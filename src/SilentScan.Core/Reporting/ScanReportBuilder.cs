@@ -1,5 +1,8 @@
+using SilentScan.Core.Catalog;
+using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
+using SilentScan.Core.Rules;
 
 namespace SilentScan.Core.Reporting;
 
@@ -9,7 +12,7 @@ public static class ScanReportBuilder
     {
         var parser = new SqlScriptParser();
         var fileHealth = new List<FileParseHealth>();
-        var findings = new List<SargabilityFinding>();
+        var parseResults = new List<SqlParseResult>();
 
         foreach (var path in sqlFilePaths)
         {
@@ -21,13 +24,41 @@ public static class ScanReportBuilder
 
             if (errors.Count == 0)
             {
-                findings.AddRange(NonSargablePredicateScanner.Scan(result));
+                parseResults.Add(result);
             }
         }
 
-        // Deterministic output ordering (CLAUDE.md).
-        findings = [.. findings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column)];
+        var tier1Findings = parseResults.SelectMany(NonSargablePredicateScanner.Scan).ToList();
+        var dynamicSqlFindings = parseResults.SelectMany(DynamicSqlScanner.Scan).ToList();
 
-        return new ScanReport(new ParseHealthReport(fileHealth), findings);
+        // Catalog/lineage need every cleanly-parsed file together, so views can resolve
+        // against tables (and other views) declared in a different file.
+        var catalog = CatalogBuilder.Build(parseResults);
+        var lineage = LineageResolver.Resolve(catalog, parseResults);
+        var typedFindings = parseResults
+            .SelectMany(r => TypedPredicateExtractor.Extract(r, catalog, lineage))
+            .Where(f => f.Verdict != Verdict.SeekPreserved)
+            .ToList();
+
+        // Deterministic output ordering (CLAUDE.md), then CLAUDE.md's Pass 4 rank:
+        // SCAN_FORCED + indexed + depth>=1 first.
+        tier1Findings = [.. tier1Findings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column)];
+        dynamicSqlFindings = [.. dynamicSqlFindings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line)];
+        typedFindings = [.. typedFindings
+            .OrderBy(f => VerdictRank(f.Verdict))
+            .ThenByDescending(f => f.Column.Indexed)
+            .ThenByDescending(f => f.Column.Depth)
+            .ThenBy(f => f.SourcePath, StringComparer.Ordinal)
+            .ThenBy(f => f.Line)];
+
+        return new ScanReport(new ParseHealthReport(fileHealth), tier1Findings, typedFindings, dynamicSqlFindings);
     }
+
+    private static int VerdictRank(Verdict verdict) => verdict switch
+    {
+        Verdict.ScanForced => 0,
+        Verdict.RangeSeek => 1,
+        Verdict.Unknown => 2,
+        _ => 3,
+    };
 }

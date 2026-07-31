@@ -10,20 +10,20 @@ namespace SilentScan.Core.Lineage;
 public static class QueryExpressionResolver
 {
     public static List<ResolvedColumn> Resolve(
-        QueryExpression queryExpression, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews) =>
+        QueryExpression queryExpression, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews, string sourcePath) =>
         queryExpression switch
         {
-            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews),
-            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews),
-            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews),
+            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews, sourcePath),
+            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews, sourcePath),
+            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews, sourcePath),
             _ => [],
         };
 
     private static List<ResolvedColumn> ResolveBinary(
-        BinaryQueryExpression binary, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews)
+        BinaryQueryExpression binary, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews, string sourcePath)
     {
-        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews);
-        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews);
+        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews, sourcePath);
+        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews, sourcePath);
 
         // CLAUDE.md: "UNION/UNION ALL output type = highest precedence across branches
         // (record ALL branch types - the mixed-branch case is itself a finding)." The left
@@ -32,9 +32,9 @@ public static class QueryExpressionResolver
     }
 
     private static List<ResolvedColumn> ResolveQuerySpecification(
-        QuerySpecification spec, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews)
+        QuerySpecification spec, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews, string sourcePath)
     {
-        var (byAlias, ordered) = FromScopeResolver.Resolve(spec.FromClause, catalog, resolvedViews);
+        var (byAlias, ordered) = FromScopeResolver.Resolve(spec.FromClause, catalog, resolvedViews, sourcePath);
         var result = new List<ResolvedColumn>();
 
         foreach (var element in spec.SelectElements)
@@ -47,7 +47,7 @@ public static class QueryExpressionResolver
 
                 case SelectScalarExpression scalar:
                     var name = scalar.ColumnName?.Value ?? InferName(scalar.Expression);
-                    var provenance = ScalarExpressionResolver.Resolve(scalar.Expression, byAlias, ordered);
+                    var provenance = ScalarExpressionResolver.Resolve(scalar.Expression, byAlias, ordered, sourcePath);
                     result.Add(new ResolvedColumn(name ?? "?column?", provenance));
                     break;
             }
@@ -57,18 +57,21 @@ public static class QueryExpressionResolver
     }
 
     private static IEnumerable<ResolvedColumn> ResolveStar(
-        SelectStarExpression star, Dictionary<string, ResolvedRelation> byAlias, IReadOnlyList<ResolvedRelation> ordered)
+        SelectStarExpression star, Dictionary<string, ScopeEntry> byAlias, IReadOnlyList<ScopeEntry> ordered)
     {
         if (star.Qualifier is { Count: > 0 } qualifier)
         {
             var aliasName = qualifier.Identifiers[^1].Value;
-            return byAlias.TryGetValue(aliasName, out var relation)
-                ? relation.Columns
+            return byAlias.TryGetValue(aliasName, out var entry)
+                ? BumpAll(entry)
                 : [new ResolvedColumn("*", new ColumnProvenance.Unknown($"unknown table alias '{aliasName}' in SELECT *"))];
         }
 
-        return ordered.SelectMany(r => r.Columns);
+        return ordered.SelectMany(BumpAll);
     }
+
+    private static IEnumerable<ResolvedColumn> BumpAll(ScopeEntry entry) =>
+        entry.Relation.Columns.Select(c => c with { Provenance = ScalarExpressionResolver.BumpDepthIfViewLayer(c.Provenance, entry.IsViewLayer) });
 
     private static string? InferName(ScalarExpression expression) =>
         expression is ColumnReferenceExpression columnRef ? columnRef.MultiPartIdentifier.Identifiers[^1].Value : null;

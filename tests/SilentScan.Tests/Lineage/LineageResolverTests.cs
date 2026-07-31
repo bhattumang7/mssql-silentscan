@@ -32,6 +32,24 @@ public sealed class LineageResolverTests
         Assert.Equal("dbo.Orders", baseColumn.TableQualifiedName);
         Assert.Equal("OrderCode", baseColumn.ColumnName);
         Assert.Equal(SqlTypeCategory.VarChar, baseColumn.Type!.Category);
+        Assert.Equal(0, baseColumn.Depth);
+    }
+
+    [Fact]
+    public void Resolve_CastInsideView_RecordsCastOriginAndDepthAtWhereItAppears()
+    {
+        var (_, lineage) = Build(
+            "CREATE TABLE dbo.Orders (OrderId INT NOT NULL);",
+            "CREATE VIEW dbo.vw_L1 AS SELECT CAST(OrderId AS VARCHAR(10)) AS OrderIdText FROM dbo.Orders;",
+            "CREATE VIEW dbo.vw_L2 AS SELECT OrderIdText FROM dbo.vw_L1;");
+
+        var view = lineage.Find("dbo.vw_L2")!;
+        var cast = Assert.IsType<ColumnProvenance.Cast>(view.FindColumn("OrderIdText")!.Provenance);
+
+        // The CAST is introduced in vw_L1; vw_L2 reads it through one more view layer.
+        Assert.Equal(SqlTypeCategory.VarChar, cast.ExplicitType.Category);
+        Assert.Equal(1, cast.Depth);
+        Assert.NotNull(cast.OriginSourcePath);
     }
 
     [Fact]
@@ -51,6 +69,10 @@ public sealed class LineageResolverTests
         var baseColumn = Assert.IsType<ColumnProvenance.BaseColumn>(orderCode.Provenance);
         Assert.Equal("dbo.Orders", baseColumn.TableQualifiedName);
         Assert.Equal("SQL_Latin1_General_CP1_CI_AS", baseColumn.Type!.Collation!.Name);
+
+        // vw_L1 reads the base table directly (not a view layer); vw_L2..vw_L5 each read
+        // through one more view layer, so vw_L5's column crosses 4 view-layer boundaries.
+        Assert.Equal(4, baseColumn.Depth);
     }
 
     [Fact]

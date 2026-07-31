@@ -6,11 +6,11 @@ namespace SilentScan.Core.Lineage;
 /// <summary>Resolves a FROM clause to an alias-&gt;relation scope, flattening the join tree to its leaf table references.</summary>
 public static class FromScopeResolver
 {
-    public static (Dictionary<string, ResolvedRelation> ByAlias, List<ResolvedRelation> Ordered) Resolve(
-        FromClause? fromClause, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews)
+    public static (Dictionary<string, ScopeEntry> ByAlias, List<ScopeEntry> Ordered) Resolve(
+        FromClause? fromClause, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews, string sourcePath)
     {
-        var byAlias = new Dictionary<string, ResolvedRelation>(StringComparer.OrdinalIgnoreCase);
-        var ordered = new List<ResolvedRelation>();
+        var byAlias = new Dictionary<string, ScopeEntry>(StringComparer.OrdinalIgnoreCase);
+        var ordered = new List<ScopeEntry>();
 
         if (fromClause is null)
         {
@@ -21,13 +21,13 @@ public static class FromScopeResolver
         {
             foreach (var leaf in FlattenJoins(tableReference))
             {
-                var (alias, relation) = ResolveTableReference(leaf, catalog, resolvedViews);
+                var (alias, entry) = ResolveTableReference(leaf, catalog, resolvedViews, sourcePath);
                 if (alias is not null)
                 {
-                    byAlias[alias] = relation;
+                    byAlias[alias] = entry;
                 }
 
-                ordered.Add(relation);
+                ordered.Add(entry);
             }
         }
 
@@ -65,32 +65,33 @@ public static class FromScopeResolver
         }
     }
 
-    private static (string? Alias, ResolvedRelation Relation) ResolveTableReference(
-        TableReference tableReference, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews)
+    private static (string? Alias, ScopeEntry Entry) ResolveTableReference(
+        TableReference tableReference, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews, string sourcePath)
     {
         switch (tableReference)
         {
             case NamedTableReference named:
                 var qualifiedName = SchemaObjectNameHelper.Qualify(named.SchemaObject);
-                var relation = resolvedViews.TryGetValue(qualifiedName, out var view)
-                    ? view
-                    : ToResolvedRelation(catalog.Find(qualifiedName), qualifiedName);
+                var isViewLayer = resolvedViews.TryGetValue(qualifiedName, out var view);
+                var relation = isViewLayer ? view! : ToResolvedRelation(catalog.Find(qualifiedName), qualifiedName);
                 var alias = named.Alias?.Value ?? SchemaObjectNameHelper.Resolve(named.SchemaObject).Name;
-                return (alias, relation);
+                return (alias, new ScopeEntry(relation, isViewLayer));
 
             case QueryDerivedTable derived:
-                var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews);
+                // A derived-table subquery is inline, local to this statement - not a
+                // persisted view/TVF, so it does not add view-layer depth.
+                var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews, sourcePath);
                 if (derived.Columns.Count > 0)
                 {
                     innerColumns = [.. innerColumns.Zip(derived.Columns, (c, id) => c with { Name = id.Value })];
                 }
 
-                return (derived.Alias?.Value, new ResolvedRelation(QualifiedName: null, innerColumns));
+                return (derived.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, innerColumns), IsViewLayer: false));
 
             default:
                 // OPENQUERY/OPENROWSET/PIVOT/table-valued function calls etc: not yet resolved.
                 // Empty columns means any reference against this alias falls through to "not found".
-                return ((tableReference as TableReferenceWithAlias)?.Alias?.Value, ResolvedRelation.Empty);
+                return ((tableReference as TableReferenceWithAlias)?.Alias?.Value, new ScopeEntry(ResolvedRelation.Empty, IsViewLayer: false));
         }
     }
 

@@ -63,7 +63,7 @@ public static class LineageResolver
 
     private static ResolvedRelation ResolveView(ViewDefinition view, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews)
     {
-        var columns = QueryExpressionResolver.Resolve(view.SelectStatement.QueryExpression, catalog, resolvedViews);
+        var columns = QueryExpressionResolver.Resolve(view.SelectStatement.QueryExpression, catalog, resolvedViews, view.SourcePath);
 
         if (view.ExplicitColumnNames is { Count: > 0 } explicitNames)
         {

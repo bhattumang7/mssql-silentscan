@@ -1,0 +1,171 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SilentScan.Core.Catalog;
+using SilentScan.Core.Lineage;
+using SilentScan.Core.Parsing;
+using SilentScan.Core.Rules;
+
+namespace SilentScan.Core.Predicates;
+
+/// <summary>
+/// Pass 3+4: finds comparison predicates in WHERE/ON/HAVING/BETWEEN across procs, views,
+/// functions, and ad-hoc statements, resolves the column side through the catalog/lineage,
+/// types the other side, and classifies the verdict (CLAUDE.md Pass 3 + Pass 4).
+/// </summary>
+public static class TypedPredicateExtractor
+{
+    public static IReadOnlyList<TypedPredicateFinding> Extract(
+        SqlParseResult parseResult, DatabaseCatalog catalog, LineageCatalog lineage)
+    {
+        var resolvedViews = lineage.AllRelations;
+        var visitor = new Visitor(parseResult.SourcePath, catalog, resolvedViews);
+        parseResult.Fragment.Accept(visitor);
+        return visitor.Findings;
+    }
+
+    private sealed class Visitor(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<string, ResolvedRelation> resolvedViews) : TSqlFragmentVisitor
+    {
+        private readonly Stack<(Dictionary<string, ScopeEntry> ByAlias, List<ScopeEntry> Ordered)> _scopeStack = new();
+        private readonly Dictionary<string, SqlType?> _variables = new(StringComparer.OrdinalIgnoreCase);
+
+        public List<TypedPredicateFinding> Findings { get; } = [];
+
+        public override void ExplicitVisit(QuerySpecification node)
+        {
+            _scopeStack.Push(FromScopeResolver.Resolve(node.FromClause, catalog, resolvedViews, sourcePath));
+            base.ExplicitVisit(node);
+            _scopeStack.Pop();
+        }
+
+        public override void ExplicitVisit(CreateProcedureStatement node)
+        {
+            // Local declarations don't cross proc boundaries, so start fresh per proc.
+            _variables.Clear();
+            RecordParameters(node.Parameters);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(CreateFunctionStatement node)
+        {
+            _variables.Clear();
+            RecordParameters(node.Parameters);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(DeclareVariableStatement node)
+        {
+            foreach (var declaration in node.Declarations)
+            {
+                _variables[declaration.VariableName.Value] = SqlTypeReferenceResolver.Resolve(declaration.DataType, columnCollation: null);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void Visit(BooleanComparisonExpression node) =>
+            TryAddFinding(node.FirstExpression, node.SecondExpression, node);
+
+        public override void Visit(BooleanTernaryExpression node)
+        {
+            if (node.TernaryExpressionType is BooleanTernaryExpressionType.Between or BooleanTernaryExpressionType.NotBetween)
+            {
+                TryAddFinding(node.FirstExpression, node.SecondExpression, node);
+            }
+        }
+
+        private void RecordParameters(IList<ProcedureParameter> parameters)
+        {
+            foreach (var parameter in parameters)
+            {
+                _variables[parameter.VariableName.Value] = SqlTypeReferenceResolver.Resolve(parameter.DataType, columnCollation: null);
+            }
+        }
+
+        private void TryAddFinding(ScalarExpression first, ScalarExpression second, TSqlFragment node)
+        {
+            if (_scopeStack.Count == 0)
+            {
+                // A comparison outside any FROM scope (e.g. a bare IF @x = 1) has no column
+                // side to resolve; nothing to classify.
+                return;
+            }
+
+            var (byAlias, ordered) = _scopeStack.Peek();
+            var left = ResolveOperand(first, byAlias, ordered);
+            var right = ResolveOperand(second, byAlias, ordered);
+
+            PredicateOperand.Column? column;
+            PredicateOperand? other;
+            if (left is PredicateOperand.Column leftColumn)
+            {
+                (column, other) = (leftColumn, right);
+            }
+            else if (right is PredicateOperand.Column rightColumn)
+            {
+                (column, other) = (rightColumn, left);
+            }
+            else
+            {
+                (column, other) = (null, null);
+            }
+
+            if (column is null || other is null)
+            {
+                return;
+            }
+
+            var otherType = other is PredicateOperand.Value value ? value.Type : ((PredicateOperand.Column)other).Type;
+            var verdict = VerdictClassifier.Classify(column.Type, otherType);
+
+            Findings.Add(new TypedPredicateFinding(verdict, column, other, sourcePath, node.StartLine, node.StartColumn));
+        }
+
+        private PredicateOperand ResolveOperand(ScalarExpression expression, Dictionary<string, ScopeEntry> byAlias, List<ScopeEntry> ordered)
+        {
+            switch (expression)
+            {
+                case ColumnReferenceExpression columnRef:
+                    return ResolveColumnOperand(columnRef, byAlias, ordered);
+
+                case VariableReference variableRef:
+                    return new PredicateOperand.Value(_variables.GetValueOrDefault(variableRef.Name));
+
+                case Literal literal:
+                    return new PredicateOperand.Value(Rules.LiteralTypeResolver.Resolve(literal));
+
+                default:
+                    return new PredicateOperand.Value(Type: null);
+            }
+        }
+
+        private PredicateOperand ResolveColumnOperand(ColumnReferenceExpression columnRef, Dictionary<string, ScopeEntry> byAlias, List<ScopeEntry> ordered)
+        {
+            var identifiers = columnRef.MultiPartIdentifier.Identifiers;
+            var columnName = identifiers[^1].Value;
+
+            ResolvedColumn? resolved;
+            bool isViewLayer;
+            if (identifiers.Count >= 2 && byAlias.TryGetValue(identifiers[^2].Value, out var entry))
+            {
+                resolved = entry.Relation.FindColumn(columnName);
+                isViewLayer = entry.IsViewLayer;
+            }
+            else
+            {
+                var matches = ordered.Select(e => (Entry: e, Column: e.Relation.FindColumn(columnName))).Where(m => m.Column is not null).ToList();
+                resolved = matches.Count == 1 ? matches[0].Column : null;
+                isViewLayer = matches.Count == 1 && matches[0].Entry.IsViewLayer;
+            }
+
+            var provenance = resolved is null ? null : ScalarExpressionResolver.BumpDepthIfViewLayer(resolved.Provenance, isViewLayer);
+            if (provenance is not ColumnProvenance.BaseColumn baseColumn)
+            {
+                // Not a traceable base-table column (Cast/Expression/Union/Unknown/Declared,
+                // or unresolved) - not eligible for the "indexed column" side of a verdict.
+                return new PredicateOperand.Value(Type: null);
+            }
+
+            var indexed = catalog.Find(baseColumn.TableQualifiedName)?.IsIndexedColumn(baseColumn.ColumnName) ?? false;
+            return new PredicateOperand.Column(baseColumn.TableQualifiedName, baseColumn.ColumnName, baseColumn.Type, indexed, baseColumn.Depth, baseColumn);
+        }
+    }
+}
