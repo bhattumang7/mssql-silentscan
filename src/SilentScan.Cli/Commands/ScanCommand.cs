@@ -1,19 +1,26 @@
 using System.CommandLine;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Reporting;
 
 namespace SilentScan.Cli.Commands;
 
 /// <summary>
-/// `silentscan scan &lt;path&gt;` — Pass 0 of the pipeline: parse every .sql file under the
-/// given folder (or a single file) and report ScriptDOM parse health as JSON. This is
-/// the dialect-sniffing signal CLAUDE.md's corpus rules key off of; the finding-emitting
-/// passes (catalog/lineage/predicates/verdicts) land in Phase 1+ on top of this.
+/// `silentscan scan &lt;path&gt;` — parses every .sql file under the given folder (or a single
+/// file), reports ScriptDOM parse health (Pass 0 / the corpus dialect-sniffing signal), and
+/// for files that parsed cleanly, the Tier-1 syntactic non-sargable predicate findings
+/// (CLAUDE.md Phase 1 exit criterion). Type/lineage-aware findings land in later phases.
 /// </summary>
 public static class ScanCommand
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        // Findings schema is versioned JSON (CLAUDE.md) - enum names, not raw ordinals,
+        // so the schema stays stable as new SargabilityFindingKind values are added.
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public static Command Create()
     {
@@ -22,7 +29,7 @@ public static class ScanCommand
             Description = "A .sql file or a folder to scan recursively.",
         };
 
-        var command = new Command("scan", "Parse .sql files and report ScriptDOM parse health.")
+        var command = new Command("scan", "Parse .sql files and report parse health plus Tier-1 sargability findings.")
         {
             pathArgument,
         };
@@ -45,10 +52,10 @@ public static class ScanCommand
         }
 
         var files = SqlFileDiscovery.EnumerateSqlFiles(path);
-        var report = ParseHealthReportBuilder.Build(files);
+        var report = ScanReportBuilder.Build(files);
 
         stdout.WriteLine(JsonSerializer.Serialize(report, JsonOptions));
 
-        return report.FilesWithErrors == 0 ? 0 : 1;
+        return report.ParseHealth.FilesWithErrors == 0 ? 0 : 1;
     }
 }

@@ -21,6 +21,21 @@ public sealed class ScanCommandTests
     }
 
     [Fact]
+    public void Run_FixtureWithSargabilityIssue_ReportsFindingAsStringEnum()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "fixtures", "tier1", "FUNCTION_WRAPPED_COLUMN_fires.sql");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var exitCode = ScanCommand.Run(path, stdout, stderr);
+
+        Assert.Equal(0, exitCode);
+        var output = stdout.ToString();
+        Assert.Contains("\"Kind\": \"FunctionWrappedColumn\"", output);
+        Assert.Contains("\"ColumnName\": \"SomeDate\"", output);
+    }
+
+    [Fact]
     public void Run_MissingPath_ReturnsOneAndWritesError()
     {
         var stdout = new StringWriter();

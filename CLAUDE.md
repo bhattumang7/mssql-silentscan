@@ -197,6 +197,7 @@ only oracle-confirmed findings; static-only findings go in an appendix.
   # Sonar 
   Sonar is available here and we scan using it before each commit. All issues are resolved before commit.  I have brought in a sonar scanning script from another project - tweak it as needed.
   Compile as well as sonar should report 0 issues in all categories. 
+  Run sonar and get to 0 issues before every commit.
   
   # Local database
   We have a local SQL server image in docker. Use that. 
