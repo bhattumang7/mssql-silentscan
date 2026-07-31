@@ -146,6 +146,14 @@ public static class CatalogBuilder
         catalog.AddOrReplace(table);
     }
 
+    /// <summary>
+    /// Exposed for <see cref="Lineage.ViewDefinitionExtractor"/>: a multi-statement TVF's
+    /// RETURNS @t TABLE(...) is column-definition syntax identical to a table variable, and
+    /// its declared columns become <see cref="Lineage.ColumnProvenance.Declared"/> provenance.
+    /// </summary>
+    public static IReadOnlyList<CatalogColumn> BuildColumnsForExternalUse(TableDefinition definition) =>
+        BuildColumns(definition).Columns;
+
     private static (List<CatalogColumn> Columns, List<CatalogIndex> InlineIndexes) BuildColumns(TableDefinition definition)
     {
         var columns = new List<CatalogColumn>();
