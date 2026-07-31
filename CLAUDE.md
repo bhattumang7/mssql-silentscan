@@ -149,9 +149,12 @@ CSV the writeup can chart directly.
 For each corpus repo: deploy its DDL to a fresh database → diff our inferred
 view column types/collations against `sys.columns` for every view (this is the
 free ground-truth oracle for the lineage engine; ANY mismatch is a P0 bug) →
-for each SCAN_FORCED finding, execute a parameterized probe of the predicate
-and confirm CONVERT_IMPLICIT-on-column in the plan XML. Study reports only
-oracle-confirmed findings; static-only findings go in an appendix.
+for each SCAN_FORCED finding, submit a SELF-AUTHORED probe SELECT (never the
+repo's procs) under SET SHOWPLAN_XML ON — compile-only, nothing executes, no
+data needed (tables stay empty; CONVERT_IMPLICIT is a compile-time artifact
+visible in the estimated plan) — and confirm CONVERT_IMPLICIT-on-column in the
+returned plan XML. Corpus DML/procs are NEVER executed anywhere. Study reports
+only oracle-confirmed findings; static-only findings go in an appendix.
 
 ## Corpus rules
 
@@ -193,6 +196,7 @@ oracle-confirmed findings; static-only findings go in an appendix.
   
   # Sonar 
   Sonar is available here and we scan using it before each commit. All issues are resolved before commit.  I have brought in a sonar scanning script from another project - tweak it as needed.
+  Compile as well as sonar should report 0 issues in all categories. 
   
   # Local database
   We have a local SQL server image in docker. Use that. 
@@ -202,3 +206,9 @@ oracle-confirmed findings; static-only findings go in an appendix.
   
   # Inventing our own corpus
   Do not invent our own corpus, look for issues from the internet and include those as tests for us to detect.
+  
+  # Test fixtures
+  The test fixtures need to be repeatable. Make sure to clean up correctly at the end to avoid flaky tests.
+  
+  # Tests
+  Not everything can be covered with unit tests - integration tests are needed. Create them. 

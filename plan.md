@@ -14,9 +14,10 @@ Prove the two risky bits before building anything real.
 - [ ] Console app: ScriptDOM (TSql160Parser) parses one file containing a
       table, two stacked views, and a proc; dump the AST; extract the WHERE
       predicate's column reference.
-- [ ] Docker SQL Server 2022 up; deploy that same file; query sys.columns for
-      the views; pull an actual plan XML via SET STATISTICS XML ON and locate
-      CONVERT_IMPLICIT on the column side.
+- [ ] Docker SQL Server 2022 up; deploy that same file (DDL only, tables stay
+      empty); query sys.columns for the views; submit a self-authored probe
+      SELECT under SET SHOWPLAN_XML ON (compile-only — nothing executes) and
+      locate CONVERT_IMPLICIT on the column side of the estimated plan.
 - Exit: we can see both the static AST and the engine's ground truth for the
   same artifact. Everything else is plumbing.
 

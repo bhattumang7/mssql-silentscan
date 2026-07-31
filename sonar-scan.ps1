@@ -171,26 +171,41 @@ try {
     # The upload above is async: SonarQube queues a Compute Engine task and
     # returns immediately. Issues aren't queryable against this run's data
     # until that task reports SUCCESS, so poll it rather than assuming the
-    # scanner exiting means results are ready.
+    # scanner exiting means results are ready. A missing/null task id or a
+    # null status from the API is treated as a hard failure, not skipped -
+    # silently proceeding here is exactly what previously let stale/wrong
+    # results get read after a "successful" scan.
     $taskIdLine = $endOutput | Select-String -Pattern 'api/ce/task\?id=([\w-]+)' | Select-Object -Last 1
-    if ($taskIdLine -and $taskIdLine.Matches[0].Groups[1].Success) {
-        $taskId = $taskIdLine.Matches[0].Groups[1].Value
-        Write-Host ""
-        Write-Host "Waiting for SonarQube to process analysis (task $taskId)..." -ForegroundColor Yellow
-        $ceStatus = 'PENDING'
-        $elapsed = 0
-        while ($ceStatus -in @('PENDING', 'IN_PROGRESS') -and $elapsed -lt 120) {
-            Start-Sleep -Seconds 2
-            $elapsed += 2
-            $task = Invoke-RestMethod -Uri "$HostUrl/api/ce/task?id=$taskId" `
-                -Headers @{ Authorization = "Basic $credentials" }
-            $ceStatus = $task.task.status
-        }
-        Write-Host "Processing status: $ceStatus" -ForegroundColor $(if ($ceStatus -eq 'SUCCESS') { 'Green' } else { 'Red' })
-        if ($ceStatus -ne 'SUCCESS') { throw "SonarQube background processing did not succeed (status: $ceStatus)" }
-    } else {
-        Write-Warning "Could not find the Compute Engine task id in scanner output; skipping the processing-complete wait."
+    if (-not $taskIdLine -or -not $taskIdLine.Matches[0].Groups[1].Success) {
+        throw "Could not find the Compute Engine task id in scanner output. Refusing to report success without confirming SonarQube processed this analysis - re-run with more verbose scanner output if this persists."
     }
+    $taskId = $taskIdLine.Matches[0].Groups[1].Value
+    if ([string]::IsNullOrWhiteSpace($taskId)) {
+        throw "Compute Engine task id extracted from scanner output was empty."
+    }
+
+    Write-Host ""
+    Write-Host "Waiting for SonarQube to process analysis (task $taskId)..." -ForegroundColor Yellow
+    $ceStatus = 'PENDING'
+    $elapsed = 0
+    $pollIntervalSeconds = 2
+    $timeoutSeconds = 120
+    while ($ceStatus -in @('PENDING', 'IN_PROGRESS') -and $elapsed -lt $timeoutSeconds) {
+        Start-Sleep -Seconds $pollIntervalSeconds
+        $elapsed += $pollIntervalSeconds
+        $task = Invoke-RestMethod -Uri "$HostUrl/api/ce/task?id=$taskId" `
+            -Headers @{ Authorization = "Basic $credentials" }
+        if (-not $task -or -not $task.task -or -not $task.task.status) {
+            throw "SonarQube returned no task for id '$taskId' (host $HostUrl). This is the failure mode where a task id looks present but the API can't find it - check the token/host are pointed at the same server instance that received the upload."
+        }
+        $ceStatus = $task.task.status
+        Write-Host "  [$($elapsed)s] status=$ceStatus" -ForegroundColor DarkGray
+    }
+    if ($ceStatus -in @('PENDING', 'IN_PROGRESS')) {
+        throw "Timed out after ${timeoutSeconds}s waiting for task $taskId to finish (last status: $ceStatus)."
+    }
+    Write-Host "Processing status: $ceStatus" -ForegroundColor $(if ($ceStatus -eq 'SUCCESS') { 'Green' } else { 'Red' })
+    if ($ceStatus -ne 'SUCCESS') { throw "SonarQube background processing did not succeed (status: $ceStatus)" }
 }
 finally {
     Pop-Location

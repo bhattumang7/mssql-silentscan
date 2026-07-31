@@ -1,0 +1,53 @@
+using SilentScan.Core.Parsing;
+using SilentScan.Core.Reporting;
+
+namespace SilentScan.Tests.Reporting;
+
+public sealed class ParseHealthReportBuilderTests
+{
+    private static readonly string FixturesDir = Path.Combine(AppContext.BaseDirectory, "fixtures");
+
+    [Fact]
+    public void Build_CleanFixture_ReportsNoErrorsAndFullSuccessRate()
+    {
+        var files = SqlFileDiscovery.EnumerateSqlFiles(Path.Combine(FixturesDir, "phase0_spike.sql"));
+
+        var report = ParseHealthReportBuilder.Build(files);
+
+        Assert.Equal(1, report.TotalFiles);
+        Assert.Equal(0, report.FilesWithErrors);
+        Assert.Equal(1.0, report.ParseSuccessRate);
+    }
+
+    [Fact]
+    public void Build_MalformedSql_ReportsErrorsAndReducedSuccessRate()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("silentscan-tests-");
+        try
+        {
+            var badFile = Path.Combine(tempDir.FullName, "broken.sql");
+            File.WriteAllText(badFile, "SELECT FROM WHERE;;;");
+
+            var files = SqlFileDiscovery.EnumerateSqlFiles(tempDir.FullName);
+            var report = ParseHealthReportBuilder.Build(files);
+
+            Assert.Equal(1, report.TotalFiles);
+            Assert.Equal(1, report.FilesWithErrors);
+            Assert.Equal(0.0, report.ParseSuccessRate);
+            Assert.NotEmpty(report.Files.Single().Errors);
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Build_EmptyFileList_ReportsFullSuccessRate()
+    {
+        var report = ParseHealthReportBuilder.Build([]);
+
+        Assert.Equal(0, report.TotalFiles);
+        Assert.Equal(1.0, report.ParseSuccessRate);
+    }
+}

@@ -8,7 +8,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- NOT invariant: this tool's entire subject is SQL Server collation behavior, and
+         Microsoft.Data.SqlClient itself requires real ICU globalization to open a connection. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Documentation comments are not required on every public member; the
          analyzers that matter here are correctness ones, not doc coverage. -->

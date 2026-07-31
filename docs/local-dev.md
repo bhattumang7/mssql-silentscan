@@ -23,6 +23,12 @@ dotnet test
 `Directory.Build.props` treats warnings as errors and enables recommended
 analyzers solution-wide; a red build is a real defect, not noise to suppress.
 
+`tests/SilentScan.Tests/Integration/` requires the Docker SQL Server above to
+be running — there is no mock/skip path (CLAUDE.md: not everything can be
+covered with unit tests). Each integration test class creates and drops its
+own disposable database per run via `SilentScan.Verify.Deployment.DatabaseProvisioner`
+so reruns don't accumulate state.
+
 ## Sonar
 
 ```
