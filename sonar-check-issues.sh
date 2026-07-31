@@ -20,6 +20,13 @@ curl -s -u "admin:${PASSWORD}" \
   | column -t -s $'\t'
 
 echo
+echo "Security hotspots to review:"
+curl -s -u "admin:${PASSWORD}" \
+  "${HOST_URL}/api/hotspots/search?projectKey=${PROJECT_KEY}&status=TO_REVIEW" \
+  | jq -r '.hotspots[] | [(.component | sub("^[^:]+:"; "")) + ":" + (.line | tostring), .vulnerabilityProbability, .message] | @tsv' \
+  | column -t -s $'\t'
+
+echo
 echo "Quality gate:"
 curl -s -u "admin:${PASSWORD}" \
   "${HOST_URL}/api/qualitygates/project_status?projectKey=${PROJECT_KEY}" \

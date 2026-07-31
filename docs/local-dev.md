@@ -29,6 +29,21 @@ covered with unit tests). Each integration test class creates and drops its
 own disposable database per run via `SilentScan.Verify.Deployment.DatabaseProvisioner`
 so reruns don't accumulate state.
 
+## Benchmark harness
+
+```
+dotnet run --project src/SilentScan.Bench -- run \
+  --rows 10000 1000000 10000000 \
+  --output silentscan-bench-results.csv
+```
+
+Runs the full CLAUDE.md Benchmark protocol matrix (type pairs x row counts x
+legacy/new cardinality estimator x matched/mismatched param) against a fresh
+disposable database and writes the cost table CSV. The default row counts
+match the spec (10K/1M/10M); the automated test suite exercises the same
+code path at a much smaller row count to keep `dotnet test` fast — run the
+CLI directly for the full-scale sweep.
+
 ## Sonar
 
 ```
