@@ -1,0 +1,20 @@
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: silentscan-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SILENTSCAN_SA_PASSWORD:-SilentScan!Dev2026}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "14330:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"${SILENTSCAN_SA_PASSWORD:-SilentScan!Dev2026}\" -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - silentscan-sql-data:/var/opt/mssql
+
+volumes:
+  silentscan-sql-data:

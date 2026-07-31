@@ -1,0 +1,52 @@
+namespace SilentScan.Core.Catalog;
+
+/// <summary>
+/// A fully-resolved T-SQL scalar type: category plus the facets that affect
+/// comparison semantics (length/precision/scale, and collation for string types).
+/// </summary>
+public sealed record SqlType(
+    SqlTypeCategory Category,
+    int? Length = null,
+    int? Precision = null,
+    int? Scale = null,
+    Collation? Collation = null,
+    bool IsMax = false)
+{
+    public bool IsStringFamily => Category is SqlTypeCategory.Char or SqlTypeCategory.VarChar
+        or SqlTypeCategory.NChar or SqlTypeCategory.NVarChar or SqlTypeCategory.Text
+        or SqlTypeCategory.NText;
+
+    public bool IsUnicodeString => Category is SqlTypeCategory.NChar or SqlTypeCategory.NVarChar
+        or SqlTypeCategory.NText;
+
+    public bool IsNonUnicodeString => Category is SqlTypeCategory.Char or SqlTypeCategory.VarChar
+        or SqlTypeCategory.Text;
+
+    public override string ToString()
+    {
+        var baseName = Category.ToString();
+        var facet = FormatFacet();
+        var collationSuffix = Collation is { } c ? $" COLLATE {c.Name}" : string.Empty;
+        return $"{baseName}{facet}{collationSuffix}";
+    }
+
+    private string FormatFacet()
+    {
+        if (IsMax)
+        {
+            return "(max)";
+        }
+
+        if (Length is { } len)
+        {
+            return $"({len})";
+        }
+
+        if (Precision is { } p)
+        {
+            return Scale is { } s ? $"({p},{s})" : $"({p})";
+        }
+
+        return string.Empty;
+    }
+}

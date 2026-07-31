@@ -1,0 +1,19 @@
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+.vs/
+.idea/
+.vscode/
+
+# Cloned corpus repositories are never checked in; only the manifest is.
+corpus/*
+!corpus/manifest.json
+
+# Sonar scanner working data
+.sonarqube/
+.scannerwork/
+
+# Local dev secrets (SA password override for docker-compose)
+.env

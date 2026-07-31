@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>silentscan</AssemblyName>
+    <RootNamespace>SilentScan.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <ProjectReference Include="../SilentScan.Core/SilentScan.Core.csproj" />
+  </ItemGroup>
+
+</Project>

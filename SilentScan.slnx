@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SilentScan.Bench/SilentScan.Bench.csproj" />
+    <Project Path="src/SilentScan.Cli/SilentScan.Cli.csproj" />
+    <Project Path="src/SilentScan.Core/SilentScan.Core.csproj" />
+    <Project Path="src/SilentScan.Verify/SilentScan.Verify.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SilentScan.Tests/SilentScan.Tests.csproj" />
+  </Folder>
+</Solution>

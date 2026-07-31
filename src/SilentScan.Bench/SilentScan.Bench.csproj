@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SilentScan.Bench</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="System.CommandLine" />
+    <ProjectReference Include="../SilentScan.Core/SilentScan.Core.csproj" />
+    <ProjectReference Include="../SilentScan.Verify/SilentScan.Verify.csproj" />
+  </ItemGroup>
+
+</Project>

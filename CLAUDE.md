@@ -192,10 +192,13 @@ oracle-confirmed findings; static-only findings go in an appendix.
   We want to do things right in the first go. Do not write any placeholders or dummy vlaues that would have to be cleared later. All that you can do it not implemented exception. 
   
   # Sonar 
-  Sonar is available here and we scan using it before each commit. All issues are resolved before commit. 
+  Sonar is available here and we scan using it before each commit. All issues are resolved before commit.  I have brought in a sonar scanning script from another project - tweak it as needed.
   
   # Local database
   We have a local SQL server image in docker. Use that. 
   
   # Code coverage 
   We always aim for 99% code coverage. 
+  
+  # Inventing our own corpus
+  Do not invent our own corpus, look for issues from the internet and include those as tests for us to detect.
