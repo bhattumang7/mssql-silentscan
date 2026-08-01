@@ -13,7 +13,7 @@ public sealed class ScanCommandTests
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var exitCode = ScanCommand.Run(FixturePath, stdout, stderr);
+        var exitCode = ScanCommand.Run(FixturePath, "json", stdout, stderr);
 
         Assert.Equal(0, exitCode);
         Assert.Contains("\"TotalFiles\": 1", stdout.ToString());
@@ -27,7 +27,7 @@ public sealed class ScanCommandTests
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var exitCode = ScanCommand.Run(path, stdout, stderr);
+        var exitCode = ScanCommand.Run(path, "json", stdout, stderr);
 
         Assert.Equal(0, exitCode);
         var output = stdout.ToString();
@@ -36,12 +36,39 @@ public sealed class ScanCommandTests
     }
 
     [Fact]
+    public void Run_SarifFormat_WritesValidSarif()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "fixtures", "tier1", "FUNCTION_WRAPPED_COLUMN_fires.sql");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var exitCode = ScanCommand.Run(path, "sarif", stdout, stderr);
+
+        Assert.Equal(0, exitCode);
+        var output = stdout.ToString();
+        Assert.Contains("\"version\": \"2.1.0\"", output);
+        Assert.Contains("silentscan/tier1/function-wrapped-column", output);
+    }
+
+    [Fact]
+    public void Run_UnknownFormat_ReturnsOneAndWritesError()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var exitCode = ScanCommand.Run(FixturePath, "xml", stdout, stderr);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("unknown --format", stderr.ToString());
+    }
+
+    [Fact]
     public void Run_MissingPath_ReturnsOneAndWritesError()
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var exitCode = ScanCommand.Run("/no/such/path/at/all.sql", stdout, stderr);
+        var exitCode = ScanCommand.Run("/no/such/path/at/all.sql", "json", stdout, stderr);
 
         Assert.Equal(1, exitCode);
         Assert.Contains("not found", stderr.ToString());
@@ -57,7 +84,7 @@ public sealed class ScanCommandTests
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            var exitCode = ScanCommand.Run(tempDir.FullName, stdout, stderr);
+            var exitCode = ScanCommand.Run(tempDir.FullName, "json", stdout, stderr);
 
             Assert.Equal(1, exitCode);
         }

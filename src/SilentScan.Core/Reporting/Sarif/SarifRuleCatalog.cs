@@ -1,0 +1,47 @@
+using SilentScan.Core.Predicates;
+using SilentScan.Core.Rules;
+
+namespace SilentScan.Core.Reporting.Sarif;
+
+/// <summary>Stable SARIF rule IDs/descriptions, one per finding kind this tool produces.</summary>
+public static class SarifRuleCatalog
+{
+    public const string DynamicSqlLiteralRuleId = "silentscan/dynamic-sql/literal";
+    public const string DynamicSqlUnanalyzableRuleId = "silentscan/dynamic-sql/unanalyzable";
+
+    public static string Tier1RuleId(SargabilityFindingKind kind) => kind switch
+    {
+        SargabilityFindingKind.FunctionWrappedColumn => "silentscan/tier1/function-wrapped-column",
+        SargabilityFindingKind.CastOrConvertOnColumn => "silentscan/tier1/cast-or-convert-on-column",
+        SargabilityFindingKind.ColumnArithmetic => "silentscan/tier1/column-arithmetic",
+        SargabilityFindingKind.LeadingWildcardLike => "silentscan/tier1/leading-wildcard-like",
+        SargabilityFindingKind.LikePatternNotLiteral => "silentscan/tier1/like-pattern-not-literal",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SargabilityFindingKind."),
+    };
+
+    public static string VerdictRuleId(Verdict verdict) => verdict switch
+    {
+        Verdict.ScanForced => "silentscan/verdict/scan-forced",
+        Verdict.RangeSeek => "silentscan/verdict/range-seek",
+        Verdict.Unknown => "silentscan/verdict/unknown",
+        Verdict.SeekPreserved => "silentscan/verdict/seek-preserved",
+        _ => throw new ArgumentOutOfRangeException(nameof(verdict), verdict, "Unhandled Verdict."),
+    };
+
+    public static IReadOnlyList<SarifRule> AllRules { get; } =
+    [
+        Rule(Tier1RuleId(SargabilityFindingKind.FunctionWrappedColumn), "A column is wrapped in a function call inside a predicate, preventing an index seek."),
+        Rule(Tier1RuleId(SargabilityFindingKind.CastOrConvertOnColumn), "A column has CAST/CONVERT applied to it inside a predicate."),
+        Rule(Tier1RuleId(SargabilityFindingKind.ColumnArithmetic), "A column has arithmetic applied to it inside a predicate."),
+        Rule(Tier1RuleId(SargabilityFindingKind.LeadingWildcardLike), "A LIKE predicate on a column starts with a wildcard, forcing a full scan."),
+        Rule(Tier1RuleId(SargabilityFindingKind.LikePatternNotLiteral), "A LIKE predicate's pattern is not a literal, so a leading wildcard can't be ruled out statically."),
+        Rule(VerdictRuleId(Verdict.ScanForced), "An implicit type conversion on the column side forces a full scan."),
+        Rule(VerdictRuleId(Verdict.RangeSeek), "An implicit type conversion on the column side permits only a dynamic range seek, not a direct seek."),
+        Rule(VerdictRuleId(Verdict.Unknown), "A predicate's sargability could not be determined (e.g. unresolved collation) - never guessed."),
+        Rule(VerdictRuleId(Verdict.SeekPreserved), "A predicate compares types where the seek is preserved (reported for completeness; not filtered into ScanReportBuilder's actionable findings)."),
+        Rule(DynamicSqlLiteralRuleId, "A dynamic SQL call site with a literal-only argument."),
+        Rule(DynamicSqlUnanalyzableRuleId, "A dynamic SQL call site whose contents could not be statically analyzed."),
+    ];
+
+    private static SarifRule Rule(string id, string description) => new(id, new SarifMessage(description));
+}
