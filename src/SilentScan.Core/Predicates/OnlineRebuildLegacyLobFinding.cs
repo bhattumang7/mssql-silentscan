@@ -7,6 +7,8 @@ public enum OnlineRebuildLegacyLobKind
 {
     AlterTableRebuild,
     AlterIndexAllRebuild,
+    AlterColumnOnline,
+    DropIndexOnline,
 }
 
 public sealed record OnlineRebuildLegacyLobFinding(
