@@ -90,8 +90,8 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/deprecated-syntax/deprecated-set-rowcount</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">SET ROWCOUNT is deprecated - use TOP (n) instead; Microsoft documents it as not honored by INSERT/UPDATE/DELETE in a future release.</p>
-  <p class="rationale">SET ROWCOUNT is deprecated - use TOP (n) instead; Microsoft documents it as not honored by INSERT/UPDATE/DELETE in a future release. Code relying on it to limit rows affected by a DML statement is at risk of silently losing that limit.</p>
+  <p class="rationale">SET ROWCOUNT silently caps rows affected/returned by every subsequent statement in the session right now (oracle-confirmed), not just a future-deprecation risk; it is also deprecated - use TOP (n) instead; Microsoft documents it as not honored by INSERT/UPDATE/DELETE in a future release.</p>
+  <p class="rationale">SET ROWCOUNT silently caps rows affected/returned by every subsequent statement in the session right now, not just as a future-deprecation risk: oracle-confirmed, a nonzero SET ROWCOUNT left active before a multi-row INSERT makes a later SELECT COUNT(*) against that same data return the capped count, not the true one. It is also deprecated - use TOP (n) instead; Microsoft documents it as not honored by INSERT/UPDATE/DELETE in a future release. Code relying on it to limit rows affected by a DML statement is at risk of silently losing that limit once the deprecation lands, on top of the present-tense risk of a forgotten SET ROWCOUNT quietly limiting unrelated statements later in the same session.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Use TOP (n) instead of SET ROWCOUNT.</p>
   <h3>SET ROWCOUNT limiting a DELETE</h3>
