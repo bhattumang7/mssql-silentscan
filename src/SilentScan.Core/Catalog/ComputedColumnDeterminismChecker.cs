@@ -52,6 +52,12 @@ internal static class ComputedColumnDeterminismChecker
         "weekday", "dw", "week", "wk", "ww",
     };
 
+    private static readonly HashSet<string> AlwaysNonDeterministicOdbcFunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CURDATE", "CURTIME", "NOW", "USER", "DATABASE", "RAND",
+        "WEEK", "DAYOFWEEK", "MONTHNAME", "DAYNAME",
+    };
+
     private static readonly HashSet<int> NonDeterministicDateStyles =
     [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 106, 107, 109, 113,
@@ -74,6 +80,16 @@ internal static class ComputedColumnDeterminismChecker
             if (AlwaysNonDeterministicFunctionNames.Contains(name)
                 || (node.Parameters.Count == 0 && string.Equals(name, "RAND", StringComparison.OrdinalIgnoreCase))
                 || (string.Equals(name, "DATEPART", StringComparison.OrdinalIgnoreCase) && IsNonDeterministicDatePart(node.Parameters)))
+            {
+                Found = true;
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(OdbcFunctionCall node)
+        {
+            if (AlwaysNonDeterministicOdbcFunctionNames.Contains(node.Name.Value))
             {
                 Found = true;
             }
