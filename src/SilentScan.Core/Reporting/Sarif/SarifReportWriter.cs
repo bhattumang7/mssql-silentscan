@@ -1674,9 +1674,18 @@ public static class SarifReportWriter
     private static SarifResult ToResult(AlwaysEncryptedComparisonMismatchFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlwaysEncryptedComparisonMismatchRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == AlwaysEncryptedComparisonMismatchKind.LiteralOperand
-            ? $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against a literal value directly - the server cannot compare ciphertext against a plaintext literal; the statement does not compile."
-            : $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - the Always Encrypted state differs between the two operands; the statement does not compile.";
+        var message = finding.Kind switch
+        {
+            AlwaysEncryptedComparisonMismatchKind.LiteralOperand =>
+                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against a literal value directly - the server cannot compare ciphertext against a plaintext literal; the statement does not compile.",
+            AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch =>
+                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - the Always Encrypted state differs between the two operands; the statement does not compile.",
+            AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison =>
+                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) using a range operator (<, >, BETWEEN, ...) - deterministic encryption only supports equality comparisons; the statement does not compile.",
+            AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave =>
+                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - randomized encryption without a secure-enclave-enabled column encryption key does not support this comparison; the statement does not compile.",
+            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled AlwaysEncryptedComparisonMismatchKind."),
+        };
 
         return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }

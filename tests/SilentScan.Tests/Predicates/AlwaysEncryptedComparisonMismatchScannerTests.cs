@@ -7,6 +7,22 @@ namespace SilentScan.Tests.Predicates;
 public sealed class AlwaysEncryptedComparisonMismatchScannerTests
 {
     private const string Ddl = """
+        CREATE COLUMN MASTER KEY Cmk
+        WITH (KEY_STORE_PROVIDER_NAME = 'MSSQL_CERTIFICATE_STORE', KEY_PATH = 'CurrentUser/My/0000000000000000000000000000000000000000');
+        GO
+        CREATE COLUMN MASTER KEY EnclaveCmk
+        WITH (KEY_STORE_PROVIDER_NAME = 'MSSQL_CERTIFICATE_STORE', KEY_PATH = 'CurrentUser/My/1111111111111111111111111111111111111111',
+              ENCLAVE_COMPUTATIONS (SIGNATURE = 0x01020304));
+        GO
+        CREATE COLUMN ENCRYPTION KEY CekA
+        WITH VALUES (COLUMN_MASTER_KEY = Cmk, ALGORITHM = 'RSA_OAEP', ENCRYPTED_VALUE = 0x01000000);
+        GO
+        CREATE COLUMN ENCRYPTION KEY CekB
+        WITH VALUES (COLUMN_MASTER_KEY = Cmk, ALGORITHM = 'RSA_OAEP', ENCRYPTED_VALUE = 0x02000000);
+        GO
+        CREATE COLUMN ENCRYPTION KEY EnclaveCek
+        WITH VALUES (COLUMN_MASTER_KEY = EnclaveCmk, ALGORITHM = 'RSA_OAEP', ENCRYPTED_VALUE = 0x03000000);
+        GO
         CREATE TABLE dbo.Customer
         (
             CustomerId INT NOT NULL PRIMARY KEY,
@@ -18,6 +34,12 @@ public sealed class AlwaysEncryptedComparisonMismatchScannerTests
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = CekB, ENCRYPTION_TYPE = DETERMINISTIC, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             RndA       NVARCHAR(20) COLLATE Latin1_General_BIN2
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = CekA, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
+            RndA2      NVARCHAR(20) COLLATE Latin1_General_BIN2
+                ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = CekA, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
+            RndEncA    NVARCHAR(20) COLLATE Latin1_General_BIN2
+                ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = EnclaveCek, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
+            RndEncA2   NVARCHAR(20) COLLATE Latin1_General_BIN2
+                ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = EnclaveCek, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             PlainName  NVARCHAR(100) NOT NULL
         );
         """;
@@ -94,9 +116,61 @@ public sealed class AlwaysEncryptedComparisonMismatchScannerTests
     }
 
     [Fact]
-    public void GreaterThanOperator_IsNotChecked()
+    public void GreaterThanOperator_DifferentKey_Fires()
     {
-        Assert.Empty(Scan("SELECT * FROM dbo.Customer WHERE DetA > DetB;"));
+        var finding = Assert.Single(Scan("SELECT * FROM dbo.Customer WHERE DetA > DetB;"));
+        Assert.Equal(AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch, finding.Kind);
+    }
+
+    [Fact]
+    public void GreaterThanOperator_DeterministicSameKey_Fires()
+    {
+        var finding = Assert.Single(Scan("SELECT * FROM dbo.Customer WHERE DetA > DetA2;"));
+        Assert.Equal(AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison, finding.Kind);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Customer WHERE DetA < DetA2;")]
+    [InlineData("SELECT * FROM dbo.Customer WHERE DetA >= DetA2;")]
+    [InlineData("SELECT * FROM dbo.Customer WHERE DetA <= DetA2;")]
+    public void RangeOperators_DeterministicSameKey_Fire(string sql)
+    {
+        var finding = Assert.Single(Scan(sql));
+        Assert.Equal(AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison, finding.Kind);
+    }
+
+    [Fact]
+    public void Between_DeterministicSameKey_FiresForBothBounds()
+    {
+        var findings = Scan("SELECT * FROM dbo.Customer WHERE DetA BETWEEN DetA2 AND DetA2;");
+        Assert.Equal(2, findings.Count);
+        Assert.All(findings, f => Assert.Equal(AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison, f.Kind));
+    }
+
+    [Fact]
+    public void RandomizedEqualityWithoutEnclave_Fires()
+    {
+        var finding = Assert.Single(Scan("SELECT * FROM dbo.Customer WHERE RndA = RndA2;"));
+        Assert.Equal(AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave, finding.Kind);
+    }
+
+    [Fact]
+    public void RandomizedRangeWithoutEnclave_Fires()
+    {
+        var finding = Assert.Single(Scan("SELECT * FROM dbo.Customer WHERE RndA > RndA2;"));
+        Assert.Equal(AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave, finding.Kind);
+    }
+
+    [Fact]
+    public void RandomizedEqualityWithEnclave_DoesNotFire()
+    {
+        Assert.Empty(Scan("SELECT * FROM dbo.Customer WHERE RndEncA = RndEncA2;"));
+    }
+
+    [Fact]
+    public void RandomizedRangeWithEnclave_DoesNotFire()
+    {
+        Assert.Empty(Scan("SELECT * FROM dbo.Customer WHERE RndEncA > RndEncA2;"));
     }
 
     [Fact]
