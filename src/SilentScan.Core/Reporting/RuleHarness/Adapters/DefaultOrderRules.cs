@@ -148,6 +148,14 @@ internal sealed class BareTopNoOrderByRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => BareTopNoOrderByScanner.Harvest((BareTopNoOrderByScanner.Rule)moduleRule);
 }
 
+internal sealed class RowLimitOutOfRangeRule : IPerFileRule
+{
+    public string Id => "RowLimitOutOfRangeScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RowLimitOutOfRangeScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RowLimitOutOfRangeScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RowLimitOutOfRangeScanner.Harvest((RowLimitOutOfRangeScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";
