@@ -260,6 +260,14 @@ internal sealed class AlwaysEncryptedAssignmentMismatchRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => AlwaysEncryptedAssignmentMismatchScanner.Harvest((AlwaysEncryptedAssignmentMismatchScanner.Rule)moduleRule);
 }
 
+internal sealed class AlwaysEncryptedComparisonMismatchRule : IPerFileRule
+{
+    public string Id => "AlwaysEncryptedComparisonMismatchScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => AlwaysEncryptedComparisonMismatchScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => AlwaysEncryptedComparisonMismatchScanner.CreateRule(parseResult.SourcePath, context.Catalog);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => AlwaysEncryptedComparisonMismatchScanner.Harvest((AlwaysEncryptedComparisonMismatchScanner.Rule)moduleRule);
+}
+
 internal sealed class RestrictedImplicitAssignmentRule : IPerFileRule
 {
     public string Id => "RestrictedImplicitAssignmentScanner";
