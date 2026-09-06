@@ -18,6 +18,9 @@ public sealed class AlwaysEncryptedAssignmentMismatchOracleTests : OracleTestFix
         CREATE COLUMN ENCRYPTION KEY AeamCek
         WITH VALUES (COLUMN_MASTER_KEY = AeamCmk, ALGORITHM = 'RSA_OAEP', ENCRYPTED_VALUE = 0x01000000);
         GO
+        CREATE COLUMN ENCRYPTION KEY AeamCekAlt
+        WITH VALUES (COLUMN_MASTER_KEY = AeamCmk, ALGORITHM = 'RSA_OAEP', ENCRYPTED_VALUE = 0x02000000);
+        GO
         CREATE TABLE dbo.Customer
         (
             CustomerId INT NOT NULL PRIMARY KEY,
@@ -25,6 +28,8 @@ public sealed class AlwaysEncryptedAssignmentMismatchOracleTests : OracleTestFix
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCek, ENCRYPTION_TYPE = DETERMINISTIC, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             Notes      NVARCHAR(200) COLLATE Latin1_General_BIN2
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCek, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
+            SsnAlt     NVARCHAR(20) COLLATE Latin1_General_BIN2
+                ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCekAlt, ENCRYPTION_TYPE = DETERMINISTIC, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             PlainName  NVARCHAR(100) NOT NULL
         );
         """;
@@ -37,6 +42,8 @@ public sealed class AlwaysEncryptedAssignmentMismatchOracleTests : OracleTestFix
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCek, ENCRYPTION_TYPE = DETERMINISTIC, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             Notes      NVARCHAR(200) COLLATE Latin1_General_BIN2
                 ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCek, ENCRYPTION_TYPE = RANDOMIZED, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
+            SsnAlt     NVARCHAR(20) COLLATE Latin1_General_BIN2
+                ENCRYPTED WITH (COLUMN_ENCRYPTION_KEY = AeamCekAlt, ENCRYPTION_TYPE = DETERMINISTIC, ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256') NOT NULL,
             PlainName  NVARCHAR(100) NOT NULL
         );
         """;
@@ -119,5 +126,18 @@ public sealed class AlwaysEncryptedAssignmentMismatchOracleTests : OracleTestFix
 
         Assert.Null(exception);
         Assert.Empty(Scan("UPDATE dbo.Customer SET Ssn = Ssn WHERE CustomerId = 1;"));
+    }
+
+    [Fact]
+    public async Task UpdateSet_BetweenSameEncryptionTypeButDifferentKey_FailsWithMsg206_AndScannerFlagsIt()
+    {
+        var exception = await ExecuteExpectingFailureAsync("UPDATE dbo.Customer SET Ssn = SsnAlt WHERE CustomerId = 1;");
+
+        Assert.Equal(206, exception.Number);
+
+        var finding = Assert.Single(Scan("UPDATE dbo.Customer SET Ssn = SsnAlt WHERE CustomerId = 1;"));
+        Assert.Equal(AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch, finding.Kind);
+        Assert.Equal("Ssn", finding.TargetColumnName);
+        Assert.Equal("SsnAlt", finding.SourceColumnName);
     }
 }
