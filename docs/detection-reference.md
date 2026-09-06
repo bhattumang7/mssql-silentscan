@@ -2615,3 +2615,18 @@ WITH NATIVE_COMPILATION` module.
   UDF calls is an extreme, unrepresentative edge case. Not modeled; the
   plumbing cost (a new cross-call-site counting pass) isn't justified without
   a real corpus signal that any statement gets remotely close.
+
+* **Query optimizer's internal "Normalize" transformation-rule stage
+  (`CSubRuleNormalize*` in `sqllang`) - closed, no actionable gap.** This is
+  the Cascades-style rule-based rewrite stage distinct from the
+  `CConstraintProp`-based predicate normalize/simplify pass the "Predicate
+  survival" section above already audits. Exactly three rules exist in this
+  stage, each carrying its own pattern description as an embedded string:
+  a `GROUP BY` column elided via functional dependency
+  (`Gb(a,b,c) sum(b) -> Gb(a,b) any(c), sum(b)`), a constant key dropped from
+  an `ORDER BY` under `TOP` (`Top(OrderBy a, const, b) -> Top(OrderBy a, b)`),
+  and adjacent window-function sequence-project merging
+  (`SeqPrj(x0, x1) -> SeqPrj(x0, x2)`). All three are cost-based
+  physical-plan-shape rewrites over an already-bound, already-normalized
+  logical tree; none changes query result semantics, and none intersects any
+  shipped rule's claim. No rescue candidate, no new finding opportunity.
