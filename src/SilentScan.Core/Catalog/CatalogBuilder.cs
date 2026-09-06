@@ -1480,6 +1480,7 @@ public static class CatalogBuilder
             IsPersisted: columnDefinition.IsPersisted,
             EncryptionType: ResolveEncryptionType(columnDefinition.Encryption),
             EnclaveSupport: ResolveEnclaveSupport(columnDefinition.Encryption, context.Catalog),
+            EncryptionKeyName: ResolveEncryptionKeyName(columnDefinition.Encryption),
             IsMasked: columnDefinition.IsMasked,
             MaskingFunctionName: MaskingFunctionNameNormalizer.Normalize(columnDefinition.MaskingFunction?.Value),
             IsGeneratedAlwaysPeriod: columnDefinition.GeneratedAlways is GeneratedAlwaysType.RowStart or GeneratedAlwaysType.RowEnd,
@@ -1492,6 +1493,9 @@ public static class CatalogBuilder
         encryption?.Parameters.OfType<ColumnEncryptionKeyNameParameter>().FirstOrDefault() is { Name: { Value: { } keyName } } && catalog is not null
             ? catalog.ResolveColumnEncryptionKeyEnclaveSupport(keyName)
             : ColumnEncryptionEnclaveSupport.Unknown;
+
+    private static string? ResolveEncryptionKeyName(ColumnEncryptionDefinition? encryption) =>
+        encryption?.Parameters.OfType<ColumnEncryptionKeyNameParameter>().FirstOrDefault()?.Name.Value;
 
     private static ColumnEncryptionType ResolveEncryptionType(ColumnEncryptionDefinition? encryption) =>
         encryption?.Parameters.OfType<ColumnEncryptionTypeParameter>().FirstOrDefault() is { } typeParameter

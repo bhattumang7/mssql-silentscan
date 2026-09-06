@@ -54,12 +54,13 @@ internal static class AlwaysEncryptedAssignmentMismatch
         public static RuleDocContent Content { get; } = new(
             WhyItMatters: """
                 Two Always Encrypted columns are only implicitly compatible when their encryption
-                state matches exactly. Confirmed directly against a real SQL Server instance:
-                assigning one column into another via an `UPDATE`/`MERGE` `SET` clause fails to
-                compile with Msg 206 ("Operand type clash ... is incompatible with ...") whenever
-                their encryption state differs - encrypted vs. plaintext (in either direction), or
-                a different encryption type (deterministic vs. randomized), even when both columns
-                share the same column encryption key.
+                state matches exactly - encryption type and column encryption key both. Confirmed
+                directly against a real SQL Server instance: assigning one column into another via
+                an `UPDATE`/`MERGE` `SET` clause fails to compile with Msg 206 ("Operand type clash
+                ... is incompatible with ...") whenever either differs - encrypted vs. plaintext (in
+                either direction), a different encryption type (deterministic vs. randomized), or
+                the same encryption type but a different column encryption key, even though both
+                columns' declared types otherwise match exactly.
 
                 Scoped to column-to-column assignments where both the target and the source resolve
                 to a statically known base column (through the query's own scope, including joins
@@ -89,6 +90,21 @@ internal static class AlwaysEncryptedAssignmentMismatch
                         SET SsnRandomized = @decryptedSsn;
                         """,
                     CompliantExplanation: "The client decrypts the source value and re-encrypts it for the target column's own encryption type before the statement reaches the server."),
+                new RuleDocExample(
+                    Title: "Copying between same-type columns under different keys never compiles either",
+                    NoncompliantSql: """
+                        UPDATE dbo.Customer
+                        SET Ssn = SsnFromLegacyKey;
+                        """,
+                    NoncompliantExplanation: "Ssn and SsnFromLegacyKey are both deterministic, but each uses its own column encryption key - this UPDATE fails to compile with Msg 206 every time it runs.",
+                    CompliantSql: """
+                        -- from an Always Encrypted-enabled client connection:
+                        -- read SsnFromLegacyKey (client decrypts it), then write it back
+                        -- as a parameter (client re-encrypts it under Ssn's own key)
+                        UPDATE dbo.Customer
+                        SET Ssn = @decryptedSsn;
+                        """,
+                    CompliantExplanation: "The client decrypts the source value and re-encrypts it under the target column's own key before the statement reaches the server."),
             ]);
     }
 }
