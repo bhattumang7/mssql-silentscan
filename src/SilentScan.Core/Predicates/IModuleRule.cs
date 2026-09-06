@@ -300,6 +300,10 @@ public interface IModuleRule
     {
     }
 
+    void OnEnterTableSampleClause(TableSampleClause node, ModuleWalker walker)
+    {
+    }
+
     void OnEnterSelectScalarExpression(SelectScalarExpression node, ModuleWalker walker)
     {
     }

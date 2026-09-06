@@ -691,6 +691,13 @@ public sealed class ModuleWalker : TSqlFragmentVisitor
         base.ExplicitVisit(node);
     }
 
+    public sealed override void ExplicitVisit(TableSampleClause node)
+    {
+        Dispatch(rule => rule.OnEnterTableSampleClause(node, this));
+
+        base.ExplicitVisit(node);
+    }
+
     public sealed override void ExplicitVisit(SelectScalarExpression node)
     {
         Dispatch(rule => rule.OnEnterSelectScalarExpression(node, this));

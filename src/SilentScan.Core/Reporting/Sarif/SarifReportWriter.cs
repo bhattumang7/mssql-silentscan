@@ -156,6 +156,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TryCastComputedColumnPredicateFinding>("TryCastComputedColumnPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
+        results.AddRange(report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
@@ -1665,6 +1666,22 @@ public static class SarifReportWriter
         var message = finding.Kind == AlwaysEncryptedAssignmentMismatchKind.LiteralSource
             ? $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned a literal value directly - the server cannot encrypt a plaintext literal without a column-encryption-aware client; the statement does not compile."
             : $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned from '{finding.SourceTableQualifiedName}.{finding.SourceColumnName}' ({finding.SourceEncryptionTypeDisplay}) - the Always Encrypted state differs between source and target; the statement does not compile.";
+
+        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
+    }
+
+    private static SarifResult ToResult(RowLimitOutOfRangeFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RowLimitOutOfRangeRuleId(finding.Kind), finding.Confidence);
+        var message = finding.Kind switch
+        {
+            RowLimitOutOfRangeKind.TopRowCountNegative => $"TOP ({finding.LiteralValueDisplay}) is a negative literal row count - the statement does not compile.",
+            RowLimitOutOfRangeKind.OffsetNegative => $"OFFSET {finding.LiteralValueDisplay} ROWS is a negative literal - the statement does not compile.",
+            RowLimitOutOfRangeKind.FetchNotPositive => $"FETCH NEXT {finding.LiteralValueDisplay} ROWS ONLY must be greater than zero - the statement does not compile.",
+            RowLimitOutOfRangeKind.TableSamplePercentOutOfRange => $"TABLESAMPLE ({finding.LiteralValueDisplay} PERCENT) is outside the valid 0-100 range - the statement does not compile.",
+            RowLimitOutOfRangeKind.TableSampleRowsNotPositive => $"TABLESAMPLE ({finding.LiteralValueDisplay} ROWS) must be greater than zero - the statement does not compile.",
+            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled RowLimitOutOfRangeKind."),
+        };
 
         return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
