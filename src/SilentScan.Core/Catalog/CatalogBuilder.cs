@@ -1215,6 +1215,7 @@ public static class CatalogBuilder
                 return;
             }
 
+            var (ignoreDupKey, allowRowLocks, allowPageLocks, optimizeForSequentialKey) = ResolveIndexStateOptions(createIndex.IndexOptions);
             var index = new CatalogIndex(
                 createIndex.Name?.Value,
                 CatalogIndexKind.Index,
@@ -1222,7 +1223,11 @@ public static class CatalogBuilder
                 [.. createIndex.Columns.Select(ColumnName)],
                 [.. createIndex.IncludeColumns.Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)],
                 IsFiltered: createIndex.FilterPredicate is not null,
-                IsClustered: createIndex.Clustered == true);
+                IsClustered: createIndex.Clustered == true,
+                IgnoreDupKey: ignoreDupKey,
+                AllowRowLocks: allowRowLocks,
+                AllowPageLocks: allowPageLocks,
+                OptimizeForSequentialKey: optimizeForSequentialKey);
 
             catalog.AddOrReplace(existing with { Indexes = [.. existing.Indexes, index] }, writeScope);
         }
@@ -1363,13 +1368,18 @@ public static class CatalogBuilder
 
             foreach (var constraint in tableConstraints.OfType<UniqueConstraintDefinition>())
             {
+                var (ignoreDupKey, allowRowLocks, allowPageLocks, optimizeForSequentialKey) = ResolveIndexStateOptions(constraint.IndexOptions);
                 indexes.Add(new CatalogIndex(
                     constraint.ConstraintIdentifier?.Value,
                     constraint.IsPrimaryKey ? CatalogIndexKind.PrimaryKey : CatalogIndexKind.UniqueConstraint,
                     IsUnique: true,
                     [.. constraint.Columns.Select(ColumnName)],
                     IncludedColumns: [],
-                    IsClustered: constraint.Clustered ?? constraint.IsPrimaryKey));
+                    IsClustered: constraint.Clustered ?? constraint.IsPrimaryKey,
+                    IgnoreDupKey: ignoreDupKey,
+                    AllowRowLocks: allowRowLocks,
+                    AllowPageLocks: allowPageLocks,
+                    OptimizeForSequentialKey: optimizeForSequentialKey));
             }
 
             return indexes;
@@ -1541,13 +1551,18 @@ public static class CatalogBuilder
                     isNullable = nullable.Nullable;
                     break;
                 case UniqueConstraintDefinition unique:
+                    var (ignoreDupKey, allowRowLocks, allowPageLocks, optimizeForSequentialKey) = ResolveIndexStateOptions(unique.IndexOptions);
                     inlineIndexes.Add(new CatalogIndex(
                         unique.ConstraintIdentifier?.Value,
                         unique.IsPrimaryKey ? CatalogIndexKind.PrimaryKey : CatalogIndexKind.UniqueConstraint,
                         IsUnique: true,
                         unique.Columns.Count > 0 ? [.. unique.Columns.Select(ColumnName)] : [columnName],
                         IncludedColumns: [],
-                        IsClustered: unique.Clustered ?? unique.IsPrimaryKey));
+                        IsClustered: unique.Clustered ?? unique.IsPrimaryKey,
+                        IgnoreDupKey: ignoreDupKey,
+                        AllowRowLocks: allowRowLocks,
+                        AllowPageLocks: allowPageLocks,
+                        OptimizeForSequentialKey: optimizeForSequentialKey));
 
                     if (unique.IsPrimaryKey)
                     {
@@ -1564,16 +1579,35 @@ public static class CatalogBuilder
     private static bool IsColumnstoreIndexType(IndexType? indexType) =>
         indexType?.IndexTypeKind is IndexTypeKind.ClusteredColumnStore or IndexTypeKind.NonClusteredColumnStore;
 
-    private static CatalogIndex BuildInlineIndex(IndexDefinition inlineIndex, string columnName) => new(
-        inlineIndex.Name?.Value,
-        CatalogIndexKind.Index,
-        inlineIndex.Unique,
-        inlineIndex.Columns.Count > 0 ? [.. inlineIndex.Columns.Select(ColumnName)] : [columnName],
-        [.. inlineIndex.IncludeColumns.Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)],
-        IsFiltered: inlineIndex.FilterPredicate is not null,
-        IsColumnstore: IsColumnstoreIndexType(inlineIndex.IndexType),
-        IsClustered: inlineIndex.IndexType?.IndexTypeKind == IndexTypeKind.ClusteredColumnStore);
+    private static CatalogIndex BuildInlineIndex(IndexDefinition inlineIndex, string columnName)
+    {
+        var (ignoreDupKey, allowRowLocks, allowPageLocks, optimizeForSequentialKey) = ResolveIndexStateOptions(inlineIndex.IndexOptions);
+        return new(
+            inlineIndex.Name?.Value,
+            CatalogIndexKind.Index,
+            inlineIndex.Unique,
+            inlineIndex.Columns.Count > 0 ? [.. inlineIndex.Columns.Select(ColumnName)] : [columnName],
+            [.. inlineIndex.IncludeColumns.Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)],
+            IsFiltered: inlineIndex.FilterPredicate is not null,
+            IsColumnstore: IsColumnstoreIndexType(inlineIndex.IndexType),
+            IsClustered: inlineIndex.IndexType?.IndexTypeKind == IndexTypeKind.ClusteredColumnStore,
+            IgnoreDupKey: ignoreDupKey,
+            AllowRowLocks: allowRowLocks,
+            AllowPageLocks: allowPageLocks,
+            OptimizeForSequentialKey: optimizeForSequentialKey);
+    }
 
     private static string ColumnName(ColumnWithSortOrder columnWithSortOrder) =>
         columnWithSortOrder.Column.MultiPartIdentifier.Identifiers[^1].Value;
+
+    private static bool IsIndexStateOptionOn(IList<IndexOption> indexOptions, IndexOptionKind kind, bool defaultValue) =>
+        indexOptions.OfType<IndexStateOption>().LastOrDefault(o => o.OptionKind == kind) is { } option
+            ? option.OptionState == OptionState.On
+            : defaultValue;
+
+    private static (bool IgnoreDupKey, bool AllowRowLocks, bool AllowPageLocks, bool OptimizeForSequentialKey) ResolveIndexStateOptions(IList<IndexOption> indexOptions) => (
+        IsIndexStateOptionOn(indexOptions, IndexOptionKind.IgnoreDupKey, defaultValue: false),
+        IsIndexStateOptionOn(indexOptions, IndexOptionKind.AllowRowLocks, defaultValue: true),
+        IsIndexStateOptionOn(indexOptions, IndexOptionKind.AllowPageLocks, defaultValue: true),
+        IsIndexStateOptionOn(indexOptions, IndexOptionKind.OptimizeForSequentialKey, defaultValue: false));
 }

@@ -2164,4 +2164,72 @@ public sealed class CatalogBuilderTests
         Assert.True(table.FindColumn("Bt")!.IsComputedNonDeterministic);
     }
 
+    [Fact]
+    public void Build_CreateIndexWithStateOptions_CapturesEachOption()
+    {
+        var catalog = BuildFrom("""
+            CREATE TABLE dbo.T (Id INT NOT NULL, A INT NOT NULL);
+            CREATE UNIQUE INDEX IX_T_A ON dbo.T(A) WITH (IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = OFF, ALLOW_PAGE_LOCKS = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = ON);
+            """);
+
+        var index = catalog.Find("dbo.T")!.Indexes.Single(i => i.Name == "IX_T_A");
+
+        Assert.True(index.IgnoreDupKey);
+        Assert.False(index.AllowRowLocks);
+        Assert.False(index.AllowPageLocks);
+        Assert.True(index.OptimizeForSequentialKey);
+    }
+
+    [Fact]
+    public void Build_CreateIndexWithoutOptions_KeepsDefaultIndexState()
+    {
+        var catalog = BuildFrom("""
+            CREATE TABLE dbo.T (Id INT NOT NULL, A INT NOT NULL);
+            CREATE INDEX IX_T_A ON dbo.T(A);
+            """);
+
+        var index = catalog.Find("dbo.T")!.Indexes.Single(i => i.Name == "IX_T_A");
+
+        Assert.False(index.IgnoreDupKey);
+        Assert.True(index.AllowRowLocks);
+        Assert.True(index.AllowPageLocks);
+        Assert.False(index.OptimizeForSequentialKey);
+    }
+
+    [Fact]
+    public void Build_TableLevelInlineIndexWithStateOptions_CapturesEachOption()
+    {
+        var catalog = BuildFrom("""
+            CREATE TABLE dbo.T
+            (
+                Id INT NOT NULL,
+                A  INT NOT NULL,
+                INDEX IX_T_A UNIQUE (A) WITH (IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = OFF)
+            );
+            """);
+
+        var index = catalog.Find("dbo.T")!.Indexes.Single(i => i.Name == "IX_T_A");
+
+        Assert.True(index.IgnoreDupKey);
+        Assert.False(index.AllowRowLocks);
+    }
+
+    [Fact]
+    public void Build_UniqueConstraintWithStateOptions_CapturesEachOption()
+    {
+        var catalog = BuildFrom("""
+            CREATE TABLE dbo.T
+            (
+                Id INT NOT NULL,
+                A  INT NOT NULL,
+                CONSTRAINT UX_T_A UNIQUE (A) WITH (IGNORE_DUP_KEY = ON, ALLOW_PAGE_LOCKS = OFF)
+            );
+            """);
+
+        var index = catalog.Find("dbo.T")!.Indexes.Single(i => i.Name == "UX_T_A");
+
+        Assert.True(index.IgnoreDupKey);
+        Assert.False(index.AllowPageLocks);
+    }
+
 }
