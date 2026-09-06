@@ -375,6 +375,62 @@ public sealed class ExpressionTypeInferencerTests
         Assert.False(result.LengthKnown);
     }
 
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_VarbinaryVersusChar_WinningCategoryPromotedToVariableLength()
+    {
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["VarbinaryCol"] = new SqlType(SqlTypeCategory.VarBinary, Length: 5),
+            ["CharCol"] = new SqlType(SqlTypeCategory.Char, Length: 3),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN VarbinaryCol ELSE CharCol END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.VarChar, result!.Category);
+    }
+
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_VarbinaryVersusNChar_WinningCategoryPromotedToVariableLength()
+    {
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["VarbinaryCol"] = new SqlType(SqlTypeCategory.VarBinary, Length: 5),
+            ["NCharCol"] = new SqlType(SqlTypeCategory.NChar, Length: 2),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN VarbinaryCol ELSE NCharCol END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.NVarChar, result!.Category);
+    }
+
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_VarcharVersusNChar_WinningCategoryPromotedToVariableLength()
+    {
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["VarcharCol2"] = new SqlType(SqlTypeCategory.VarChar, Length: 4),
+            ["NCharCol"] = new SqlType(SqlTypeCategory.NChar, Length: 2),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN VarcharCol2 ELSE NCharCol END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.NVarChar, result!.Category);
+    }
+
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_BinaryVersusChar_BothFixedLength_NoPromotionNeeded()
+    {
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["BinaryCol"] = new SqlType(SqlTypeCategory.Binary, Length: 2),
+            ["CharCol"] = new SqlType(SqlTypeCategory.Char, Length: 3),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN BinaryCol ELSE CharCol END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.Char, result!.Category);
+    }
+
     private static SqlType Decimal(int precision, int scale) => new(SqlTypeCategory.Decimal, Precision: precision, Scale: scale);
 
     [Theory]
