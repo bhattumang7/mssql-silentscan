@@ -8,6 +8,9 @@ public enum MemoryOptimizedUnsupportedIndexOptionKind
     ClusteredIndex,
     IncludedColumns,
     FilteredIndex,
+    IgnoreDupKey,
+    RowOrPageLockingOption,
+    OptimizeForSequentialKey,
 }
 
 public sealed record MemoryOptimizedUnsupportedIndexOptionFinding(

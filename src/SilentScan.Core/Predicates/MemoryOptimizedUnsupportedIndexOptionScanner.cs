@@ -59,5 +59,26 @@ public static class MemoryOptimizedUnsupportedIndexOptionScanner
                 table.QualifiedName, indexName, MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex,
                 table.SourcePath, table.SourceLine);
         }
+
+        if (index.IgnoreDupKey)
+        {
+            yield return new MemoryOptimizedUnsupportedIndexOptionFinding(
+                table.QualifiedName, indexName, MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey,
+                table.SourcePath, table.SourceLine);
+        }
+
+        if (!index.AllowRowLocks || !index.AllowPageLocks)
+        {
+            yield return new MemoryOptimizedUnsupportedIndexOptionFinding(
+                table.QualifiedName, indexName, MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption,
+                table.SourcePath, table.SourceLine);
+        }
+
+        if (index.OptimizeForSequentialKey)
+        {
+            yield return new MemoryOptimizedUnsupportedIndexOptionFinding(
+                table.QualifiedName, indexName, MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey,
+                table.SourcePath, table.SourceLine);
+        }
     }
 }

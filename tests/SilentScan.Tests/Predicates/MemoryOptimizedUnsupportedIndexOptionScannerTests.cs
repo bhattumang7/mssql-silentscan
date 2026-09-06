@@ -100,6 +100,69 @@ public sealed class MemoryOptimizedUnsupportedIndexOptionScannerTests
     }
 
     [Fact]
+    public void IgnoreDupKey_OnMemoryOptimizedTable_Fires()
+    {
+        var findings = Scan(
+            """
+            CREATE TABLE dbo.Widgets (
+                Id INT NOT NULL PRIMARY KEY NONCLUSTERED,
+                Code VARCHAR(20) NOT NULL,
+                INDEX IX_Code UNIQUE NONCLUSTERED (Code) WITH (IGNORE_DUP_KEY = ON)
+            ) WITH (MEMORY_OPTIMIZED = ON);
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey, finding.Kind);
+    }
+
+    [Fact]
+    public void RowLocksDisabled_OnMemoryOptimizedTable_Fires()
+    {
+        var findings = Scan(
+            """
+            CREATE TABLE dbo.Widgets (
+                Id INT NOT NULL PRIMARY KEY NONCLUSTERED,
+                Amount INT NULL,
+                INDEX IX_Amount NONCLUSTERED (Amount) WITH (ALLOW_ROW_LOCKS = OFF)
+            ) WITH (MEMORY_OPTIMIZED = ON);
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption, finding.Kind);
+    }
+
+    [Fact]
+    public void OptimizeForSequentialKey_OnMemoryOptimizedTable_Fires()
+    {
+        var findings = Scan(
+            """
+            CREATE TABLE dbo.Widgets (
+                Id INT NOT NULL PRIMARY KEY NONCLUSTERED,
+                Amount INT NULL,
+                INDEX IX_Amount NONCLUSTERED (Amount) WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON)
+            ) WITH (MEMORY_OPTIMIZED = ON);
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey, finding.Kind);
+    }
+
+    [Fact]
+    public void IgnoreDupKey_OnOrdinaryTable_NeverFires()
+    {
+        var findings = Scan(
+            """
+            CREATE TABLE dbo.Widgets (
+                Id INT NOT NULL PRIMARY KEY,
+                Code VARCHAR(20) NOT NULL,
+                INDEX IX_Code UNIQUE NONCLUSTERED (Code) WITH (IGNORE_DUP_KEY = ON)
+            );
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
     public void ClusteredRowstoreIndex_OnOrdinaryTable_NeverFires()
     {
         var catalog = new DatabaseCatalog();
