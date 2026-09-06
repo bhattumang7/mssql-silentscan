@@ -2164,6 +2164,72 @@ public sealed class CatalogBuilderTests
         Assert.True(table.FindColumn("Bt")!.IsComputedNonDeterministic);
     }
 
+    [Theory]
+    [InlineData("{fn WEEK(D)}")]
+    [InlineData("{fn DAYOFWEEK(D)}")]
+    [InlineData("{fn MONTHNAME(D)}")]
+    [InlineData("{fn DAYNAME(D)}")]
+    public void Build_ComputedColumnWithOdbcDateFunction_IsFlaggedNonDeterministic(string odbcCall)
+    {
+        var catalog = BuildFrom($$"""
+            CREATE TABLE dbo.T
+            (
+                Id INT NOT NULL PRIMARY KEY,
+                D  DATETIME NOT NULL,
+                Wk AS ({{odbcCall}})
+            );
+            """);
+
+        var table = catalog.Find("dbo.T")!;
+
+        Assert.True(table.FindColumn("Wk")!.IsComputedNonDeterministic);
+    }
+
+    [Theory]
+    [InlineData("{fn HOUR(D)}")]
+    [InlineData("{fn MINUTE(D)}")]
+    [InlineData("{fn SECOND(D)}")]
+    [InlineData("{fn DAYOFMONTH(D)}")]
+    [InlineData("{fn DAYOFYEAR(D)}")]
+    [InlineData("{fn QUARTER(D)}")]
+    public void Build_ComputedColumnWithDeterministicOdbcDateFunction_IsNotFlaggedNonDeterministic(string odbcCall)
+    {
+        var catalog = BuildFrom($$"""
+            CREATE TABLE dbo.T
+            (
+                Id INT NOT NULL PRIMARY KEY,
+                D  DATETIME NOT NULL,
+                Hr AS ({{odbcCall}})
+            );
+            """);
+
+        var table = catalog.Find("dbo.T")!;
+
+        Assert.False(table.FindColumn("Hr")!.IsComputedNonDeterministic);
+    }
+
+    [Theory]
+    [InlineData("{fn CURDATE()}")]
+    [InlineData("{fn CURTIME()}")]
+    [InlineData("{fn NOW()}")]
+    [InlineData("{fn USER()}")]
+    [InlineData("{fn DATABASE()}")]
+    [InlineData("{fn RAND()}")]
+    public void Build_ComputedColumnWithOdbcParameterlessNonDeterministicFunction_IsFlaggedNonDeterministic(string odbcCall)
+    {
+        var catalog = BuildFrom($$"""
+            CREATE TABLE dbo.T
+            (
+                Id INT NOT NULL PRIMARY KEY,
+                Nw AS ({{odbcCall}})
+            );
+            """);
+
+        var table = catalog.Find("dbo.T")!;
+
+        Assert.True(table.FindColumn("Nw")!.IsComputedNonDeterministic);
+    }
+
     [Fact]
     public void Build_CreateIndexWithStateOptions_CapturesEachOption()
     {
