@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Always Encrypted Comparison State Mismatch - SilentScan rules</title>
+<title>Always Encrypted Comparison Randomized Without Enclave - SilentScan rules</title>
 <style>
 :root {
   color-scheme: light dark;
@@ -86,22 +86,22 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <body>
 <main>
   <a class="back-link" href="../rules.html">&larr; All rules</a>
-  <h1>Always Encrypted Comparison State Mismatch</h1>
-  <p class="rule-key"><code>silentscan/predicates/always-encrypted-comparison-state-mismatch</code></p>
+  <h1>Always Encrypted Comparison Randomized Without Enclave</h1>
+  <p class="rule-key"><code>silentscan/predicates/always-encrypted-comparison-randomized-without-enclave</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">Two columns are compared (=, &lt;&gt;, !=, &lt;, &gt;, &lt;=, &gt;=, BETWEEN) whose Always Encrypted state differs - encrypted-vs-plaintext, a different encryption type (deterministic vs. randomized), or the same encryption type but a different column encryption key - oracle-confirmed (Msg 402/33277: &quot;incompatible ... operator&quot;/&quot;Encryption scheme mismatch&quot;) the statement never compiles regardless of which side is which. Two matching deterministic columns compared with = or &lt;&gt; are exempt - that comparison is genuinely supported (subject to the range-operator and randomized-without-enclave restrictions covered by this rule&#x27;s sibling rules). Catalog-only structural fact - both columns&#x27; Always Encrypted status, including which column encryption key each uses, are DDL-time facts; only comparisons where both sides resolve to a statically known base column are checked.</p>
-  <p class="rationale">Two Always Encrypted columns are only comparable when their encryption state matches exactly - encryption type and column encryption key both. Confirmed directly against a real SQL Server instance: comparing two columns with `=`, `&lt;&gt;`, `!=`, `&lt;`, `&gt;`, `&lt;=`, `&gt;=`, or `BETWEEN` fails to compile whenever either differs - encrypted vs. plaintext (in either direction), a different encryption type (deterministic vs. randomized), or the same encryption type but a different column encryption key - even though both columns&#x27; declared types otherwise match exactly. Two columns that share the same encryption type and key are not flagged by this rule (they may still be flagged by this rule&#x27;s sibling rules, which cover the deterministic-range and randomized-without-enclave restrictions that apply even when the encryption state itself matches).</p>
-  <p class="rationale">Scoped to comparisons where both operands resolve to a statically known base column (through the query&#x27;s own scope, including joins and aliases) - an expression, function call, or parameter/variable operand is never flagged, since its actual encrypted origin is not statically decidable for those shapes. `LIKE` is not covered by this rule family - pattern matching against ciphertext has its own, separate restrictions this rule does not model.</p>
+  <p class="rationale">Two columns sharing the same randomized encryption and column encryption key are compared (with any operator, including = and &lt;&gt;) where the column encryption key&#x27;s backing column master key does not declare ENCLAVE_COMPUTATIONS - oracle-confirmed (Msg 33277: &quot;Encryption scheme mismatch&quot;) the statement never compiles, since randomized ciphertext for the same plaintext differs on every encryption and needs a secure enclave to compare. Declaring ENCLAVE_COMPUTATIONS on the column master key (oracle-confirmed via its compile-time metadata alone, independent of whether a real enclave is provisioned) lifts this restriction for both equality and range comparisons on randomized columns - that case is not flagged. Only flagged when the column master key DDL is visible and confirms no ENCLAVE_COMPUTATIONS declaration; an unresolvable column encryption key is not flagged, to avoid a false positive.</p>
+  <p class="rationale">Randomized encryption produces different ciphertext for the same plaintext on every encryption, so comparing two randomized columns - even with `=` and even when they share the exact same column encryption key - needs a secure enclave to decrypt and compare server-side. Confirmed directly against a real SQL Server instance: comparing two matching randomized columns fails to compile (&quot;Encryption scheme mismatch&quot;) when their column master key does not declare `ENCLAVE_COMPUTATIONS`; declaring it lifts the restriction for both equality and range comparisons on randomized columns (confirmed via the column master key&#x27;s compile-time metadata alone, independent of whether a real enclave is provisioned).</p>
+  <p class="rationale">Only flagged when the column master key backing the comparison is itself visible to the scan and its DDL confirms no `ENCLAVE_COMPUTATIONS` declaration - an unresolvable column encryption key (for example, defined in a script outside this scan) is never flagged, to avoid a false positive on a key that might actually be enclave-enabled.</p>
   <h2>How can I fix it?</h2>
-  <p class="rationale">Route the value through an Always Encrypted-enabled client - decrypt it and compare, or re-encrypt it to the other column&#x27;s own key and algorithm - instead of comparing the encrypted values directly server-side.</p>
-  <h3>Comparing differently-encrypted columns never compiles</h3>
+  <p class="rationale">Route the value through an Always Encrypted-enabled client - decrypt both sides and compare - instead of comparing the encrypted values directly server-side, or provision a secure-enclave-enabled column master key for both columns.</p>
+  <h3>Comparing matching randomized columns without an enclave never compiles</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>SELECT * FROM dbo.Customer WHERE SsnRandomized = SsnDeterministic;</code></pre></div>
-  <p class="example-explanation">SsnRandomized and SsnDeterministic use different encryption types - this WHERE clause fails to compile every time it runs, regardless of which side is which.</p>
+  <div class="fires-block"><pre><code>SELECT * FROM dbo.Customer WHERE Notes = ArchivedNotes;</code></pre></div>
+  <p class="example-explanation">Notes and ArchivedNotes share the same randomized encryption and key, but their column master key has no ENCLAVE_COMPUTATIONS declared - this WHERE clause fails to compile every time it runs.</p>
   <p class="example-label clean-label">Compliant solution</p>
-  <div class="clean-block"><pre><code>-- from an Always Encrypted-enabled client connection:&#xA;-- read and decrypt SsnDeterministic client-side, then compare&#xA;SELECT * FROM dbo.Customer WHERE SsnRandomized = @decryptedSsn;</code></pre></div>
-  <p class="example-explanation">The client decrypts the source value and re-encrypts it to match SsnRandomized&#x27;s own encryption type before the statement reaches the server.</p>
+  <div class="clean-block"><pre><code>-- from an Always Encrypted-enabled client connection:&#xA;-- decrypt both values client-side, then compare&#xA;SELECT * FROM dbo.Customer WHERE @decryptedNotes = @decryptedArchivedNotes;</code></pre></div>
+  <p class="example-explanation">The client decrypts both values and compares them in plaintext before the statement reaches the server.</p>
   <footer>
     Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
   </footer>

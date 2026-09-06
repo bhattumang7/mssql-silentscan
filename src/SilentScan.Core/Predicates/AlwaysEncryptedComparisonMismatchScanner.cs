@@ -33,34 +33,88 @@ public static class AlwaysEncryptedComparisonMismatchScanner
 
         public void OnEnterBooleanComparisonExpressionScope(BooleanComparisonExpression node, ModuleWalker walker)
         {
-            if (node.ComparisonType is not (BooleanComparisonType.Equals
-                or BooleanComparisonType.NotEqualToBrackets
-                or BooleanComparisonType.NotEqualToExclamation))
+            if (!TryClassify(node.ComparisonType, out var isEquality))
             {
                 return;
             }
 
             var scopeChain = walker.CurrentScopeChain();
-            Inspect(node.FirstExpression, node.SecondExpression, scopeChain, node);
+            Inspect(node.FirstExpression, node.SecondExpression, isEquality, scopeChain, node);
         }
 
-        private void Inspect(ScalarExpression first, ScalarExpression second, ScopeChain scopeChain, TSqlFragment location)
+        public void OnBooleanTernaryExpression(BooleanTernaryExpression node, ModuleWalker walker)
+        {
+            if (node.TernaryExpressionType is not (BooleanTernaryExpressionType.Between or BooleanTernaryExpressionType.NotBetween))
+            {
+                return;
+            }
+
+            var scopeChain = walker.CurrentScopeChain();
+            Inspect(node.FirstExpression, node.SecondExpression, isEquality: false, scopeChain, node);
+            Inspect(node.FirstExpression, node.ThirdExpression, isEquality: false, scopeChain, node);
+        }
+
+        private static bool TryClassify(BooleanComparisonType comparisonType, out bool isEquality)
+        {
+            switch (comparisonType)
+            {
+                case BooleanComparisonType.Equals:
+                case BooleanComparisonType.NotEqualToBrackets:
+                case BooleanComparisonType.NotEqualToExclamation:
+                case BooleanComparisonType.IsDistinctFrom:
+                case BooleanComparisonType.IsNotDistinctFrom:
+                    isEquality = true;
+                    return true;
+
+                case BooleanComparisonType.GreaterThan:
+                case BooleanComparisonType.LessThan:
+                case BooleanComparisonType.GreaterThanOrEqualTo:
+                case BooleanComparisonType.LessThanOrEqualTo:
+                case BooleanComparisonType.NotLessThan:
+                case BooleanComparisonType.NotGreaterThan:
+                    isEquality = false;
+                    return true;
+
+                default:
+                    isEquality = false;
+                    return false;
+            }
+        }
+
+        private void Inspect(ScalarExpression first, ScalarExpression second, bool isEquality, ScopeChain scopeChain, TSqlFragment location)
         {
             var firstResolved = ResolveColumn(first, scopeChain);
             var secondResolved = ResolveColumn(second, scopeChain);
 
             if (firstResolved is { } fc && secondResolved is { } sc)
             {
-                if (fc.Column.EncryptionType == Catalog.ColumnEncryptionType.None && sc.Column.EncryptionType == Catalog.ColumnEncryptionType.None)
-                {
-                    return;
-                }
+                InspectColumnPair(fc, sc, isEquality, location);
+                return;
+            }
 
-                if (!AlwaysEncryptedCompatibility.IsMismatch(fc.Column, sc.Column, catalog.IdentifierComparer))
-                {
-                    return;
-                }
+            if (firstResolved is { Column.EncryptionType: not Catalog.ColumnEncryptionType.None } encryptedFirst && IsNonNullLiteral(second))
+            {
+                AddLiteralFinding(encryptedFirst, location);
+            }
+            else if (secondResolved is { Column.EncryptionType: not Catalog.ColumnEncryptionType.None } encryptedSecond && IsNonNullLiteral(first))
+            {
+                AddLiteralFinding(encryptedSecond, location);
+            }
+        }
 
+        private void InspectColumnPair(
+            (ColumnProvenance.BaseColumn Reference, CatalogColumn Column) fc,
+            (ColumnProvenance.BaseColumn Reference, CatalogColumn Column) sc,
+            bool isEquality,
+            TSqlFragment location)
+        {
+            if (fc.Column.EncryptionType == Catalog.ColumnEncryptionType.None && sc.Column.EncryptionType == Catalog.ColumnEncryptionType.None)
+            {
+                return;
+            }
+
+            if (AlwaysEncryptedCompatibility.IsMismatch(fc.Column, sc.Column, catalog.IdentifierComparer))
+            {
                 Findings.Add(new AlwaysEncryptedComparisonMismatchFinding(
                     AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch,
                     fc.Reference.TableQualifiedName,
@@ -75,15 +129,35 @@ public static class AlwaysEncryptedComparisonMismatchScanner
                 return;
             }
 
-            if (firstResolved is { Column.EncryptionType: not Catalog.ColumnEncryptionType.None } encryptedFirst && IsNonNullLiteral(second))
+            if (!isEquality && fc.Column.EncryptionType == Catalog.ColumnEncryptionType.Deterministic)
             {
-                AddLiteralFinding(encryptedFirst, location);
+                AddSameProfileFinding(AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison, fc, sc, location);
+                return;
             }
-            else if (secondResolved is { Column.EncryptionType: not Catalog.ColumnEncryptionType.None } encryptedSecond && IsNonNullLiteral(first))
+
+            if (fc.Column.EncryptionType == Catalog.ColumnEncryptionType.Randomized
+                && fc.Column.EnclaveSupport == ColumnEncryptionEnclaveSupport.Disabled)
             {
-                AddLiteralFinding(encryptedSecond, location);
+                AddSameProfileFinding(AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave, fc, sc, location);
             }
         }
+
+        private void AddSameProfileFinding(
+            AlwaysEncryptedComparisonMismatchKind kind,
+            (ColumnProvenance.BaseColumn Reference, CatalogColumn Column) fc,
+            (ColumnProvenance.BaseColumn Reference, CatalogColumn Column) sc,
+            TSqlFragment location) =>
+            Findings.Add(new AlwaysEncryptedComparisonMismatchFinding(
+                kind,
+                fc.Reference.TableQualifiedName,
+                fc.Reference.ColumnName,
+                AlwaysEncryptedCompatibility.FormatDisplay(fc.Column),
+                sc.Reference.TableQualifiedName,
+                sc.Reference.ColumnName,
+                AlwaysEncryptedCompatibility.FormatDisplay(sc.Column),
+                sourcePath,
+                location.StartLine,
+                location.StartColumn));
 
         private void AddLiteralFinding((ColumnProvenance.BaseColumn Reference, CatalogColumn Column) encrypted, TSqlFragment location) =>
             Findings.Add(new AlwaysEncryptedComparisonMismatchFinding(
