@@ -34,6 +34,7 @@ public static class LiteralComparisonFolder
         NullLiteral => null,
         IntegerLiteral integer when decimal.TryParse(integer.Value, out var value) => value,
         NumericLiteral numeric when decimal.TryParse(numeric.Value, out var value) => value,
+        ParenthesisExpression parenthesis => TryFoldToNumeric(parenthesis.Expression),
         BinaryExpression binary => TryFoldArithmetic(binary),
         UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative } unary =>
             TryFoldToNumeric(unary.Expression) is { } negated ? -negated : null,

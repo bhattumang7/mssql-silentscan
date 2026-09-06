@@ -24,6 +24,7 @@ public static class RuleRegistry
         new TruncateSwallowedRule(),
         new CatchAllPredicateRule(),
         new BareTopNoOrderByRule(),
+        new RowLimitOutOfRangeRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),

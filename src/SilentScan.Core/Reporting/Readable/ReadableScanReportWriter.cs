@@ -214,6 +214,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TryCastComputedColumnPredicate(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
+        blocks.AddRange(RowLimitOutOfRange(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -314,6 +315,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
         AddCount(counts, "Always Encrypted ORDER BY", report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Count);
         AddCount(counts, "Always Encrypted assignment mismatch", report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Count);
+        AddCount(counts, "TOP/OFFSET/FETCH/TABLESAMPLE literal out of range", report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count);
         AddCount(counts, "sql_variant/xml assignment", report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count);
         AddCount(counts, "REVERT cookie type mismatch", report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count);
         AddCount(counts, "FOR XML EXPLICIT with inline XSD", report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Count);
@@ -2927,6 +2929,26 @@ public static class ReadableScanReportWriter
             [.. report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> RowLimitOutOfRange(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"TOP/OFFSET/FETCH/TABLESAMPLE literal out of range ({report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A TOP, OFFSET, FETCH, or TABLESAMPLE clause is given a literal constant outside the range the engine accepts - a negative row count, a PERCENT value outside 0-100, or a FETCH/TABLESAMPLE ROWS count that isn't strictly positive. The statement does not compile.");
+
+        yield return new ReadableBlock.Table(
+            [WhereHeader, DetailHeader],
+            [.. report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                RuleDocSite.Url(SarifRuleCatalog.RowLimitOutOfRangeRuleId(f.Kind)),
             })]);
     }
 

@@ -72,6 +72,15 @@ public static class FindingRuleIds
         AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch => "silentscan/predicates/always-encrypted-assignment-state-mismatch",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedAssignmentMismatchKind."),
     };
+    public static string RowLimitOutOfRangeRuleId(RowLimitOutOfRangeKind kind) => kind switch
+    {
+        RowLimitOutOfRangeKind.TopRowCountNegative => "silentscan/predicates/top-row-count-negative",
+        RowLimitOutOfRangeKind.OffsetNegative => "silentscan/predicates/offset-negative",
+        RowLimitOutOfRangeKind.FetchNotPositive => "silentscan/predicates/fetch-not-positive",
+        RowLimitOutOfRangeKind.TableSamplePercentOutOfRange => "silentscan/predicates/tablesample-percent-out-of-range",
+        RowLimitOutOfRangeKind.TableSampleRowsNotPositive => "silentscan/predicates/tablesample-rows-not-positive",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled RowLimitOutOfRangeKind."),
+    };
     public const string RestrictedImplicitAssignmentRuleId = "silentscan/predicates/restricted-implicit-assignment";
     public const string RevertCookieTypeMismatchRuleId = "silentscan/predicates/revert-cookie-type-mismatch";
     public const string ForXmlExplicitInlineXsdRuleId = "silentscan/predicates/for-xml-explicit-inline-xsd";
