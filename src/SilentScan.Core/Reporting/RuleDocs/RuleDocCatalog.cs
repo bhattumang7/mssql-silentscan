@@ -149,6 +149,8 @@ public static class RuleDocCatalog
         [Predicates.AlwaysEncryptedOrderBy.RuleId] = Predicates.AlwaysEncryptedOrderBy.Content,
         [Predicates.AlwaysEncryptedAssignmentMismatch.LiteralSource.RuleId] = Predicates.AlwaysEncryptedAssignmentMismatch.LiteralSource.Content,
         [Predicates.AlwaysEncryptedAssignmentMismatch.EncryptionStateMismatch.RuleId] = Predicates.AlwaysEncryptedAssignmentMismatch.EncryptionStateMismatch.Content,
+        [Predicates.AlwaysEncryptedComparisonMismatch.LiteralOperand.RuleId] = Predicates.AlwaysEncryptedComparisonMismatch.LiteralOperand.Content,
+        [Predicates.AlwaysEncryptedComparisonMismatch.EncryptionStateMismatch.RuleId] = Predicates.AlwaysEncryptedComparisonMismatch.EncryptionStateMismatch.Content,
         [Predicates.RowLimitOutOfRange.TopRowCountNegative.RuleId] = Predicates.RowLimitOutOfRange.TopRowCountNegative.Content,
         [Predicates.RowLimitOutOfRange.OffsetNegative.RuleId] = Predicates.RowLimitOutOfRange.OffsetNegative.Content,
         [Predicates.RowLimitOutOfRange.FetchNotPositive.RuleId] = Predicates.RowLimitOutOfRange.FetchNotPositive.Content,

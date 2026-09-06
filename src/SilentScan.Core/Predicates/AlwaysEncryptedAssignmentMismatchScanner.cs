@@ -121,7 +121,7 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
             if (BaseColumnResolver.ResolveBaseColumn(sourceExpression, sourcePath, scopeChain, catalog) is { } source)
             {
                 if (catalog.Find(source.TableQualifiedName)?.FindColumn(source.ColumnName, catalog.IdentifierComparer) is not { } sourceColumn
-                    || !IsEncryptionMismatch(targetColumn, sourceColumn))
+                    || !Catalog.AlwaysEncryptedCompatibility.IsMismatch(targetColumn, sourceColumn, catalog.IdentifierComparer))
                 {
                     return;
                 }
@@ -130,10 +130,10 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
                     AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch,
                     target.TableQualifiedName,
                     target.ColumnName,
-                    FormatEncryptionDisplay(targetColumn),
+                    Catalog.AlwaysEncryptedCompatibility.FormatDisplay(targetColumn),
                     source.TableQualifiedName,
                     source.ColumnName,
-                    FormatEncryptionDisplay(sourceColumn),
+                    Catalog.AlwaysEncryptedCompatibility.FormatDisplay(sourceColumn),
                     sourcePath,
                     location.StartLine,
                     location.StartColumn));
@@ -154,22 +154,6 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
                     location.StartLine,
                     location.StartColumn));
             }
-        }
-
-        private static string FormatEncryptionDisplay(CatalogColumn column) =>
-            column.EncryptionKeyName is { } keyName
-                ? $"{column.EncryptionType} key {keyName}"
-                : column.EncryptionType.ToString();
-
-        private bool IsEncryptionMismatch(CatalogColumn target, CatalogColumn source)
-        {
-            if (target.EncryptionType != source.EncryptionType)
-            {
-                return true;
-            }
-
-            return target.EncryptionType != Catalog.ColumnEncryptionType.None
-                && !catalog.IdentifierComparer.Equals(target.EncryptionKeyName, source.EncryptionKeyName);
         }
 
         private static bool IsNonNullLiteral(ScalarExpression expression) =>

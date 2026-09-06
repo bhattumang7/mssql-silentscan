@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">379 rules. 290 carry fix guidance; 46 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">381 rules. 292 carry fix guidance; 46 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -479,6 +479,8 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <ul class="rule-list">
       <li><a class="id" href="rules/predicates-always-encrypted-assignment-literal-source.html">Always Encrypted Assignment Literal Source</a> <code class="rule-key">silentscan/predicates/always-encrypted-assignment-literal-source</code><span class="snippet">A non-NULL literal is assigned (via INSERT .</span></li>
       <li><a class="id" href="rules/predicates-always-encrypted-assignment-state-mismatch.html">Always Encrypted Assignment State Mismatch</a> <code class="rule-key">silentscan/predicates/always-encrypted-assignment-state-mismatch</code><span class="snippet">A column is assigned (via an UPDATE/MERGE SET clause) from another column whose Always Encrypted state differs.</span></li>
+      <li><a class="id" href="rules/predicates-always-encrypted-comparison-literal-operand.html">Always Encrypted Comparison Literal Operand</a> <code class="rule-key">silentscan/predicates/always-encrypted-comparison-literal-operand</code><span class="snippet">An Always Encrypted column is compared (=, &lt;&gt;, !=) against a non-NULL literal directly.</span></li>
+      <li><a class="id" href="rules/predicates-always-encrypted-comparison-state-mismatch.html">Always Encrypted Comparison State Mismatch</a> <code class="rule-key">silentscan/predicates/always-encrypted-comparison-state-mismatch</code><span class="snippet">Two columns are compared (=, &lt;&gt;, !=) whose Always Encrypted state differs.</span></li>
       <li><a class="id" href="rules/predicates-always-encrypted-order-by.html">Always Encrypted Order By</a> <code class="rule-key">silentscan/predicates/always-encrypted-order-by</code><span class="snippet">An ORDER BY clause references an Always Encrypted column.</span></li>
       <li><a class="id" href="rules/predicates-ansi-padding-mismatch.html">ANSI Padding Mismatch</a> <code class="rule-key">silentscan/predicates/ansi-padding-mismatch</code><span class="snippet">A LIKE predicate compares a non-ANSI-padded varchar/varbinary column against a literal pattern with significant trailing whitespace.</span></li>
       <li><a class="id" href="rules/predicates-catch-all-parameter.html">Catch All Parameter</a> <code class="rule-key">silentscan/predicates/catch-all-parameter</code><span class="snippet">A predicate of the shape (Col = @p OR @p IS NULL).</span></li>
