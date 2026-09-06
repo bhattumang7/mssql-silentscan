@@ -1260,6 +1260,9 @@ public static class ReadableScanReportWriter
         MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex => "Rowstore CLUSTERED index",
         MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns => "INCLUDE columns",
         MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex => "Filtered index (WHERE clause)",
+        MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey => "IGNORE_DUP_KEY",
+        MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption => "ALLOW_ROW_LOCKS/ALLOW_PAGE_LOCKS",
+        MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey => "OPTIMIZE_FOR_SEQUENTIAL_KEY",
         _ => "Unsupported index option",
     };
 

@@ -605,6 +605,9 @@ public static class SarifReportWriter
             MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' is a rowstore CLUSTERED index - not supported on a memory-optimized table (Msg 12317), so the statement does not deploy.",
             MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' declares INCLUDE columns - not supported on a memory-optimized table (Msg 10664), so the statement does not deploy.",
             MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' is a filtered index (WHERE clause) - not supported on a memory-optimized table (Msg 10794), so the statement does not deploy.",
+            MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' is declared WITH (IGNORE_DUP_KEY = ON) - not supported on a memory-optimized table (Msg 10794), so the statement does not deploy.",
+            MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' has ALLOW_ROW_LOCKS or ALLOW_PAGE_LOCKS set to OFF - not supported on a memory-optimized table (Msg 10794), so the statement does not deploy.",
+            MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' is declared WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON) - not supported on a memory-optimized table (Msg 10794), so the statement does not deploy.",
             _ => $"Index '{finding.IndexName}' on memory-optimized table '{finding.TableQualifiedName}' uses an unsupported index option.",
         };
 

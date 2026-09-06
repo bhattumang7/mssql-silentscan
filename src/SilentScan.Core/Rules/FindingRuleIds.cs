@@ -155,6 +155,9 @@ public static class FindingRuleIds
         MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex => "silentscan/catalog/memory-optimized-clustered-index",
         MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns => "silentscan/catalog/memory-optimized-index-included-columns",
         MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex => "silentscan/catalog/memory-optimized-filtered-index",
+        MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey => "silentscan/catalog/memory-optimized-index-ignore-dup-key",
+        MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption => "silentscan/catalog/memory-optimized-index-row-or-page-locking-option",
+        MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey => "silentscan/catalog/memory-optimized-index-optimize-for-sequential-key",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled MemoryOptimizedUnsupportedIndexOptionKind."),
     };
     public static string MemoryOptimizedForeignKeyRuleId(MemoryOptimizedForeignKeyFindingKind kind) => kind switch
