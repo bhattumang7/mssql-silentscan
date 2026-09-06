@@ -173,6 +173,55 @@ public sealed class NativelyCompiledUnsupportedBuiltinScannerTests
         Assert.Equal(expectedFunctionName, finding.FunctionName);
     }
 
+    [Theory]
+    [InlineData("INT", "HAS_DBACCESS(N'a')", "HAS_DBACCESS")]
+    [InlineData("VARCHAR(10)", "HOST_ID()", "HOST_ID")]
+    [InlineData("SYSNAME", "HOST_NAME()", "HOST_NAME")]
+    [InlineData("SYSNAME", "PROGRAM_NAME()", "PROGRAM_NAME")]
+    [InlineData("BIGINT", "CURRENT_TRANSACTION_ID()", "CURRENT_TRANSACTION_ID")]
+    [InlineData("SMALLINT", "XACT_STATE()", "XACT_STATE")]
+    [InlineData("INT", "GETANSINULL()", "GETANSINULL")]
+    [InlineData("NVARCHAR(30)", "DATENAME(month, SYSDATETIME())", "DATENAME")]
+    [InlineData("SYSNAME", "INDEX_COL(N'a', 1, 1)", "INDEX_COL")]
+    [InlineData("NVARCHAR(MAX)", "OBJECT_DEFINITION(1)", "OBJECT_DEFINITION")]
+    [InlineData("SYSNAME", "OBJECT_SCHEMA_NAME(1)", "OBJECT_SCHEMA_NAME")]
+    [InlineData("SYSNAME", "ORIGINAL_DB_NAME()", "ORIGINAL_DB_NAME")]
+    [InlineData("NVARCHAR(255)", "DEFAULT_DOMAIN()", "DEFAULT_DOMAIN")]
+    [InlineData("VARCHAR(32)", "APPLOCK_MODE(N'a', N'a')", "APPLOCK_MODE")]
+    [InlineData("INT", "APPLOCK_TEST(N'a', N'a', N'a', N'a')", "APPLOCK_TEST")]
+    [InlineData("VARBINARY(MAX)", "PWDENCRYPT(N'a')", "PWDENCRYPT")]
+    [InlineData("INT", "PWDCOMPARE(N'a', 0x00)", "PWDCOMPARE")]
+    [InlineData("UNIQUEIDENTIFIER", "KEY_GUID(N'a')", "KEY_GUID")]
+    [InlineData("INT", "KEY_ID(N'a')", "KEY_ID")]
+    [InlineData("SYSNAME", "KEY_NAME(1)", "KEY_NAME")]
+    [InlineData("BIGINT", "CHANGE_TRACKING_CURRENT_VERSION()", "CHANGE_TRACKING_CURRENT_VERSION")]
+    [InlineData("BIGINT", "CHANGE_TRACKING_MIN_VALID_VERSION(1)", "CHANGE_TRACKING_MIN_VALID_VERSION")]
+    [InlineData("INT", "ASYMKEY_ID(N'a')", "ASYMKEY_ID")]
+    [InlineData("INT", "COLUMNPROPERTY(1, N'a', N'a')", "COLUMNPROPERTY")]
+    [InlineData("INT", "FILEPROPERTY(N'a', N'a')", "FILEPROPERTY")]
+    [InlineData("INT", "TYPEPROPERTY(N'a', N'a')", "TYPEPROPERTY")]
+    [InlineData("INT", "DATABASEPROPERTY(N'a', N'a')", "DATABASEPROPERTY")]
+    [InlineData("SYSNAME", "CURRENT_TIMEZONE_ID()", "CURRENT_TIMEZONE_ID")]
+    [InlineData("NUMERIC(38,0)", "IDENT_INCR(N'a')", "IDENT_INCR")]
+    [InlineData("NUMERIC(38,0)", "IDENT_SEED(N'a')", "IDENT_SEED")]
+    [InlineData("INT", "CURRENT_REQUEST_ID()", "CURRENT_REQUEST_ID")]
+    [InlineData("FLOAT", "VECTOR_DISTANCE(N'cosine', CAST('[1,2]' AS VECTOR(2)), CAST('[1,2]' AS VECTOR(2)))", "VECTOR_DISTANCE")]
+    [InlineData("FLOAT", "VECTOR_NORM(CAST('[1,2]' AS VECTOR(2)), N'norm2')", "VECTOR_NORM")]
+    public void MoreUnsupportedFunctions_InNativelyCompiledProcedure_Fire(string variableType, string expression, string expectedFunctionName)
+    {
+        var findings = Scan(
+            $"""
+            CREATE PROCEDURE dbo.NormalizeCode
+            WITH NATIVE_COMPILATION, SCHEMABINDING
+            AS
+            BEGIN ATOMIC WITH (TRANSACTION ISOLATION LEVEL = SNAPSHOT, LANGUAGE = N'us_english')
+                DECLARE @x {variableType} = {expression};
+            END;
+            """);
+
+        Assert.Contains(findings, f => f.FunctionName == expectedFunctionName);
+    }
+
     [Fact]
     public void MultipleUnsupportedCalls_AllFire()
     {
