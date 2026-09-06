@@ -85,6 +85,8 @@ public static class FindingRuleIds
     {
         AlwaysEncryptedComparisonMismatchKind.LiteralOperand => "silentscan/predicates/always-encrypted-comparison-literal-operand",
         AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch => "silentscan/predicates/always-encrypted-comparison-state-mismatch",
+        AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison => "silentscan/predicates/always-encrypted-comparison-deterministic-range",
+        AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave => "silentscan/predicates/always-encrypted-comparison-randomized-without-enclave",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedComparisonMismatchKind."),
     };
     public const string RestrictedImplicitAssignmentRuleId = "silentscan/predicates/restricted-implicit-assignment";

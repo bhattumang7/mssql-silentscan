@@ -2010,7 +2010,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Always Encrypted comparison mismatch ({report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "An Always Encrypted column is compared (=, <>, !=) against a plaintext literal, or against a column whose encryption state differs (encrypted vs. plaintext, a different encryption type, or the same type under a different column encryption key) - the statement does not compile, regardless of which side holds which value.");
+            "An Always Encrypted column is compared against a plaintext literal, against a column whose encryption state differs (encrypted vs. plaintext, a different encryption type, or the same type under a different column encryption key), against a matching deterministic column using a range operator (<, >, BETWEEN, ...) - deterministic encryption only supports equality - or against a matching randomized column without a secure-enclave-enabled column encryption key. The statement does not compile in any of these cases, regardless of which side holds which value.");
 
         yield return new ReadableBlock.Table(
             [WhereHeader, "First operand", SourceHeader, DetailHeader],

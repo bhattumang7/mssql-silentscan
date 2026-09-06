@@ -7,6 +7,8 @@ public enum AlwaysEncryptedComparisonMismatchKind
 {
     LiteralOperand,
     EncryptionStateMismatch,
+    DeterministicRangeComparison,
+    RandomizedWithoutEnclave,
 }
 
 public sealed record AlwaysEncryptedComparisonMismatchFinding(
