@@ -226,20 +226,38 @@ public static class ExpressionTypeInferencer
         }
 
         var winner = left.Category > right.Category ? left : right;
+        var loser = ReferenceEquals(winner, left) ? right : left;
+        var winnerCategory = IsFixedLengthStringOrBinary(winner.Category) && IsVariableLengthStringOrBinary(loser.Category)
+            ? VariableLengthCounterpart(winner.Category)
+            : winner.Category;
+
         if (!winner.IsStringFamily)
         {
-            return new SqlType(winner.Category);
+            return new SqlType(winnerCategory);
         }
 
-        var loser = ReferenceEquals(winner, left) ? right : left;
         if (loser.IsStringFamily && IsAmbiguousCollationConflict(left.Collation, right.Collation))
         {
             return null;
         }
 
         var collation = loser.IsStringFamily ? DominantCollation(left.Collation, right.Collation) : winner.Collation;
-        return new SqlType(winner.Category, Collation: collation, LengthKnown: false);
+        return new SqlType(winnerCategory, Collation: collation, LengthKnown: false);
     }
+
+    private static bool IsFixedLengthStringOrBinary(SqlTypeCategory category) =>
+        category is SqlTypeCategory.Binary or SqlTypeCategory.Char or SqlTypeCategory.NChar;
+
+    private static bool IsVariableLengthStringOrBinary(SqlTypeCategory category) =>
+        category is SqlTypeCategory.VarBinary or SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar;
+
+    private static SqlTypeCategory VariableLengthCounterpart(SqlTypeCategory category) => category switch
+    {
+        SqlTypeCategory.Binary => SqlTypeCategory.VarBinary,
+        SqlTypeCategory.Char => SqlTypeCategory.VarChar,
+        SqlTypeCategory.NChar => SqlTypeCategory.NVarChar,
+        _ => category,
+    };
 
     private static SqlType? CombineSameCategoryStrings(SqlType left, SqlType right)
     {

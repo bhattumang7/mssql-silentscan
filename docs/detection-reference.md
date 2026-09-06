@@ -28,6 +28,26 @@ confirmed independently of any one tool's output.
   (`VarChar` > `Char`, `NVarChar` > `NChar`, `VarBinary` > `Binary`) and
   exactly what `ExpressionTypeInferencer.Combine` already implements.
 
+- **The fixed/variable-length promotion isn't limited to the three
+  same-family pairs above - it also applies across families, and this half
+  was missing.** Oracle-confirmed (Docker SQL Server 2025, real columns and
+  a non-foldable `CASE` condition so the constant-folding behavior above
+  doesn't mask the merge): `varbinary` vs. `char` merges to `varchar`, not
+  `char`; `varbinary` vs. `nchar` merges to `nvarchar`, not `nchar`; `varchar`
+  vs. `nchar` merges to `nvarchar`, not `nchar` - in every case, whichever
+  side wins by precedence gets promoted to its variable-length counterpart
+  whenever the *other*, losing side is itself variable-length, even though
+  the two sides aren't the same char/binary family. `binary` vs. `char`
+  (both fixed) correctly stays `char` - no promotion when neither side is
+  variable. `ExpressionTypeInferencer.Combine` previously picked the
+  higher-precedence operand's category verbatim with no cross-family
+  promotion check, so it under-shot to the fixed-length category for these
+  three pairs specifically - the length itself was already correctly left
+  unknown (`LengthKnown: false`) for any cross-category string merge, so
+  this was a category-only gap, not a length one. Fixed by promoting the
+  winning category to its variable-length counterpart whenever the losing
+  side is one of `VarBinary`/`VarChar`/`NVarChar`.
+
 - **Collation coercibility for CASE/dominant-type merging has exactly three
   tiers, and a column's own DDL-level `COLLATE` clause carries the *same*
   tier as a column that merely inherits the database's default collation -
