@@ -2630,3 +2630,26 @@ WITH NATIVE_COMPILATION` module.
   physical-plan-shape rewrites over an already-bound, already-normalized
   logical tree; none changes query result semantics, and none intersects any
   shipped rule's claim. No rescue candidate, no new finding opportunity.
+
+* **Full Cascades exploration/implementation rule catalogue (every
+  `CSubRule*`/`CExpRule*` in `sqllang`, ~300 names surveyed) - closed as a
+  class, one exception already covered elsewhere.** These are the
+  cost-based search rules that generate alternative *equivalent* logical/
+  physical shapes for the optimizer to cost against each other - join
+  commute/associate/exchange, semijoin/apply conversions, group-by
+  push-below/pull-above-join placement, star-join and spatial-join
+  strategies, remote/distributed query shaping, and similar. None of them
+  eliminate or rewrite a predicate's own truth-condition the way the
+  `CConstraintProp`-based normalize/simplify pass does - a rule that pushes
+  an *additional*, engine-derived implied predicate down to enable an index
+  path elsewhere (e.g. an implied `IS NOT NULL`) doesn't retroactively make
+  the query's own predicate, as the user wrote it, sargable; it adds a
+  separate condition the engine can additionally exploit, which is not what
+  any shipped "this predicate forces a scan" claim is about. The sole rule
+  in the entire catalogue that rewrites a predicate's own content -
+  `Sel(X, p) -> Sel(X, Normalized(p))` / `JoinPredNorm`'s join-condition
+  equivalent - is exactly the mechanism the "Predicate survival" section
+  above already audits shape-by-shape (`CConstraintProp` is this
+  normalization's actual home; these two Cascades rules are just its
+  call site during exploration, not a second, independent normalizer to
+  re-audit). No further rescue candidate found across the class.
