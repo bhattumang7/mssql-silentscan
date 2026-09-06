@@ -186,6 +186,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
         blocks.AddRange(AlwaysEncryptedOrderBy(report, headingLevel, pathBase));
         blocks.AddRange(AlwaysEncryptedAssignmentMismatch(report, headingLevel, pathBase));
+        blocks.AddRange(AlwaysEncryptedComparisonMismatch(report, headingLevel, pathBase));
         blocks.AddRange(RestrictedImplicitAssignment(report, headingLevel, pathBase));
         blocks.AddRange(RevertCookieTypeMismatch(report, headingLevel, pathBase));
         blocks.AddRange(ForXmlExplicitInlineXsd(report, headingLevel, pathBase));
@@ -315,6 +316,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
         AddCount(counts, "Always Encrypted ORDER BY", report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Count);
         AddCount(counts, "Always Encrypted assignment mismatch", report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Count);
+        AddCount(counts, "Always Encrypted comparison mismatch", report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count);
         AddCount(counts, "TOP/OFFSET/FETCH/TABLESAMPLE literal out of range", report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count);
         AddCount(counts, "sql_variant/xml assignment", report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count);
         AddCount(counts, "REVERT cookie type mismatch", report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count);
@@ -1996,6 +1998,30 @@ public static class ReadableScanReportWriter
                     ? "a literal value"
                     : $"{f.SourceTableQualifiedName}.{f.SourceColumnName} ({f.SourceEncryptionTypeDisplay})",
                 RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedAssignmentMismatchRuleId(f.Kind)),
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> AlwaysEncryptedComparisonMismatch(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"Always Encrypted comparison mismatch ({report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "An Always Encrypted column is compared (=, <>, !=) against a plaintext literal, or against a column whose encryption state differs (encrypted vs. plaintext, a different encryption type, or the same type under a different column encryption key) - the statement does not compile, regardless of which side holds which value.");
+
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "First operand", SourceHeader, DetailHeader],
+            [.. report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                $"{f.FirstTableQualifiedName}.{f.FirstColumnName} ({f.FirstEncryptionTypeDisplay})",
+                f.Kind == AlwaysEncryptedComparisonMismatchKind.LiteralOperand
+                    ? "a literal value"
+                    : $"{f.SecondTableQualifiedName}.{f.SecondColumnName} ({f.SecondEncryptionTypeDisplay})",
+                RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedComparisonMismatchRuleId(f.Kind)),
             })]);
     }
 

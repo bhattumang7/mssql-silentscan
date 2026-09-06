@@ -81,6 +81,12 @@ public static class FindingRuleIds
         RowLimitOutOfRangeKind.TableSampleRowsNotPositive => "silentscan/predicates/tablesample-rows-not-positive",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled RowLimitOutOfRangeKind."),
     };
+    public static string AlwaysEncryptedComparisonMismatchRuleId(AlwaysEncryptedComparisonMismatchKind kind) => kind switch
+    {
+        AlwaysEncryptedComparisonMismatchKind.LiteralOperand => "silentscan/predicates/always-encrypted-comparison-literal-operand",
+        AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch => "silentscan/predicates/always-encrypted-comparison-state-mismatch",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedComparisonMismatchKind."),
+    };
     public const string RestrictedImplicitAssignmentRuleId = "silentscan/predicates/restricted-implicit-assignment";
     public const string RevertCookieTypeMismatchRuleId = "silentscan/predicates/revert-cookie-type-mismatch";
     public const string ForXmlExplicitInlineXsdRuleId = "silentscan/predicates/for-xml-explicit-inline-xsd";

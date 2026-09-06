@@ -124,6 +124,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
         results.AddRange(report.Find<AlwaysEncryptedOrderByFinding>("AlwaysEncryptedOrderByScanner").Select(ToResult));
         results.AddRange(report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Select(ToResult));
+        results.AddRange(report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Select(ToResult));
         results.AddRange(report.Find<RestrictedImplicitAssignmentFinding>("RestrictedImplicitAssignmentScanner").Select(ToResult));
         results.AddRange(report.Find<RevertCookieTypeMismatchFinding>("RevertCookieTypeMismatchScanner").Select(ToResult));
         results.AddRange(report.Find<ForXmlExplicitInlineXsdFinding>("ForXmlExplicitInlineXsdScanner").Select(ToResult));
@@ -1666,6 +1667,16 @@ public static class SarifReportWriter
         var message = finding.Kind == AlwaysEncryptedAssignmentMismatchKind.LiteralSource
             ? $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned a literal value directly - the server cannot encrypt a plaintext literal without a column-encryption-aware client; the statement does not compile."
             : $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned from '{finding.SourceTableQualifiedName}.{finding.SourceColumnName}' ({finding.SourceEncryptionTypeDisplay}) - the Always Encrypted state differs between source and target; the statement does not compile.";
+
+        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
+    }
+
+    private static SarifResult ToResult(AlwaysEncryptedComparisonMismatchFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlwaysEncryptedComparisonMismatchRuleId(finding.Kind), finding.Confidence);
+        var message = finding.Kind == AlwaysEncryptedComparisonMismatchKind.LiteralOperand
+            ? $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against a literal value directly - the server cannot compare ciphertext against a plaintext literal; the statement does not compile."
+            : $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - the Always Encrypted state differs between the two operands; the statement does not compile.";
 
         return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }

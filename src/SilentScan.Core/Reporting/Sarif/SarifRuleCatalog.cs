@@ -49,6 +49,7 @@ public static class SarifRuleCatalog
     public const string XmlSchemaCollectionMismatchRuleId = FindingRuleIds.XmlSchemaCollectionMismatchRuleId;
     public static string AlwaysEncryptedAssignmentMismatchRuleId(AlwaysEncryptedAssignmentMismatchKind kind) => FindingRuleIds.AlwaysEncryptedAssignmentMismatchRuleId(kind);
     public static string RowLimitOutOfRangeRuleId(RowLimitOutOfRangeKind kind) => FindingRuleIds.RowLimitOutOfRangeRuleId(kind);
+    public static string AlwaysEncryptedComparisonMismatchRuleId(AlwaysEncryptedComparisonMismatchKind kind) => FindingRuleIds.AlwaysEncryptedComparisonMismatchRuleId(kind);
     public static string SelectiveXmlIndexValueColumnRuleId(SelectiveXmlIndexValueColumnFindingKind kind) => FindingRuleIds.SelectiveXmlIndexValueColumnRuleId(kind);
     public static string SemanticSearchRuleId(SemanticSearchFindingKind kind) => FindingRuleIds.SemanticSearchRuleId(kind);
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => FindingRuleIds.DynamicDataMaskingRuleId(kind);
