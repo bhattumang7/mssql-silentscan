@@ -34,8 +34,6 @@ public enum DeprecatedSyntaxFindingKind
     LegacyLobStatement,
 
     LegacyLobFunction,
-
-    LegacyLobLocalVariable,
 }
 
 public sealed record DeprecatedSyntaxFinding(

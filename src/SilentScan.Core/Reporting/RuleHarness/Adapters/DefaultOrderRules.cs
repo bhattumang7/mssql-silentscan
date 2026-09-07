@@ -164,14 +164,6 @@ internal sealed class FloatOrderDependentAggregateRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FloatOrderDependentAggregateScanner.Harvest((FloatOrderDependentAggregateScanner.Rule)moduleRule);
 }
 
-internal sealed class VectorLiteralConversionRule : IPerFileRule
-{
-    public string Id => "VectorLiteralConversionScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => VectorLiteralConversionScanner.Scan(parseResult, context.Catalog);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => VectorLiteralConversionScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => VectorLiteralConversionScanner.Harvest((VectorLiteralConversionScanner.Rule)moduleRule);
-}
-
 internal sealed class ExecuteAtLargeObjectParameterRule : IPerFileRule
 {
     public string Id => "ExecuteAtLargeObjectParameterScanner";

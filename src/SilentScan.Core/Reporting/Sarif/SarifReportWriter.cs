@@ -48,7 +48,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<JsonIndexRewriteFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Select(ToResult));
-        results.AddRange(report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner)).Select(ToResult));
         results.AddRange(report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
@@ -398,16 +397,6 @@ public static class SarifReportWriter
             : $"'{finding.TableQualifiedName}.{finding.ColumnName}' is declared {finding.TypeDisplay} - MAX-typed columns can never be an index key column, so no predicate/join on it can ever seek.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
-    private static SarifResult ToResult(VectorLiteralConversionFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.VectorLiteralConversionRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == VectorLiteralConversionFindingKind.ElementCountMismatch
-            ? $"String literal '{finding.LiteralText}' converted to {finding.TargetTypeDisplay} has {finding.ActualElementCount} element(s), not {finding.DeclaredDimensions} - the vector dimensions do not match; the conversion fails at execution (Msg 42204)."
-            : $"String literal '{finding.LiteralText}' converted to {finding.TargetTypeDisplay} contains a {finding.ElementKind} element - the JSON array must contain only numbers; the conversion fails at execution (Msg 13670).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
     private static SarifResult ToResult(MemoryOptimizedSchemaOnlyDurabilityFinding finding)

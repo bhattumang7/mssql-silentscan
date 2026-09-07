@@ -55,12 +55,6 @@ public static class FindingRuleIds
         AlterColumnSafetyKind.TemporalOffsetDropped => "silentscan/catalog/alter-column-temporal-offset-dropped",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlterColumnSafetyKind."),
     };
-    public static string VectorLiteralConversionRuleId(VectorLiteralConversionFindingKind kind) => kind switch
-    {
-        VectorLiteralConversionFindingKind.NonNumericJsonElement => "silentscan/predicates/vector-literal-non-numeric-element",
-        VectorLiteralConversionFindingKind.ElementCountMismatch => "silentscan/predicates/vector-literal-dimension-mismatch",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled VectorLiteralConversionFindingKind."),
-    };
     public static string ExecuteAtLargeObjectParameterRuleId(ExecuteAtLargeObjectParameterFindingKind kind) => kind switch
     {
         ExecuteAtLargeObjectParameterFindingKind.CrashesSession => "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
@@ -156,7 +150,6 @@ public static class FindingRuleIds
     public const string DeprecatedSyntaxDeprecatedSetRowcountRuleId = "silentscan/deprecated-syntax/deprecated-set-rowcount";
     public const string DeprecatedSyntaxLegacyLobStatementRuleId = "silentscan/deprecated-syntax/legacy-lob-statement";
     public const string DeprecatedSyntaxLegacyLobFunctionRuleId = "silentscan/deprecated-syntax/legacy-lob-function";
-    public const string DeprecatedSyntaxLegacyLobLocalVariableRuleId = "silentscan/deprecated-syntax/legacy-lob-local-variable";
     public const string StatementShapeInsertWithoutColumnListRuleId = "silentscan/statement-shape/insert-without-column-list";
     public const string StatementShapeOrdinalOrderByRuleId = "silentscan/statement-shape/ordinal-order-by";
     public const string StatementShapeTableWithNoPrimaryKeyRuleId = "silentscan/statement-shape/table-with-no-primary-key";
@@ -449,7 +442,6 @@ public static class FindingRuleIds
         DeprecatedSyntaxFindingKind.DeprecatedSetRowcount => DeprecatedSyntaxDeprecatedSetRowcountRuleId,
         DeprecatedSyntaxFindingKind.LegacyLobStatement => DeprecatedSyntaxLegacyLobStatementRuleId,
         DeprecatedSyntaxFindingKind.LegacyLobFunction => DeprecatedSyntaxLegacyLobFunctionRuleId,
-        DeprecatedSyntaxFindingKind.LegacyLobLocalVariable => DeprecatedSyntaxLegacyLobLocalVariableRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled DeprecatedSyntaxFindingKind."),
     };
     public static string StatementShapeRuleId(StatementShapeFindingKind kind) => kind switch
