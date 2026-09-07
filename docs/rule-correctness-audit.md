@@ -101,12 +101,12 @@ correctness bugs found; 0 remain open below.
   cursors → no-parallel cursor), including the negative cases
   (`@@ROWCOUNT`, `SCOPE_IDENTITY()`, `LOCAL STATIC FORWARD_ONLY READ_ONLY`,
   a no-option cursor, a `DYNAMIC` cursor) correctly never firing.
-- `IndexHintScanner` — existing oracle tests already confirm Msg 308
-  (nonexistent hinted index) and the seek→scan degradation for an unbound
-  hinted-index leading column; independently confirmed the
-  "referenced anywhere" column collector correctly resolves correlated
-  references inside a subquery, so a leading-key column bound only in a
-  correlated subquery doesn't cause a false positive.
+- `IndexHintScanner` — existing oracle tests already confirm the seek→scan
+  degradation for an unbound hinted-index leading column; independently
+  confirmed the "referenced anywhere" column collector correctly resolves
+  correlated references inside a subquery, so a leading-key column bound
+  only in a correlated subquery doesn't cause a false positive. The sibling
+  nonexistent-hinted-index check was removed as a pure hard-error rule.
 - `MaxTypedColumnScanner` — live-verified the two differentiated claims:
   `VARCHAR(MAX)` is allowed as an INCLUDE column but rejected as a key
   column (Msg 1919), while legacy `TEXT`/`NTEXT`/`IMAGE` is rejected even
@@ -261,38 +261,15 @@ statement — is uncontroversial syntax, not a claim needing verification).
   the FK `DistinctBy(ConstraintName)` (absent for check constraints) is
   correct given `sys.foreign_key_columns`' per-column-pair row shape versus
   check constraints' non-duplicated one.
-- `WindowFunctionArgumentScanner` — `LAG`/`LEAD` negative-offset detection
-  and `PERCENTILE_CONT`/`PERCENTILE_DISC` out-of-range detection match Msg
-  8730/8727 semantics; the shared literal-folding logic correctly handles
-  unary-minus and arithmetic forms; the `[0,1]` inclusive boundary check is
-  correct at both endpoints.
-- `AlwaysEncryptedComparisonMismatchScanner` — re-audited after the range/
-  enclave extension; the `DeterministicRangeComparison` gate's own rule doc
-  already records the oracle finding that `ENCLAVE_COMPUTATIONS` on the
-  column master key does not lift the range-operator restriction for
-  deterministic columns, matching the scanner's unconditional check; the
-  `RandomizedWithoutEnclave` enclave-support gate, the equality-vs-range
-  classification, and the literal/None-vs-None exclusions all check out.
-- `AlwaysEncryptedAssignmentMismatchScanner` — found and fixed a real gap:
-  `INSERT` handling only inspected the `VALUES` source form, silently
-  skipping the identical column-to-column encryption-mismatch check for
-  `INSERT ... SELECT`'s positional column mapping, even though Msg 206
-  fires identically either way; oracle-confirmed and closed. The
-  `UPDATE`/`MERGE` `SET`-clause path and the literal-source checks
-  (VALUES and SET) were already correct.
-- `GroupByValidityScanner` — found and fixed a real gap: the HAVING/ORDER BY
-  boolean walk only checked an `IN` predicate's left operand for the
-  literal-value-list form, silently skipping the same check for the
-  subquery form (`col IN (SELECT ...)`) even though Msg 8121 fires
-  identically either way; oracle-confirmed and closed. Everything else
-  (grouping-construct flattening, expression-shape text match, the
-  identifier-only column-name fallback, collation-aware case folding, the
-  windowed-vs-plain aggregate distinction) checked out.
-
 ---
 
 ## Not yet audited
 
-None — all 78 rule scanner families have been audited at least once as of
-this pass. Re-auditing after a shipped fix, or auditing a newly added rule
-family, restarts this list.
+None of the remaining rule scanner families are unaudited as of this pass.
+`WindowFunctionArgumentScanner`, `AlwaysEncryptedComparisonMismatchScanner`,
+`AlwaysEncryptedAssignmentMismatchScanner`, and `GroupByValidityScanner` were
+audited here and then removed entirely as pure hard-error rules with no
+silent-consequence branch (out of scope per CLAUDE.md's hard-error scope
+boundary) - their audit entries are removed along with them. Re-auditing
+after a shipped fix, or auditing a newly added rule family, restarts this
+list.
