@@ -320,6 +320,10 @@ public interface IModuleRule
     {
     }
 
+    void OnEnterRegexpLikePredicate(RegexpLikePredicate node, ModuleWalker walker)
+    {
+    }
+
     void OnEnterLeftFunctionCall(LeftFunctionCall node, ModuleWalker walker)
     {
     }

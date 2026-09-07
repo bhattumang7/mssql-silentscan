@@ -140,6 +140,14 @@ internal sealed class RegexpReplaceDollarBackreferenceRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpReplaceDollarBackreferenceScanner.Harvest((RegexpReplaceDollarBackreferenceScanner.Rule)moduleRule);
 }
 
+internal sealed class RegexpDefaultCaseSensitiveOnCiColumnRule : IPerFileRule
+{
+    public string Id => "RegexpDefaultCaseSensitiveOnCiColumnScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpDefaultCaseSensitiveOnCiColumnScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpDefaultCaseSensitiveOnCiColumnScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpDefaultCaseSensitiveOnCiColumnScanner.Harvest((RegexpDefaultCaseSensitiveOnCiColumnScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

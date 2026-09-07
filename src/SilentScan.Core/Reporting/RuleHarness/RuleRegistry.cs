@@ -23,6 +23,7 @@ public static class RuleRegistry
         new JsonObjectDuplicateKeyRule(),
         new UnistrUnpairedSurrogateRule(),
         new RegexpReplaceDollarBackreferenceRule(),
+        new RegexpDefaultCaseSensitiveOnCiColumnRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),

@@ -176,6 +176,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(JsonObjectDuplicateKey(report, headingLevel, pathBase));
         blocks.AddRange(UnistrUnpairedSurrogate(report, headingLevel, pathBase));
         blocks.AddRange(RegexpReplaceDollarBackreference(report, headingLevel, pathBase));
+        blocks.AddRange(RegexpDefaultCaseSensitiveOnCiColumn(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -274,6 +275,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "JSON_OBJECT with a repeated literal key", report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count);
         AddCount(counts, "UNISTR escape with an unpaired surrogate", report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count);
         AddCount(counts, "REGEXP_REPLACE with a $N backreference", report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Count);
+        AddCount(counts, "REGEXP_* call defaults to case-sensitive on a case-insensitive column", report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -2090,6 +2092,28 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.DollarToken,
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> RegexpDefaultCaseSensitiveOnCiColumn(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"REGEXP_* call defaults to case-sensitive on a case-insensitive column ({report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR call's subject column has a case-insensitive collation, but the call has no match_type argument ending in 'i'. Oracle-confirmed the engine matches case-sensitively by default regardless of the operand's collation, unlike every other T-SQL string comparison.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RegexpDefaultCaseSensitiveOnCiColumnRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Function", "Column"],
+            [.. report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.FunctionName,
+                $"{f.TableQualifiedName}.{f.ColumnName}",
             })]);
     }
 
