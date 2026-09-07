@@ -2599,3 +2599,34 @@ rule for any of these shapes.
   only fires a `$N` token whose `N` is within that count, to avoid flagging
   a coincidental literal dollar amount when the pattern has no group a `$N`
   could plausibly mean.
+
+* **`RegexpDefaultCaseSensitiveOnCiColumnRuleId` shipped - the entire
+  REGEXP_* family ignores the operand's collation for case sensitivity,
+  always matching case-sensitively unless an explicit `'i'` match_type flag
+  is passed.** Oracle-confirmed (SQL Server 2025, Docker) against a table
+  column using the database's own default collation
+  (`SQL_Latin1_General_CP1_CI_AS`, the common CI default): `v = 'abc'`
+  matches both `'ABC'` and `'abc'` (collation-consistent), but
+  `REGEXP_LIKE(v, 'abc')` with no `match_type` argument matches only the
+  literal-case `'abc'` row - no error, just fewer rows. The same divergence
+  holds for `REGEXP_COUNT`, `REGEXP_REPLACE`, and `REGEXP_SUBSTR`, and for
+  plain string literals under the database's own default collation with no
+  `COLLATE` anywhere in the statement. A case-sensitive column shows no
+  divergence (`REGEXP_LIKE` and `=` agree), confirming the gap is specific
+  to CI collations. `match_type` flag resolution is last-c/i-wins, not
+  first-wins or "any 'i' present": `'ci'` (ends in `i`) matches
+  case-insensitively, `'ic'` (ends in `c`) does not - oracle-confirmed with
+  several orderings/combinations including `'iic'`, `'cci'`, and `'sim'`.
+  Traced `alg_RegExp_Replace`/`InitRegexpCompCtxt`/`FetchRegexpPatternData`
+  in `vendor/sql2025` (`sqllang`) looking for the case-folding decision
+  itself - none of the named symbols touch it (RE2 is statically linked
+  with its match-compilation logic inlined, the same boundary already hit
+  for `RegexpReplaceDollarBackreferenceRuleId`'s `$N` inertness), so the
+  default-case-sensitivity fact and the last-flag-wins resolution rule were
+  both established by oracle probing. The scanner only fires when the
+  subject is a column resolved via the catalog with a known
+  case-insensitive collation (`Collation.IsCaseSensitive == false`) and the
+  literal pattern contains at least one letter (a pattern with none can
+  never be affected by case) - a non-literal `match_type` argument is
+  skipped rather than assumed absent, since it could still resolve to `'i'`
+  at runtime.
