@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regexp Default Case Sensitive On Ci Collation - SilentScan rules</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --accent: #0a5cff;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --fires-bg: #fff5f5;
+  --fires-border: #e0a0a0;
+  --clean-bg: #f2fbf3;
+  --clean-border: #9fcfa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4993ff;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --fires-bg: #1e1315;
+    --fires-border: #6e3b3b;
+    --clean-bg: #131e14;
+    --clean-border: #3b6e42;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-top: 0; margin-bottom: 2.5rem; }
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: 0.15em 0.4em; font-size: 0.9em; }
+pre { padding: 0.9rem 1rem; overflow-x: auto; font-size: 0.85em; margin: 0.5rem 0; }
+a { color: var(--accent); }
+.back-link { display: inline-block; margin-bottom: 1.5rem; }
+.rule { border-top: 1px solid var(--border); padding: 1.5rem 0; }
+.rule:first-of-type { border-top: none; }
+.rule-id { font-size: 1rem; margin: 0 0 0.5rem; }
+.rationale { margin: 0.5rem 0; }
+.fix { margin: 0.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); }
+.fix-label { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.example { margin: 0.5rem 0; font-size: 0.9em; color: var(--muted); }
+.example-path { font-size: 0.8em; color: var(--muted); margin: 0 0 0.3rem; }
+.example-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1rem 0 0.3rem; }
+.example-explanation { font-size: 0.9em; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+.fires-block pre { background: var(--fires-bg); border: 1px solid var(--fires-border); }
+.clean-block pre { background: var(--clean-bg); border: 1px solid var(--clean-border); }
+.fires-label { color: #c14040; }
+.clean-label { color: #2f8f42; }
+.family-section { margin-top: 2rem; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.rule-list li { padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.rule-list li:first-child { border-top: none; }
+.rule-list .id { font-weight: 600; }
+.rule-list .snippet { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.15rem; }
+.rule-key { color: var(--muted); font-size: 0.8em; margin: 0 0 1.5rem; }
+.rule-key code { padding: 0.1em 0.35em; }
+footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="../rules.html">&larr; All rules</a>
+  <h1>Regexp Default Case Sensitive On Ci Collation</h1>
+  <p class="rule-key"><code>silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation</code></p>
+  <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
+  <h2>Why is this an issue?</h2>
+  <p class="rationale">A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR call&#x27;s subject is a column with a case-insensitive collation, and the call&#x27;s literal pattern contains a letter, but the call has no match_type argument whose last c/i flag character is &#x27;i&#x27;. Oracle-confirmed (SQL Server 2025): every REGEXP_* function matches case-sensitively by default regardless of the operand&#x27;s collation - unlike =, LIKE, and every other collation-aware T-SQL string comparison, which follow the column&#x27;s own case sensitivity. Against a table column with the common SQL_Latin1_General_CP1_CI_AS default collation, REGEXP_LIKE(Name, &#x27;abc&#x27;) with no flag misses every row that = &#x27;abc&#x27; or LIKE &#x27;abc&#x27; would match, with no error - only an explicit &#x27;i&#x27; match_type flag restores case-insensitive matching, and if both &#x27;c&#x27; and &#x27;i&#x27; are present the last one in the flag string wins.</p>
+  <p class="rationale">Every T-SQL string comparison - =, LIKE, ORDER BY, GROUP BY - follows the operand&#x27;s own collation for case sensitivity. REGEXP_LIKE, REGEXP_REPLACE, REGEXP_COUNT, and REGEXP_SUBSTR do not: oracle-confirmed (SQL Server 2025) they always match case-sensitively unless an explicit match_type argument containing &#x27;i&#x27; is passed, no matter what collation the operand carries. Against a table using the common SQL_Latin1_General_CP1_CI_AS default collation, WHERE Name = &#x27;abc&#x27; and WHERE Name LIKE &#x27;abc&#x27; both match &#x27;ABC&#x27;, &#x27;Abc&#x27;, and &#x27;abc&#x27; - but WHERE REGEXP_LIKE(Name, &#x27;abc&#x27;) with no match_type argument matches only the literal-case &#x27;abc&#x27; row, silently dropping the others with no error.</p>
+  <p class="rationale">This makes REGEXP_LIKE and its siblings an easy trap when reached for as a drop-in replacement for LIKE or a same-collation equality check on a case-insensitive column: the call succeeds, returns fewer rows (or a different substring/count/replacement) than the equivalent LIKE/= would, and nothing about the result signals that case sensitivity is the reason. Passing &#x27;i&#x27; as the match_type argument restores the collation-consistent, case-insensitive behavior - and if both &#x27;c&#x27; and &#x27;i&#x27; appear in the match_type string, the last one wins, so &#x27;ic&#x27; is still case-sensitive.</p>
+  <p class="rationale">Only fires when the subject is a column whose resolved collation is case-insensitive, the pattern is a literal containing at least one letter (a pattern with no letters can never be affected by case), and the match_type argument is either absent or a literal whose last c/i flag isn&#x27;t &#x27;i&#x27; - a non-literal match_type could still resolve to &#x27;i&#x27; at runtime and isn&#x27;t flagged.</p>
+  <h2>How can I fix it?</h2>
+  <p class="rationale">Pass an explicit match_type argument ending in &#x27;i&#x27; whenever the regex call&#x27;s subject has a case-insensitive collation and case shouldn&#x27;t matter.</p>
+  <h3>REGEXP_LIKE against a case-insensitive column with no match_type</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, &#x27;[Jj]ohn&#x27;);</code></pre></div>
+  <p class="example-explanation">Name uses the database&#x27;s default case-insensitive collation, but REGEXP_LIKE still matches case-sensitively with no match_type argument, silently missing rows that = &#x27;John&#x27; or LIKE &#x27;%John%&#x27; would find.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, &#x27;[Jj]ohn&#x27;, &#x27;i&#x27;);</code></pre></div>
+  <p class="example-explanation">The explicit &#x27;i&#x27; match_type restores case-insensitive matching, consistent with the column&#x27;s own collation.</p>
+  <footer>
+    Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
+  </footer>
+</main>
+</body>
+</html>

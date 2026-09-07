@@ -726,6 +726,13 @@ public sealed class ModuleWalker : TSqlFragmentVisitor
         base.ExplicitVisit(node);
     }
 
+    public sealed override void ExplicitVisit(RegexpLikePredicate node)
+    {
+        Dispatch(rule => rule.OnEnterRegexpLikePredicate(node, this));
+
+        base.ExplicitVisit(node);
+    }
+
     public sealed override void ExplicitVisit(LeftFunctionCall node)
     {
         Dispatch(rule => rule.OnEnterLeftFunctionCall(node, this));
