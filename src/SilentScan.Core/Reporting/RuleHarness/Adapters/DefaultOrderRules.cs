@@ -132,6 +132,14 @@ internal sealed class UnistrUnpairedSurrogateRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => UnistrUnpairedSurrogateScanner.Harvest((UnistrUnpairedSurrogateScanner.Rule)moduleRule);
 }
 
+internal sealed class RegexpReplaceDollarBackreferenceRule : IPerFileRule
+{
+    public string Id => "RegexpReplaceDollarBackreferenceScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpReplaceDollarBackreferenceScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpReplaceDollarBackreferenceScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpReplaceDollarBackreferenceScanner.Harvest((RegexpReplaceDollarBackreferenceScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

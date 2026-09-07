@@ -175,6 +175,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(JsonArrayAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(JsonObjectDuplicateKey(report, headingLevel, pathBase));
         blocks.AddRange(UnistrUnpairedSurrogate(report, headingLevel, pathBase));
+        blocks.AddRange(RegexpReplaceDollarBackreference(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -272,6 +273,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "JSON_ARRAYAGG with no ORDER BY", report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count);
         AddCount(counts, "JSON_OBJECT with a repeated literal key", report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count);
         AddCount(counts, "UNISTR escape with an unpaired surrogate", report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count);
+        AddCount(counts, "REGEXP_REPLACE with a $N backreference", report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -2067,6 +2069,27 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.EscapeSequence,
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> RegexpReplaceDollarBackreference(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"REGEXP_REPLACE with a $N backreference ({report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A REGEXP_REPLACE() replacement string references a captured group using $N. The engine gives $ no special meaning in a replacement string - only \\N substitutes a captured group. Oracle-confirmed the $N token is accepted with no error and passed through into the output unchanged.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RegexpReplaceDollarBackreferenceRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Dollar token"],
+            [.. report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.DollarToken,
             })]);
     }
 
