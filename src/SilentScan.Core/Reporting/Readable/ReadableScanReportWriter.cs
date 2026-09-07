@@ -172,6 +172,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
         blocks.AddRange(StringAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(ForXmlPathMissingOrder(report, headingLevel, pathBase));
+        blocks.AddRange(JsonArrayAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -266,6 +267,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Bare TOP with no ORDER BY", report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Count);
         AddCount(counts, "STRING_AGG with no WITHIN GROUP (ORDER BY ...)", report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count);
         AddCount(counts, "FOR XML PATH concatenation with no ORDER BY", report.Find<ForXmlPathMissingOrderFinding>(nameof(ForXmlPathMissingOrderScanner)).Count);
+        AddCount(counts, "JSON_ARRAYAGG with no ORDER BY", report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -1997,6 +1999,26 @@ public static class ReadableScanReportWriter
         yield return new ReadableBlock.Table(
             [WhereHeader],
             [.. report.Find<ForXmlPathMissingOrderFinding>(nameof(ForXmlPathMissingOrderScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> JsonArrayAggMissingOrder(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"JSON_ARRAYAGG with no ORDER BY ({report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A JSON_ARRAYAGG call with no ORDER BY inside its own argument list. Oracle-confirmed the array element order is not guaranteed and changes silently with the chosen plan (e.g. an added or dropped index) - the same missing-order gap STRING_AGG and FOR XML PATH have. JSON_ARRAYAGG orders itself differently from those two: the ORDER BY goes inside the call's own argument list (JSON_ARRAYAGG(col ORDER BY col)), not in a WITHIN GROUP clause - WITHIN GROUP (ORDER BY ...) after JSON_ARRAYAGG is silently accepted by the engine and has no effect on the output order at all.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.JsonArrayAggMissingOrderRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader],
+            [.. report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
             })]);

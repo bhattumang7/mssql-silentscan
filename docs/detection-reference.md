@@ -2525,3 +2525,27 @@ rule for any of these shapes.
   normalization's actual home; these two Cascades rules are just its
   call site during exploration, not a second, independent normalizer to
   re-audit). No further rescue candidate found across the class.
+
+* **`JsonArrayAggMissingOrderRuleId` shipped - JSON_ARRAYAGG with no ORDER BY
+  has no guaranteed element order, the same missing-order gap STRING_AGG and
+  FOR XML PATH already have, but it orders itself differently and that
+  difference is its own trap.** JSON_ARRAYAGG's own grammar
+  (`jsonArrayAggBuiltInFunctionCall` in ScriptDom, distinct from the generic
+  `FunctionCall` production) puts the ORDER BY inside the call's own argument
+  list (`JSON_ARRAYAGG(col ORDER BY col)`, exposed on ScriptDom's
+  `FunctionCall.JsonOrderByClause`) rather than a trailing `WITHIN GROUP
+  (ORDER BY ...)` clause the way STRING_AGG does. Oracle-confirmed (Docker,
+  SQL Server 2025): the engine accepts `JSON_ARRAYAGG(col) WITHIN GROUP
+  (ORDER BY col)` - the STRING_AGG-shaped syntax someone would naturally
+  reach for - with no error, and it has zero effect on the array's element
+  order; only the in-argument-list form actually orders. A real, previously
+  undocumented silent-failure shape, not just a missing-order gap. That
+  `WITHIN GROUP` shape is not itself flaggable as "the clause you wrote does
+  nothing": ScriptDom's `jsonArrayAggBuiltInFunctionCall` grammar has no
+  `WITHIN GROUP` production at all, so a module containing that exact
+  construct fails to parse (`Incorrect syntax near '('`) even though the
+  connected engine accepts it - a client-parser gap this tool cannot see
+  past, not a hard-error-scope exclusion. The shipped rule only covers the
+  fully-parseable "no order specified anywhere" shape
+  (`JsonOrderByClause is null`), the same shape `StringAggMissingOrderRuleId`
+  already covers for STRING_AGG.
