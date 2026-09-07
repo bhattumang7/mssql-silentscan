@@ -19,6 +19,7 @@ public static class RuleRegistry
         new BareTopNoOrderByRule(),
         new StringAggMissingOrderRule(),
         new ForXmlPathMissingOrderRule(),
+        new JsonArrayAggMissingOrderRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),

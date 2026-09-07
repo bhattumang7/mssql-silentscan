@@ -91,6 +91,7 @@ public static class TestScanReports
         IReadOnlyList<BareTopNoOrderByFinding>? BareTopNoOrderByFindings = null,
         IReadOnlyList<StringAggMissingOrderFinding>? StringAggMissingOrderFindings = null,
         IReadOnlyList<ForXmlPathMissingOrderFinding>? ForXmlPathMissingOrderFindings = null,
+        IReadOnlyList<JsonArrayAggMissingOrderFinding>? JsonArrayAggMissingOrderFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -200,6 +201,7 @@ public static class TestScanReports
         Set("BareTopNoOrderByScanner", BareTopNoOrderByFindings);
         Set("StringAggMissingOrderScanner", StringAggMissingOrderFindings);
         Set("ForXmlPathMissingOrderScanner", ForXmlPathMissingOrderFindings);
+        Set("JsonArrayAggMissingOrderScanner", JsonArrayAggMissingOrderFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);

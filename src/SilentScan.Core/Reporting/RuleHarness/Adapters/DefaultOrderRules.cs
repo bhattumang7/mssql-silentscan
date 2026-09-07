@@ -108,6 +108,14 @@ internal sealed class ForXmlPathMissingOrderRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ForXmlPathMissingOrderScanner.Harvest((ForXmlPathMissingOrderScanner.Rule)moduleRule);
 }
 
+internal sealed class JsonArrayAggMissingOrderRule : IPerFileRule
+{
+    public string Id => "JsonArrayAggMissingOrderScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonArrayAggMissingOrderScanner.Harvest((JsonArrayAggMissingOrderScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";
