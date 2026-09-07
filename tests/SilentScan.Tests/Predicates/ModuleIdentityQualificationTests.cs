@@ -26,17 +26,16 @@ public sealed class ModuleIdentityQualificationTests
         var result = SqlScriptParser.ParseText("test.sql", """
             CREATE PROCEDURE UnqualifiedProc AS
             BEGIN
-                DECLARE @a INT, @b INT;
-                DECLARE cur CURSOR FOR SELECT X, Y, Z FROM dbo.T;
-                OPEN cur;
-                FETCH NEXT FROM cur INTO @a, @b;
-                CLOSE cur;
-                DEALLOCATE cur;
+                BEGIN TRY
+                    SELECT 1;
+                END TRY
+                BEGIN CATCH
+                END CATCH
             END
             """);
 
         var finding = Assert.Single(
-            ControlFlowRiskScanner.Scan(result, new DatabaseCatalog()), f => f.Kind == ControlFlowRiskFindingKind.CursorFetchColumnCountMismatch);
+            ControlFlowRiskScanner.Scan(result, new DatabaseCatalog()), f => f.Kind == ControlFlowRiskFindingKind.EmptyCatchBlock);
         Assert.Equal("dbo.UnqualifiedProc", finding.ModuleQualifiedName);
     }
 

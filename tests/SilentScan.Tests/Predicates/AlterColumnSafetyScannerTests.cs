@@ -89,31 +89,6 @@ public sealed class AlterColumnSafetyScannerTests
     }
 
     [Fact]
-    public void VarcharColumn_AlteredToVarbinary_Fires()
-    {
-        var findings = Scan("""
-            CREATE TABLE dbo.Document (Payload VARCHAR(50) NOT NULL);
-            ALTER TABLE dbo.Document ALTER COLUMN Payload VARBINARY(50);
-            """);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal("Payload", finding.ColumnName);
-        Assert.Equal(AlterColumnSafetyKind.IncompatibleFamilyConversion, finding.Kind);
-    }
-
-    [Fact]
-    public void NvarcharColumn_AlteredToVarbinary_Fires()
-    {
-        var findings = Scan("""
-            CREATE TABLE dbo.Document (Payload NVARCHAR(50) NOT NULL);
-            ALTER TABLE dbo.Document ALTER COLUMN Payload VARBINARY(50);
-            """);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(AlterColumnSafetyKind.IncompatibleFamilyConversion, finding.Kind);
-    }
-
-    [Fact]
     public void VarbinaryColumn_AlteredToVarchar_NegativeControl_DoesNotFire()
     {
         var findings = Scan("""

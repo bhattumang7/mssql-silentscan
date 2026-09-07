@@ -36,7 +36,7 @@ public sealed class TempTableExecShapeCheckerClassifyTests
     }
 
     [Fact]
-    public void FewerDescribedColumnsThanDeclared_ColumnCountMismatch()
+    public void FewerDescribedColumnsThanDeclared_NoFindings()
     {
         var tempColumns = new List<CatalogColumn>
         {
@@ -48,16 +48,11 @@ public sealed class TempTableExecShapeCheckerClassifyTests
         var findings = new List<TempTableExecShapeFinding>();
         TempTableExecShapeChecker.Classify(Candidate, tempColumns, described, findings);
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(TempTableExecShapeFindingKind.ColumnCountMismatch, finding.Kind);
-        Assert.Equal(2, finding.TempTableDeclaredColumnCount);
-        Assert.Equal(1, finding.DescribedColumnCount);
-        Assert.Null(finding.ColumnPosition);
-        Assert.Null(finding.WriteLoss);
+        Assert.Empty(findings);
     }
 
     [Fact]
-    public void MoreDescribedColumnsThanDeclared_ColumnCountMismatch()
+    public void MoreDescribedColumnsThanDeclared_NoFindings()
     {
         var tempColumns = new List<CatalogColumn>
         {
@@ -68,8 +63,7 @@ public sealed class TempTableExecShapeCheckerClassifyTests
         var findings = new List<TempTableExecShapeFinding>();
         TempTableExecShapeChecker.Classify(Candidate, tempColumns, described, findings);
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(TempTableExecShapeFindingKind.ColumnCountMismatch, finding.Kind);
+        Assert.Empty(findings);
     }
 
     [Fact]

@@ -456,40 +456,6 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void MergeUsingNonUniqueSource_Fires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.C AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void MergeUsingUniqueBackedSource_NeverFires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
-    }
-
-    [Fact]
-    public void MergeUsingNonUniqueSource_OnClauseUnsatisfiable_NeverFires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.C AS s ON t.Id = s.AId AND s.AId = 1 AND s.AId = 2 "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
-    }
-
-    [Fact]
     public void MergeUnconditionalWhenMatchedDelete_Fires()
     {
         var findings = Scan(
@@ -576,92 +542,6 @@ public sealed class QueryAntiPatternScannerTests
         var findings = QueryAntiPatternScanner.Scan(result, catalog);
 
         Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
-    }
-
-    [Fact]
-    public void CubeOverTwelveColumns_Fires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 13));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY CUBE({columns});");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-        Assert.Contains("CUBE over 13 columns", finding.DetailText);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void CubeAtTwelveColumns_NeverFires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 12));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY CUBE({columns});");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-    }
-
-    [Fact]
-    public void LegacyWithCubeOverTwelveColumns_Fires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 13));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY {columns} WITH CUBE;");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-    }
-
-    [Fact]
-    public void RollupOverThirtyTwoColumns_Fires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 33));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY ROLLUP({columns});");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-        Assert.Contains("ROLLUP over 33 columns", finding.DetailText);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void RollupAtThirtyTwoColumns_NeverFires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 32));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY ROLLUP({columns});");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-    }
-
-    [Fact]
-    public void LegacyWithRollupOverThirtyTwoColumns_Fires()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 33));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY {columns} WITH ROLLUP;");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-    }
-
-    [Fact]
-    public void GroupingSetsCombinationCountOverFourThousandNinetySix_Fires()
-    {
-        var cubeColumns = string.Join(", ", Enumerable.Repeat("Id", 12));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY GROUPING SETS (CUBE({cubeColumns}), (Id));");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-        Assert.Contains("4097 grouping sets", finding.DetailText);
-    }
-
-    [Fact]
-    public void GroupingSetsCombinationCountAtFourThousandNinetySix_NeverFires()
-    {
-        var cubeColumns = string.Join(", ", Enumerable.Repeat("Id", 12));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY GROUPING SETS (CUBE({cubeColumns}));");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
-    }
-
-    [Fact]
-    public void PlainGroupByManyColumns_NeverFiresGroupingSetsCardinalityLimit()
-    {
-        var columns = string.Join(", ", Enumerable.Repeat("Id", 40));
-        var findings = Scan($"SELECT Id, COUNT(*) FROM dbo.A GROUP BY {columns};");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded);
     }
 
     [Fact]
@@ -832,78 +712,6 @@ public sealed class QueryAntiPatternScannerTests
         return QueryAntiPatternScanner.Scan(result, catalog);
     }
 
-    [Fact]
-    public void AlterTableSwitch_DifferentColumnCount_Fires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount INT NOT NULL); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4943", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_DifferentColumnNameAtSameOrdinal_Fires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount INT NOT NULL); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL, Amt INT NOT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-        Assert.Contains("4942", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_DifferentDataType_Fires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount DECIMAL(10,2) NOT NULL); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL, Amount DECIMAL(12,4) NOT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-        Assert.Contains("4944", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_DifferentNullability_Fires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount INT NULL); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL, Amount INT NOT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-        Assert.Contains("4985", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_ComputedOnOneSideOnly_Fires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount AS (Id * 2)); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL, Amount INT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-        Assert.Contains("4965", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_IdenticalShape_NeverFires()
-    {
-        var findings = ScanSwitch(
-            "CREATE TABLE dbo.SwSrc (Id INT NOT NULL, Amount DECIMAL(10,2) NOT NULL); "
-            + "CREATE TABLE dbo.SwTgt (Id INT NOT NULL, Amount DECIMAL(10,2) NOT NULL);",
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch);
-    }
-
     private static DatabaseCatalog CatalogWithSwitchTables(
         IReadOnlyList<CatalogIndex> sourceIndexes, IReadOnlyList<CatalogIndex> targetIndexes)
     {
@@ -924,73 +732,6 @@ public sealed class QueryAntiPatternScannerTests
         var result = SqlScriptParser.ParseText("test.sql", "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchTables(sourceIndexes, targetIndexes));
-    }
-
-    [Fact]
-    public void AlterTableSwitch_ClusteredIndexPresenceMismatch_Fires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [],
-            targetIndexes: [new CatalogIndex("CX_SwTgt", CatalogIndexKind.Index, IsUnique: false, KeyColumns: ["Id"], IncludedColumns: [], IsClustered: true)]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4913", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetIndexMissingFromSource_Fires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [],
-            targetIndexes: [new CatalogIndex("IX_SwTgt_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [])]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-        Assert.Contains("4947", finding.DetailText);
-        Assert.Contains("IX_SwTgt_Code", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetIndexIncludeColumnMissingFromSource_Fires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [new CatalogIndex("IX_SwSrc_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [])],
-            targetIndexes: [new CatalogIndex("IX_SwTgt_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: ["Pct"])]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-        Assert.Contains("4947", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetIndexSortDirectionDiffersFromSource_Fires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [new CatalogIndex("IX_SwSrc_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [], KeyColumnIsDescendingRaw: [false])],
-            targetIndexes: [new CatalogIndex("IX_SwTgt_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [], KeyColumnIsDescendingRaw: [true])]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-        Assert.Contains("4947", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceHasExtraIndexTargetLacks_NeverFires()
-    {
-
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [new CatalogIndex("IX_SwSrc_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [])],
-            targetIndexes: []);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_IdenticalIndexSet_NeverFires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [new CatalogIndex("IX_SwSrc_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: ["Pct"], KeyColumnIsDescendingRaw: [false])],
-            targetIndexes: [new CatalogIndex("IX_SwTgt_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: ["Pct"], KeyColumnIsDescendingRaw: [false])]);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
     }
 
     private static DatabaseCatalog CatalogWithSwitchConstraints(
@@ -1024,143 +765,12 @@ public sealed class QueryAntiPatternScannerTests
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchConstraints(checkConstraints, foreignKeys));
     }
 
-    [Fact]
-    public void AlterTableSwitch_TargetCheckConstraintMissingFromSource_Fires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints: [new CatalogCheckConstraint("CK_SwTgt", "dbo.SwTgt", IsNotTrusted: false, IsDisabled: false, DefinitionText: "([RegionId]>(0))")],
-            foreignKeys: []);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4970", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_MatchingCheckConstraintDisabledStateDiffers_Fires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints:
-            [
-                new CatalogCheckConstraint("CK_SwSrc", "dbo.SwSrc", IsNotTrusted: false, IsDisabled: true, DefinitionText: "([RegionId]>(0))"),
-                new CatalogCheckConstraint("CK_SwTgt", "dbo.SwTgt", IsNotTrusted: false, IsDisabled: false, DefinitionText: "([RegionId]>(0))"),
-            ],
-            foreignKeys: []);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-        Assert.Contains("4960", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceHasExtraCheckConstraintTargetLacks_NeverFires()
-    {
-
-        var findings = ScanSwitchConstraints(
-            checkConstraints: [new CatalogCheckConstraint("CK_SwSrc", "dbo.SwSrc", IsNotTrusted: false, IsDisabled: false, DefinitionText: "([RegionId]>(0))")],
-            foreignKeys: []);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetForeignKeyMissingFromSource_Fires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints: [],
-            foreignKeys: [new ForeignKeyRelationship("FK_SwTgt", "dbo.SwTgt", "RegionId", "dbo.SwRef", "Id")]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-        Assert.Contains("4968", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_MatchingForeignKeyEnabledStateDiffers_Fires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints: [],
-            foreignKeys:
-            [
-                new ForeignKeyRelationship("FK_SwSrc", "dbo.SwSrc", "RegionId", "dbo.SwRef", "Id", IsDisabled: true),
-                new ForeignKeyRelationship("FK_SwTgt", "dbo.SwTgt", "RegionId", "dbo.SwRef", "Id", IsDisabled: false),
-            ]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-        Assert.Contains("4969", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_MatchingForeignKeyTrustStateDiffers_Fires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints: [],
-            foreignKeys:
-            [
-                new ForeignKeyRelationship("FK_SwSrc", "dbo.SwSrc", "RegionId", "dbo.SwRef", "Id", IsNotTrusted: true),
-                new ForeignKeyRelationship("FK_SwTgt", "dbo.SwTgt", "RegionId", "dbo.SwRef", "Id", IsNotTrusted: false),
-            ]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-        Assert.Contains("4974", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_IdenticalConstraints_NeverFires()
-    {
-        var findings = ScanSwitchConstraints(
-            checkConstraints:
-            [
-                new CatalogCheckConstraint("CK_SwSrc", "dbo.SwSrc", IsNotTrusted: false, IsDisabled: false, DefinitionText: "([RegionId]>(0))"),
-                new CatalogCheckConstraint("CK_SwTgt", "dbo.SwTgt", IsNotTrusted: false, IsDisabled: false, DefinitionText: "([RegionId]>(0))"),
-            ],
-            foreignKeys:
-            [
-                new ForeignKeyRelationship("FK_SwSrc", "dbo.SwSrc", "RegionId", "dbo.SwRef", "Id"),
-                new ForeignKeyRelationship("FK_SwTgt", "dbo.SwTgt", "RegionId", "dbo.SwRef", "Id"),
-            ]);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch);
-    }
-
     private static IReadOnlyList<QueryAntiPatternFinding> ScanSwitchTargetOnlyIndexes(
         IReadOnlyList<CatalogIndex> sourceIndexes, IReadOnlyList<CatalogIndex> targetIndexes)
     {
         var result = SqlScriptParser.ParseText("test.sql", "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchTables(sourceIndexes, targetIndexes));
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetHasXmlIndex_Fires()
-    {
-        var findings = ScanSwitchTargetOnlyIndexes(
-            sourceIndexes: [],
-            targetIndexes: [new CatalogIndex("PXML_SwTgt", CatalogIndexKind.Index, IsUnique: false, KeyColumns: [], IncludedColumns: [], IsXmlIndex: true)]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTargetOnlyIndexRestriction);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4983", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceHasXmlIndexTargetDoesNot_NeverFires()
-    {
-
-        var findings = ScanSwitchTargetOnlyIndexes(
-            sourceIndexes: [new CatalogIndex("PXML_SwSrc", CatalogIndexKind.Index, IsUnique: false, KeyColumns: [], IncludedColumns: [], IsXmlIndex: true)],
-            targetIndexes: []);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTargetOnlyIndexRestriction);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetHasSpatialIndex_Fires()
-    {
-        var findings = ScanSwitchTargetOnlyIndexes(
-            sourceIndexes: [],
-            targetIndexes: [new CatalogIndex("SIDX_SwTgt", CatalogIndexKind.Index, IsUnique: false, KeyColumns: [], IncludedColumns: [], IsSpatialIndex: true)]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTargetOnlyIndexRestriction);
-        Assert.Contains("4983", finding.DetailText);
     }
 
     private static DatabaseCatalog CatalogWithSwitchFullTextIndexes(bool sourceHasFullTextIndex, bool targetHasFullTextIndex)
@@ -1182,35 +792,6 @@ public sealed class QueryAntiPatternScannerTests
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchFullTextIndexes(sourceHasFullTextIndex, targetHasFullTextIndex));
     }
 
-    [Fact]
-    public void AlterTableSwitch_SourceHasFullTextIndex_Fires()
-    {
-        var findings = ScanSwitchFullTextIndexes(sourceHasFullTextIndex: true, targetHasFullTextIndex: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFullTextIndexRestriction);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4918", finding.DetailText);
-        Assert.Contains("dbo.SwSrc", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetHasFullTextIndex_Fires()
-    {
-        var findings = ScanSwitchFullTextIndexes(sourceHasFullTextIndex: false, targetHasFullTextIndex: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFullTextIndexRestriction);
-        Assert.Contains("4918", finding.DetailText);
-        Assert.Contains("dbo.SwTgt", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_NeitherHasFullTextIndex_NeverFires()
-    {
-        var findings = ScanSwitchFullTextIndexes(sourceHasFullTextIndex: false, targetHasFullTextIndex: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFullTextIndexRestriction);
-    }
-
     private static DatabaseCatalog CatalogWithSwitchFilegroups(
         string? sourceFilegroup, bool sourceReadOnly, string? targetFilegroup, bool targetReadOnly)
     {
@@ -1230,42 +811,6 @@ public sealed class QueryAntiPatternScannerTests
         var result = SqlScriptParser.ParseText("test.sql", "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchFilegroups(sourceFilegroup, sourceReadOnly, targetFilegroup, targetReadOnly));
-    }
-
-    [Fact]
-    public void AlterTableSwitch_DifferentFilegroups_Fires()
-    {
-        var findings = ScanSwitchFilegroups("PRIMARY", sourceReadOnly: false, "FG_Orders", targetReadOnly: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4940", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetInReadOnlyFilegroup_Fires()
-    {
-        var findings = ScanSwitchFilegroups("FG_Orders", sourceReadOnly: false, "FG_Orders", targetReadOnly: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch);
-        Assert.Contains("4979", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SameReadWriteFilegroup_NeverFires()
-    {
-        var findings = ScanSwitchFilegroups("FG_Orders", sourceReadOnly: false, "FG_Orders", targetReadOnly: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_PartitionedTableUnknownFilegroup_NeverFires()
-    {
-
-        var findings = ScanSwitchFilegroups(null, sourceReadOnly: false, "FG_Orders", targetReadOnly: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch);
     }
 
     private static DatabaseCatalog CatalogWithSwitchTemporal(bool sourceIsTemporal, bool targetIsTemporal)
@@ -1295,41 +840,6 @@ public sealed class QueryAntiPatternScannerTests
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchTemporal(sourceIsTemporal, targetIsTemporal));
     }
 
-    [Fact]
-    public void AlterTableSwitch_TargetSystemVersionedSourceIsNot_Fires()
-    {
-        var findings = ScanSwitchTemporal(sourceIsTemporal: false, targetIsTemporal: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTemporalMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("13577", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceSystemVersionedTargetIsNot_Fires()
-    {
-        var findings = ScanSwitchTemporal(sourceIsTemporal: true, targetIsTemporal: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTemporalMismatch);
-        Assert.Contains("13577", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_BothSystemVersioned_NeverFires()
-    {
-        var findings = ScanSwitchTemporal(sourceIsTemporal: true, targetIsTemporal: true);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTemporalMismatch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_NeitherSystemVersioned_NeverFires()
-    {
-        var findings = ScanSwitchTemporal(sourceIsTemporal: false, targetIsTemporal: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchTemporalMismatch);
-    }
-
     private static DatabaseCatalog CatalogWithSwitchRuleConstraint(bool sourceHasRule, bool targetHasRule)
     {
         var ddl = "CREATE TABLE dbo.SwSrc (Id INT NOT NULL); CREATE TABLE dbo.SwTgt (Id INT NOT NULL);";
@@ -1349,33 +859,6 @@ public sealed class QueryAntiPatternScannerTests
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchRuleConstraint(sourceHasRule, targetHasRule));
     }
 
-    [Fact]
-    public void AlterTableSwitch_TargetHasRuleConstraint_Fires()
-    {
-        var findings = ScanSwitchRuleConstraint(sourceHasRule: false, targetHasRule: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchRuleConstraint);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4964", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceHasRuleConstraint_Fires()
-    {
-        var findings = ScanSwitchRuleConstraint(sourceHasRule: true, targetHasRule: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchRuleConstraint);
-        Assert.Contains("4964", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_NeitherHasRuleConstraint_NeverFires()
-    {
-        var findings = ScanSwitchRuleConstraint(sourceHasRule: false, targetHasRule: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchRuleConstraint);
-    }
-
     private static DatabaseCatalog CatalogWithSwitchCdc(bool sourceDisallowed, bool targetDisallowed)
     {
         var ddl = "CREATE TABLE dbo.SwSrc (Id INT NOT NULL); CREATE TABLE dbo.SwTgt (Id INT NOT NULL);";
@@ -1393,50 +876,6 @@ public sealed class QueryAntiPatternScannerTests
         var result = SqlScriptParser.ParseText("test.sql", switchSql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return QueryAntiPatternScanner.Scan(result, CatalogWithSwitchCdc(sourceDisallowed, targetDisallowed));
-    }
-
-    [Fact]
-    public void AlterTableSwitch_TargetCdcPartitionSwitchDisallowed_Fires()
-    {
-        var findings = ScanSwitchCdc(
-            "ALTER TABLE dbo.SwSrc SWITCH PARTITION 1 TO dbo.SwTgt PARTITION 1;",
-            sourceDisallowed: false, targetDisallowed: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchCdcPartitionSwitch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("22842", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceCdcPartitionSwitchDisallowed_Fires()
-    {
-        var findings = ScanSwitchCdc(
-            "ALTER TABLE dbo.SwSrc SWITCH PARTITION 1 TO dbo.SwTgt PARTITION 1;",
-            sourceDisallowed: true, targetDisallowed: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchCdcPartitionSwitch);
-        Assert.Contains("22843", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_NoPartitionNumber_CdcDisallowedNeverFires()
-    {
-
-        var findings = ScanSwitchCdc(
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;",
-            sourceDisallowed: false, targetDisallowed: true);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchCdcPartitionSwitch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_CdcPartitionSwitchAllowed_NeverFires()
-    {
-        var findings = ScanSwitchCdc(
-            "ALTER TABLE dbo.SwSrc SWITCH PARTITION 1 TO dbo.SwTgt PARTITION 1;",
-            sourceDisallowed: false, targetDisallowed: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchCdcPartitionSwitch);
     }
 
     private static DatabaseCatalog CatalogWithSwitchPartitionFilegroups(
@@ -1467,60 +906,6 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void AlterTableSwitch_DifferentSchemesSamePartitionNumberDifferentFilegroup_Fires()
-    {
-        var findings = ScanSwitchPartitionFilegroups(
-            "ALTER TABLE dbo.SwSrc SWITCH PARTITION 1 TO dbo.SwTgt PARTITION 1;",
-            sourceScheme: "PS_B", targetScheme: "PS_A",
-            mappings: [("PS_A", 1, "FG_A"), ("PS_B", 1, "FG_B")]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchPartitionFilegroupMismatch);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-        Assert.Contains("4938", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_NonPartitionedSourceDifferentFilegroupThanTargetPartition_Fires()
-    {
-        var ddl = "CREATE TABLE dbo.SwSrc (Id INT NOT NULL); CREATE TABLE dbo.SwTgt (Id INT NOT NULL);";
-        var result = SqlScriptParser.ParseText("test.sql", ddl);
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var catalog = CatalogBuilder.Build([result]);
-        catalog.AddOrReplace(catalog.Find("dbo.SwSrc")! with { FilegroupName = "FG_B" });
-        catalog.AddOrReplace(catalog.Find("dbo.SwTgt")! with { PartitionSchemeName = "PS_A" });
-        catalog.AddPartitionFilegroup("PS_A", 1, "FG_A");
-
-        var switchResult = SqlScriptParser.ParseText("test.sql", "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt PARTITION 1;");
-        Assert.False(switchResult.HasErrors, string.Join("; ", switchResult.Errors.Select(e => e.Message)));
-        var findings = QueryAntiPatternScanner.Scan(switchResult, catalog);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchPartitionFilegroupMismatch);
-        Assert.Contains("4939", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SamePartitionSchemeSamePartitionNumber_NeverFires()
-    {
-        var findings = ScanSwitchPartitionFilegroups(
-            "ALTER TABLE dbo.SwSrc SWITCH PARTITION 1 TO dbo.SwTgt PARTITION 1;",
-            sourceScheme: "PS_A", targetScheme: "PS_A",
-            mappings: [("PS_A", 1, "FG_A")]);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchPartitionFilegroupMismatch);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_BothNonPartitioned_PartitionFilegroupCheckNeverFires()
-    {
-
-        var findings = ScanSwitchPartitionFilegroups(
-            "ALTER TABLE dbo.SwSrc SWITCH TO dbo.SwTgt;",
-            sourceScheme: null, targetScheme: null, mappings: []);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchPartitionFilegroupMismatch);
-    }
-
-    [Fact]
     public void AlterTableSwitch_NeitherTableResolves_NoFindingsAndDoesNotThrow()
     {
         var findings = ScanSwitch(
@@ -1528,27 +913,6 @@ public sealed class QueryAntiPatternScannerTests
             "ALTER TABLE dbo.NoSuchSrc SWITCH PARTITION 1 TO dbo.NoSuchTgt PARTITION 1;");
 
         Assert.Empty(findings);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceInReadOnlyFilegroup_Fires()
-    {
-        var findings = ScanSwitchFilegroups("FG_Orders", sourceReadOnly: true, "FG_Orders", targetReadOnly: false);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch);
-        Assert.Contains("4979", finding.DetailText);
-        Assert.Contains("source table", finding.DetailText);
-    }
-
-    [Fact]
-    public void AlterTableSwitch_SourceIndexKeyColumnsDifferFromTarget_Fires()
-    {
-        var findings = ScanSwitchIndexes(
-            sourceIndexes: [new CatalogIndex("IX_SwSrc_Pct", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Pct"], IncludedColumns: [])],
-            targetIndexes: [new CatalogIndex("IX_SwTgt_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"], IncludedColumns: [])]);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch);
-        Assert.Contains("4947", finding.DetailText);
     }
 
     [Fact]
@@ -1652,39 +1016,6 @@ public sealed class QueryAntiPatternScannerTests
             + "WHEN NOT MATCHED THEN INSERT (Id, AId) VALUES (s.AId, s.AId);");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
-    }
-
-    [Fact]
-    public void MergeUsingDerivedTableSource_NeverFiresNonUniqueUsingSource()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING (SELECT Id AS AId FROM dbo.C) AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
-    }
-
-    [Fact]
-    public void MergeUsingUnresolvableTableSource_NeverFiresNonUniqueUsingSource()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.NoSuchSource AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
-    }
-
-    [Fact]
-    public void MergeUsingSourceWithNoAliasQualifiedEqualityJoinColumn_NeverFiresNonUniqueUsingSource()
-    {
-        var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.C AS s ON 1 = 1 "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
-            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeNonUniqueUsingSource);
     }
 
     [Fact]

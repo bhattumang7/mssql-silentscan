@@ -129,9 +129,6 @@ public static class IndexHintScanner
                 var matchedIndex = table.Indexes.FirstOrDefault(i => catalog.IdentifierComparer.Equals(i.Name, hintedName));
                 if (matchedIndex is null)
                 {
-                    Findings.Add(new IndexHintFinding(
-                        IndexHintFindingKind.IndexDoesNotExist, table.QualifiedName, hintedName, LeadingColumnName: null,
-                        sourcePath, hint.StartLine, hint.StartColumn));
                     continue;
                 }
 

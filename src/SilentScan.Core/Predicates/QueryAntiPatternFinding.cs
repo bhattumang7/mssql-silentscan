@@ -28,8 +28,6 @@ public enum QueryAntiPatternFindingKind
 
     MergeMissingHoldlock,
 
-    MergeNonUniqueUsingSource,
-
     MergeUnconditionalDelete,
 
     RecursiveCteMissingMaxRecursion,
@@ -39,38 +37,6 @@ public enum QueryAntiPatternFindingKind
     LinkedServerOrCrossDatabaseReference,
 
     MultiRowInsertIgnoreDupKeyDrop,
-
-    AlterTableSwitchColumnMismatch,
-
-    AlterTableSwitchIndexMismatch,
-
-    AlterTableSwitchConstraintMismatch,
-
-    AlterTableSwitchTargetOnlyIndexRestriction,
-
-    AlterTableSwitchFilegroupMismatch,
-
-    AlterTableSwitchTemporalMismatch,
-
-    AlterTableSwitchRuleConstraint,
-
-    AlterTableSwitchCdcPartitionSwitch,
-
-    AlterTableSwitchPartitionFilegroupMismatch,
-
-    AlterTableSwitchFullTextIndexRestriction,
-
-    AlterTableSwitchIndexedViewAlignment,
-
-    AlterSchemaTransferMsShippedObject,
-
-    GroupingSetsCardinalityLimitExceeded,
-
-    GroupingArgumentNotInGroupByList,
-
-    AlterTableRebuildPartitionOutOfRange,
-
-    PartitionRebuildNumberExceedsCeiling,
 }
 
 public sealed record QueryAntiPatternFinding(

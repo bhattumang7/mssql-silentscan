@@ -20,7 +20,6 @@ public sealed class PredicateLocationCoverageTests
         "SilentScan.Core.Predicates.CatchAllPredicateScanner+Rule",
         "SilentScan.Core.Predicates.FloatEqualityPredicateScanner+Rule",
         "SilentScan.Core.Predicates.NotInNullableSubqueryScanner+Rule",
-        "SilentScan.Core.Predicates.OperandComparabilityScanner+Rule",
         "SilentScan.Core.Predicates.TryCastComputedColumnPredicateScanner+Rule",
         "SilentScan.Core.Predicates.NonSargablePredicateScanner+Rule",
     };

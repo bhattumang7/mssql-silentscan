@@ -37,11 +37,6 @@ public static class AlterColumnSafetyScanner
 
     private static AlterColumnSafetyKind? Classify(SqlType previous, SqlType next)
     {
-        if (IsIncompatibleFamilyConversion(previous, next))
-        {
-            return AlterColumnSafetyKind.IncompatibleFamilyConversion;
-        }
-
         if (IsPrecisionOrScaleNarrowing(previous, next))
         {
             return AlterColumnSafetyKind.PrecisionOrScaleNarrowing;
@@ -54,12 +49,6 @@ public static class AlterColumnSafetyScanner
 
         return null;
     }
-
-    private static bool IsCharFamily(SqlTypeCategory category) => category is
-        SqlTypeCategory.Char or SqlTypeCategory.VarChar or SqlTypeCategory.NChar or SqlTypeCategory.NVarChar;
-
-    private static bool IsIncompatibleFamilyConversion(SqlType previous, SqlType next) =>
-        IsCharFamily(previous.Category) && next.IsBinaryFamily;
 
     private static bool IsPrecisionOrScaleNarrowing(SqlType previous, SqlType next)
     {

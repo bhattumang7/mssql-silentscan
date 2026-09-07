@@ -5,8 +5,6 @@ namespace SilentScan.Core.Predicates;
 
 public enum ControlFlowRiskFindingKind
 {
-    CursorFetchColumnCountMismatch,
-
     EmptyCatchBlock,
 
     TriggerEmitsOutput,

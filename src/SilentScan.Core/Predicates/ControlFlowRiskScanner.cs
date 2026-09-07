@@ -38,8 +38,6 @@ public static class ControlFlowRiskScanner
 
         private bool _inTrigger;
 
-        private readonly Dictionary<string, int?> _cursorColumnCounts = new(StringComparer.OrdinalIgnoreCase);
-
         private readonly HashSet<SelectStatement> _cursorDefiningSelects = new(ReferenceEqualityComparer.Instance);
 
         private static readonly HashSet<string> NonDeterministicFunctionNames =
@@ -63,35 +61,14 @@ public static class ControlFlowRiskScanner
 
         private void ResetCursorTracking()
         {
-            _cursorColumnCounts.Clear();
             _cursorDefiningSelects.Clear();
         }
 
         public void OnEnterDeclareCursorStatement(DeclareCursorStatement node, ModuleWalker walker)
         {
-            _cursorColumnCounts[node.Name.Value] = TryCountSelectColumns(node.CursorDefinition.Select);
-
             if (node.CursorDefinition.Select is { } cursorSelect)
             {
                 _cursorDefiningSelects.Add(cursorSelect);
-            }
-        }
-
-        public void OnEnterFetchCursorStatement(FetchCursorStatement node, ModuleWalker walker)
-        {
-            var name = node.Cursor?.Name?.Value;
-            if (name is not null
-                && _cursorColumnCounts.TryGetValue(name, out var declaredCount)
-                && declaredCount is { } declared
-                && node.IntoVariables is { Count: > 0 } intoVariables
-                && intoVariables.Count != declared)
-            {
-                Findings.Add(new ControlFlowRiskFinding(
-                    ControlFlowRiskFindingKind.CursorFetchColumnCountMismatch,
-                    CurrentModule(walker), sourcePath, node.StartLine, node.StartColumn,
-                    $"FETCH INTO lists {intoVariables.Count} variable(s) but cursor '{name}' selects " +
-                    $"{declared} column(s) - this FETCH always fails at runtime (Msg 16924).",
-                    FindingConfidence.High));
             }
         }
 
@@ -289,11 +266,5 @@ public static class ControlFlowRiskScanner
             return node.QueryExpression is QuerySpecification { SelectElements: { Count: > 0 } elements }
                 && elements.All(e => e is SelectSetVariable);
         }
-
-        private static int? TryCountSelectColumns(SelectStatement select) =>
-            select.QueryExpression is QuerySpecification { SelectElements: { Count: > 0 } elements }
-            && elements.All(e => e is SelectScalarExpression)
-                ? elements.Count
-                : null;
     }
 }
