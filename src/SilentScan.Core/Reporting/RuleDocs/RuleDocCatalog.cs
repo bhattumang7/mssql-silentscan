@@ -56,6 +56,7 @@ public static class RuleDocCatalog
         [BoundedStringBuiltinTruncation.ReplicateResultTruncated.RuleId] = BoundedStringBuiltinTruncation.ReplicateResultTruncated.Content,
         [BoundedStringBuiltinTruncation.ReplaceResultTruncated.RuleId] = BoundedStringBuiltinTruncation.ReplaceResultTruncated.Content,
         [BoundedStringBuiltinTruncation.SpaceResultTruncated.RuleId] = BoundedStringBuiltinTruncation.SpaceResultTruncated.Content,
+        [StringBuiltin.StringAggMissingOrder.RuleId] = StringBuiltin.StringAggMissingOrder.Content,
         [Query.BareTopNoOrderBy.RuleId] = Query.BareTopNoOrderBy.Content,
 
         [QueryAntiPattern.TableVariablePspSkip.RuleId] = QueryAntiPattern.TableVariablePspSkip.Content,

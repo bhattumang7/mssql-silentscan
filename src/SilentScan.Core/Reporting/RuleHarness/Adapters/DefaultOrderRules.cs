@@ -92,6 +92,14 @@ internal sealed class BareTopNoOrderByRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => BareTopNoOrderByScanner.Harvest((BareTopNoOrderByScanner.Rule)moduleRule);
 }
 
+internal sealed class StringAggMissingOrderRule : IPerFileRule
+{
+    public string Id => "StringAggMissingOrderScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringAggMissingOrderScanner.Harvest((StringAggMissingOrderScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

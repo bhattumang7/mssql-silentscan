@@ -170,6 +170,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TryCastComputedColumnPredicate(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
+        blocks.AddRange(StringAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -262,6 +263,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "TRY_CAST computed column referenced in a predicate", report.Find<TryCastComputedColumnPredicateFinding>(nameof(TryCastComputedColumnPredicateScanner)).Count);
         AddCount(counts, "SELECT * view stale against base table's current shape", report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count);
         AddCount(counts, "Bare TOP with no ORDER BY", report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Count);
+        AddCount(counts, "STRING_AGG with no WITHIN GROUP (ORDER BY ...)", report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -1953,6 +1955,26 @@ public static class ReadableScanReportWriter
         yield return new ReadableBlock.Table(
             [WhereHeader],
             [.. report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> StringAggMissingOrder(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"STRING_AGG with no WITHIN GROUP (ORDER BY ...) ({report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A STRING_AGG call with no WITHIN GROUP (ORDER BY ...) clause. STRING_AGG always compiles to a Stream Aggregate, so the concatenation order follows whatever order the plan's access path/sort feeds it - oracle-confirmed that adding an index changes that order with no error or warning.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.StringAggMissingOrderRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader],
+            [.. report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
             })]);
