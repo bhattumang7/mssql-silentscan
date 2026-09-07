@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
@@ -19,7 +20,7 @@ public sealed class GroupByValidityOracleTests : OracleTestFixture
     {
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        return GroupByValidityScanner.Scan(result);
+        return GroupByValidityScanner.Scan(result, new DatabaseCatalog());
     }
 
     private async Task<SqlException> ExecuteExpectingFailureAsync(string sql)

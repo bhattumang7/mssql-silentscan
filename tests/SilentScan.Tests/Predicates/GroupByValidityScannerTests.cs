@@ -1,15 +1,17 @@
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Tests.Predicates;
 
 public sealed class GroupByValidityScannerTests
 {
-    private static IReadOnlyList<GroupByValidityFinding> Scan(string sql)
+    private static IReadOnlyList<GroupByValidityFinding> Scan(string sql, DatabaseCatalog? catalog = null)
     {
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        return GroupByValidityScanner.Scan(result);
+        return GroupByValidityScanner.Scan(result, catalog ?? new DatabaseCatalog());
     }
 
     [Fact]
@@ -195,6 +197,26 @@ public sealed class GroupByValidityScannerTests
     public void SelectList_WindowAggregateOverNestedRealAggregate_NegativeControl_DoesNotFire()
     {
         var findings = Scan("SELECT Category, SUM(SUM(Amount)) OVER (PARTITION BY Category) FROM dbo.Sale GROUP BY Category;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SelectList_ColumnDifferingOnlyByCase_CaseSensitiveCollation_Fires()
+    {
+        var catalog = new DatabaseCatalog { DefaultCollation = new Collation("Latin1_General_CS_AS") };
+
+        var findings = Scan("SELECT CATEGORY FROM dbo.Sale GROUP BY Category;", catalog);
+
+        Assert.Contains(findings, f => f.Kind == GroupByValidityFindingKind.SelectList);
+    }
+
+    [Fact]
+    public void SelectList_ColumnDifferingOnlyByCase_CaseInsensitiveCollation_NegativeControl_DoesNotFire()
+    {
+        var catalog = new DatabaseCatalog { DefaultCollation = new Collation("Latin1_General_CI_AS") };
+
+        var findings = Scan("SELECT CATEGORY FROM dbo.Sale GROUP BY Category;", catalog);
 
         Assert.Empty(findings);
     }
