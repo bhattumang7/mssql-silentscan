@@ -177,6 +177,7 @@ public static class SarifRuleCatalog
     public const string TryCastComputedColumnPredicateRuleId = FindingRuleIds.TryCastComputedColumnPredicateRuleId;
     public const string StaleSelectStarViewRuleId = FindingRuleIds.StaleSelectStarViewRuleId;
     public const string BareTopNoOrderByRuleId = FindingRuleIds.BareTopNoOrderByRuleId;
+    public const string StringAggMissingOrderRuleId = FindingRuleIds.StringAggMissingOrderRuleId;
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
     public const string AggregateDivisionColumnstoreRuleId = FindingRuleIds.AggregateDivisionColumnstoreRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;

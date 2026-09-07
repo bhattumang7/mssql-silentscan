@@ -89,6 +89,7 @@ public static class TestScanReports
         IReadOnlyList<TryCastComputedColumnPredicateFinding>? TryCastComputedColumnPredicateFindings = null,
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
         IReadOnlyList<BareTopNoOrderByFinding>? BareTopNoOrderByFindings = null,
+        IReadOnlyList<StringAggMissingOrderFinding>? StringAggMissingOrderFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -196,6 +197,7 @@ public static class TestScanReports
         Set("TryCastComputedColumnPredicateScanner", TryCastComputedColumnPredicateFindings);
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
         Set("BareTopNoOrderByScanner", BareTopNoOrderByFindings);
+        Set("StringAggMissingOrderScanner", StringAggMissingOrderFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
