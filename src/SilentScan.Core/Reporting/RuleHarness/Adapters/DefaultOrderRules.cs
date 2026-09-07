@@ -148,6 +148,14 @@ internal sealed class RegexpDefaultCaseSensitiveOnCiColumnRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpDefaultCaseSensitiveOnCiColumnScanner.Harvest((RegexpDefaultCaseSensitiveOnCiColumnScanner.Rule)moduleRule);
 }
 
+internal sealed class RegexpAccentInsensitiveColumnRule : IPerFileRule
+{
+    public string Id => "RegexpAccentInsensitiveColumnScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpAccentInsensitiveColumnScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpAccentInsensitiveColumnScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpAccentInsensitiveColumnScanner.Harvest((RegexpAccentInsensitiveColumnScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

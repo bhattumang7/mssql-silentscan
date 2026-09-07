@@ -2643,3 +2643,25 @@ rule for any of these shapes.
   `ExplicitVisit` following the exact same dispatch pattern as
   `OnEnterFunctionCall`, reusable by any future rule that needs to react to
   the predicate form directly instead of the function-call forms.
+
+* **`RegexpAccentInsensitiveColumnRuleId` shipped - a sibling of
+  `RegexpDefaultCaseSensitiveOnCiColumnRuleId`, but for accent-insensitive
+  (`_AI`) collations, where the gap has no fix.** Oracle-confirmed (SQL
+  Server 2025, Docker) against a column collated
+  `SQL_Latin1_General_CP1_CI_AI`: `v = 'cafe'` matches a stored `'café'`
+  row (accent folding, as `_AI` promises), but `REGEXP_LIKE(v, 'cafe')`
+  never matches it - and unlike the case-sensitivity gap, no `match_type`
+  value fixes this. The full flag set is exactly `{c, i, s, m}` (verified
+  by oracle-triggering `Msg 19303` "Only {c,i,s,m} flags are valid" against
+  every other letter) - none of the four covers accent folding, so this is
+  a permanent capability gap, not a missing-argument mistake. Fix guidance
+  is therefore "use =/LIKE instead" rather than "pass a flag", a materially
+  different remediation from the sibling rule - flagged to the user as an
+  explicit fork before building, since it changes what an actionable
+  finding even means here. Shares the same `Inspect`/`OnEnterFromClause`/
+  `GlobalFunctionTableReference` traversal shape as
+  `RegexpDefaultCaseSensitiveOnCiColumnRuleId` (duplicated rather than
+  factored out, matching this codebase's existing one-scanner-per-rule
+  convention over cross-rule sharing) but fires unconditionally on an
+  `IsAccentInsensitive` collation regardless of any `match_type` argument,
+  since none can suppress it.

@@ -24,6 +24,7 @@ public static class RuleRegistry
         new UnistrUnpairedSurrogateRule(),
         new RegexpReplaceDollarBackreferenceRule(),
         new RegexpDefaultCaseSensitiveOnCiColumnRule(),
+        new RegexpAccentInsensitiveColumnRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),

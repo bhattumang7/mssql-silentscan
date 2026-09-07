@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regexp Accent Insensitive Column Unsupported - SilentScan rules</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --accent: #0a5cff;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --fires-bg: #fff5f5;
+  --fires-border: #e0a0a0;
+  --clean-bg: #f2fbf3;
+  --clean-border: #9fcfa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4993ff;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --fires-bg: #1e1315;
+    --fires-border: #6e3b3b;
+    --clean-bg: #131e14;
+    --clean-border: #3b6e42;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-top: 0; margin-bottom: 2.5rem; }
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: 0.15em 0.4em; font-size: 0.9em; }
+pre { padding: 0.9rem 1rem; overflow-x: auto; font-size: 0.85em; margin: 0.5rem 0; }
+a { color: var(--accent); }
+.back-link { display: inline-block; margin-bottom: 1.5rem; }
+.rule { border-top: 1px solid var(--border); padding: 1.5rem 0; }
+.rule:first-of-type { border-top: none; }
+.rule-id { font-size: 1rem; margin: 0 0 0.5rem; }
+.rationale { margin: 0.5rem 0; }
+.fix { margin: 0.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); }
+.fix-label { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.example { margin: 0.5rem 0; font-size: 0.9em; color: var(--muted); }
+.example-path { font-size: 0.8em; color: var(--muted); margin: 0 0 0.3rem; }
+.example-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1rem 0 0.3rem; }
+.example-explanation { font-size: 0.9em; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+.fires-block pre { background: var(--fires-bg); border: 1px solid var(--fires-border); }
+.clean-block pre { background: var(--clean-bg); border: 1px solid var(--clean-border); }
+.fires-label { color: #c14040; }
+.clean-label { color: #2f8f42; }
+.family-section { margin-top: 2rem; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.rule-list li { padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.rule-list li:first-child { border-top: none; }
+.rule-list .id { font-weight: 600; }
+.rule-list .snippet { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.15rem; }
+.rule-key { color: var(--muted); font-size: 0.8em; margin: 0 0 1.5rem; }
+.rule-key code { padding: 0.1em 0.35em; }
+footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="../rules.html">&larr; All rules</a>
+  <h1>Regexp Accent Insensitive Column Unsupported</h1>
+  <p class="rule-key"><code>silentscan/string-builtin/regexp-accent-insensitive-column-unsupported</code></p>
+  <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
+  <h2>Why is this an issue?</h2>
+  <p class="rationale">A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR/REGEXP_MATCHES/REGEXP_SPLIT_TO_TABLE call&#x27;s subject is a column with an accent-insensitive collation, and the call&#x27;s literal pattern contains a letter. Oracle-confirmed (SQL Server 2025): every REGEXP_* function&#x27;s match_type flags (c, i, s, m) cover case sensitivity, dot-matches-newline, and multiline anchors, but none of them restore accent-insensitive matching - a column declared with an _AI collation specifically so that = and LIKE fold accented characters together (e.g. &#x27;cafe&#x27; matching &#x27;caf&#xE9;&#x27;) loses that folding entirely and permanently once the comparison moves to a REGEXP_* call, with no flag able to bring it back and no error raised.</p>
+  <p class="rationale">An _AI (accent-insensitive) collation makes = and LIKE fold accented characters together - &#x27;cafe&#x27; matches &#x27;caf&#xE9;&#x27; the same way a case-insensitive collation folds &#x27;ABC&#x27; and &#x27;abc&#x27;. REGEXP_LIKE, REGEXP_REPLACE, REGEXP_COUNT, REGEXP_SUBSTR, REGEXP_MATCHES, and REGEXP_SPLIT_TO_TABLE never do this, and unlike the equivalent case-sensitivity gap, there is no flag that fixes it: oracle-confirmed (SQL Server 2025) the match_type argument only accepts c, i, s, and m (case, case-insensitive, dot-matches-newline, multiline anchors) - none of them restores accent folding. Against a column using SQL_Latin1_General_CP1_CI_AI, WHERE Name = &#x27;cafe&#x27; matches a row storing &#x27;caf&#xE9;&#x27;, but WHERE REGEXP_LIKE(Name, &#x27;cafe&#x27;) never will, no matter what match_type is passed, with no error to say so.</p>
+  <p class="rationale">This makes REGEXP_* a strictly narrower replacement for =/LIKE on an accent-insensitive column: reaching for it as a drop-in for a LIKE-based search permanently drops accent folding for that comparison, and there is no REGEXP_* argument that gets it back.</p>
+  <p class="rationale">Only fires when the subject is a column whose resolved collation is accent-insensitive and the pattern is a literal containing at least one letter (a pattern with none can never be affected by accent folding).</p>
+  <h2>How can I fix it?</h2>
+  <p class="rationale">REGEXP_* has no accent-insensitive match mode. If the subject&#x27;s accent-insensitive collation is load-bearing, use =/LIKE instead of REGEXP_*, or accept that the regex call will only match the exact accented form written in the pattern.</p>
+  <h3>REGEXP_LIKE against an accent-insensitive column</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, &#x27;cafe&#x27;);</code></pre></div>
+  <p class="example-explanation">Name uses an accent-insensitive collation, but REGEXP_LIKE never folds accents - a row storing &#x27;caf&#xE9;&#x27; is silently never matched, and no match_type flag can fix it.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>SELECT * FROM dbo.Customer WHERE Name = &#x27;cafe&#x27;;</code></pre></div>
+  <p class="example-explanation">= follows the column&#x27;s own accent-insensitive collation, correctly matching &#x27;caf&#xE9;&#x27;.</p>
+  <footer>
+    Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
+  </footer>
+</main>
+</body>
+</html>

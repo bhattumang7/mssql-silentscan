@@ -202,6 +202,7 @@ public static class FindingRuleIds
     public const string UnistrUnpairedSurrogateRuleId = "silentscan/string-builtin/unistr-unpaired-surrogate";
     public const string RegexpReplaceDollarBackreferenceRuleId = "silentscan/string-builtin/regexp-replace-dollar-backreference";
     public const string RegexpDefaultCaseSensitiveOnCiColumnRuleId = "silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation";
+    public const string RegexpAccentInsensitiveColumnRuleId = "silentscan/string-builtin/regexp-accent-insensitive-column-unsupported";
     public const string StringConcatNullRuleId = "silentscan/predicate/plus-operator-null-propagation";
     public const string AggregateDivisionColumnstoreRuleId = "silentscan/predicate/aggregate-division-columnstore-batch-mode";
     public const string SecurityPredicateIndexRuleId = "silentscan/catalog/rls-predicate-unindexed-column";
