@@ -58,6 +58,7 @@ public static class RuleDocCatalog
         [BoundedStringBuiltinTruncation.SpaceResultTruncated.RuleId] = BoundedStringBuiltinTruncation.SpaceResultTruncated.Content,
         [StringBuiltin.StringAggMissingOrder.RuleId] = StringBuiltin.StringAggMissingOrder.Content,
         [JsonBuiltin.JsonArrayAggMissingOrder.RuleId] = JsonBuiltin.JsonArrayAggMissingOrder.Content,
+        [JsonBuiltin.JsonObjectDuplicateKey.RuleId] = JsonBuiltin.JsonObjectDuplicateKey.Content,
         [Query.ForXmlPathMissingOrder.RuleId] = Query.ForXmlPathMissingOrder.Content,
         [Query.BareTopNoOrderBy.RuleId] = Query.BareTopNoOrderBy.Content,
 

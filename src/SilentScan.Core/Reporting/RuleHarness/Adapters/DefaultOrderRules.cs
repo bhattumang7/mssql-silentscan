@@ -116,6 +116,14 @@ internal sealed class JsonArrayAggMissingOrderRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonArrayAggMissingOrderScanner.Harvest((JsonArrayAggMissingOrderScanner.Rule)moduleRule);
 }
 
+internal sealed class JsonObjectDuplicateKeyRule : IPerFileRule
+{
+    public string Id => "JsonObjectDuplicateKeyScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonObjectDuplicateKeyScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonObjectDuplicateKeyScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonObjectDuplicateKeyScanner.Harvest((JsonObjectDuplicateKeyScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

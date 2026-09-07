@@ -173,6 +173,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(StringAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(ForXmlPathMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(JsonArrayAggMissingOrder(report, headingLevel, pathBase));
+        blocks.AddRange(JsonObjectDuplicateKey(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -268,6 +269,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "STRING_AGG with no WITHIN GROUP (ORDER BY ...)", report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count);
         AddCount(counts, "FOR XML PATH concatenation with no ORDER BY", report.Find<ForXmlPathMissingOrderFinding>(nameof(ForXmlPathMissingOrderScanner)).Count);
         AddCount(counts, "JSON_ARRAYAGG with no ORDER BY", report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count);
+        AddCount(counts, "JSON_OBJECT with a repeated literal key", report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -2021,6 +2023,27 @@ public static class ReadableScanReportWriter
             [.. report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> JsonObjectDuplicateKey(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"JSON_OBJECT with a repeated literal key ({report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A JSON_OBJECT call with the same literal key string written twice. Oracle-confirmed the engine accepts this with no error and emits both keys into the JSON text unchanged, but JSON_VALUE and equivalent single-value readers always resolve to the first occurrence - every later value written under that same key is silently discarded.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.JsonObjectDuplicateKeyRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Duplicate key"],
+            [.. report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.DuplicateKey,
             })]);
     }
 
