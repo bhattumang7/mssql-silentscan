@@ -10,20 +10,35 @@ else restricts what SilentScan can detect or how it detects it.
 findings) is the deliverable. **Precision beats recall everywhere** — one false
 positive in a published finding is worse than ten missed true positives.
 
-## Hard-error DDL/DML is out of scope
-If SQL Server itself refuses to compile or deploy something with a hard,
-synchronous error (a `CREATE`/`ALTER` that fails outright, a statement that
-never parses/binds), don't build a rule to catch it. Two independent reasons,
-either one is sufficient:
-- **Unreachable via the real entry point.** `scan-db` reads an
-  already-deployed catalog from `sys.*`. Anything that fails to deploy can
-  never exist there to be scanned — see the `FullTextIndexDdlScanner` and
-  `ComputedColumnIndexKeyScanner` removals for the pattern.
-- **Not our job.** Catching what the engine already refuses at compile/deploy
-  time means re-deriving the engine's own validation logic — at the limit,
-  reimplementing the compiler. The engine already tells the user, immediately
-  and loudly, exactly what's wrong. SilentScan's value is surfacing what the
-  engine stays silent about, not duplicating what it already shouts.
+## Hard errors are out of scope — assume the code executes without error
+Assume every statement SilentScan looks at actually runs to completion
+without throwing. A hard, synchronous error that SQL Server reports loudly
+and unambiguously the moment its path is hit — a `CREATE`/`ALTER` that fails
+outright, a statement that never parses/binds, or a statement that compiles
+fine (including via deferred name resolution, where the referenced object
+doesn't exist yet at `CREATE` time) but always throws the instant it first
+executes — is never in scope, regardless of whether the erroring object is
+reachable in a deployed catalog. Reachability in `sys.*` is necessary but not
+sufficient: the question is not "can `scan-db` see this object," it's "does
+the engine already scream about this the moment it's hit." Two independent
+reasons, either one is sufficient:
+- **Loud, not silent.** SilentScan's whole reason to exist is surfacing what
+  the engine stays silent about. An error the engine already reports,
+  immediately and unmistakably, needs no static analyzer — the first test
+  run or real invocation already tells the user exactly what's wrong. See
+  the `FullTextIndexDdlScanner` and `ComputedColumnIndexKeyScanner` removals
+  for the deploy-time pattern.
+- **Not our job.** Catching what the engine already refuses — whether at
+  compile/deploy time or on first execution — means re-deriving the engine's
+  own validation logic, at the limit reimplementing the compiler.
+
+Only build (or keep) a rule for what survives execution without error: a
+wrong or silently lossy result, a precision/rounding loss, a plan-shape or
+performance consequence, an internal engine decision (locking, caching,
+serialization, evaluation order, deferred materialization) that produces a
+correct-looking but wrong outcome. If the only oracle-confirmable fact about
+a rule is "this throws Msg NNNN," it's out of scope, full stop — it doesn't
+matter when in the object's lifecycle that throw happens.
 
 ## Do not launch agents
 Keep the urge to spin up agents in control. For very small tasks do not spin up agents.
