@@ -38,7 +38,6 @@ public static class SarifRuleCatalog
     public const string JsonIndexRewriteEligibleRuleId = FindingRuleIds.JsonIndexRewriteEligibleRuleId;
     public static string ExecuteAtLargeObjectParameterRuleId(ExecuteAtLargeObjectParameterFindingKind kind) => FindingRuleIds.ExecuteAtLargeObjectParameterRuleId(kind);
     public static string MaxTypedColumnRuleId(NonIndexableColumnFindingKind kind) => FindingRuleIds.MaxTypedColumnRuleId(kind);
-    public static string VectorLiteralConversionRuleId(VectorLiteralConversionFindingKind kind) => FindingRuleIds.VectorLiteralConversionRuleId(kind);
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => FindingRuleIds.DynamicDataMaskingRuleId(kind);
     public const string FloatEqualityRuleId = FindingRuleIds.FloatEqualityRuleId;
     public const string FloatOrderDependentAggregateRuleId = FindingRuleIds.FloatOrderDependentAggregateRuleId;
@@ -134,7 +133,6 @@ public static class SarifRuleCatalog
     public const string DeprecatedSyntaxDeprecatedSetRowcountRuleId = FindingRuleIds.DeprecatedSyntaxDeprecatedSetRowcountRuleId;
     public const string DeprecatedSyntaxLegacyLobStatementRuleId = FindingRuleIds.DeprecatedSyntaxLegacyLobStatementRuleId;
     public const string DeprecatedSyntaxLegacyLobFunctionRuleId = FindingRuleIds.DeprecatedSyntaxLegacyLobFunctionRuleId;
-    public const string DeprecatedSyntaxLegacyLobLocalVariableRuleId = FindingRuleIds.DeprecatedSyntaxLegacyLobLocalVariableRuleId;
     public const string StatementShapeInsertWithoutColumnListRuleId = FindingRuleIds.StatementShapeInsertWithoutColumnListRuleId;
     public const string StatementShapeOrdinalOrderByRuleId = FindingRuleIds.StatementShapeOrdinalOrderByRuleId;
     public const string StatementShapeTableWithNoPrimaryKeyRuleId = FindingRuleIds.StatementShapeTableWithNoPrimaryKeyRuleId;

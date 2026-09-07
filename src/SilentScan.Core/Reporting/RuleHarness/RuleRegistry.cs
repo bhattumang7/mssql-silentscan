@@ -26,7 +26,6 @@ public static class RuleRegistry
         new CheckConstraintPredicateContradictionRule(),
         new FloatEqualityPredicateRule(),
         new FloatOrderDependentAggregateRule(),
-        new VectorLiteralConversionRule(),
         new ExecuteAtLargeObjectParameterRule(),
         new IndexCoverageRule(),
         new SelfReferencingDmlRule(),
