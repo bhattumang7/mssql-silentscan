@@ -9,8 +9,9 @@ internal static class RegexpDefaultCaseSensitiveOnCiColumn
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
             Every T-SQL string comparison - =, LIKE, ORDER BY, GROUP BY - follows the operand's
-            own collation for case sensitivity. REGEXP_LIKE, REGEXP_REPLACE, REGEXP_COUNT, and
-            REGEXP_SUBSTR do not: oracle-confirmed (SQL Server 2025) they always match
+            own collation for case sensitivity. REGEXP_LIKE, REGEXP_REPLACE, REGEXP_COUNT,
+            REGEXP_SUBSTR, REGEXP_MATCHES, and REGEXP_SPLIT_TO_TABLE do not: oracle-confirmed
+            (SQL Server 2025) they always match
             case-sensitively unless an explicit match_type argument containing 'i' is passed, no
             matter what collation the operand carries. Against a table using the common
             SQL_Latin1_General_CP1_CI_AS default collation, WHERE Name = 'abc' and WHERE Name LIKE

@@ -144,4 +144,38 @@ public sealed class RegexpDefaultCaseSensitiveOnCiColumnScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Fact]
+    public void RegexpMatches_NoFlags_CiColumn_Fires()
+    {
+        var findings = Scan(CiTable, "SELECT m.* FROM dbo.T CROSS APPLY REGEXP_MATCHES(Name, 'john') AS m;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("REGEXP_MATCHES", finding.FunctionName);
+    }
+
+    [Fact]
+    public void RegexpMatches_WithIFlag_NeverFires()
+    {
+        var findings = Scan(CiTable, "SELECT m.* FROM dbo.T CROSS APPLY REGEXP_MATCHES(Name, 'john', 'i') AS m;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void RegexpSplitToTable_NoFlags_CiColumn_Fires()
+    {
+        var findings = Scan(CiTable, "SELECT s.* FROM dbo.T CROSS APPLY REGEXP_SPLIT_TO_TABLE(Name, 'john') AS s;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("REGEXP_SPLIT_TO_TABLE", finding.FunctionName);
+    }
+
+    [Fact]
+    public void RegexpSplitToTable_WithIFlag_NeverFires()
+    {
+        var findings = Scan(CiTable, "SELECT s.* FROM dbo.T CROSS APPLY REGEXP_SPLIT_TO_TABLE(Name, 'john', 'i') AS s;");
+
+        Assert.Empty(findings);
+    }
 }
