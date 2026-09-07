@@ -7,7 +7,6 @@ public static class RuleRegistry
     public static IReadOnlyList<IRule> All { get; } =
     [
         new WaitForRule(),
-        new NativelyCompiledUnsupportedBuiltinRule(),
         new RestoreOptionConflictRule(),
         new ViewCheckOptionContradictionRule(),
         new CreateDatabaseOptionConflictRule(),
@@ -53,9 +52,6 @@ public static class RuleRegistry
         new ExecuteAtLargeObjectParameterRule(),
         new UnpivotExactTypeMismatchRule(),
         new SchemaboundAliasTypeRule(),
-        new NativelyCompiledClrTypeRule(),
-        new NativelyCompiledErrorOutsideCatchRule(),
-        new NativelyCompiledInterpretedCalleeRule(),
         new MemoryOptimizedLedgerConflictRule(),
         new SparseColumnDisallowedTypeRule(),
         new LegacyLobUtf8CollationRule(),

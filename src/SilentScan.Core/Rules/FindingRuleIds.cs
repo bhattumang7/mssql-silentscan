@@ -162,10 +162,6 @@ public static class FindingRuleIds
     public const string LegacyLobUtf8CollationRuleId = "silentscan/catalog/legacy-lob-utf8-collation";
     public const string LegacyLobConversionTargetRuleId = "silentscan/predicates/legacy-lob-conversion-target";
     public const string MemoryOptimizedUtf8CollationRuleId = "silentscan/catalog/memory-optimized-utf8-collation";
-    public const string NativelyCompiledUnsupportedBuiltinRuleId = "silentscan/predicate/natively-compiled-unsupported-builtin";
-    public const string NativelyCompiledClrTypeRuleId = "silentscan/predicate/natively-compiled-clr-type";
-    public const string NativelyCompiledErrorOutsideCatchRuleId = "silentscan/predicate/natively-compiled-error-outside-catch";
-    public const string NativelyCompiledInterpretedCalleeRuleId = "silentscan/predicate/natively-compiled-interpreted-callee";
     public const string MemoryOptimizedLedgerConflictRuleId = "silentscan/catalog/memory-optimized-ledger-conflict";
     public static string MemoryOptimizedUnsupportedIndexOptionRuleId(MemoryOptimizedUnsupportedIndexOptionKind kind) => kind switch
     {
