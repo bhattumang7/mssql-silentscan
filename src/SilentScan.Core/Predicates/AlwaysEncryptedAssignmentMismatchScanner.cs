@@ -31,6 +31,8 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
     {
         public List<AlwaysEncryptedAssignmentMismatchFinding> Findings { get; } = [];
 
+        private (CatalogTable Table, IList<ColumnReferenceExpression> Columns, QuerySpecification Source)? _pendingInsertSelect;
+
         public void OnEnterAssignmentSetClause(AssignmentSetClause node, ModuleWalker walker)
         {
             if (node.Column is not { } targetColumnRef)
@@ -49,6 +51,22 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
             {
                 InspectInsertColumns(table, node.InsertSpecification.Columns, node.InsertSpecification.InsertSource as ValuesInsertSource);
             }
+
+            _pendingInsertSelect = table is not null && node.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification querySpec }
+                ? (table, node.InsertSpecification.Columns, querySpec)
+                : null;
+        }
+
+        public void OnLeaveInsertStatementScope(InsertStatement node, ModuleWalker walker) => _pendingInsertSelect = null;
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (_pendingInsertSelect is not { } pending || !ReferenceEquals(pending.Source, node))
+            {
+                return;
+            }
+
+            InspectInsertSelectColumns(pending.Table, pending.Columns, node, scopeChain);
         }
 
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
@@ -102,6 +120,68 @@ public static class AlwaysEncryptedAssignmentMismatchScanner
                         sourcePath,
                         columnValues[i].StartLine,
                         columnValues[i].StartColumn));
+                }
+            }
+        }
+
+        private void InspectInsertSelectColumns(
+            CatalogTable table,
+            IList<ColumnReferenceExpression> columns,
+            QuerySpecification source,
+            ScopeChain scopeChain)
+        {
+            var selectExpressions = source.SelectElements.OfType<SelectScalarExpression>().ToList();
+            if (columns.Count == 0 || selectExpressions.Count != columns.Count)
+            {
+                return;
+            }
+
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var name = columns[i].MultiPartIdentifier.Identifiers[^1].Value;
+                var targetColumn = table.FindColumn(name, catalog.IdentifierComparer);
+                if (targetColumn is not { EncryptionType: not Catalog.ColumnEncryptionType.None })
+                {
+                    continue;
+                }
+
+                var sourceExpression = selectExpressions[i].Expression;
+
+                if (BaseColumnResolver.ResolveBaseColumn(sourceExpression, sourcePath, scopeChain, catalog) is { } sourceRef)
+                {
+                    if (catalog.Find(sourceRef.TableQualifiedName)?.FindColumn(sourceRef.ColumnName, catalog.IdentifierComparer) is not { } sourceColumn
+                        || !Catalog.AlwaysEncryptedCompatibility.IsMismatch(targetColumn, sourceColumn, catalog.IdentifierComparer))
+                    {
+                        continue;
+                    }
+
+                    Findings.Add(new AlwaysEncryptedAssignmentMismatchFinding(
+                        AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch,
+                        table.QualifiedName,
+                        targetColumn.Name,
+                        Catalog.AlwaysEncryptedCompatibility.FormatDisplay(targetColumn),
+                        sourceRef.TableQualifiedName,
+                        sourceRef.ColumnName,
+                        Catalog.AlwaysEncryptedCompatibility.FormatDisplay(sourceColumn),
+                        sourcePath,
+                        sourceExpression.StartLine,
+                        sourceExpression.StartColumn));
+                    continue;
+                }
+
+                if (IsNonNullLiteral(sourceExpression))
+                {
+                    Findings.Add(new AlwaysEncryptedAssignmentMismatchFinding(
+                        AlwaysEncryptedAssignmentMismatchKind.LiteralSource,
+                        table.QualifiedName,
+                        targetColumn.Name,
+                        targetColumn.EncryptionType.ToString(),
+                        SourceTableQualifiedName: null,
+                        SourceColumnName: null,
+                        SourceEncryptionTypeDisplay: null,
+                        sourcePath,
+                        sourceExpression.StartLine,
+                        sourceExpression.StartColumn));
                 }
             }
         }
