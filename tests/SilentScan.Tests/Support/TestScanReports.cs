@@ -90,6 +90,7 @@ public static class TestScanReports
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
         IReadOnlyList<BareTopNoOrderByFinding>? BareTopNoOrderByFindings = null,
         IReadOnlyList<StringAggMissingOrderFinding>? StringAggMissingOrderFindings = null,
+        IReadOnlyList<ForXmlPathMissingOrderFinding>? ForXmlPathMissingOrderFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -198,6 +199,7 @@ public static class TestScanReports
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
         Set("BareTopNoOrderByScanner", BareTopNoOrderByFindings);
         Set("StringAggMissingOrderScanner", StringAggMissingOrderFindings);
+        Set("ForXmlPathMissingOrderScanner", ForXmlPathMissingOrderFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);

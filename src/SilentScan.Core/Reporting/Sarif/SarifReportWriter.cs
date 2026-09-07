@@ -118,6 +118,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
         results.AddRange(report.Find<StringAggMissingOrderFinding>("StringAggMissingOrderScanner").Select(ToResult));
+        results.AddRange(report.Find<ForXmlPathMissingOrderFinding>("ForXmlPathMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
@@ -850,6 +851,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.StringAggMissingOrderRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = "STRING_AGG with no WITHIN GROUP (ORDER BY ...) - SQL Server does not guarantee the concatenation order; it always follows whatever order the plan's Stream Aggregate consumes rows in, which changes silently with the chosen plan (e.g. an added or dropped index).";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(ForXmlPathMissingOrderFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ForXmlPathMissingOrderRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = "SELECT ... FOR XML PATH with no ORDER BY - the row order feeding this classic string-concatenation idiom is not guaranteed and changes silently with the chosen plan (e.g. an added or dropped index), the same missing-order gap STRING_AGG has.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
