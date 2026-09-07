@@ -2574,3 +2574,28 @@ rule for any of these shapes.
   `StringLiteral` on both sides of the match - a variable, parameter, or
   computed key is skipped as not statically decidable, the same boundary
   every other literal-comparison rule in this project already draws.
+
+* **`RegexpReplaceDollarBackreferenceRuleId` shipped - REGEXP_REPLACE's `$N`
+  backreference syntax silently does nothing, a real trap for anyone porting
+  regex logic from .NET/JS/Perl conventions.** REGEXP_REPLACE's replacement
+  string substitutes a captured group using a backslash-digit token (`\1`,
+  `\2`, ...) - oracle-confirmed (SQL Server 2025, Docker) with a large
+  (200,000-row, `MAXDOP 8`) parallel-execution check that the substitution is
+  correct and order-preserving at scale. `$` carries no meaning at all in the
+  replacement string: `REGEXP_REPLACE('abc123def', '([a-z]+)([0-9]+)',
+  '$2-$1')` returns `'$2-$1def'` unchanged with no error, while the
+  backslash form (`'\2-\1'`) correctly returns `'123-abcdef'`. `$`-digit is
+  the backreference convention in .NET `Regex.Replace`, JavaScript, and most
+  other regex flavors, making this an easy, silent port-over mistake. Traced
+  the engine's `alg_RegExp_Replace` (`sqllang`) - it only performs
+  LOB-length/type validation at bind time; the actual RE2-backed replace
+  execution has no named symbols in the decompiled tree (RE2 is statically
+  linked with its replacement logic inlined), so the exact `$N` inertness
+  was established by oracle probing rather than reading a named function -
+  documented here as the boundary of what the decompiled tree can show.
+  The scanner counts real capturing groups in the pattern (skipping
+  `(?:...)` non-capturing groups and parens inside a character class,
+  including the leading-`]`-is-literal RE2 rule - all oracle-confirmed) and
+  only fires a `$N` token whose `N` is within that count, to avoid flagging
+  a coincidental literal dollar amount when the pattern has no group a `$N`
+  could plausibly mean.

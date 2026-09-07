@@ -22,6 +22,7 @@ public static class RuleRegistry
         new JsonArrayAggMissingOrderRule(),
         new JsonObjectDuplicateKeyRule(),
         new UnistrUnpairedSurrogateRule(),
+        new RegexpReplaceDollarBackreferenceRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),
