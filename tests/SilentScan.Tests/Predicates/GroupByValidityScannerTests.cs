@@ -222,6 +222,14 @@ public sealed class GroupByValidityScannerTests
     }
 
     [Fact]
+    public void Having_InPredicateSubqueryForm_BareColumnNotInGroupByOrAggregate_Fires()
+    {
+        var findings = Scan("SELECT Category, SUM(Amount) FROM dbo.Sale GROUP BY Category HAVING Id IN (SELECT Id FROM dbo.Other);");
+
+        Assert.Contains(findings, f => f.Kind == GroupByValidityFindingKind.Having);
+    }
+
+    [Fact]
     public void SelectList_ColumnInsideSubquery_NegativeControl_DoesNotFire()
     {
         var findings = Scan("SELECT Category, SUM(Amount), (SELECT MAX(Id) FROM dbo.Other) FROM dbo.Sale GROUP BY Category;");
