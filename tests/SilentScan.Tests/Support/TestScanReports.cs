@@ -94,6 +94,7 @@ public static class TestScanReports
         IReadOnlyList<JsonArrayAggMissingOrderFinding>? JsonArrayAggMissingOrderFindings = null,
         IReadOnlyList<JsonObjectDuplicateKeyFinding>? JsonObjectDuplicateKeyFindings = null,
         IReadOnlyList<UnistrUnpairedSurrogateFinding>? UnistrUnpairedSurrogateFindings = null,
+        IReadOnlyList<RegexpReplaceDollarBackreferenceFinding>? RegexpReplaceDollarBackreferenceFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -206,6 +207,7 @@ public static class TestScanReports
         Set("JsonArrayAggMissingOrderScanner", JsonArrayAggMissingOrderFindings);
         Set("JsonObjectDuplicateKeyScanner", JsonObjectDuplicateKeyFindings);
         Set("UnistrUnpairedSurrogateScanner", UnistrUnpairedSurrogateFindings);
+        Set("RegexpReplaceDollarBackreferenceScanner", RegexpReplaceDollarBackreferenceFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);

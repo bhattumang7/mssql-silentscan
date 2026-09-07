@@ -182,6 +182,7 @@ public static class SarifRuleCatalog
     public const string JsonArrayAggMissingOrderRuleId = FindingRuleIds.JsonArrayAggMissingOrderRuleId;
     public const string JsonObjectDuplicateKeyRuleId = FindingRuleIds.JsonObjectDuplicateKeyRuleId;
     public const string UnistrUnpairedSurrogateRuleId = FindingRuleIds.UnistrUnpairedSurrogateRuleId;
+    public const string RegexpReplaceDollarBackreferenceRuleId = FindingRuleIds.RegexpReplaceDollarBackreferenceRuleId;
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
     public const string AggregateDivisionColumnstoreRuleId = FindingRuleIds.AggregateDivisionColumnstoreRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;
