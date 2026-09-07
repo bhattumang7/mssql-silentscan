@@ -266,6 +266,21 @@ statement — is uncontroversial syntax, not a claim needing verification).
   8730/8727 semantics; the shared literal-folding logic correctly handles
   unary-minus and arithmetic forms; the `[0,1]` inclusive boundary check is
   correct at both endpoints.
+- `AlwaysEncryptedComparisonMismatchScanner` — re-audited after the range/
+  enclave extension; the `DeterministicRangeComparison` gate's own rule doc
+  already records the oracle finding that `ENCLAVE_COMPUTATIONS` on the
+  column master key does not lift the range-operator restriction for
+  deterministic columns, matching the scanner's unconditional check; the
+  `RandomizedWithoutEnclave` enclave-support gate, the equality-vs-range
+  classification, and the literal/None-vs-None exclusions all check out.
+- `GroupByValidityScanner` — found and fixed a real gap: the HAVING/ORDER BY
+  boolean walk only checked an `IN` predicate's left operand for the
+  literal-value-list form, silently skipping the same check for the
+  subquery form (`col IN (SELECT ...)`) even though Msg 8121 fires
+  identically either way; oracle-confirmed and closed. Everything else
+  (grouping-construct flattening, expression-shape text match, the
+  identifier-only column-name fallback, collation-aware case folding, the
+  windowed-vs-plain aggregate distinction) checked out.
 
 ---
 
