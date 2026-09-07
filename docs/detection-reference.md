@@ -2213,22 +2213,6 @@ rule for any of these shapes.
   marker — out of scope under the decidable-from-SQL-Server-catalog rule,
   not a gap in this tool. Shipped as `ExternalTableUnsupportedColumnTypeRuleId`.
 
-* **Non-numeric JSON element (or a mismatched element count) inside a string
-  literal converted to native `VECTOR(n)` — shipped, broader than the
-  original "boolean element" framing.** Oracle-confirmed (SQL Server 2025):
-  a well-formed JSON array containing a boolean/string/null/object element
-  always fails at execution (Msg 13670: "Input JSON is not a valid Vector"),
-  identically whether reached via `CAST`/`CONVERT`, a `DECLARE` initializer,
-  or a `SET` assignment to a `VECTOR`-typed variable — the original item
-  only asked about booleans, but string/null/object are the same class of
-  bug, so all four are covered. A numeric array whose element count doesn't
-  match the declared dimension fails the same way (Msg 42204). A malformed
-  literal, a non-array top-level value, or a nested-array element are left
-  unflagged — the engine's own error text diverges for those (e.g. a bare
-  `'true'` reports "Boolean not supported" but a bare `'123'` reports
-  "Malformed JSON"), so guessing a specific message for them would be
-  overclaiming. Shipped as `VectorLiteralConversionRuleId` (two kinds).
-
 * **`CONTAINS`/`FREETEXT` inside an aggregate expression — shipped, real
   restriction is unconditional, not GROUP BY-scoped.** Oracle-confirmed a
   full-text predicate nested inside a non-windowed aggregate's own
@@ -2405,48 +2389,6 @@ rule for any of these shapes.
   misclassified - not a scanner gap. Shipped by widening
   `ScalarUdfInlineabilityScanner`'s existing `GlobalVariableExpression`
   check from the single `@@DBTS` name to the five-name set.
-
-* **Item 4's encryption-state leg - shipped as a new
-  `AlwaysEncryptedAssignmentMismatchRuleId` family; legacy-LOB leg
-  redirected to a declaration-time reject, also shipped.** Oracle-confirmed
-  (Docker, SQL Server 2022) two distinct Msg 206 ("Operand type clash")
-  shapes for Always Encrypted columns, both regardless of which
-  encryption type/key is on either side: (1) a bare literal assigned into
-  an encrypted column via `INSERT ... VALUES` or an `UPDATE`/`MERGE` `SET`
-  clause always fails - the server cannot encrypt a plaintext literal
-  without a column-encryption-aware client; a `NULL` literal is exempt.
-  (2) a column-to-column assignment between two columns whose encryption
-  state differs - encrypted vs. plaintext in either direction, or
-  deterministic vs. randomized even under the same key - always fails.
-  Same-column self-assignment and matching-encryption-type assignments
-  compile and run fine. A parameter/variable source is never flagged -
-  the client driver is expected to encrypt it appropriately before
-  sending it. Shipped as `AlwaysEncryptedAssignmentMismatchScanner`,
-  covering `UPDATE`/`MERGE SET` (via the existing `AssignmentSetClause`
-  hook, resolving both sides through the query's own scope chain so
-  joins/aliases work) and `INSERT ... VALUES` (including `MERGE`'s
-  `INSERT` action) literal targets. `INSERT ... SELECT` column-to-column
-  mapping across a source table was scoped out - the target-column-list
-  tracking `TypedPredicateExtractor` already does for `WriteLossFinding`
-  would need to be duplicated to resolve it safely, disproportionate for
-  this pass. The legacy-LOB leg, as originally framed ("an assignment
-  whose source type cannot legally convert"), does not exist: oracle
-  probing found `DECLARE @x TEXT`/`NTEXT`/`IMAGE` fails to compile
-  unconditionally (Msg 2739, "invalid for local variables") regardless of
-  whether the variable is ever assigned - the same shape as the
-  collation leg's debunk (illegal syntax, not an assignment-time
-  restriction). Table columns and table-variable columns of these types,
-  and procedure/function parameters, remain legal. `IMAGE`'s own implicit
-  conversion behavior against character/XML types was also probed and
-  found genuinely asymmetric and inconsistent enough (e.g. `IMAGE`
-  accepts an implicit assignment from `VARCHAR(MAX)` but not from `TEXT`,
-  while the reverse direction rejects both) to risk false positives if
-  modeled from `SqlType` category alone - not shipped, deprioritized
-  behind the declaration-time reject, which is unconditional and safe.
-  Shipped the declaration-time fact as a new `DeprecatedSyntaxFindingKind.
-  LegacyLobLocalVariable` (High confidence, unlike this scanner's other
-  style-level findings, since it is a guaranteed compile failure, not a
-  deprecation warning).
 
 * **`sql_variant`/`bit` comparability restrictions - killed, no distinct
   restriction exists beyond ordinary type incompatibility.** The type/predicate

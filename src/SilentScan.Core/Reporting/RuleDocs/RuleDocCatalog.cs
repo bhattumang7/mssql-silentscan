@@ -114,8 +114,6 @@ public static class RuleDocCatalog
         [Predicates.DynamicDataMaskingComputedExpressionCollapse.RuleId] = Predicates.DynamicDataMaskingComputedExpressionCollapse.Content,
         [Predicates.AlterColumnPrecisionScaleNarrowing.RuleId] = Predicates.AlterColumnPrecisionScaleNarrowing.Content,
         [Predicates.AlterColumnTemporalOffsetDropped.RuleId] = Predicates.AlterColumnTemporalOffsetDropped.Content,
-        [Predicates.VectorLiteralNonNumericElement.RuleId] = Predicates.VectorLiteralNonNumericElement.Content,
-        [Predicates.VectorLiteralElementCountMismatch.RuleId] = Predicates.VectorLiteralElementCountMismatch.Content,
         [Predicates.ExecuteAtLargeObjectParameterCrashesSession.RuleId] = Predicates.ExecuteAtLargeObjectParameterCrashesSession.Content,
 
         [Catalog.UntrustedForeignKey.RuleId] = Catalog.UntrustedForeignKey.Content,
@@ -280,7 +278,6 @@ public static class RuleDocCatalog
         [DeprecatedSyntax.DeprecatedSetRowcount.RuleId] = DeprecatedSyntax.DeprecatedSetRowcount.Content,
         [DeprecatedSyntax.LegacyLobStatement.RuleId] = DeprecatedSyntax.LegacyLobStatement.Content,
         [DeprecatedSyntax.LegacyLobFunction.RuleId] = DeprecatedSyntax.LegacyLobFunction.Content,
-        [DeprecatedSyntax.LegacyLobLocalVariable.RuleId] = DeprecatedSyntax.LegacyLobLocalVariable.Content,
 
         [Duplication.CommentedOutCode.RuleId] = Duplication.CommentedOutCode.Content,
         [Duplication.DuplicatedStringLiteral.RuleId] = Duplication.DuplicatedStringLiteral.Content,

@@ -99,7 +99,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TemporalBoundary(report, headingLevel, pathBase));
         blocks.AddRange(JsonIndexRewrite(report, headingLevel, pathBase));
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
-        blocks.AddRange(VectorLiteralConversion(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
         blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
         blocks.AddRange(OversizedParameter(report, headingLevel, pathBase));
@@ -227,7 +226,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "JSON_VALUE equality predicates eligible for a JSON_CONTAINS index rewrite", report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
         AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
-        AddCount(counts, "String literals converted to VECTOR(n) that always fail at execution", report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner)).Count);
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
         AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
         AddCount(counts, "Predicates comparing a column against an oversized parameter/variable", report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count);
@@ -1553,29 +1551,6 @@ public static class ReadableScanReportWriter
         AlterColumnSafetyKind.TemporalOffsetDropped => "Temporal offset dropped",
         _ => "Unknown",
     };
-
-    private static IEnumerable<ReadableBlock> VectorLiteralConversion(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"String literals converted to VECTOR(n) that always fail at execution ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A string literal converted to VECTOR(n) (via CAST/CONVERT, a DECLARE initializer, or a SET assignment) is a well-formed JSON array containing a non-numeric element, or a numeric array whose element count does not match the declared dimension - oracle-confirmed (SQL Server 2025) the conversion always fails at execution (Msg 13670 or Msg 42204), regardless of the row.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Literal", "Target type", DetailHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.LiteralText,
-                f.TargetTypeDisplay,
-                RuleDocSite.Url(SarifRuleCatalog.VectorLiteralConversionRuleId(f.Kind)),
-            })]);
-    }
 
     private static IEnumerable<ReadableBlock> ExecuteAtLargeObjectParameter(ScanReport report, int level, string? pathBase)
     {
