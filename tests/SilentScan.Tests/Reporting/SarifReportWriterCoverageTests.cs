@@ -688,29 +688,6 @@ public sealed class SarifReportWriterCoverageTests
             Line: 1,
             Column: 1);
 
-    [Theory]
-    [InlineData(MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex, "rowstore CLUSTERED index")]
-    [InlineData(MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns, "declares INCLUDE columns")]
-    [InlineData(MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex, "is a filtered index (WHERE clause)")]
-    public void Write_MemoryOptimizedUnsupportedIndexOptionFinding_MapsKindToDistinctMessage(MemoryOptimizedUnsupportedIndexOptionKind kind, string expectedSubstring)
-    {
-        var finding = new MemoryOptimizedUnsupportedIndexOptionFinding("dbo.T", "IX_Test", kind, "test.sql", 1);
-        var report = TestScanReports.Build(MemoryOptimizedUnsupportedIndexOptionFindings: [finding]);
-
-        Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Theory]
-    [InlineData(MemoryOptimizedForeignKeyFindingKind.CrossStorageForeignKey, "exactly one side is memory-optimized")]
-    [InlineData(MemoryOptimizedForeignKeyFindingKind.ReferentialAction, "referential action other than NO ACTION")]
-    public void Write_MemoryOptimizedForeignKeyFinding_MapsKindToDistinctMessage(MemoryOptimizedForeignKeyFindingKind kind, string expectedSubstring)
-    {
-        var finding = new MemoryOptimizedForeignKeyFinding("FK_Test", "dbo.Parent", "dbo.Child", kind, "test.sql", 1);
-        var report = TestScanReports.Build(MemoryOptimizedForeignKeyFindings: [finding]);
-
-        Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
     [Fact]
     public void Write_MemoryOptimizedSchemaOnlyDurabilityFinding_MapsToDeploymentMessage()
     {
@@ -988,21 +965,6 @@ public sealed class SarifReportWriterCoverageTests
         var report = TestScanReports.Build(MaxTypedColumnFindings: [finding]);
 
         Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Theory]
-    [InlineData(SelectiveXmlIndexValueColumnFindingKind.TooWide, "silentscan/catalog/selective-xml-index-value-column-too-wide", "Msg 6395")]
-    [InlineData(SelectiveXmlIndexValueColumnFindingKind.LargeObject, "silentscan/catalog/selective-xml-index-value-column-large-object", "Msg 6391")]
-    public void Write_SelectiveXmlIndexValueColumnFinding_MapsKindToDistinctRuleIdAndMessage(
-        SelectiveXmlIndexValueColumnFindingKind kind, string expectedRuleId, string expectedMessageSubstring)
-    {
-        var finding = new SelectiveXmlIndexValueColumnFinding(
-            "dbo.Orders", "SXI_Orders_Note", "SXI_Orders", "Note", "varchar(901)", "test.sql", 1, kind);
-        var report = TestScanReports.Build(SelectiveXmlIndexValueColumnFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal(expectedRuleId, result.GetProperty("ruleId").GetString());
-        Assert.Contains(expectedMessageSubstring, result.GetProperty("message").GetProperty("text").GetString());
     }
 
     [Theory]

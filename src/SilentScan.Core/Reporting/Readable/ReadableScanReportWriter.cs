@@ -99,19 +99,12 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TemporalBoundary(report, headingLevel, pathBase));
         blocks.AddRange(JsonIndexRewrite(report, headingLevel, pathBase));
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
-        blocks.AddRange(ColumnstoreUnsupportedColumnType(report, headingLevel, pathBase));
         blocks.AddRange(ExternalTableUnsupportedColumnType(report, headingLevel, pathBase));
         blocks.AddRange(VectorLiteralConversion(report, headingLevel, pathBase));
         blocks.AddRange(FullTextPredicateInAggregate(report, headingLevel, pathBase));
         blocks.AddRange(ChangeTrackingEncryptedPrimaryKey(report, headingLevel, pathBase));
         blocks.AddRange(XmlSchemaCollectionDisallowedType(report, headingLevel, pathBase));
         blocks.AddRange(XmlSchemaCollectionMismatch(report, headingLevel, pathBase));
-        blocks.AddRange(SelectiveXmlIndexValueColumn(report, headingLevel, pathBase));
-        blocks.AddRange(MemoryOptimizedUnsupportedColumnType(report, headingLevel, pathBase));
-        blocks.AddRange(MemoryOptimizedUtf8Collation(report, headingLevel, pathBase));
-        blocks.AddRange(MemoryOptimizedLedgerConflict(report, headingLevel, pathBase));
-        blocks.AddRange(MemoryOptimizedUnsupportedIndexOption(report, headingLevel, pathBase));
-        blocks.AddRange(MemoryOptimizedForeignKey(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
         blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
         blocks.AddRange(SemanticSearch(report, headingLevel, pathBase));
@@ -186,8 +179,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(RestrictedImplicitAssignment(report, headingLevel, pathBase));
         blocks.AddRange(RevertCookieTypeMismatch(report, headingLevel, pathBase));
         blocks.AddRange(ForXmlExplicitInlineXsd(report, headingLevel, pathBase));
-        blocks.AddRange(AlwaysEncryptedKeyColumn(report, headingLevel, pathBase));
-        blocks.AddRange(AlwaysEncryptedUnsupportedColumn(report, headingLevel, pathBase));
         blocks.AddRange(AlterColumnSafety(report, headingLevel, pathBase));
         blocks.AddRange(DropProtectedObject(report, headingLevel, pathBase));
         blocks.AddRange(OnlineRebuildLegacyLob(report, headingLevel, pathBase));
@@ -268,20 +259,13 @@ public static class ReadableScanReportWriter
         AddCount(counts, "JSON_VALUE equality predicates eligible for a JSON_CONTAINS index rewrite", report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
         AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
-        AddCount(counts, "Columnstore-unsupported-type columns participating in a columnstore index (does not deploy)", report.Find<ColumnstoreUnsupportedColumnTypeFinding>(nameof(ColumnstoreUnsupportedColumnTypeScanner)).Count);
         AddCount(counts, "CREATE EXTERNAL TABLE columns declared with a PolyBase-unsupported type (does not deploy)", report.Find<ExternalTableUnsupportedColumnTypeFinding>(nameof(ExternalTableUnsupportedColumnTypeScanner)).Count);
         AddCount(counts, "String literals converted to VECTOR(n) that always fail at execution", report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner)).Count);
         AddCount(counts, "Full-text predicates nested inside a non-windowed aggregate expression", report.Find<FullTextPredicateInAggregateFinding>(nameof(FullTextPredicateInAggregateScanner)).Count);
         AddCount(counts, "ENABLE CHANGE_TRACKING targeting a table with an Always Encrypted primary key column", report.Find<ChangeTrackingEncryptedPrimaryKeyFinding>(nameof(ChangeTrackingEncryptedPrimaryKeyScanner)).Count);
         AddCount(counts, "XML schema collections using a disallowed built-in XSD type", report.Find<XmlSchemaCollectionDisallowedTypeFinding>(nameof(XmlSchemaCollectionDisallowedTypeScanner)).Count);
         AddCount(counts, "Typed XML variables assigned across mismatched schema collections", report.Find<XmlSchemaCollectionMismatchFinding>(nameof(XmlSchemaCollectionMismatchScanner)).Count);
-        AddCount(counts, "Secondary selective XML indexes over an oversized/large-object value column (does not deploy)", report.Find<SelectiveXmlIndexValueColumnFinding>(nameof(SelectiveXmlIndexValueColumnScanner)).Count);
-        AddCount(counts, "Unsupported column type on a memory-optimized table (does not deploy)", report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>(nameof(MemoryOptimizedUnsupportedColumnTypeScanner)).Count);
-        AddCount(counts, "UTF-8 collation on a memory-optimized table column (does not deploy)", report.Find<MemoryOptimizedUtf8CollationFinding>(nameof(MemoryOptimizedUtf8CollationScanner)).Count);
         AddCount(counts, "Semantic search function calls that fail at execution", report.Find<SemanticSearchFinding>(nameof(SemanticSearchScanner)).Count);
-        AddCount(counts, "MEMORY_OPTIMIZED and LEDGER both specified on the same table (does not deploy)", report.Find<MemoryOptimizedLedgerConflictFinding>(nameof(MemoryOptimizedLedgerConflictScanner)).Count);
-        AddCount(counts, "Unsupported index option on a memory-optimized table (does not deploy)", report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>(nameof(MemoryOptimizedUnsupportedIndexOptionScanner)).Count);
-        AddCount(counts, "Unsupported memory-optimized foreign key (does not deploy)", report.Find<MemoryOptimizedForeignKeyFinding>(nameof(MemoryOptimizedForeignKeyScanner)).Count);
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
         AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
         AddCount(counts, "Predicates comparing a column against an oversized parameter/variable", report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count);
@@ -313,9 +297,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "sql_variant/xml assignment", report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count);
         AddCount(counts, "REVERT cookie type mismatch", report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count);
         AddCount(counts, "FOR XML EXPLICIT with inline XSD", report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Count);
-        AddCount(counts, "Always Encrypted non-enclave key column", report.Find<AlwaysEncryptedKeyColumnFinding>(nameof(AlwaysEncryptedKeyColumnScanner)).Count);
-        AddCount(counts, "Always Encrypted unsupported data type", report.Find<AlwaysEncryptedUnsupportedColumnFinding>(nameof(AlwaysEncryptedUnsupportedColumnScanner)).Count(f => f.Kind == AlwaysEncryptedUnsupportedColumnKind.UnsupportedDataType));
-        AddCount(counts, "Always Encrypted identity column", report.Find<AlwaysEncryptedUnsupportedColumnFinding>(nameof(AlwaysEncryptedUnsupportedColumnScanner)).Count(f => f.Kind == AlwaysEncryptedUnsupportedColumnKind.IdentityColumn));
         AddCount(counts, "ALTER COLUMN safety", report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count);
         AddCount(counts, "DROP against a protected object", report.Find<DropProtectedObjectFinding>(nameof(DropProtectedObjectScanner)).Count);
         AddCount(counts, "Online index rebuild blocked by a legacy large-object column", report.Find<OnlineRebuildLegacyLobFinding>(nameof(OnlineRebuildLegacyLobScanner)).Count);
@@ -992,29 +973,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> ColumnstoreUnsupportedColumnType(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<ColumnstoreUnsupportedColumnTypeFinding>(nameof(ColumnstoreUnsupportedColumnTypeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Columnstore-unsupported-type columns in a columnstore index ({report.Find<ColumnstoreUnsupportedColumnTypeFinding>(nameof(ColumnstoreUnsupportedColumnTypeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact, not a plan-shape claim: a column of this type participating in a columnstore index does not deploy at all - oracle-confirmed real DDL execution fails with Msg 35343 (\"a data type that cannot participate in a columnstore index\").");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ColumnstoreUnsupportedColumnTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Type", "Index"],
-            [.. report.Find<ColumnstoreUnsupportedColumnTypeFinding>(nameof(ColumnstoreUnsupportedColumnTypeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.TypeDisplay,
-                f.IndexName,
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> ExternalTableUnsupportedColumnType(ScanReport report, int level, string? pathBase)
     {
         var findings = report.Find<ExternalTableUnsupportedColumnTypeFinding>(nameof(ExternalTableUnsupportedColumnTypeScanner));
@@ -1037,174 +995,6 @@ public static class ReadableScanReportWriter
                 f.TypeDisplay,
             })]);
     }
-
-    private static IEnumerable<ReadableBlock> SelectiveXmlIndexValueColumn(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SelectiveXmlIndexValueColumnFinding>(nameof(SelectiveXmlIndexValueColumnScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Secondary selective XML indexes over an oversized/large-object value column ({report.Find<SelectiveXmlIndexValueColumnFinding>(nameof(SelectiveXmlIndexValueColumnScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact, not a plan-shape claim: a secondary selective XML index over a promoted path whose declared type is a large object or wider than 900 bytes does not deploy at all - oracle-confirmed real DDL execution fails with Msg 6391 (large object) or Msg 6395 (maximum key length is 900 bytes).");
-
-        foreach (var group in report.Find<SelectiveXmlIndexValueColumnFinding>(nameof(SelectiveXmlIndexValueColumnScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SelectiveXmlIndexValueColumnRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, "Secondary index", "Primary index", "Path", "Type"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.SecondaryIndexName}",
-                    f.PrimaryIndexName,
-                    f.PathName,
-                    f.TypeDisplay,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> MemoryOptimizedUnsupportedColumnType(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>(nameof(MemoryOptimizedUnsupportedColumnTypeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Unsupported column type on a memory-optimized table ({report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>(nameof(MemoryOptimizedUnsupportedColumnTypeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact, not a plan-shape claim: xml, sql_variant, text, ntext, image, and timestamp/rowversion columns are not supported on a memory-optimized table at all - oracle-confirmed real DDL execution fails with Msg 10794.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MemoryOptimizedUnsupportedColumnTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Type"],
-            [.. report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>(nameof(MemoryOptimizedUnsupportedColumnTypeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.TypeDisplay,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> MemoryOptimizedUtf8Collation(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<MemoryOptimizedUtf8CollationFinding>(nameof(MemoryOptimizedUtf8CollationScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"UTF-8 collation on a memory-optimized table column ({report.Find<MemoryOptimizedUtf8CollationFinding>(nameof(MemoryOptimizedUtf8CollationScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact, not a plan-shape claim: a char/varchar column carrying a UTF-8 collation is not supported on a memory-optimized table at all - oracle-confirmed real DDL execution fails with Msg 12356.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MemoryOptimizedUtf8CollationRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Type", "Collation"],
-            [.. report.Find<MemoryOptimizedUtf8CollationFinding>(nameof(MemoryOptimizedUtf8CollationScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.TypeDisplay,
-                f.CollationName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> MemoryOptimizedLedgerConflict(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<MemoryOptimizedLedgerConflictFinding>(nameof(MemoryOptimizedLedgerConflictScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"MEMORY_OPTIMIZED and LEDGER both specified on the same table ({report.Find<MemoryOptimizedLedgerConflictFinding>(nameof(MemoryOptimizedLedgerConflictScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A CREATE TABLE statement specifies both MEMORY_OPTIMIZED = ON and LEDGER = ON - oracle-confirmed real deployment fails with Msg 12359.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MemoryOptimizedLedgerConflictRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader],
-            [.. report.Find<MemoryOptimizedLedgerConflictFinding>(nameof(MemoryOptimizedLedgerConflictScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> MemoryOptimizedUnsupportedIndexOption(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>(nameof(MemoryOptimizedUnsupportedIndexOptionScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Unsupported index option on a memory-optimized table ({report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>(nameof(MemoryOptimizedUnsupportedIndexOptionScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact: a rowstore CLUSTERED index, an index with INCLUDE columns, or a filtered index (a WHERE clause on the index) is not supported on a memory-optimized table - oracle-confirmed real DDL execution fails (Msg 12317/10664/10794 respectively).");
-
-        foreach (var group in report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>(nameof(MemoryOptimizedUnsupportedIndexOptionScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{MemoryOptimizedUnsupportedIndexOptionTitle(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MemoryOptimizedUnsupportedIndexOptionRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, TableHeader, "Index"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.TableQualifiedName,
-                    f.IndexName,
-                })]);
-        }
-    }
-
-    private static string MemoryOptimizedUnsupportedIndexOptionTitle(MemoryOptimizedUnsupportedIndexOptionKind kind) => kind switch
-    {
-        MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex => "Rowstore CLUSTERED index",
-        MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns => "INCLUDE columns",
-        MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex => "Filtered index (WHERE clause)",
-        MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey => "IGNORE_DUP_KEY",
-        MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption => "ALLOW_ROW_LOCKS/ALLOW_PAGE_LOCKS",
-        MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey => "OPTIMIZE_FOR_SEQUENTIAL_KEY",
-        _ => "Unsupported index option",
-    };
-
-    private static IEnumerable<ReadableBlock> MemoryOptimizedForeignKey(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<MemoryOptimizedForeignKeyFinding>(nameof(MemoryOptimizedForeignKeyScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Unsupported memory-optimized foreign key ({report.Find<MemoryOptimizedForeignKeyFinding>(nameof(MemoryOptimizedForeignKeyScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact: a foreign key spanning a memory-optimized and a disk-based table, or a CASCADE/SET NULL/SET DEFAULT referential action between two memory-optimized tables, is not supported - oracle-confirmed real DDL execution fails (Msg 10778/10794 respectively).");
-
-        foreach (var group in report.Find<MemoryOptimizedForeignKeyFinding>(nameof(MemoryOptimizedForeignKeyScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{MemoryOptimizedForeignKeyTitle(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MemoryOptimizedForeignKeyRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, "Constraint", "Parent table", "Referenced table"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.ConstraintName,
-                    f.ParentTableQualifiedName,
-                    f.ReferencedTableQualifiedName,
-                })]);
-        }
-    }
-
-    private static string MemoryOptimizedForeignKeyTitle(MemoryOptimizedForeignKeyFindingKind kind) => kind switch
-    {
-        MemoryOptimizedForeignKeyFindingKind.CrossStorageForeignKey => "Spans memory-optimized and disk-based tables",
-        MemoryOptimizedForeignKeyFindingKind.ReferentialAction => "Non-NO ACTION referential action",
-        _ => "Unsupported foreign key shape",
-    };
 
     private static IEnumerable<ReadableBlock> MemoryOptimizedSchemaOnlyDurability(ScanReport report, int level, string? pathBase)
     {
@@ -1990,74 +1780,6 @@ public static class ReadableScanReportWriter
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 $"FOR XML EXPLICIT, XMLSCHEMA at line {f.Line}, column {f.Column}.",
             })]);
-    }
-
-    private static IEnumerable<ReadableBlock> AlwaysEncryptedKeyColumn(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AlwaysEncryptedKeyColumnFinding>(nameof(AlwaysEncryptedKeyColumnScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Always Encrypted non-enclave key column ({report.Find<AlwaysEncryptedKeyColumnFinding>(nameof(AlwaysEncryptedKeyColumnScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A RANDOMIZED-encrypted column is used as a key column of an index, PRIMARY KEY/UNIQUE constraint, or statistics object, and the column encryption key backing it is tied to a column master key declared without ENCLAVE_COMPUTATIONS - the statement does not deploy (Msg 33573).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedKeyColumnRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, ObjectHeader, "Kind"],
-            [.. report.Find<AlwaysEncryptedKeyColumnFinding>(nameof(AlwaysEncryptedKeyColumnScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.ObjectName,
-                f.Kind switch
-                {
-                    AlwaysEncryptedKeyColumnKind.PrimaryKey => "PRIMARY KEY constraint",
-                    AlwaysEncryptedKeyColumnKind.UniqueConstraint => "UNIQUE constraint",
-                    AlwaysEncryptedKeyColumnKind.Statistics => "statistics",
-                    _ => "index",
-                },
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> AlwaysEncryptedUnsupportedColumn(ScanReport report, int level, string? pathBase)
-    {
-        var unsupportedType = report.Find<AlwaysEncryptedUnsupportedColumnFinding>(nameof(AlwaysEncryptedUnsupportedColumnScanner)).Where(f => f.Kind == AlwaysEncryptedUnsupportedColumnKind.UnsupportedDataType).ToList();
-        if (unsupportedType.Count > 0)
-        {
-            yield return new ReadableBlock.Heading(level, $"Always Encrypted unsupported data type ({unsupportedType.Count})");
-            yield return new ReadableBlock.Paragraph(
-                "A column declared ENCRYPTED WITH has a data type Always Encrypted rejects outright - the statement does not deploy (Msg 33280).");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedUnsupportedColumnRuleId(AlwaysEncryptedUnsupportedColumnKind.UnsupportedDataType)));
-
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, "Type"],
-                [.. unsupportedType.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.TypeDisplay ?? string.Empty,
-                })]);
-        }
-
-        var identity = report.Find<AlwaysEncryptedUnsupportedColumnFinding>(nameof(AlwaysEncryptedUnsupportedColumnScanner)).Where(f => f.Kind == AlwaysEncryptedUnsupportedColumnKind.IdentityColumn).ToList();
-        if (identity.Count > 0)
-        {
-            yield return new ReadableBlock.Heading(level, $"Always Encrypted identity column ({identity.Count})");
-            yield return new ReadableBlock.Paragraph(
-                "A column declared IDENTITY also carries ENCRYPTED WITH - an identity column must be unencrypted, so the statement does not deploy (Msg 2749).");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedUnsupportedColumnRuleId(AlwaysEncryptedUnsupportedColumnKind.IdentityColumn)));
-
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, "Type"],
-                [.. identity.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.TypeDisplay ?? string.Empty,
-                })]);
-        }
     }
 
     private static IEnumerable<ReadableBlock> AlterColumnSafety(ScanReport report, int level, string? pathBase)

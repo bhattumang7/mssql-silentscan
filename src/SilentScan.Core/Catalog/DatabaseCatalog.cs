@@ -36,10 +36,6 @@ public sealed class DatabaseCatalog
 
     private readonly List<TemporalTablePair> _temporalTablePairs = [];
 
-    private readonly List<CatalogSelectiveXmlIndexPromotedPath> _selectiveXmlIndexPromotedPaths = [];
-
-    private readonly List<CatalogSecondarySelectiveXmlIndexReference> _secondarySelectiveXmlIndexReferences = [];
-
     private readonly Dictionary<(string SchemeName, int PartitionNumber), string> _partitionFilegroupsBySchemeAndNumber = [];
 
     private Dictionary<string, IReadOnlyList<CatalogIndex>> _indexedViewIndexesByQualifiedName;
@@ -148,14 +144,6 @@ public sealed class DatabaseCatalog
     public void AddCheckConstraint(CatalogCheckConstraint constraint) => _checkConstraints.Add(constraint);
 
     public IReadOnlyList<CatalogCheckConstraint> CheckConstraints => _checkConstraints;
-
-    public void AddSelectiveXmlIndexPromotedPath(CatalogSelectiveXmlIndexPromotedPath path) => _selectiveXmlIndexPromotedPaths.Add(path);
-
-    public IReadOnlyList<CatalogSelectiveXmlIndexPromotedPath> SelectiveXmlIndexPromotedPaths => _selectiveXmlIndexPromotedPaths;
-
-    public void AddSecondarySelectiveXmlIndexReference(CatalogSecondarySelectiveXmlIndexReference reference) => _secondarySelectiveXmlIndexReferences.Add(reference);
-
-    public IReadOnlyList<CatalogSecondarySelectiveXmlIndexReference> SecondarySelectiveXmlIndexReferences => _secondarySelectiveXmlIndexReferences;
 
     public void AddSecurityPredicate(CatalogSecurityPredicate predicate) => _securityPredicates.Add(predicate);
 
