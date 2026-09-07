@@ -125,7 +125,7 @@ public static class GroupByValidityScanner
                     CheckScalar(like.SecondExpression, groupedTexts, groupedColumnNames, kind);
                     break;
 
-                case InPredicate { Subquery: null } inPredicate:
+                case InPredicate inPredicate:
                     CheckScalar(inPredicate.Expression, groupedTexts, groupedColumnNames, kind);
                     foreach (var value in inPredicate.Values)
                     {
