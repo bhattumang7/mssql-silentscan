@@ -2629,4 +2629,17 @@ rule for any of these shapes.
   literal pattern contains at least one letter (a pattern with none can
   never be affected by case) - a non-literal `match_type` argument is
   skipped rather than assumed absent, since it could still resolve to `'i'`
-  at runtime.
+  at runtime. The same default-case-sensitivity gap oracle-confirmed for the
+  table-valued forms `REGEXP_MATCHES` and `REGEXP_SPLIT_TO_TABLE` (used in a
+  `FROM`/`CROSS APPLY` clause) - both parse as `GlobalFunctionTableReference`
+  in ScriptDom, not the `SchemaObjectFunctionTableReference` other built-in
+  TVF scanners in this codebase (`TvfFenceScanner`, `ScalarUdfScanner`) key
+  off, since they're schema-less built-ins rather than catalog-registered
+  functions; confirmed via a throwaway ScriptDom AST dump rather than
+  guessed. `ModuleWalker` had no hook for `RegexpLikePredicate` (a
+  dedicated ScriptDom node the existing `NonSargablePredicateScanner`
+  already reached only through its own private traversal) - added
+  `IModuleRule.OnEnterRegexpLikePredicate`/`ModuleWalker`'s matching
+  `ExplicitVisit` following the exact same dispatch pattern as
+  `OnEnterFunctionCall`, reusable by any future rule that needs to react to
+  the predicate form directly instead of the function-call forms.
