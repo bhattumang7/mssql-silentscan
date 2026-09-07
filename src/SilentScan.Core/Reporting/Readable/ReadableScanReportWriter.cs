@@ -99,15 +99,9 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TemporalBoundary(report, headingLevel, pathBase));
         blocks.AddRange(JsonIndexRewrite(report, headingLevel, pathBase));
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
-        blocks.AddRange(ExternalTableUnsupportedColumnType(report, headingLevel, pathBase));
         blocks.AddRange(VectorLiteralConversion(report, headingLevel, pathBase));
-        blocks.AddRange(FullTextPredicateInAggregate(report, headingLevel, pathBase));
-        blocks.AddRange(ChangeTrackingEncryptedPrimaryKey(report, headingLevel, pathBase));
-        blocks.AddRange(XmlSchemaCollectionDisallowedType(report, headingLevel, pathBase));
-        blocks.AddRange(XmlSchemaCollectionMismatch(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
         blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
-        blocks.AddRange(SemanticSearch(report, headingLevel, pathBase));
         blocks.AddRange(OversizedParameter(report, headingLevel, pathBase));
         blocks.AddRange(UnderLengthParameter(report, headingLevel, pathBase));
         blocks.AddRange(AnsiPaddingMismatch(report, headingLevel, pathBase));
@@ -121,7 +115,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(UntrustedConstraint(report, headingLevel, pathBase));
         blocks.AddRange(CascadingForeignKey(report, headingLevel, pathBase));
         blocks.AddRange(MultiReferencedCte(report, headingLevel, pathBase));
-        blocks.AddRange(RecursiveCteAnchorTypeMismatch(report, headingLevel, pathBase));
         blocks.AddRange(NestedViewDepth(report, headingLevel, pathBase));
         blocks.AddRange(PostExpansionJoinWidth(report, headingLevel, pathBase));
         blocks.AddRange(SelectStarView(report, headingLevel, pathBase));
@@ -133,17 +126,10 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ExecResultSetsShape(report, headingLevel, pathBase));
         blocks.AddRange(SelfReferencingDml(report, headingLevel, pathBase));
         blocks.AddRange(TemporalTableHistoryIndexGap(report, headingLevel, pathBase));
-        blocks.AddRange(GeneratedAlwaysColumnAssignment(report, headingLevel, pathBase));
         blocks.AddRange(ModuleCompileFlag(report, headingLevel, pathBase));
         blocks.AddRange(WindowFrame(report, headingLevel, pathBase));
-        blocks.AddRange(WindowFunctionArgument(report, headingLevel, pathBase));
-        blocks.AddRange(StringSplitArgument(report, headingLevel, pathBase));
         blocks.AddRange(BoundedStringBuiltinTruncation(report, headingLevel, pathBase));
         blocks.AddRange(WaitFor(report, headingLevel, pathBase));
-        blocks.AddRange(RestoreOptionConflict(report, headingLevel, pathBase));
-        blocks.AddRange(ViewCheckOptionContradiction(report, headingLevel, pathBase));
-        blocks.AddRange(CreateDatabaseOptionConflict(report, headingLevel, pathBase));
-        blocks.AddRange(GraphPseudoColumnAssignment(report, headingLevel, pathBase));
         blocks.AddRange(CursorCloseOnCommit(report, headingLevel, pathBase));
         blocks.AddRange(ViewOrdering(report, headingLevel, pathBase));
         blocks.AddRange(TransactionHygiene(report, headingLevel, pathBase));
@@ -173,24 +159,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
         blocks.AddRange(FloatOrderDependentAggregate(report, headingLevel, pathBase));
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
-        blocks.AddRange(AlwaysEncryptedOrderBy(report, headingLevel, pathBase));
-        blocks.AddRange(AlwaysEncryptedAssignmentMismatch(report, headingLevel, pathBase));
-        blocks.AddRange(AlwaysEncryptedComparisonMismatch(report, headingLevel, pathBase));
-        blocks.AddRange(RestrictedImplicitAssignment(report, headingLevel, pathBase));
-        blocks.AddRange(RevertCookieTypeMismatch(report, headingLevel, pathBase));
-        blocks.AddRange(ForXmlExplicitInlineXsd(report, headingLevel, pathBase));
         blocks.AddRange(AlterColumnSafety(report, headingLevel, pathBase));
-        blocks.AddRange(DropProtectedObject(report, headingLevel, pathBase));
-        blocks.AddRange(OnlineRebuildLegacyLob(report, headingLevel, pathBase));
-        blocks.AddRange(UnpivotExactTypeMismatch(report, headingLevel, pathBase));
-        blocks.AddRange(SchemaboundAliasType(report, headingLevel, pathBase));
-        blocks.AddRange(SparseColumnDisallowedType(report, headingLevel, pathBase));
-        blocks.AddRange(LegacyLobUtf8Collation(report, headingLevel, pathBase));
-        blocks.AddRange(LegacyLobConversionTarget(report, headingLevel, pathBase));
-        blocks.AddRange(GroupByValidity(report, headingLevel, pathBase));
-        blocks.AddRange(OperandComparability(report, headingLevel, pathBase));
-        blocks.AddRange(VectorFunctionArgument(report, headingLevel, pathBase));
-        blocks.AddRange(SchemaWithRejectedType(report, headingLevel, pathBase));
         blocks.AddRange(ExecuteAtLargeObjectParameter(report, headingLevel, pathBase));
         blocks.AddRange(QueryAntiPattern(report, headingLevel, pathBase));
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
@@ -202,7 +171,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TryCastComputedColumnPredicate(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
-        blocks.AddRange(RowLimitOutOfRange(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -259,13 +227,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "JSON_VALUE equality predicates eligible for a JSON_CONTAINS index rewrite", report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
         AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
-        AddCount(counts, "CREATE EXTERNAL TABLE columns declared with a PolyBase-unsupported type (does not deploy)", report.Find<ExternalTableUnsupportedColumnTypeFinding>(nameof(ExternalTableUnsupportedColumnTypeScanner)).Count);
         AddCount(counts, "String literals converted to VECTOR(n) that always fail at execution", report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner)).Count);
-        AddCount(counts, "Full-text predicates nested inside a non-windowed aggregate expression", report.Find<FullTextPredicateInAggregateFinding>(nameof(FullTextPredicateInAggregateScanner)).Count);
-        AddCount(counts, "ENABLE CHANGE_TRACKING targeting a table with an Always Encrypted primary key column", report.Find<ChangeTrackingEncryptedPrimaryKeyFinding>(nameof(ChangeTrackingEncryptedPrimaryKeyScanner)).Count);
-        AddCount(counts, "XML schema collections using a disallowed built-in XSD type", report.Find<XmlSchemaCollectionDisallowedTypeFinding>(nameof(XmlSchemaCollectionDisallowedTypeScanner)).Count);
-        AddCount(counts, "Typed XML variables assigned across mismatched schema collections", report.Find<XmlSchemaCollectionMismatchFinding>(nameof(XmlSchemaCollectionMismatchScanner)).Count);
-        AddCount(counts, "Semantic search function calls that fail at execution", report.Find<SemanticSearchFinding>(nameof(SemanticSearchScanner)).Count);
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
         AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
         AddCount(counts, "Predicates comparing a column against an oversized parameter/variable", report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count);
@@ -290,25 +252,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
-        AddCount(counts, "Always Encrypted ORDER BY", report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Count);
-        AddCount(counts, "Always Encrypted assignment mismatch", report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Count);
-        AddCount(counts, "Always Encrypted comparison mismatch", report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count);
-        AddCount(counts, "TOP/OFFSET/FETCH/TABLESAMPLE literal out of range", report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count);
-        AddCount(counts, "sql_variant/xml assignment", report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count);
-        AddCount(counts, "REVERT cookie type mismatch", report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count);
-        AddCount(counts, "FOR XML EXPLICIT with inline XSD", report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Count);
         AddCount(counts, "ALTER COLUMN safety", report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count);
-        AddCount(counts, "DROP against a protected object", report.Find<DropProtectedObjectFinding>(nameof(DropProtectedObjectScanner)).Count);
-        AddCount(counts, "Online index rebuild blocked by a legacy large-object column", report.Find<OnlineRebuildLegacyLobFinding>(nameof(OnlineRebuildLegacyLobScanner)).Count);
-        AddCount(counts, "UNPIVOT source columns with mismatched exact types", report.Find<UnpivotExactTypeMismatchFinding>(nameof(UnpivotExactTypeMismatchScanner)).Count);
-        AddCount(counts, "WITH SCHEMABINDING function using an alias type", report.Find<SchemaboundAliasTypeFinding>(nameof(SchemaboundAliasTypeScanner)).Count);
-        AddCount(counts, "SPARSE column of a disallowed type", report.Find<SparseColumnDisallowedTypeFinding>(nameof(SparseColumnDisallowedTypeScanner)).Count);
-        AddCount(counts, "TEXT/NTEXT column with a UTF-8 or supplementary-character-aware collation", report.Find<LegacyLobUtf8CollationFinding>(nameof(LegacyLobUtf8CollationScanner)).Count);
-        AddCount(counts, "conversion targeting TEXT/NTEXT with a UTF-8 or supplementary-character-aware collation", report.Find<LegacyLobConversionTargetFinding>(nameof(LegacyLobConversionTargetScanner)).Count);
-        AddCount(counts, "GROUP BY-invalid column reference", report.Find<GroupByValidityFinding>(nameof(GroupByValidityScanner)).Count);
-        AddCount(counts, "Operand not comparable (xml/json/legacy large object/spatial)", report.Find<OperandComparabilityFinding>(nameof(OperandComparabilityScanner)).Count);
-        AddCount(counts, "Vector function argument type errors", report.Find<VectorFunctionArgumentFinding>(nameof(VectorFunctionArgumentScanner)).Count);
-        AddCount(counts, "OPENXML/OPENROWSET WITH schema rejected column type", report.Find<SchemaWithRejectedTypeFinding>(nameof(SchemaWithRejectedTypeScanner)).Count);
         AddCount(counts, "EXECUTE (...) AT large-object/xml parameter", report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Count);
         AddCount(counts, "Query anti-patterns", report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count);
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
@@ -331,7 +275,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Untrusted FK/CHECK constraints", report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).Count);
         AddCount(counts, "Foreign keys with a cascading ON DELETE/UPDATE action", report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Count);
         AddCount(counts, "CTEs referenced 2+ times downstream of their own WITH clause", report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Count);
-        AddCount(counts, "Recursive CTE anchor/recursive member column type disagreements", report.Find<RecursiveCteAnchorTypeMismatchFinding>(nameof(RecursiveCteAnchorTypeMismatchScanner)).Count);
         AddCount(counts, "Views/inline TVFs nested 2+ view/TVF layers deep", report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Count);
         AddCount(counts, "Queries whose expanded join width exceeds their written FROM/JOIN count", report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count);
         AddCount(counts, "Consumers narrowing a nested SELECT * view's frozen column list", report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Count);
@@ -343,17 +286,10 @@ public static class ReadableScanReportWriter
         AddCount(counts, "EXEC ... WITH RESULT SETS shape mismatches", report.Find<ExecResultSetsShapeFinding>(ExecResultSetsShapeRuleId).Count);
         AddCount(counts, "Self-referencing DML (Halloween Protection risk)", report.Find<SelfReferencingDmlFinding>(nameof(SelfReferencingDmlScanner)).Count);
         AddCount(counts, "Temporal table history-side index gaps", report.Find<TemporalTableHistoryIndexGapFinding>(nameof(TemporalTableHistoryIndexGapScanner)).Count);
-        AddCount(counts, "Explicit assignments to a GENERATED ALWAYS temporal period column", report.Find<GeneratedAlwaysColumnAssignmentFinding>(nameof(GeneratedAlwaysColumnAssignmentScanner)).Count);
         AddCount(counts, "Module compile flags (WITH RECOMPILE / TVF database-collation return)", report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count);
         AddCount(counts, "RANGE window-function frames", report.Find<WindowFrameFinding>(nameof(WindowFrameScanner)).Count);
-        AddCount(counts, "LAG/LEAD/PERCENTILE_CONT/PERCENTILE_DISC/TABLESAMPLE out-of-range constant arguments", report.Find<WindowFunctionArgumentFinding>(nameof(WindowFunctionArgumentScanner)).Count);
-        AddCount(counts, "STRING_SPLIT argument validation", report.Find<StringSplitArgumentFinding>(nameof(StringSplitArgumentScanner)).Count);
         AddCount(counts, "REPLICATE/REPLACE/SPACE constant-provable result truncation", report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count);
         AddCount(counts, "WAITFOR DELAY/TIME", report.Find<WaitForFinding>(nameof(WaitForScanner)).Count);
-        AddCount(counts, "RESTORE WITH conflicting RECOVERY/NORECOVERY/STANDBY", report.Find<RestoreOptionConflictFinding>(nameof(RestoreOptionConflictScanner)).Count);
-        AddCount(counts, "WITH CHECK OPTION view write contradicted by a literal", report.Find<ViewCheckOptionContradictionFinding>(nameof(ViewCheckOptionContradictionScanner)).Count);
-        AddCount(counts, "CREATE DATABASE WITH CONTAINMENT = PARTIAL and CATALOG_COLLATION", report.Find<CreateDatabaseOptionConflictFinding>(nameof(CreateDatabaseOptionConflictScanner)).Count);
-        AddCount(counts, "$node_id/$edge_id direct assignment", report.Find<GraphPseudoColumnAssignmentFinding>(nameof(GraphPseudoColumnAssignmentScanner)).Count);
         AddCount(counts, "Cursors silently closed by CURSOR_CLOSE_ON_COMMIT then fetched", report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count);
         AddCount(counts, "View/inline TVF ordering not guaranteed", report.Find<ViewOrderingFinding>(nameof(ViewOrderingScanner)).Count);
         AddCount(counts, "Unresolved BEGIN TRANSACTION", report.Find<TransactionHygieneFinding>(nameof(TransactionHygieneScanner)).Count);
@@ -973,29 +909,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> ExternalTableUnsupportedColumnType(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<ExternalTableUnsupportedColumnTypeFinding>(nameof(ExternalTableUnsupportedColumnTypeScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"CREATE EXTERNAL TABLE columns declared or inferred with a PolyBase-unsupported type ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A CREATE EXTERNAL TABLE column's declared type (or, for CETAS, its select-list source expression's resolved type) is checked against a fixed PolyBase allow-list before the engine ever opens the external data source - oracle-confirmed real DDL execution fails with Msg 46518 (\"The type '...' is not supported with external tables.\") for the explicit-column form, or Msg 15877 for CETAS, independent of the file format, DATA_SOURCE, or whether the referenced location exists.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ExternalTableUnsupportedColumnTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Type"],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.TypeDisplay,
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> MemoryOptimizedSchemaOnlyDurability(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count == 0)
@@ -1038,45 +951,6 @@ public static class ReadableScanReportWriter
                 f.DefinitionText,
                 f.IsCoveredByIndex ? "Yes" : "No",
             })]);
-    }
-
-    private static IEnumerable<ReadableBlock> SemanticSearch(ScanReport report, int level, string? pathBase)
-    {
-        var all = report.Find<SemanticSearchFinding>(nameof(SemanticSearchScanner));
-
-        var tableNotIndexed = all.Where(f => f.Kind == SemanticSearchFindingKind.TableNotSemanticFullTextIndexed).ToList();
-        if (tableNotIndexed.Count > 0)
-        {
-            yield return new ReadableBlock.Heading(level, $"Semantic search function on a table with no semantic full-text index ({tableNotIndexed.Count})");
-            yield return new ReadableBlock.Paragraph(
-                "Oracle-confirmed (Msg 41202): SEMANTICKEYPHRASETABLE, SEMANTICSIMILARITYTABLE, and SEMANTICSIMILARITYDETAILSTABLE all require the source table to have a full-text index column enabled with STATISTICAL_SEMANTICS - none does here, so the call fails.");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SemanticSearchRuleId(SemanticSearchFindingKind.TableNotSemanticFullTextIndexed)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, TableHeader, DetailHeader],
-                [.. tableNotIndexed.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.TableQualifiedName,
-                    f.Detail,
-                })]);
-        }
-
-        var columnNotIndexed = all.Where(f => f.Kind == SemanticSearchFindingKind.ColumnNotSemanticFullTextIndexed).ToList();
-        if (columnNotIndexed.Count > 0)
-        {
-            yield return new ReadableBlock.Heading(level, $"Semantic search function names a column without STATISTICAL_SEMANTICS ({columnNotIndexed.Count})");
-            yield return new ReadableBlock.Paragraph(
-                "Oracle-confirmed (Msg 41203): the column named in the call must itself be full-text indexed with STATISTICAL_SEMANTICS, even if another column on the same table qualifies.");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SemanticSearchRuleId(SemanticSearchFindingKind.ColumnNotSemanticFullTextIndexed)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, DetailHeader],
-                [.. columnNotIndexed.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.Detail,
-                })]);
-        }
     }
 
     private static IEnumerable<ReadableBlock> OversizedParameter(ScanReport report, int level, string? pathBase)
@@ -1645,143 +1519,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> AlwaysEncryptedOrderBy(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Always Encrypted ORDER BY ({report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An ORDER BY clause references an Always Encrypted column - the statement does not compile at all (Msg 33277), for both DETERMINISTIC and RANDOMIZED encryption types, regardless of whether the connecting client is itself Always-Encrypted-enabled. Direct base-table columns in the immediate statement's own top-level ORDER BY only - a window function's own OVER (... ORDER BY ...) and an encrypted column reached only through a view/CTE/derived table are not analyzed by this v1.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedOrderByRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Encryption type", DetailHeader],
-            [.. report.Find<AlwaysEncryptedOrderByFinding>(nameof(AlwaysEncryptedOrderByScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.EncryptionTypeDisplay,
-                $"Referenced in ORDER BY at line {f.Line}, column {f.Column}.",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> AlwaysEncryptedAssignmentMismatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Always Encrypted assignment mismatch ({report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An Always Encrypted column is assigned a plaintext literal, or from a column whose encryption state differs (encrypted vs. plaintext, or a different encryption type) - the statement does not compile (Msg 206), regardless of which side is the source.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Target column", SourceHeader, DetailHeader],
-            [.. report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TargetTableQualifiedName}.{f.TargetColumnName} ({f.TargetEncryptionTypeDisplay})",
-                f.Kind == AlwaysEncryptedAssignmentMismatchKind.LiteralSource
-                    ? "a literal value"
-                    : $"{f.SourceTableQualifiedName}.{f.SourceColumnName} ({f.SourceEncryptionTypeDisplay})",
-                RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedAssignmentMismatchRuleId(f.Kind)),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> AlwaysEncryptedComparisonMismatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Always Encrypted comparison mismatch ({report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An Always Encrypted column is compared against a plaintext literal, against a column whose encryption state differs (encrypted vs. plaintext, a different encryption type, or the same type under a different column encryption key), against a matching deterministic column using a range operator (<, >, BETWEEN, ...) - deterministic encryption only supports equality - or against a matching randomized column without a secure-enclave-enabled column encryption key. The statement does not compile in any of these cases, regardless of which side holds which value.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "First operand", SourceHeader, DetailHeader],
-            [.. report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.FirstTableQualifiedName}.{f.FirstColumnName} ({f.FirstEncryptionTypeDisplay})",
-                f.Kind == AlwaysEncryptedComparisonMismatchKind.LiteralOperand
-                    ? "a literal value"
-                    : $"{f.SecondTableQualifiedName}.{f.SecondColumnName} ({f.SecondEncryptionTypeDisplay})",
-                RuleDocSite.Url(SarifRuleCatalog.AlwaysEncryptedComparisonMismatchRuleId(f.Kind)),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> RestrictedImplicitAssignment(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Restricted sql_variant/xml assignment ({report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A local variable or parameter reads directly out of a sql_variant-typed source into a differently-typed target, or into an xml-typed target from a source that is neither xml nor a character/binary type - the statement does not compile at all (Msg 206, \"Operand type clash\", or Msg 257, \"Implicit conversion ... is not allowed\"), unconditionally.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RestrictedImplicitAssignmentRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TargetHeader, SourceHeader, DetailHeader],
-            [.. report.Find<RestrictedImplicitAssignmentFinding>(nameof(RestrictedImplicitAssignmentScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TargetVariableName} ({f.TargetTypeDisplay})",
-                $"{f.SourceVariableName} ({f.SourceTypeDisplay})",
-                $"Assigned at line {f.Line}, column {f.Column}.",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> RevertCookieTypeMismatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"REVERT cookie type mismatch ({report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "REVERT WITH COOKIE references a variable that is not declared varbinary(100) - the engine only accepts the fixed varbinary(100) shape produced by EXECUTE AS ... WITH COOKIE INTO; the statement does not compile.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RevertCookieTypeMismatchRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Cookie variable", DetailHeader],
-            [.. report.Find<RevertCookieTypeMismatchFinding>(nameof(RevertCookieTypeMismatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.CookieVariableName} ({f.CookieTypeDisplay})",
-                $"Referenced at line {f.Line}, column {f.Column}.",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> ForXmlExplicitInlineXsd(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"FOR XML EXPLICIT with inline XSD ({report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A FOR XML EXPLICIT query also specifies XMLSCHEMA - this combination does not compile.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ForXmlExplicitInlineXsdRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, DetailHeader],
-            [.. report.Find<ForXmlExplicitInlineXsdFinding>(nameof(ForXmlExplicitInlineXsdScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"FOR XML EXPLICIT, XMLSCHEMA at line {f.Line}, column {f.Column}.",
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> AlterColumnSafety(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count == 0)
@@ -1813,228 +1550,9 @@ public static class ReadableScanReportWriter
     private static string AlterColumnSafetyTitle(AlterColumnSafetyKind kind) => kind switch
     {
         AlterColumnSafetyKind.PrecisionOrScaleNarrowing => "Precision/scale narrowing",
-        AlterColumnSafetyKind.IncompatibleFamilyConversion => "Incompatible family conversion",
         AlterColumnSafetyKind.TemporalOffsetDropped => "Temporal offset dropped",
         _ => "Unknown",
     };
-
-    private static IEnumerable<ReadableBlock> DropProtectedObject(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<DropProtectedObjectFinding>(nameof(DropProtectedObjectScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"DROP against a protected object ({report.Find<DropProtectedObjectFinding>(nameof(DropProtectedObjectScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A DROP SCHEMA statement targets a schema this scan also saw own at least one object, or a DROP ROLE statement names one of the engine's fixed database roles - both always fail at deploy time.");
-
-        foreach (var group in report.Find<DropProtectedObjectFinding>(nameof(DropProtectedObjectScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{DropProtectedObjectTitle(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DropProtectedObjectRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ObjectHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.ObjectName,
-                })]);
-        }
-    }
-
-    private static string DropProtectedObjectTitle(DropProtectedObjectKind kind) => kind switch
-    {
-        DropProtectedObjectKind.SchemaNotEmpty => "Schema not empty",
-        DropProtectedObjectKind.FixedDatabaseRole => "Fixed database role",
-        _ => "Unknown",
-    };
-
-    private static IEnumerable<ReadableBlock> OnlineRebuildLegacyLob(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<OnlineRebuildLegacyLobFinding>(nameof(OnlineRebuildLegacyLobScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Online index rebuild blocked by a legacy large-object column ({report.Find<OnlineRebuildLegacyLobFinding>(nameof(OnlineRebuildLegacyLobScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An ALTER TABLE ... REBUILD or ALTER INDEX ALL ... REBUILD statement specifies ONLINE = ON against a table carrying a TEXT/NTEXT/IMAGE column - the online rebuild always touches every column and never completes.");
-
-        foreach (var group in report.Find<OnlineRebuildLegacyLobFinding>(nameof(OnlineRebuildLegacyLobScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{OnlineRebuildLegacyLobTitle(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.OnlineRebuildLegacyLobRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, TableHeader, ColumnHeader, "Type"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.TableQualifiedName,
-                    f.ColumnName,
-                    f.TypeDisplay,
-                })]);
-        }
-    }
-
-    private static string OnlineRebuildLegacyLobTitle(OnlineRebuildLegacyLobKind kind) => kind switch
-    {
-        OnlineRebuildLegacyLobKind.AlterTableRebuild => "ALTER TABLE ... REBUILD",
-        OnlineRebuildLegacyLobKind.AlterIndexAllRebuild => "ALTER INDEX ALL ... REBUILD",
-        OnlineRebuildLegacyLobKind.AlterColumnOnline => "ALTER TABLE ... ALTER COLUMN",
-        OnlineRebuildLegacyLobKind.DropIndexOnline => "DROP INDEX",
-        _ => "Unknown",
-    };
-
-    private static IEnumerable<ReadableBlock> UnpivotExactTypeMismatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<UnpivotExactTypeMismatchFinding>(nameof(UnpivotExactTypeMismatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"UNPIVOT source columns with mismatched exact types ({report.Find<UnpivotExactTypeMismatchFinding>(nameof(UnpivotExactTypeMismatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "UNPIVOT requires every column named in its IN-list to share exactly the same type - oracle-confirmed (Msg 8167) a mismatch in base type, length/precision/scale, or collation always fails to compile, even when the types would otherwise implicitly convert.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.UnpivotExactTypeMismatchRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, "Reference column", "Reference type", "Mismatched column", "Mismatched type"],
-            [.. report.Find<UnpivotExactTypeMismatchFinding>(nameof(UnpivotExactTypeMismatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ReferenceColumnName,
-                f.ReferenceTypeDisplay,
-                f.MismatchedColumnName,
-                f.MismatchedTypeDisplay,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> SchemaboundAliasType(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SchemaboundAliasTypeFinding>(nameof(SchemaboundAliasTypeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"WITH SCHEMABINDING function using an alias type ({report.Find<SchemaboundAliasTypeFinding>(nameof(SchemaboundAliasTypeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A WITH SCHEMABINDING function's own parameter, RETURNS type, or table-valued RETURNS column names a CREATE TYPE alias - oracle-confirmed (Msg 2792) this never compiles, regardless of the alias's underlying type.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SchemaboundAliasTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, FunctionHeader, "Kind", "Member", "Alias type"],
-            [.. report.Find<SchemaboundAliasTypeFinding>(nameof(SchemaboundAliasTypeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.FunctionQualifiedName,
-                f.Kind.ToString(),
-                f.MemberName,
-                f.AliasTypeQualifiedName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> SparseColumnDisallowedType(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SparseColumnDisallowedTypeFinding>(nameof(SparseColumnDisallowedTypeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"SPARSE column of a disallowed type ({report.Find<SparseColumnDisallowedTypeFinding>(nameof(SparseColumnDisallowedTypeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A column marked SPARSE has a type on the engine's own closed disallow-list - oracle-confirmed (Msg 1731) the CREATE/ALTER never compiles.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SparseColumnDisallowedTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, ColumnHeader, "Type"],
-            [.. report.Find<SparseColumnDisallowedTypeFinding>(nameof(SparseColumnDisallowedTypeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ColumnName,
-                f.TypeDisplay,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> LegacyLobUtf8Collation(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<LegacyLobUtf8CollationFinding>(nameof(LegacyLobUtf8CollationScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"TEXT/NTEXT column with a UTF-8 or supplementary-character-aware collation ({report.Find<LegacyLobUtf8CollationFinding>(nameof(LegacyLobUtf8CollationScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A TEXT/NTEXT column's effective collation carries the _UTF8 or _SC flag - oracle-confirmed (Msg 4188) the CREATE/ALTER never compiles.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.LegacyLobUtf8CollationRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, ColumnHeader, "Type", "Collation"],
-            [.. report.Find<LegacyLobUtf8CollationFinding>(nameof(LegacyLobUtf8CollationScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ColumnName,
-                f.TypeDisplay,
-                f.CollationName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> OperandComparability(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<OperandComparabilityFinding>(nameof(OperandComparabilityScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Operand not comparable ({report.Find<OperandComparabilityFinding>(nameof(OperandComparabilityScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An xml, json, legacy large-object (text/ntext/image), or spatial (geometry/geography) column is referenced from a comparison, IN list, BETWEEN, NULLIF, ORDER BY, GROUP BY, SELECT DISTINCT, or a window function's PARTITION BY - these types are not comparable at all outside IS NULL (and, for the legacy large-object types, LIKE); the statement does not compile. Direct base-table columns resolved through the immediate statement's own FROM/CTE scope only - a column reached only through a view/derived table is not analyzed by this v1.");
-
-        foreach (var group in report.Find<OperandComparabilityFinding>(nameof(OperandComparabilityScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.OperandComparabilityRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, "Type", DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.TypeDisplay,
-                    $"{f.Context}{(f.OperatorText is null ? "" : $" ({f.OperatorText})")} at line {f.Line}, column {f.Column}.",
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> VectorFunctionArgument(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<VectorFunctionArgumentFinding>(nameof(VectorFunctionArgumentScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Vector function argument type errors ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A VECTOR_DISTANCE/VECTOR_NORM/VECTORPROPERTY call's vector-position argument is not a VECTOR(n)-typed value, or VECTOR_DISTANCE's two vector arguments declare different dimensions - the statement never compiles or never succeeds at execution, regardless of the actual data.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, FunctionHeader, "Argument", "Type", DetailHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.FunctionName,
-                f.ArgumentDescription,
-                f.OtherTypeDisplay is null ? f.TypeDisplay : $"{f.TypeDisplay} vs {f.OtherTypeDisplay}",
-                RuleDocSite.Url(SarifRuleCatalog.VectorFunctionArgumentRuleId(f.Kind)),
-            })]);
-    }
 
     private static IEnumerable<ReadableBlock> VectorLiteralConversion(ScanReport report, int level, string? pathBase)
     {
@@ -2056,122 +1574,6 @@ public static class ReadableScanReportWriter
                 f.LiteralText,
                 f.TargetTypeDisplay,
                 RuleDocSite.Url(SarifRuleCatalog.VectorLiteralConversionRuleId(f.Kind)),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> FullTextPredicateInAggregate(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<FullTextPredicateInAggregateFinding>(nameof(FullTextPredicateInAggregateScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Full-text predicates nested inside a non-windowed aggregate expression ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A CONTAINS/FREETEXT full-text predicate appears inside a non-windowed aggregate function's expression (typically via CASE WHEN) - oracle-confirmed this never compiles (Msg 30082: \"Full-text predicates cannot appear in an aggregate expression. Place the aggregate expression in a subquery.\"). The same aggregate with an OVER clause is unaffected.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.FullTextPredicateInAggregateRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Aggregate", "Full-text predicate"],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.AggregateFunctionName,
-                f.FullTextFunctionName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> ChangeTrackingEncryptedPrimaryKey(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<ChangeTrackingEncryptedPrimaryKeyFinding>(nameof(ChangeTrackingEncryptedPrimaryKeyScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"ENABLE CHANGE_TRACKING targeting a table with an Always Encrypted primary key column ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "ALTER TABLE ... ENABLE CHANGE_TRACKING targets a table whose primary key includes an Always Encrypted column - oracle-confirmed this always fails (Msg 22118: \"Change tracking is not supported when the primary key contains encrypted columns.\"), regardless of the encryption type.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ChangeTrackingEncryptedPrimaryKeyRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, "Encrypted primary key column"],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ColumnName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> XmlSchemaCollectionDisallowedType(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<XmlSchemaCollectionDisallowedTypeFinding>(nameof(XmlSchemaCollectionDisallowedTypeScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"XML schema collections using a disallowed built-in XSD type ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A CREATE/ALTER XML SCHEMA COLLECTION's inline XSD text uses NOTATION anywhere, or uses ID/IDREF (or a type derived from either) as an element's own type or an extension/restriction base - oracle-confirmed the schema collection never registers (Msg 9337 or Msg 6995).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.XmlSchemaCollectionDisallowedTypeRuleId(XmlSchemaCollectionDisallowedTypeKind.NotationType)));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Schema collection", "XSD type", DetailHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.SchemaCollectionQualifiedName,
-                f.XsdTypeName,
-                RuleDocSite.Url(SarifRuleCatalog.XmlSchemaCollectionDisallowedTypeRuleId(f.Kind)),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> XmlSchemaCollectionMismatch(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<XmlSchemaCollectionMismatchFinding>(nameof(XmlSchemaCollectionMismatchScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Typed XML variables assigned across mismatched schema collections ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A typed XML variable/parameter is assigned directly from another typed XML variable/parameter declared against a different named schema collection, with no CONVERT in between - oracle-confirmed this does not compile (Msg 527: \"Implicit conversion between XML types constrained by different XML schema collections is not allowed.\").");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.XmlSchemaCollectionMismatchRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TargetHeader, SourceHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TargetVariableName} (XML({f.TargetSchemaCollectionName}))",
-                $"{f.SourceVariableName} (XML({f.SourceSchemaCollectionName}))",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> SchemaWithRejectedType(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<SchemaWithRejectedTypeFinding>(nameof(SchemaWithRejectedTypeScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"OPENXML/OPENROWSET WITH schema rejected column type ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An OPENXML ... WITH or OPENROWSET(BULK ...) inline-schema WITH clause declares a column typed sql_variant, text/ntext/image, a CLR type (geometry/geography/hierarchyid), or (OPENROWSET only) xml - a type the engine's fixed type gate for that clause always rejects.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Type", DetailHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ColumnName,
-                f.TypeDisplay,
-                RuleDocSite.Url(SarifRuleCatalog.SchemaWithRejectedTypeRuleId(f.Kind)),
             })]);
     }
 
@@ -2581,26 +1983,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> RowLimitOutOfRange(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"TOP/OFFSET/FETCH/TABLESAMPLE literal out of range ({report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A TOP, OFFSET, FETCH, or TABLESAMPLE clause is given a literal constant outside the range the engine accepts - a negative row count, a PERCENT value outside 0-100, or a FETCH/TABLESAMPLE ROWS count that isn't strictly positive. The statement does not compile.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, DetailHeader],
-            [.. report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                RuleDocSite.Url(SarifRuleCatalog.RowLimitOutOfRangeRuleId(f.Kind)),
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> StringConcatNull(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count == 0)
@@ -2738,30 +2120,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> RecursiveCteAnchorTypeMismatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<RecursiveCteAnchorTypeMismatchFinding>(nameof(RecursiveCteAnchorTypeMismatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Recursive CTE anchor/recursive member type mismatches ({report.Find<RecursiveCteAnchorTypeMismatchFinding>(nameof(RecursiveCteAnchorTypeMismatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "T-SQL requires a recursive CTE's recursive member to resolve each column to exactly the anchor member's own type - oracle-confirmed as a hard compile-time error (Msg 240, \"Types don't match between the anchor and the recursive part\") that blocks even CREATE PROCEDURE/CREATE VIEW from succeeding.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RecursiveCteAnchorTypeMismatchRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "CTE", ColumnHeader, "Anchor type", "Recursive member type"],
-            [.. report.Find<RecursiveCteAnchorTypeMismatchFinding>(nameof(RecursiveCteAnchorTypeMismatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.CteName,
-                f.ColumnName,
-                f.AnchorTypeDisplay,
-                f.RecursiveTypeDisplay,
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> NestedViewDepth(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Count == 0)
@@ -2875,17 +2233,14 @@ public static class ReadableScanReportWriter
         foreach (var group in report.Find<TempTableExecShapeFinding>(TempTableExecShapeRuleId).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var title = group.Key == TempTableExecShapeFindingKind.ColumnCountMismatch ? "Column count mismatch" : "Column type mismatch";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
+            yield return new ReadableBlock.Heading(level + 1, $"Column type mismatch ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TempTableExecShapeRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
                     Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.Kind == TempTableExecShapeFindingKind.ColumnCountMismatch
-                        ? $"{f.TempTableQualifiedName} INSERT targets {f.TempTableDeclaredColumnCount} column(s); {f.ExecutedProcQualifiedName} describes {f.DescribedColumnCount}"
-                        : $"{f.TempTableQualifiedName} position {f.ColumnPosition} ('{f.ColumnName}', {f.TempColumnTypeDisplay}) <- {f.ExecutedProcQualifiedName} ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
+                    $"{f.TempTableQualifiedName} position {f.ColumnPosition} ('{f.ColumnName}', {f.TempColumnTypeDisplay}) <- {f.ExecutedProcQualifiedName} ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
                 })]);
         }
     }
@@ -2904,17 +2259,14 @@ public static class ReadableScanReportWriter
         foreach (var group in report.Find<ExecResultSetsShapeFinding>(ExecResultSetsShapeRuleId).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var title = group.Key == ExecResultSetsShapeFindingKind.ColumnCountMismatch ? "Column count mismatch" : "Column type mismatch";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
+            yield return new ReadableBlock.Heading(level + 1, $"Column type mismatch ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ExecResultSetsShapeRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
                     Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.Kind == ExecResultSetsShapeFindingKind.ColumnCountMismatch
-                        ? $"{f.ExecutedProcQualifiedName} WITH RESULT SETS declares {f.DeclaredColumnCount} column(s); describes {f.DescribedColumnCount}"
-                        : $"{f.ExecutedProcQualifiedName} WITH RESULT SETS position {f.ColumnPosition} ('{f.ColumnName}', {f.DeclaredColumnTypeDisplay}) <- described ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
+                    $"{f.ExecutedProcQualifiedName} WITH RESULT SETS position {f.ColumnPosition} ('{f.ColumnName}', {f.DeclaredColumnTypeDisplay}) <- described ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
                 })]);
         }
     }
@@ -2966,36 +2318,6 @@ public static class ReadableScanReportWriter
                 f.CurrentIndexName ?? "(unnamed)",
                 string.Join(", ", f.KeyColumns),
             })]);
-    }
-
-    private static IEnumerable<ReadableBlock> GeneratedAlwaysColumnAssignment(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<GeneratedAlwaysColumnAssignmentFinding>(nameof(GeneratedAlwaysColumnAssignmentScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Explicit assignments to a GENERATED ALWAYS temporal period column ({report.Find<GeneratedAlwaysColumnAssignmentFinding>(nameof(GeneratedAlwaysColumnAssignmentScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An INSERT/UPDATE/MERGE names a system-versioned temporal table's GENERATED ALWAYS AS ROW START/END period column - oracle-confirmed a hard compile/runtime error unconditionally (Msg 13536 for an explicit INSERT value, Msg 13537 for any UPDATE assignment, DEFAULT included).");
-
-        foreach (var group in report.Find<GeneratedAlwaysColumnAssignmentFinding>(nameof(GeneratedAlwaysColumnAssignmentScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            var title = group.Key == GeneratedAlwaysColumnAssignmentKind.ExplicitInsertValue
-                ? "Explicit INSERT value (Msg 13536)"
-                : "UPDATE SET assignment (Msg 13537)";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.GeneratedAlwaysColumnAssignmentRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, TableHeader, ColumnHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.TableQualifiedName,
-                    f.ColumnName,
-                })]);
-        }
     }
 
     private static IEnumerable<ReadableBlock> ModuleCompileFlag(ScanReport report, int level, string? pathBase)
@@ -3053,60 +2375,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> WindowFunctionArgument(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<WindowFunctionArgumentFinding>(nameof(WindowFunctionArgumentScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"LAG/LEAD/PERCENTILE_CONT/PERCENTILE_DISC/TABLESAMPLE out-of-range constant arguments ({report.Find<WindowFunctionArgumentFinding>(nameof(WindowFunctionArgumentScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A LAG/LEAD offset argument, a PERCENTILE_CONT/PERCENTILE_DISC percentile argument, or a TABLESAMPLE (... PERCENT) percent argument, constant-folds to a value the engine rejects (a negative offset, a percentile outside the inclusive [0, 1] range, or a percent outside the inclusive [0, 100] range) - oracle-confirmed the statement fails (Msg 8730/Msg 8727/Msg 476) the moment any row reaches the function, or never compiles at all for TABLESAMPLE.");
-
-        foreach (var group in report.Find<WindowFunctionArgumentFinding>(nameof(WindowFunctionArgumentScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.WindowFunctionArgumentRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, FunctionHeader, "Argument"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.FunctionName,
-                    f.ArgumentText,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> StringSplitArgument(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<StringSplitArgumentFinding>(nameof(StringSplitArgumentScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"STRING_SPLIT argument validation ({report.Find<StringSplitArgumentFinding>(nameof(StringSplitArgumentScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "STRING_SPLIT is called with an argument that oracle-confirmed always fails at compile/bind time, before any row is read.");
-
-        foreach (var group in report.Find<StringSplitArgumentFinding>(nameof(StringSplitArgumentScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.StringSplitArgumentRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, "Argument", DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.ArgumentText,
-                    f.DetailText ?? string.Empty,
-                })]);
-        }
-    }
-
     private static IEnumerable<ReadableBlock> BoundedStringBuiltinTruncation(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count == 0)
@@ -3154,153 +2422,6 @@ public static class ReadableScanReportWriter
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.IsInsideTransaction ? "Yes" : "No",
             })]);
-    }
-
-    private static IEnumerable<ReadableBlock> RestoreOptionConflict(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<RestoreOptionConflictFinding>(nameof(RestoreOptionConflictScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"RESTORE WITH conflicting RECOVERY/NORECOVERY/STANDBY ({report.Find<RestoreOptionConflictFinding>(nameof(RestoreOptionConflictScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "RECOVERY, NORECOVERY, and STANDBY describe mutually exclusive end states for the database after the restore completes - combining any two always fails (Msg 3031).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RestoreOptionConflictRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Conflict"],
-            [.. report.Find<RestoreOptionConflictFinding>(nameof(RestoreOptionConflictScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                DescribeRestoreOptionConflictKind(f.Kind),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> ViewCheckOptionContradiction(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<ViewCheckOptionContradictionFinding>(nameof(ViewCheckOptionContradictionScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"WITH CHECK OPTION view write contradicted by a literal ({report.Find<ViewCheckOptionContradictionFinding>(nameof(ViewCheckOptionContradictionScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "The assigned literal falls outside the range the view's own WHERE clause allows - the view was created WITH CHECK OPTION, so the engine always rejects this row (Msg 550).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ViewCheckOptionContradictionRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "View", ColumnHeader],
-            [.. report.Find<ViewCheckOptionContradictionFinding>(nameof(ViewCheckOptionContradictionScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ViewQualifiedName,
-                f.ColumnName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> CreateDatabaseOptionConflict(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CreateDatabaseOptionConflictFinding>(nameof(CreateDatabaseOptionConflictScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"CREATE DATABASE WITH CONTAINMENT = PARTIAL and CATALOG_COLLATION ({report.Find<CreateDatabaseOptionConflictFinding>(nameof(CreateDatabaseOptionConflictScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "CONTAINMENT = PARTIAL and CATALOG_COLLATION are mutually exclusive on CREATE DATABASE - this combination always fails (Msg 12845).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CreateDatabaseOptionConflictRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader],
-            [.. report.Find<CreateDatabaseOptionConflictFinding>(nameof(CreateDatabaseOptionConflictScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-            })]);
-    }
-
-    private static string DescribeRestoreOptionConflictKind(RestoreOptionConflictKind kind) => kind switch
-    {
-        RestoreOptionConflictKind.RecoveryAndNoRecovery => "RECOVERY + NORECOVERY",
-        RestoreOptionConflictKind.RecoveryAndStandby => "RECOVERY + STANDBY",
-        RestoreOptionConflictKind.NoRecoveryAndStandby => "NORECOVERY + STANDBY",
-        _ => kind.ToString(),
-    };
-
-    private static IEnumerable<ReadableBlock> GraphPseudoColumnAssignment(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<GraphPseudoColumnAssignmentFinding>(nameof(GraphPseudoColumnAssignmentScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"$node_id/$edge_id direct assignment ({report.Find<GraphPseudoColumnAssignmentFinding>(nameof(GraphPseudoColumnAssignmentScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "$node_id/$edge_id are hidden, system-managed columns on a SQL Graph node/edge table - an explicit INSERT or UPDATE value for them always fails.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.GraphPseudoColumnAssignmentRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Statement"],
-            [.. report.Find<GraphPseudoColumnAssignmentFinding>(nameof(GraphPseudoColumnAssignmentScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.PseudoColumnName,
-                f.StatementKind,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> LegacyLobConversionTarget(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<LegacyLobConversionTargetFinding>(nameof(LegacyLobConversionTargetScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"conversion targeting TEXT/NTEXT with a UTF-8 or supplementary-character-aware collation ({report.Find<LegacyLobConversionTargetFinding>(nameof(LegacyLobConversionTargetScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A CAST/CONVERT/TRY_CAST/TRY_CONVERT expression targets TEXT/NTEXT with a trailing COLLATE clause naming a UTF-8 or _SC collation - oracle-confirmed (Msg 4189) the statement never compiles.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.LegacyLobConversionTargetRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Type", "Collation"],
-            [.. report.Find<LegacyLobConversionTargetFinding>(nameof(LegacyLobConversionTargetScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TypeDisplay,
-                f.CollationName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> GroupByValidity(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<GroupByValidityFinding>(nameof(GroupByValidityScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"GROUP BY-invalid column reference ({report.Find<GroupByValidityFinding>(nameof(GroupByValidityScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A column reference in the select list or HAVING clause is neither an aggregate function argument nor shape-identical to a GROUP BY expression - oracle-confirmed (Msg 8120/8121) the statement never compiles.");
-
-        foreach (var group in report.Find<GroupByValidityFinding>(nameof(GroupByValidityScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            var title = group.Key switch
-            {
-                GroupByValidityFindingKind.Having => "HAVING clause",
-                GroupByValidityFindingKind.OrderBy => "ORDER BY clause",
-                _ => "Select list",
-            };
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.GroupByValidityRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, "Expression"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.ExpressionText,
-                })]);
-        }
     }
 
     private static IEnumerable<ReadableBlock> CursorCloseOnCommit(ScanReport report, int level, string? pathBase)
@@ -3370,10 +2491,6 @@ public static class ReadableScanReportWriter
                     "Unresolved implicit transaction",
                     "SET IMPLICIT_TRANSACTIONS ON silently opens a transaction ahead of the next INSERT/UPDATE/DELETE/MERGE/TRUNCATE/SELECT (with a FROM)/CREATE/ALTER/DROP/GRANT/REVOKE/OPEN CURSOR/FETCH CURSOR with no matching BEGIN TRANSACTION - a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK leaves @@TRANCOUNT elevated by one the instant the procedure returns, same as an unresolved explicit BEGIN TRANSACTION.",
                     new[] { "Implicit transaction opened at", "Unresolved at" }),
-                TransactionHygieneFindingKind.CommitAfterXactAbortDoomsTransaction => (
-                    "COMMIT after XACT_ABORT dooms the transaction",
-                    "SET XACT_ABORT ON marks a transaction that was already open before a TRY block as uncommittable (XACT_STATE() = -1) the instant an error is caught by the matching CATCH block - oracle-confirmed a COMMIT TRANSACTION reached directly inside that CATCH block always fails with Msg 3930, regardless of the error that triggered the CATCH; only ROLLBACK is possible.",
-                    new[] { "Transaction opened at", "Doomed COMMIT at" }),
                 _ => (
                     "Unresolved BEGIN TRANSACTION",
                     "A BEGIN TRANSACTION reaches a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK - oracle-confirmed directly that SQL Server raises Msg 266 and leaves @@TRANCOUNT elevated by one the instant such a procedure returns, holding its locks indefinitely.",
@@ -3447,15 +2564,14 @@ public static class ReadableScanReportWriter
             yield break;
         }
 
-        yield return new ReadableBlock.Heading(level, $"INDEX hints naming a nonexistent or non-seekable index ({report.Find<IndexHintFinding>(nameof(IndexHintScanner)).Count})");
+        yield return new ReadableBlock.Heading(level, $"INDEX hints naming a non-seekable index ({report.Find<IndexHintFinding>(nameof(IndexHintScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "An INDEX(...) table hint either names an index that no longer exists (oracle-confirmed a hard compile error, Msg 308, every time this statement runs) or forces a real index whose own leading key column is never bound anywhere in the statement (oracle-confirmed to degrade the forced access path to a full index scan, since the hint requires this specific index rather than merely suggesting it).");
+            "An INDEX(...) table hint forces a real index whose own leading key column is never bound anywhere in the statement (oracle-confirmed to degrade the forced access path to a full index scan, since the hint requires this specific index rather than merely suggesting it).");
 
         foreach (var group in report.Find<IndexHintFinding>(nameof(IndexHintScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var title = group.Key == IndexHintFindingKind.IndexDoesNotExist ? "Index does not exist" : "Leading column never bound";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
+            yield return new ReadableBlock.Heading(level + 1, $"Leading column never bound ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.IndexHintRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, TableHeader, "Hinted index", "Problem"],
@@ -3464,7 +2580,7 @@ public static class ReadableScanReportWriter
                     Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                     f.TableQualifiedName,
                     f.HintedIndexName,
-                    f.Kind == IndexHintFindingKind.IndexDoesNotExist ? "Index does not exist" : $"Leading column {f.LeadingColumnName} never bound",
+                    $"Leading column {f.LeadingColumnName} never bound",
                 })]);
         }
     }

@@ -41,39 +41,3 @@ internal static class ExecuteAtLargeObjectParameterCrashesSession
                 CompliantExplanation: "@payload is a fixed-length NVARCHAR(4000) - the remote call parameter binds normally."),
         ]);
 }
-
-internal static class ExecuteAtXmlParameterRejected
-{
-    public static string RuleId => SarifRuleCatalog.ExecuteAtLargeObjectParameterRuleId(SilentScan.Core.Predicates.ExecuteAtLargeObjectParameterFindingKind.XmlRejected);
-
-    public static RuleDocContent Content { get; } = new(
-        WhyItMatters: """
-            EXECUTE ( 'command_text', @param, ... ) AT linked_server (or AT DATA_SOURCE
-            data_source_name) rejects an xml-typed parameter at any of the additional
-            comma-separated positions. Confirmed directly against real SQL Server instances (2022 and
-            2025): the statement fails at execution with Msg 9512 ("Xml data type is not supported as
-            a parameter to remote calls"), before any remote connection is attempted, regardless of
-            the target or the document's actual content.
-            """,
-        HowToFixIt: """
-            Convert the xml value to a string (for example via .value() or CAST to
-            NVARCHAR(MAX)) before passing it as an EXECUTE (...) AT argument, and parse it back into
-            xml on the remote side if it is genuinely needed there.
-            """,
-        Examples:
-        [
-            new RuleDocExample(
-                Title: "Passing an xml parameter to EXECUTE AT always fails",
-                NoncompliantSql: """
-                    DECLARE @doc XML = '<a/>';
-                    EXEC ('SELECT 1', @doc) AT MyLinkedServer;
-                    """,
-                NoncompliantExplanation: "@doc is xml - this statement fails every time it runs with Msg 9512.",
-                CompliantSql: """
-                    DECLARE @doc XML = '<a/>';
-                    DECLARE @docText NVARCHAR(4000) = CAST(@doc AS NVARCHAR(4000));
-                    EXEC ('SELECT 1', @docText) AT MyLinkedServer;
-                    """,
-                CompliantExplanation: "The xml value is cast to a plain NVARCHAR before being passed as the remote call parameter."),
-        ]);
-}

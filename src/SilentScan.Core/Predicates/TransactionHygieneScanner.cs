@@ -229,23 +229,6 @@ public static class TransactionHygieneScanner
 
             var tryResult = AnalyzeSequential(tryCatch.TryStatements.Statements, enteringState);
 
-            if (enteringState is { OpenSite: { } doomedOpenSite, XactAbortOn: true })
-            {
-                foreach (var catchStatement in Unwrap(tryCatch.CatchStatements.Statements))
-                {
-                    if (catchStatement is CommitTransactionStatement commit)
-                    {
-                        Findings.Add(new TransactionHygieneFinding(
-                            TransactionHygieneFindingKind.CommitAfterXactAbortDoomsTransaction,
-                            sourcePath,
-                            doomedOpenSite.StartLine,
-                            doomedOpenSite.StartColumn,
-                            commit.StartLine,
-                            commit.StartColumn));
-                    }
-                }
-            }
-
             var catchResult = AnalyzeSequential(tryCatch.CatchStatements.Statements, enteringState);
 
             return MergeBranches(tryResult, catchResult);

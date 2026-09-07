@@ -55,19 +55,6 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
             RETURN;
         END
         GO
-        CREATE PROCEDURE dbo.p_xact_abort_doomed_commit AS
-        BEGIN
-            SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                COMMIT TRANSACTION;
-            END CATCH
-        END
-        GO
         CREATE PROCEDURE dbo.p_xact_abort_correct_rollback AS
         BEGIN
             SET XACT_ABORT ON;
@@ -238,44 +225,6 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
             """);
 
         Assert.Empty(findings);
-    }
-
-    [Fact]
-    public async Task CommitInCatch_UnderXactAbort_AlwaysFailsWithMsg3930_EngineThenAutoRollsBackTheDoomedTransaction()
-    {
-        await using var connection = await OpenConnectionAsync();
-        try
-        {
-            await using var exec = new SqlCommand("EXEC dbo.p_xact_abort_doomed_commit;", connection);
-            var ex = await Assert.ThrowsAsync<SqlException>(() => exec.ExecuteNonQueryAsync());
-            Assert.Equal(3930, ex.Number);
-
-            Assert.Equal(0, await ReadTranCountAsync(connection));
-        }
-        finally
-        {
-            await CleanUpAnyOpenTransactionAsync(connection);
-        }
-    }
-
-    [Fact]
-    public void CommitInCatch_UnderXactAbort_ScannerFlagsTheDoomedCommit()
-    {
-        var findings = Scan(
-            """
-            SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                COMMIT TRANSACTION;
-            END CATCH
-            """);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(TransactionHygieneFindingKind.CommitAfterXactAbortDoomsTransaction, finding.Kind);
     }
 
     [Fact]

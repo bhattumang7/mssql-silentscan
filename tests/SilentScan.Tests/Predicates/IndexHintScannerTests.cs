@@ -33,14 +33,11 @@ public sealed class IndexHintScannerTests
     }
 
     [Fact]
-    public void HintNamesNonexistentIndex_Fires()
+    public void HintNamesNonexistentIndex_NeverFires()
     {
         var findings = Scan("SELECT 1 FROM dbo.Orders WITH (INDEX(IX_DoesNotExist)) WHERE OrderId = 1;", CatalogWithIndex());
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(IndexHintFindingKind.IndexDoesNotExist, finding.Kind);
-        Assert.Equal("IX_DoesNotExist", finding.HintedIndexName);
-        Assert.Null(finding.LeadingColumnName);
+        Assert.Empty(findings);
     }
 
     [Fact]

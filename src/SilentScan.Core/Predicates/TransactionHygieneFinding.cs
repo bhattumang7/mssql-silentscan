@@ -6,7 +6,6 @@ public enum TransactionHygieneFindingKind
 {
     UnresolvedOnSomePath,
     ImplicitTransactionUnresolvedOnSomePath,
-    CommitAfterXactAbortDoomsTransaction,
 }
 
 public sealed record TransactionHygieneFinding(

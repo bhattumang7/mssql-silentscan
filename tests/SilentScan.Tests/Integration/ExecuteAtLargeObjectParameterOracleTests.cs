@@ -131,23 +131,4 @@ public sealed class ExecuteAtLargeObjectParameterOracleTests : IAsyncLifetime
         Assert.Empty(Scan(sql));
     }
 
-    [Fact]
-    public async Task XmlParameter_FailsWithMsg9512_AndScannerFlagsIt()
-    {
-        var sql = $"""
-            DECLARE @p XML = '<a/>';
-            EXEC ('SELECT 1 AS x', @p) AT {_linkedServerName};
-            """;
-
-        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
-
-        var exception = await Assert.ThrowsAsync<SqlException>(() => command.ExecuteNonQueryAsync());
-        Assert.Equal(9512, exception.Number);
-
-        var finding = Assert.Single(Scan(sql));
-        Assert.Equal(ExecuteAtLargeObjectParameterFindingKind.XmlRejected, finding.Kind);
-    }
 }

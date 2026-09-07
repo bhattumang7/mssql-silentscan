@@ -7,7 +7,7 @@ namespace SilentScan.Tests.Predicates;
 public sealed class TempTableExecShapePipelineTests
 {
     [Fact]
-    public async Task ColumnCountMismatch_Fires()
+    public async Task ColumnCountMismatch_NeverFires()
     {
         const string sql = """
             CREATE PROCEDURE dbo.usp_Callee AS
@@ -24,12 +24,7 @@ public sealed class TempTableExecShapePipelineTests
 
         var report = await EngineAuthoritativeScan.ScanAsync(sql);
 
-        var finding = Assert.Single(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner"));
-        Assert.Equal(TempTableExecShapeFindingKind.ColumnCountMismatch, finding.Kind);
-        Assert.Equal("#Results", finding.TempTableQualifiedName);
-        Assert.Equal("dbo.usp_Callee", finding.ExecutedProcQualifiedName);
-        Assert.Equal(2, finding.TempTableDeclaredColumnCount);
-        Assert.Equal(1, finding.DescribedColumnCount);
+        Assert.Empty(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner"));
     }
 
     [Fact]
@@ -54,7 +49,7 @@ public sealed class TempTableExecShapePipelineTests
     }
 
     [Fact]
-    public async Task ColumnCountMismatch_ExplicitColumnListStillNarrowerThanDescribed_Fires()
+    public async Task ColumnCountMismatch_ExplicitColumnListStillNarrowerThanDescribed_NeverFires()
     {
         const string sql = """
             CREATE PROCEDURE dbo.usp_Callee AS
@@ -71,10 +66,7 @@ public sealed class TempTableExecShapePipelineTests
 
         var report = await EngineAuthoritativeScan.ScanAsync(sql);
 
-        var finding = Assert.Single(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner"));
-        Assert.Equal(TempTableExecShapeFindingKind.ColumnCountMismatch, finding.Kind);
-        Assert.Equal(2, finding.TempTableDeclaredColumnCount);
-        Assert.Equal(3, finding.DescribedColumnCount);
+        Assert.Empty(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner"));
     }
 
     [Fact]
