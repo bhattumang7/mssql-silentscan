@@ -140,4 +140,36 @@ public sealed class AlwaysEncryptedAssignmentMismatchOracleTests : OracleTestFix
         Assert.Equal("Ssn", finding.TargetColumnName);
         Assert.Equal("SsnAlt", finding.SourceColumnName);
     }
+
+    [Fact]
+    public async Task InsertSelect_BetweenDifferentEncryptionTypes_FailsWithMsg206_AndScannerFlagsIt()
+    {
+        const string sql = """
+            INSERT INTO dbo.Customer (CustomerId, Notes, Ssn, SsnAlt, PlainName)
+            SELECT CustomerId, Ssn, Ssn, SsnAlt, PlainName FROM dbo.Customer;
+            """;
+
+        var exception = await ExecuteExpectingFailureAsync(sql);
+
+        Assert.Equal(206, exception.Number);
+
+        var finding = Assert.Single(Scan(sql));
+        Assert.Equal(AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch, finding.Kind);
+        Assert.Equal("Notes", finding.TargetColumnName);
+        Assert.Equal("Ssn", finding.SourceColumnName);
+    }
+
+    [Fact]
+    public async Task InsertSelect_BetweenSameEncryptedColumn_Succeeds_AndScannerDoesNotFlagIt()
+    {
+        const string sql = """
+            INSERT INTO dbo.Customer (CustomerId, Ssn, Notes, SsnAlt, PlainName)
+            SELECT CustomerId, Ssn, Notes, SsnAlt, PlainName FROM dbo.Customer;
+            """;
+
+        var exception = await Record.ExceptionAsync(() => ExecuteAsync(sql));
+
+        Assert.Null(exception);
+        Assert.Empty(Scan(sql));
+    }
 }

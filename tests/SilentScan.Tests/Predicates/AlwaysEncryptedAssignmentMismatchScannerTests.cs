@@ -132,6 +132,44 @@ public sealed class AlwaysEncryptedAssignmentMismatchScannerTests
     }
 
     [Fact]
+    public void InsertSelect_BetweenDifferentEncryptionTypes_Fires()
+    {
+        var findings = Scan("""
+            INSERT INTO dbo.Customer (CustomerId, Notes, Ssn, SsnCopy, PlainName)
+            SELECT CustomerId, Ssn, Ssn, Ssn, PlainName FROM dbo.Customer;
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch, finding.Kind);
+        Assert.Equal("Notes", finding.TargetColumnName);
+        Assert.Equal("Ssn", finding.SourceColumnName);
+    }
+
+    [Fact]
+    public void InsertSelect_BetweenSameEncryptionTypeAndKey_NeverFires()
+    {
+        var findings = Scan("""
+            INSERT INTO dbo.Customer (CustomerId, Ssn, Notes, SsnCopy, PlainName)
+            SELECT CustomerId, Ssn, Notes, Ssn, PlainName FROM dbo.Customer;
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void InsertSelect_LiteralIntoEncryptedColumn_Fires()
+    {
+        var findings = Scan("""
+            INSERT INTO dbo.Customer (CustomerId, Ssn, Notes, SsnCopy, PlainName)
+            SELECT CustomerId, '123456789', Notes, SsnCopy, PlainName FROM dbo.Customer;
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(AlwaysEncryptedAssignmentMismatchKind.LiteralSource, finding.Kind);
+        Assert.Equal("Ssn", finding.TargetColumnName);
+    }
+
+    [Fact]
     public void MergeUpdate_BetweenDifferentEncryptionTypes_Fires()
     {
         var findings = Scan("""

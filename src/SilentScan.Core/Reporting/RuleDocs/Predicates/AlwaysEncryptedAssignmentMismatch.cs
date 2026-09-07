@@ -56,17 +56,22 @@ internal static class AlwaysEncryptedAssignmentMismatch
                 Two Always Encrypted columns are only implicitly compatible when their encryption
                 state matches exactly - encryption type and column encryption key both. Confirmed
                 directly against a real SQL Server instance: assigning one column into another via
-                an `UPDATE`/`MERGE` `SET` clause fails to compile with Msg 206 ("Operand type clash
-                ... is incompatible with ...") whenever either differs - encrypted vs. plaintext (in
-                either direction), a different encryption type (deterministic vs. randomized), or
-                the same encryption type but a different column encryption key, even though both
-                columns' declared types otherwise match exactly.
+                an `UPDATE`/`MERGE` `SET` clause, or mapping one into another positionally through
+                an `INSERT ... SELECT`, fails to compile with Msg 206 ("Operand type clash ... is
+                incompatible with ...") whenever either differs - encrypted vs. plaintext (in either
+                direction), a different encryption type (deterministic vs. randomized), or the same
+                encryption type but a different column encryption key, even though both columns'
+                declared types otherwise match exactly, and even when the target table doesn't exist
+                yet at the statement's own create time (deferred name resolution lets the statement
+                compile then, only to fail this way on the first execution once the table exists).
 
                 Scoped to column-to-column assignments where both the target and the source resolve
                 to a statically known base column (through the query's own scope, including joins
                 and aliases) - an expression, function call, or parameter/variable source is never
                 flagged, since the engine's own restriction (and the encrypted value's actual
-                origin) is not staticaly decidable for those shapes.
+                origin) is not staticaly decidable for those shapes. The `INSERT ... SELECT` case is
+                only checked when the target has an explicit column list matching the select list
+                one-for-one, with no wildcard and no `UNION`.
                 """,
             HowToFixIt: """
                 Route the value through an Always Encrypted-enabled client - decrypt it and
@@ -105,6 +110,21 @@ internal static class AlwaysEncryptedAssignmentMismatch
                         SET Ssn = @decryptedSsn;
                         """,
                     CompliantExplanation: "The client decrypts the source value and re-encrypts it under the target column's own key before the statement reaches the server."),
+                new RuleDocExample(
+                    Title: "The same mismatch through INSERT ... SELECT never compiles either",
+                    NoncompliantSql: """
+                        INSERT INTO dbo.CustomerArchive (CustomerId, SsnRandomized)
+                        SELECT CustomerId, SsnDeterministic FROM dbo.Customer;
+                        """,
+                    NoncompliantExplanation: "SsnRandomized and SsnDeterministic use different encryption types - this INSERT fails to compile with Msg 206 every time it runs, regardless of which column holds the source value.",
+                    CompliantSql: """
+                        -- from an Always Encrypted-enabled client connection:
+                        -- read SsnDeterministic (client decrypts it), then write it back
+                        -- as a parameterized batch (client re-encrypts each value for SsnRandomized)
+                        INSERT INTO dbo.CustomerArchive (CustomerId, SsnRandomized)
+                        VALUES (@customerId, @decryptedSsn);
+                        """,
+                    CompliantExplanation: "The client decrypts each source value and re-encrypts it for the target column's own encryption type before the statement reaches the server."),
             ]);
     }
 }
