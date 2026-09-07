@@ -15,15 +15,15 @@ public static class GroupByValidityScanner
         "GROUPING", "GROUPING_ID", "STRING_AGG", "CHECKSUM_AGG", "APPROX_COUNT_DISTINCT",
     };
 
-    public static IReadOnlyList<GroupByValidityFinding> Scan(SqlParseResult parseResult)
+    public static IReadOnlyList<GroupByValidityFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
-        var rule = CreateRule(parseResult.SourcePath);
-        var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
+        var rule = CreateRule(parseResult.SourcePath, catalog);
+        var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return Harvest(rule);
     }
 
-    internal static Rule CreateRule(string sourcePath) => new(sourcePath);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog catalog) => new(sourcePath, catalog.IdentifierComparer);
 
     internal static IReadOnlyList<GroupByValidityFinding> Harvest(Rule rule) =>
         [
@@ -35,7 +35,7 @@ public static class GroupByValidityScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath) : IModuleRule
+    internal sealed class Rule(string sourcePath, StringComparer identifierComparer) : IModuleRule
     {
         public List<GroupByValidityFinding> Findings { get; } = [];
 
@@ -57,7 +57,7 @@ public static class GroupByValidityScanner
                     .OfType<ColumnReferenceExpression>()
                     .Where(c => c.MultiPartIdentifier.Identifiers.Count > 0)
                     .Select(c => c.MultiPartIdentifier.Identifiers[^1].Value),
-                StringComparer.OrdinalIgnoreCase);
+                identifierComparer);
 
             foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
             {

@@ -22,9 +22,11 @@ internal static class GroupByValiditySelectList
 
             A `GROUP BY` expression is matched to a select-list expression by structural shape
             (`GROUP BY Id + 1` covers `SELECT Id + 1`, but not `SELECT Id + 2`) - except a bare column
-            reference, which matches by column name alone, ignoring case and table qualification
-            (`GROUP BY Category` covers `SELECT CATEGORY` and `SELECT s.Category` equally), matching
-            SQL Server's own identifier resolution. Covers `ROLLUP`/`CUBE`/`GROUPING SETS` and the
+            reference, which matches by column name alone, ignoring table qualification and comparing
+            case per the database's own identifier collation (`GROUP BY Category` covers
+            `SELECT s.Category` regardless of collation, and covers `SELECT CATEGORY` too unless the
+            database collation is case-sensitive), matching SQL Server's own identifier resolution.
+            Covers `ROLLUP`/`CUBE`/`GROUPING SETS` and the
             legacy `WITH ROLLUP`/`WITH CUBE` syntax the same way as a plain `GROUP BY` - oracle-
             confirmed a column is exempt as soon as it appears anywhere in the grouping specification,
             even inside just one grouping set of a `GROUPING SETS` list.
@@ -57,7 +59,7 @@ internal static class GroupByValidityHaving
             The identical restriction `GroupByValiditySelectList` documents for the select list also
             applies to the `HAVING` clause: once a `SELECT` has a `GROUP BY`, every `HAVING`
             expression must either be a non-windowed aggregate function call, or shape-identical to
-            one of the `GROUP BY` expressions - including the same case/qualification-tolerant column
+            one of the `GROUP BY` expressions - including the same qualification-tolerant, collation-aware column
             matching and `ROLLUP`/`CUBE`/`GROUPING SETS` coverage.
 
             Oracle-confirmed (Msg 8121, "Column '...' is invalid in the HAVING clause because it is
@@ -83,7 +85,7 @@ internal static class GroupByValidityOrderBy
             The identical restriction `GroupByValiditySelectList` documents for the select list also
             applies to the `ORDER BY` clause: once a `SELECT` has a `GROUP BY`, every `ORDER BY`
             expression must either be a non-windowed aggregate function call, or shape-identical to
-            one of the `GROUP BY` expressions - including the same case/qualification-tolerant column
+            one of the `GROUP BY` expressions - including the same qualification-tolerant, collation-aware column
             matching and `ROLLUP`/`CUBE`/`GROUPING SETS` coverage.
 
             Oracle-confirmed (Msg 8127, "Column '...' is invalid in the ORDER BY clause because it is
