@@ -7,7 +7,6 @@ namespace SilentScan.Core.Predicates;
 public enum AlterColumnSafetyKind
 {
     PrecisionOrScaleNarrowing,
-    IncompatibleFamilyConversion,
     TemporalOffsetDropped,
 }
 

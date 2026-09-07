@@ -57,30 +57,6 @@ internal sealed class AlterColumnSafetyRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => AlterColumnSafetyScanner.Scan(context.Catalog);
 }
 
-internal sealed class DropProtectedObjectRule : ICatalogRule
-{
-    public string Id => "DropProtectedObjectScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => DropProtectedObjectScanner.Scan(context.Catalog);
-}
-
-internal sealed class OnlineRebuildLegacyLobRule : ICatalogRule
-{
-    public string Id => "OnlineRebuildLegacyLobScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => OnlineRebuildLegacyLobScanner.Scan(context.Catalog);
-}
-
-internal sealed class SparseColumnDisallowedTypeRule : ICatalogRule
-{
-    public string Id => "SparseColumnDisallowedTypeScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => SparseColumnDisallowedTypeScanner.Scan(context.Catalog);
-}
-
-internal sealed class LegacyLobUtf8CollationRule : ICatalogRule
-{
-    public string Id => "LegacyLobUtf8CollationScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => LegacyLobUtf8CollationScanner.Scan(context.Catalog);
-}
-
 internal sealed class NonPersistedComputedColumnRule : ICatalogRule
 {
     public string Id => "NonPersistedComputedColumnScanner";

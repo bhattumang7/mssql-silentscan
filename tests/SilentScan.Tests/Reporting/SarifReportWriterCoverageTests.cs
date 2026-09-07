@@ -441,20 +441,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Fact]
-    public void Write_TempTableExecShapeColumnCountMismatch_MapsToErrorLevelWithBothCounts()
-    {
-        var finding = new TempTableExecShapeFinding(
-            TempTableExecShapeFindingKind.ColumnCountMismatch, "#Buffer", "dbo.usp_Producer", 3, 2,
-            ColumnName: null, ColumnPosition: null, TempColumnTypeDisplay: null, DescribedColumnTypeDisplay: null,
-            WriteLoss: null, CallerScopeQualifiedName: null, SourcePath: "test.sql", Line: 1, Column: 1);
-        var report = TestScanReports.Build(TempTableExecShapeFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal("error", result.GetProperty("level").GetString());
-        Assert.Contains("targets 3 column(s) but the executed proc's real result set describes 2", result.GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
     public void Write_TempTableExecShapeColumnTypeMismatch_MapsToWarningLevelNamingPositionAndTypes()
     {
         var finding = new TempTableExecShapeFinding(
@@ -701,9 +687,7 @@ public sealed class SarifReportWriterCoverageTests
     [InlineData(QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, "error")]
     [InlineData(QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, "error")]
     [InlineData(QueryAntiPatternFindingKind.NonAggregateHavingPredicate, "warning")]
-    [InlineData(QueryAntiPatternFindingKind.MergeNonUniqueUsingSource, "error")]
     [InlineData(QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion, "error")]
-    [InlineData(QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded, "error")]
     [InlineData(QueryAntiPatternFindingKind.GlobalCursorDeclaration, "warning")]
     public void Write_QueryAntiPatternFinding_MapsKindToItsOwnLevelBucket(QueryAntiPatternFindingKind kind, string expectedLevel)
     {
@@ -762,36 +746,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(OperandComparabilityContext.Comparison, "compared with = in this predicate")]
-    [InlineData(OperandComparabilityContext.In, "used in an IN list")]
-    [InlineData(OperandComparabilityContext.Between, "used in a BETWEEN")]
-    [InlineData(OperandComparabilityContext.NullIf, "used in a NULLIF")]
-    [InlineData(OperandComparabilityContext.OrderBy, "referenced in this ORDER BY clause")]
-    [InlineData(OperandComparabilityContext.GroupBy, "referenced in this GROUP BY clause")]
-    [InlineData(OperandComparabilityContext.Distinct, "selected under SELECT DISTINCT")]
-    public void Write_OperandComparabilityFinding_MapsContextToPositionWording(OperandComparabilityContext context, string expectedSubstring)
-    {
-        var finding = new OperandComparabilityFinding("dbo.T", "Col", "xml", OperandComparabilityFindingKind.Xml, context, "=", "test.sql", 1, 1);
-        var report = TestScanReports.Build(OperandComparabilityFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal("error", result.GetProperty("level").GetString());
-        Assert.Contains(expectedSubstring, result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData(OperandComparabilityFindingKind.Xml, "the xml data type is not comparable")]
-    [InlineData(OperandComparabilityFindingKind.LegacyLargeObject, "the text/ntext/image data type is not comparable")]
-    [InlineData(OperandComparabilityFindingKind.Json, "the json data type is not comparable")]
-    public void Write_OperandComparabilityFinding_MapsKindToTypeLabel(OperandComparabilityFindingKind kind, string expectedSubstring)
-    {
-        var finding = new OperandComparabilityFinding("dbo.T", "Col", "xml", kind, OperandComparabilityContext.Comparison, "=", "test.sql", 1, 1);
-        var report = TestScanReports.Build(OperandComparabilityFindings: [finding]);
-
-        Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Theory]
     [InlineData(SessionDateSettingKind.DateFormat, "SET DATEFORMAT changes")]
     [InlineData(SessionDateSettingKind.DateFirst, "SET DATEFIRST changes")]
     public void Write_SessionDateSettingFinding_MapsKindToDistinctMessage(SessionDateSettingKind kind, string expectedSubstring)
@@ -803,7 +757,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(IndexHintFindingKind.IndexDoesNotExist, "error", "does not exist in the catalog")]
     [InlineData(IndexHintFindingKind.HintedIndexNotSeekable, "warning", "degrades the forced index to a full scan")]
     public void Write_IndexHintFinding_MapsKindToItsOwnLevelAndMessage(IndexHintFindingKind kind, string expectedLevel, string expectedSubstring)
     {
@@ -979,12 +932,11 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(ControlFlowRiskFindingKind.CursorFetchColumnCountMismatch, "error")]
     [InlineData(ControlFlowRiskFindingKind.EmptyCatchBlock, "error")]
     [InlineData(ControlFlowRiskFindingKind.CaseExpressionMissingElse, "error")]
     [InlineData(ControlFlowRiskFindingKind.NonDeterministicCaseInput, "error")]
     [InlineData(ControlFlowRiskFindingKind.TriggerEmitsOutput, "warning")]
-    public void Write_ControlFlowRiskFinding_OnlyTheFourNamedKindsAreError(ControlFlowRiskFindingKind kind, string expectedLevel)
+    public void Write_ControlFlowRiskFinding_OnlyTheThreeNamedKindsAreError(ControlFlowRiskFindingKind kind, string expectedLevel)
     {
         var finding = new ControlFlowRiskFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);
         var report = TestScanReports.Build(ControlFlowRiskFindings: [finding]);

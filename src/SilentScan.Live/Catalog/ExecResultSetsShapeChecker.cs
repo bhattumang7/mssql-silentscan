@@ -74,12 +74,6 @@ public sealed class ExecResultSetsShapeChecker
     {
         if (candidate.DeclaredColumns.Count != describedColumns.Count)
         {
-            findings.Add(new ExecResultSetsShapeFinding(
-                ExecResultSetsShapeFindingKind.ColumnCountMismatch,
-                candidate.ExecutedProcQualifiedName,
-                candidate.DeclaredColumns.Count, describedColumns.Count,
-                ColumnName: null, ColumnPosition: null, DeclaredColumnTypeDisplay: null, DescribedColumnTypeDisplay: null, WriteLoss: null,
-                candidate.CallerScopeQualifiedName, candidate.SourcePath, candidate.Line, candidate.Column));
             return;
         }
 

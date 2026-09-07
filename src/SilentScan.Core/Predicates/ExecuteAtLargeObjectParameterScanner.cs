@@ -66,12 +66,6 @@ public static class ExecuteAtLargeObjectParameterScanner
                         variable.Name.TrimStart('@'), type.ToString(), ExecuteAtLargeObjectParameterFindingKind.CrashesSession,
                         sourcePath, variable.StartLine, variable.StartColumn));
                 }
-                else if (type.Category == SqlTypeCategory.Xml)
-                {
-                    Findings.Add(new ExecuteAtLargeObjectParameterFinding(
-                        variable.Name.TrimStart('@'), type.ToString(), ExecuteAtLargeObjectParameterFindingKind.XmlRejected,
-                        sourcePath, variable.StartLine, variable.StartColumn));
-                }
             }
         }
     }

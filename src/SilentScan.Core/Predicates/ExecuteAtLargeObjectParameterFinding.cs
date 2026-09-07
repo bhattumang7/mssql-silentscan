@@ -20,6 +20,4 @@ public sealed record ExecuteAtLargeObjectParameterFinding(
 public enum ExecuteAtLargeObjectParameterFindingKind
 {
     CrashesSession,
-
-    XmlRejected,
 }

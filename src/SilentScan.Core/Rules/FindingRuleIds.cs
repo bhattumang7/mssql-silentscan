@@ -40,16 +40,6 @@ public static class FindingRuleIds
         NonIndexableColumnFindingKind.LegacyLargeObject => "silentscan/catalog/legacy-large-object-column",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled NonIndexableColumnFindingKind."),
     };
-    public const string ExternalTableUnsupportedColumnTypeRuleId = "silentscan/predicates/external-table-unsupported-column-type";
-    public const string FullTextPredicateInAggregateRuleId = "silentscan/predicates/full-text-predicate-in-aggregate";
-    public const string ChangeTrackingEncryptedPrimaryKeyRuleId = "silentscan/predicates/change-tracking-encrypted-primary-key";
-    public const string XmlSchemaCollectionMismatchRuleId = "silentscan/predicates/xml-schema-collection-mismatch";
-    public static string XmlSchemaCollectionDisallowedTypeRuleId(XmlSchemaCollectionDisallowedTypeKind kind) => kind switch
-    {
-        XmlSchemaCollectionDisallowedTypeKind.NotationType => "silentscan/predicates/xml-schema-collection-notation-type",
-        XmlSchemaCollectionDisallowedTypeKind.IdOrIdRefType => "silentscan/predicates/xml-schema-collection-id-idref-type",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled XmlSchemaCollectionDisallowedTypeKind."),
-    };
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => kind switch
     {
         DynamicDataMaskingFindingKind.PredicateExposure => "silentscan/predicates/dynamic-data-masking-predicate-exposure",
@@ -58,54 +48,12 @@ public static class FindingRuleIds
     };
     public const string FloatEqualityRuleId = "silentscan/predicates/float-equality";
     public const string FloatOrderDependentAggregateRuleId = "silentscan/predicates/float-order-dependent-aggregate";
-    public const string AlwaysEncryptedOrderByRuleId = "silentscan/predicates/always-encrypted-order-by";
-    public static string AlwaysEncryptedAssignmentMismatchRuleId(AlwaysEncryptedAssignmentMismatchKind kind) => kind switch
-    {
-        AlwaysEncryptedAssignmentMismatchKind.LiteralSource => "silentscan/predicates/always-encrypted-assignment-literal-source",
-        AlwaysEncryptedAssignmentMismatchKind.EncryptionStateMismatch => "silentscan/predicates/always-encrypted-assignment-state-mismatch",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedAssignmentMismatchKind."),
-    };
-    public static string RowLimitOutOfRangeRuleId(RowLimitOutOfRangeKind kind) => kind switch
-    {
-        RowLimitOutOfRangeKind.TopRowCountNegative => "silentscan/predicates/top-row-count-negative",
-        RowLimitOutOfRangeKind.OffsetNegative => "silentscan/predicates/offset-negative",
-        RowLimitOutOfRangeKind.FetchNotPositive => "silentscan/predicates/fetch-not-positive",
-        RowLimitOutOfRangeKind.TableSamplePercentOutOfRange => "silentscan/predicates/tablesample-percent-out-of-range",
-        RowLimitOutOfRangeKind.TableSampleRowsNotPositive => "silentscan/predicates/tablesample-rows-not-positive",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled RowLimitOutOfRangeKind."),
-    };
-    public static string AlwaysEncryptedComparisonMismatchRuleId(AlwaysEncryptedComparisonMismatchKind kind) => kind switch
-    {
-        AlwaysEncryptedComparisonMismatchKind.LiteralOperand => "silentscan/predicates/always-encrypted-comparison-literal-operand",
-        AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch => "silentscan/predicates/always-encrypted-comparison-state-mismatch",
-        AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison => "silentscan/predicates/always-encrypted-comparison-deterministic-range",
-        AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave => "silentscan/predicates/always-encrypted-comparison-randomized-without-enclave",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedComparisonMismatchKind."),
-    };
-    public const string RestrictedImplicitAssignmentRuleId = "silentscan/predicates/restricted-implicit-assignment";
-    public const string RevertCookieTypeMismatchRuleId = "silentscan/predicates/revert-cookie-type-mismatch";
-    public const string ForXmlExplicitInlineXsdRuleId = "silentscan/predicates/for-xml-explicit-inline-xsd";
     public const string TriggerOrderRuleId = "silentscan/catalog/trigger-firing-order-undefined";
     public static string AlterColumnSafetyRuleId(AlterColumnSafetyKind kind) => kind switch
     {
         AlterColumnSafetyKind.PrecisionOrScaleNarrowing => "silentscan/catalog/alter-column-precision-scale-narrowing",
-        AlterColumnSafetyKind.IncompatibleFamilyConversion => "silentscan/catalog/alter-column-incompatible-family-conversion",
         AlterColumnSafetyKind.TemporalOffsetDropped => "silentscan/catalog/alter-column-temporal-offset-dropped",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlterColumnSafetyKind."),
-    };
-    public static string OperandComparabilityRuleId(OperandComparabilityFindingKind kind) => kind switch
-    {
-        OperandComparabilityFindingKind.Xml => "silentscan/predicates/xml-operand-not-comparable",
-        OperandComparabilityFindingKind.LegacyLargeObject => "silentscan/predicates/legacy-lob-operand-not-comparable",
-        OperandComparabilityFindingKind.Json => "silentscan/predicates/json-operand-not-comparable",
-        OperandComparabilityFindingKind.Spatial => "silentscan/predicates/spatial-operand-not-comparable",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled OperandComparabilityFindingKind."),
-    };
-    public static string VectorFunctionArgumentRuleId(VectorFunctionArgumentFindingKind kind) => kind switch
-    {
-        VectorFunctionArgumentFindingKind.NonVectorOperand => "silentscan/predicates/vector-function-non-vector-operand",
-        VectorFunctionArgumentFindingKind.DimensionMismatch => "silentscan/predicates/vector-function-dimension-mismatch",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled VectorFunctionArgumentFindingKind."),
     };
     public static string VectorLiteralConversionRuleId(VectorLiteralConversionFindingKind kind) => kind switch
     {
@@ -113,39 +61,11 @@ public static class FindingRuleIds
         VectorLiteralConversionFindingKind.ElementCountMismatch => "silentscan/predicates/vector-literal-dimension-mismatch",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled VectorLiteralConversionFindingKind."),
     };
-    public static string SchemaWithRejectedTypeRuleId(SchemaWithRejectedTypeKind kind) => kind switch
-    {
-        SchemaWithRejectedTypeKind.OpenXmlClrType => "silentscan/predicates/openxml-with-clr-type-rejected",
-        SchemaWithRejectedTypeKind.OpenRowsetLegacyType => "silentscan/predicates/openrowset-with-legacy-type-rejected",
-        SchemaWithRejectedTypeKind.OpenRowsetClrType => "silentscan/predicates/openrowset-with-clr-type-rejected",
-        SchemaWithRejectedTypeKind.OpenRowsetXml => "silentscan/predicates/openrowset-with-xml-rejected",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SchemaWithRejectedTypeKind."),
-    };
     public static string ExecuteAtLargeObjectParameterRuleId(ExecuteAtLargeObjectParameterFindingKind kind) => kind switch
     {
         ExecuteAtLargeObjectParameterFindingKind.CrashesSession => "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
-        ExecuteAtLargeObjectParameterFindingKind.XmlRejected => "silentscan/predicates/execute-at-xml-parameter-rejected",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled ExecuteAtLargeObjectParameterFindingKind."),
     };
-    public static string DropProtectedObjectRuleId(DropProtectedObjectKind kind) => kind switch
-    {
-        DropProtectedObjectKind.SchemaNotEmpty => "silentscan/catalog/drop-schema-not-empty",
-        DropProtectedObjectKind.FixedDatabaseRole => "silentscan/catalog/drop-fixed-database-role",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled DropProtectedObjectKind."),
-    };
-    public static string OnlineRebuildLegacyLobRuleId(OnlineRebuildLegacyLobKind kind) => kind switch
-    {
-        OnlineRebuildLegacyLobKind.AlterTableRebuild => "silentscan/catalog/online-rebuild-legacy-lob-alter-table",
-        OnlineRebuildLegacyLobKind.AlterIndexAllRebuild => "silentscan/catalog/online-rebuild-legacy-lob-alter-index-all",
-        OnlineRebuildLegacyLobKind.AlterColumnOnline => "silentscan/catalog/online-rebuild-legacy-lob-alter-column",
-        OnlineRebuildLegacyLobKind.DropIndexOnline => "silentscan/catalog/online-rebuild-legacy-lob-drop-index",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled OnlineRebuildLegacyLobKind."),
-    };
-    public const string UnpivotExactTypeMismatchRuleId = "silentscan/catalog/unpivot-exact-type-mismatch";
-    public const string SchemaboundAliasTypeRuleId = "silentscan/catalog/schemabound-alias-type";
-    public const string SparseColumnDisallowedTypeRuleId = "silentscan/catalog/sparse-column-disallowed-type";
-    public const string LegacyLobUtf8CollationRuleId = "silentscan/catalog/legacy-lob-utf8-collation";
-    public const string LegacyLobConversionTargetRuleId = "silentscan/predicates/legacy-lob-conversion-target";
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = "silentscan/catalog/memory-optimized-schema-only-durability";
     public const string QueryAntiPatternTableVariableLowCompatEstimateRuleId = "silentscan/query/table-variable-low-compat-estimate";
     public const string QueryAntiPatternTableVariablePspSkipRuleId = "silentscan/query/table-variable-psp-skip";
@@ -158,28 +78,11 @@ public static class FindingRuleIds
     public const string QueryAntiPatternDistinctMaskingJoinFanoutRuleId = "silentscan/query/distinct-masking-join-fanout";
     public const string QueryAntiPatternUnqualifiedTableReferenceRuleId = "silentscan/query/unqualified-table-reference";
     public const string QueryAntiPatternMergeMissingHoldlockRuleId = "silentscan/query/merge-missing-holdlock";
-    public const string QueryAntiPatternMergeNonUniqueUsingSourceRuleId = "silentscan/query/merge-non-unique-using-source";
     public const string QueryAntiPatternMergeUnconditionalDeleteRuleId = "silentscan/query/merge-unconditional-delete";
     public const string QueryAntiPatternRecursiveCteMissingMaxRecursionRuleId = "silentscan/query/recursive-cte-missing-maxrecursion";
     public const string QueryAntiPatternUnboundedTableWriteRuleId = "silentscan/query/unbounded-table-write";
     public const string QueryAntiPatternLinkedServerOrCrossDatabaseReferenceRuleId = "silentscan/query/linked-server-or-cross-database-reference";
     public const string QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId = "silentscan/query/multi-row-insert-ignore-dup-key-drop";
-    public const string QueryAntiPatternAlterTableSwitchColumnMismatchRuleId = "silentscan/query/alter-table-switch-column-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchIndexMismatchRuleId = "silentscan/query/alter-table-switch-index-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchConstraintMismatchRuleId = "silentscan/query/alter-table-switch-constraint-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchTargetOnlyIndexRestrictionRuleId = "silentscan/query/alter-table-switch-target-only-index-restriction";
-    public const string QueryAntiPatternAlterTableSwitchFilegroupMismatchRuleId = "silentscan/query/alter-table-switch-filegroup-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchTemporalMismatchRuleId = "silentscan/query/alter-table-switch-temporal-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchRuleConstraintRuleId = "silentscan/query/alter-table-switch-rule-constraint";
-    public const string QueryAntiPatternAlterTableSwitchCdcPartitionSwitchRuleId = "silentscan/query/alter-table-switch-cdc-partition-switch";
-    public const string QueryAntiPatternAlterTableSwitchPartitionFilegroupMismatchRuleId = "silentscan/query/alter-table-switch-partition-filegroup-mismatch";
-    public const string QueryAntiPatternAlterTableSwitchFullTextIndexRestrictionRuleId = "silentscan/query/alter-table-switch-full-text-index-restriction";
-    public const string QueryAntiPatternAlterTableSwitchIndexedViewAlignmentRuleId = "silentscan/query/alter-table-switch-indexed-view-alignment";
-    public const string QueryAntiPatternAlterSchemaTransferMsShippedObjectRuleId = "silentscan/query/alter-schema-transfer-ms-shipped-object";
-    public const string QueryAntiPatternGroupingSetsCardinalityLimitExceededRuleId = "silentscan/query/grouping-sets-cardinality-limit-exceeded";
-    public const string QueryAntiPatternGroupingArgumentNotInGroupByListRuleId = "silentscan/query/grouping-argument-not-in-group-by-list";
-    public const string QueryAntiPatternAlterTableRebuildPartitionOutOfRangeRuleId = "silentscan/query/alter-table-rebuild-partition-out-of-range";
-    public const string QueryAntiPatternPartitionRebuildNumberExceedsCeilingRuleId = "silentscan/query/partition-rebuild-number-exceeds-ceiling";
     public const string IndexCoverageKeyLookupProneIndexRuleId = "silentscan/index/key-lookup-prone";
     public const string TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId = "silentscan/trigger/multi-row-unsafe-single-row-assignment";
     public const string TriggerCorrectnessMultiRowUnsafeKeyedDmlRuleId = "silentscan/trigger/multi-row-unsafe-keyed-dml";
@@ -259,7 +162,6 @@ public static class FindingRuleIds
     public const string StatementShapeTableWithNoPrimaryKeyRuleId = "silentscan/statement-shape/table-with-no-primary-key";
     public const string StatementShapeMissingSetNocountOnRuleId = "silentscan/statement-shape/missing-set-nocount-on";
     public const string StatementShapeBareSelectStarRuleId = "silentscan/statement-shape/bare-select-star";
-    public const string ControlFlowRiskCursorFetchColumnCountMismatchRuleId = "silentscan/control-flow/cursor-fetch-column-count-mismatch";
     public const string ControlFlowRiskEmptyCatchBlockRuleId = "silentscan/control-flow/empty-catch-block";
     public const string ControlFlowRiskTriggerEmitsOutputRuleId = "silentscan/control-flow/trigger-emits-output";
     public const string ControlFlowRiskDirtyReadIsolationHintRuleId = "silentscan/control-flow/dirty-read-isolation-hint";
@@ -273,7 +175,6 @@ public static class FindingRuleIds
     public const string NonUniqueUpdateSourceRuleId = "silentscan/correctness/nonunique-update-source";
     public const string CheckConstraintPredicateContradictionIntervalRuleId = "silentscan/correctness/check-constraint-predicate-contradiction";
     public const string NotNullPredicateContradictionRuleId = "silentscan/correctness/not-null-predicate-contradiction";
-    public const string ViewCheckOptionContradictionRuleId = "silentscan/correctness/view-check-option-contradiction";
     public const string ForcedSerialTableVariableModificationRuleId = "silentscan/forced-serial/table-variable-modification";
     public const string ForcedSerialFastForwardCursorRuleId = "silentscan/forced-serial/fast-forward-cursor";
     public const string ForcedSerialNonParallelizableIntrinsicRuleId = "silentscan/forced-serial/nonparallelizable-intrinsic";
@@ -281,7 +182,6 @@ public static class FindingRuleIds
     public const string UntrustedCheckConstraintRuleId = "silentscan/catalog/untrusted-check-constraint";
     public const string CascadingForeignKeyRuleId = "silentscan/catalog/cascading-foreign-key";
     public const string MultiReferencedCteRuleId = "silentscan/lineage/multi-referenced-cte";
-    public const string RecursiveCteAnchorTypeMismatchRuleId = "silentscan/lineage/recursive-cte-anchor-type-mismatch";
     public const string NestedViewDepthRuleId = "silentscan/lineage/nested-view-depth";
     public const string PostExpansionJoinWidthRuleId = "silentscan/lineage/post-expansion-join-width";
     public const string SelectStarViewRuleId = "silentscan/lineage/select-star-view";
@@ -289,9 +189,7 @@ public static class FindingRuleIds
     public const string OuterJoinPredicateCollapseRuleId = "silentscan/join/outer-join-predicate-collapse";
     public const string ConcatenatedValueInConstantSqlRuleId = "silentscan/dynamic-sql/concatenated-value-in-constant-sql";
     public const string ExecStringConcatenatesParameterizableValueRuleId = "silentscan/dynamic-sql/exec-string-concatenates-parameterizable-value";
-    public const string TempTableExecShapeColumnCountMismatchRuleId = "silentscan/dynamic-sql/insert-exec-temp-table-column-count-mismatch";
     public const string TempTableExecShapeColumnTypeMismatchRuleId = "silentscan/dynamic-sql/insert-exec-temp-table-column-type-mismatch";
-    public const string ExecResultSetsShapeColumnCountMismatchRuleId = "silentscan/dynamic-sql/exec-with-result-sets-column-count-mismatch";
     public const string ExecResultSetsShapeColumnTypeMismatchRuleId = "silentscan/dynamic-sql/exec-with-result-sets-column-type-mismatch";
     public const string NonPersistedComputedColumnRuleId = "silentscan/catalog/non-persisted-computed-column";
     public const string SelfReferencingDmlRuleId = "silentscan/dml/self-referencing";
@@ -320,23 +218,6 @@ public static class FindingRuleIds
         WindowFrameFindingKind.ImplicitDefaultRangeFrame => "silentscan/window-frame/implicit-default-range",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
-    public static string WindowFunctionArgumentRuleId(WindowFunctionArgumentFindingKind kind) => kind switch
-    {
-        WindowFunctionArgumentFindingKind.LagLeadNegativeOffset => "silentscan/window-function/lag-lead-negative-offset",
-        WindowFunctionArgumentFindingKind.PercentileOutOfRange => "silentscan/window-function/percentile-out-of-range",
-        WindowFunctionArgumentFindingKind.TableSamplePercentOutOfRange => "silentscan/window-function/tablesample-percent-out-of-range",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
-    public static string StringSplitArgumentRuleId(StringSplitArgumentFindingKind kind) => kind switch
-    {
-        StringSplitArgumentFindingKind.SeparatorNotSingleCharacter => "silentscan/string-tvf/string-split-separator-length",
-        StringSplitArgumentFindingKind.ArgumentTypeNotCharacter => "silentscan/string-tvf/string-split-argument-type",
-        StringSplitArgumentFindingKind.EnableOrdinalNotConstant => "silentscan/string-tvf/string-split-enable-ordinal-not-constant",
-        StringSplitArgumentFindingKind.EnableOrdinalTypeNotInteger => "silentscan/string-tvf/string-split-enable-ordinal-type",
-        StringSplitArgumentFindingKind.EnableOrdinalInvalidValue => "silentscan/string-tvf/string-split-enable-ordinal-value",
-        StringSplitArgumentFindingKind.ThreeArgumentFormRequiresNewerEngine => "silentscan/string-tvf/string-split-ordinality-engine-version",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
     public static string BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind kind) => kind switch
     {
         BoundedStringBuiltinTruncationFindingKind.ReplicateResultTruncated => "silentscan/string-builtin/replicate-truncated",
@@ -345,15 +226,11 @@ public static class FindingRuleIds
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
     public const string WaitForRuleId = "silentscan/control-flow/waitfor";
-    public const string RestoreOptionConflictRuleId = "silentscan/restore/option-conflict";
-    public const string CreateDatabaseOptionConflictRuleId = "silentscan/create-database/option-conflict";
-    public const string GraphPseudoColumnAssignmentRuleId = "silentscan/graph/pseudo-column-assignment";
     public const string CursorCloseOnCommitRuleId = "silentscan/control-flow/cursor-close-on-commit";
     public static string TransactionHygieneRuleId(TransactionHygieneFindingKind kind) => kind switch
     {
         TransactionHygieneFindingKind.UnresolvedOnSomePath => "silentscan/control-flow/unresolved-transaction",
         TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath => "silentscan/control-flow/unresolved-implicit-transaction",
-        TransactionHygieneFindingKind.CommitAfterXactAbortDoomsTransaction => "silentscan/control-flow/commit-after-xact-abort-dooms-transaction",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
     public const string OutputParameterRuleId = "silentscan/control-flow/unassigned-output-parameter";
@@ -361,7 +238,6 @@ public static class FindingRuleIds
     public const string MissingStatisticsRuleId = "silentscan/statistics/no-applicable-statistic-auto-create-disabled";
     public static string IndexHintRuleId(IndexHintFindingKind kind) => kind switch
     {
-        IndexHintFindingKind.IndexDoesNotExist => "silentscan/hint/index-does-not-exist",
         IndexHintFindingKind.HintedIndexNotSeekable => "silentscan/hint/index-not-seekable",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
@@ -381,13 +257,6 @@ public static class FindingRuleIds
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
-    public static string GroupByValidityRuleId(GroupByValidityFindingKind kind) => kind switch
-    {
-        GroupByValidityFindingKind.SelectList => "silentscan/group-by/invalid-select-list-column",
-        GroupByValidityFindingKind.Having => "silentscan/group-by/invalid-having-column",
-        GroupByValidityFindingKind.OrderBy => "silentscan/group-by/invalid-order-by-column",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
     public const string TruncateSwallowedRuleId = "silentscan/control-flow/truncate-swallowed-by-catch";
     public static string DatabaseConfigurationRuleId(DatabaseConfigurationFindingKind kind) => kind switch
     {
@@ -487,13 +356,11 @@ public static class FindingRuleIds
     };
     public static string TempTableExecShapeRuleId(TempTableExecShapeFindingKind kind) => kind switch
     {
-        TempTableExecShapeFindingKind.ColumnCountMismatch => TempTableExecShapeColumnCountMismatchRuleId,
         TempTableExecShapeFindingKind.ColumnTypeMismatch => TempTableExecShapeColumnTypeMismatchRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled TempTableExecShapeFindingKind."),
     };
     public static string ExecResultSetsShapeRuleId(ExecResultSetsShapeFindingKind kind) => kind switch
     {
-        ExecResultSetsShapeFindingKind.ColumnCountMismatch => ExecResultSetsShapeColumnCountMismatchRuleId,
         ExecResultSetsShapeFindingKind.ColumnTypeMismatch => ExecResultSetsShapeColumnTypeMismatchRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled ExecResultSetsShapeFindingKind."),
     };
@@ -596,7 +463,6 @@ public static class FindingRuleIds
     };
     public static string ControlFlowRiskRuleId(ControlFlowRiskFindingKind kind) => kind switch
     {
-        ControlFlowRiskFindingKind.CursorFetchColumnCountMismatch => ControlFlowRiskCursorFetchColumnCountMismatchRuleId,
         ControlFlowRiskFindingKind.EmptyCatchBlock => ControlFlowRiskEmptyCatchBlockRuleId,
         ControlFlowRiskFindingKind.TriggerEmitsOutput => ControlFlowRiskTriggerEmitsOutputRuleId,
         ControlFlowRiskFindingKind.DirtyReadIsolationHint => ControlFlowRiskDirtyReadIsolationHintRuleId,
@@ -621,28 +487,11 @@ public static class FindingRuleIds
         QueryAntiPatternFindingKind.DistinctMaskingJoinFanout => QueryAntiPatternDistinctMaskingJoinFanoutRuleId,
         QueryAntiPatternFindingKind.UnqualifiedTableReference => QueryAntiPatternUnqualifiedTableReferenceRuleId,
         QueryAntiPatternFindingKind.MergeMissingHoldlock => QueryAntiPatternMergeMissingHoldlockRuleId,
-        QueryAntiPatternFindingKind.MergeNonUniqueUsingSource => QueryAntiPatternMergeNonUniqueUsingSourceRuleId,
         QueryAntiPatternFindingKind.MergeUnconditionalDelete => QueryAntiPatternMergeUnconditionalDeleteRuleId,
         QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion => QueryAntiPatternRecursiveCteMissingMaxRecursionRuleId,
         QueryAntiPatternFindingKind.UnboundedTableWrite => QueryAntiPatternUnboundedTableWriteRuleId,
         QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference => QueryAntiPatternLinkedServerOrCrossDatabaseReferenceRuleId,
         QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop => QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchColumnMismatch => QueryAntiPatternAlterTableSwitchColumnMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchIndexMismatch => QueryAntiPatternAlterTableSwitchIndexMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchConstraintMismatch => QueryAntiPatternAlterTableSwitchConstraintMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchTargetOnlyIndexRestriction => QueryAntiPatternAlterTableSwitchTargetOnlyIndexRestrictionRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchFilegroupMismatch => QueryAntiPatternAlterTableSwitchFilegroupMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchTemporalMismatch => QueryAntiPatternAlterTableSwitchTemporalMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchRuleConstraint => QueryAntiPatternAlterTableSwitchRuleConstraintRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchCdcPartitionSwitch => QueryAntiPatternAlterTableSwitchCdcPartitionSwitchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchPartitionFilegroupMismatch => QueryAntiPatternAlterTableSwitchPartitionFilegroupMismatchRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchFullTextIndexRestriction => QueryAntiPatternAlterTableSwitchFullTextIndexRestrictionRuleId,
-        QueryAntiPatternFindingKind.AlterTableSwitchIndexedViewAlignment => QueryAntiPatternAlterTableSwitchIndexedViewAlignmentRuleId,
-        QueryAntiPatternFindingKind.AlterSchemaTransferMsShippedObject => QueryAntiPatternAlterSchemaTransferMsShippedObjectRuleId,
-        QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded => QueryAntiPatternGroupingSetsCardinalityLimitExceededRuleId,
-        QueryAntiPatternFindingKind.GroupingArgumentNotInGroupByList => QueryAntiPatternGroupingArgumentNotInGroupByListRuleId,
-        QueryAntiPatternFindingKind.AlterTableRebuildPartitionOutOfRange => QueryAntiPatternAlterTableRebuildPartitionOutOfRangeRuleId,
-        QueryAntiPatternFindingKind.PartitionRebuildNumberExceedsCeiling => QueryAntiPatternPartitionRebuildNumberExceedsCeilingRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled QueryAntiPatternFindingKind."),
     };
     public static string IndexCoverageRuleId(IndexCoverageFindingKind kind) => kind switch
@@ -678,12 +527,6 @@ public static class FindingRuleIds
         CheckConstraintPredicateContradictionKind.CheckConstraintInterval => CheckConstraintPredicateContradictionIntervalRuleId,
         CheckConstraintPredicateContradictionKind.NotNullConstraint => NotNullPredicateContradictionRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled CheckConstraintPredicateContradictionKind."),
-    };
-    public static string GeneratedAlwaysColumnAssignmentRuleId(GeneratedAlwaysColumnAssignmentKind kind) => kind switch
-    {
-        GeneratedAlwaysColumnAssignmentKind.ExplicitInsertValue => GeneratedAlwaysColumnExplicitInsertRuleId,
-        GeneratedAlwaysColumnAssignmentKind.ExplicitUpdateValue => GeneratedAlwaysColumnExplicitUpdateRuleId,
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled GeneratedAlwaysColumnAssignmentKind."),
     };
     public static string TvfFenceRuleId(TvfFenceFindingKind kind) => kind switch
     {
@@ -732,12 +575,6 @@ public static class FindingRuleIds
         SargabilityFindingKind.DateFunctionOnColumn => "silentscan/tier1/date-function-on-column",
         SargabilityFindingKind.CharindexOrLeftOnColumn => "silentscan/tier1/charindex-or-left-on-column",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SargabilityFindingKind."),
-    };
-    public static string SemanticSearchRuleId(SemanticSearchFindingKind kind) => kind switch
-    {
-        SemanticSearchFindingKind.TableNotSemanticFullTextIndexed => "silentscan/catalog/semantic-search-table-not-indexed",
-        SemanticSearchFindingKind.ColumnNotSemanticFullTextIndexed => "silentscan/catalog/semantic-search-column-not-indexed",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SemanticSearchFindingKind."),
     };
     public static string VerdictRuleId(Verdict verdict) => verdict switch
     {

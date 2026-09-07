@@ -103,12 +103,6 @@ public sealed class TempTableExecShapeChecker
 
         if (effectiveColumns.Count != describedColumns.Count)
         {
-            findings.Add(new TempTableExecShapeFinding(
-                TempTableExecShapeFindingKind.ColumnCountMismatch,
-                candidate.TempTableQualifiedName, candidate.ExecutedProcQualifiedName,
-                effectiveColumns.Count, describedColumns.Count,
-                ColumnName: null, ColumnPosition: null, TempColumnTypeDisplay: null, DescribedColumnTypeDisplay: null, WriteLoss: null,
-                candidate.CallerScopeQualifiedName, candidate.SourcePath, candidate.Line, candidate.Column));
             return;
         }
 

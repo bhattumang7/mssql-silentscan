@@ -51,18 +51,6 @@ public sealed class ExecuteAtLargeObjectParameterScannerTests
     }
 
     [Fact]
-    public void XmlParameter_Fires()
-    {
-        var findings = Scan("""
-            DECLARE @p XML = '<a/>';
-            EXEC ('SELECT 1', @p) AT MyLinkedServer;
-            """);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(ExecuteAtLargeObjectParameterFindingKind.XmlRejected, finding.Kind);
-    }
-
-    [Fact]
     public void FixedLengthNVarCharParameter_DoesNotFire()
     {
         var findings = Scan("""

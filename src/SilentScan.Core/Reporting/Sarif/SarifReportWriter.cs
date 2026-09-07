@@ -48,12 +48,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<JsonIndexRewriteFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Select(ToResult));
-        results.AddRange(report.Find<ExternalTableUnsupportedColumnTypeFinding>(nameof(ExternalTableUnsupportedColumnTypeScanner)).Select(ToResult));
         results.AddRange(report.Find<VectorLiteralConversionFinding>(nameof(VectorLiteralConversionScanner)).Select(ToResult));
-        results.AddRange(report.Find<FullTextPredicateInAggregateFinding>(nameof(FullTextPredicateInAggregateScanner)).Select(ToResult));
-        results.AddRange(report.Find<ChangeTrackingEncryptedPrimaryKeyFinding>(nameof(ChangeTrackingEncryptedPrimaryKeyScanner)).Select(ToResult));
-        results.AddRange(report.Find<XmlSchemaCollectionDisallowedTypeFinding>(nameof(XmlSchemaCollectionDisallowedTypeScanner)).Select(ToResult));
-        results.AddRange(report.Find<XmlSchemaCollectionMismatchFinding>(nameof(XmlSchemaCollectionMismatchScanner)).Select(ToResult));
         results.AddRange(report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
@@ -66,7 +61,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<CascadingForeignKeyFinding>("CascadingForeignKeyScanner").Select(ToResult));
         results.AddRange(report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Select(ToResult));
-        results.AddRange(report.Find<RecursiveCteAnchorTypeMismatchFinding>(nameof(RecursiveCteAnchorTypeMismatchScanner)).Select(ToResult));
         results.AddRange(report.Find<NestedViewDepthFinding>("NestedViewDepthScanner").Select(ToResult));
         results.AddRange(report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Select(ToResult));
         results.AddRange(report.Find<SelectStarViewFinding>("SelectStarViewScanner").Select(ToResult));
@@ -81,16 +75,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TemporalTableHistoryIndexGapFinding>("TemporalTableHistoryIndexGapScanner").Select(ToResult));
         results.AddRange(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner").Select(ToResult));
         results.AddRange(report.Find<WindowFrameFinding>("WindowFrameScanner").Select(ToResult));
-        results.AddRange(report.Find<WindowFunctionArgumentFinding>("WindowFunctionArgumentScanner").Select(ToResult));
-        results.AddRange(report.Find<StringSplitArgumentFinding>("StringSplitArgumentScanner").Select(ToResult));
         results.AddRange(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Select(ToResult));
-        results.AddRange(report.Find<RestoreOptionConflictFinding>("RestoreOptionConflictScanner").Select(ToResult));
-        results.AddRange(report.Find<ViewCheckOptionContradictionFinding>("ViewCheckOptionContradictionScanner").Select(ToResult));
-        results.AddRange(report.Find<CreateDatabaseOptionConflictFinding>("CreateDatabaseOptionConflictScanner").Select(ToResult));
-        results.AddRange(report.Find<GraphPseudoColumnAssignmentFinding>("GraphPseudoColumnAssignmentScanner").Select(ToResult));
-        results.AddRange(report.Find<LegacyLobUtf8CollationFinding>("LegacyLobUtf8CollationScanner").Select(ToResult));
-        results.AddRange(report.Find<LegacyLobConversionTargetFinding>("LegacyLobConversionTargetScanner").Select(ToResult));
-        results.AddRange(report.Find<GroupByValidityFinding>("GroupByValidityScanner").Select(ToResult));
         results.AddRange(report.Find<WaitForFinding>("WaitForScanner").Select(ToResult));
         results.AddRange(report.Find<CursorCloseOnCommitFinding>("CursorCloseOnCommitScanner").Select(ToResult));
         results.AddRange(report.Find<ViewOrderingFinding>("ViewOrderingScanner").Select(ToResult));
@@ -120,18 +105,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner").Select(ToResult));
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
-        results.AddRange(report.Find<AlwaysEncryptedOrderByFinding>("AlwaysEncryptedOrderByScanner").Select(ToResult));
-        results.AddRange(report.Find<AlwaysEncryptedAssignmentMismatchFinding>(nameof(AlwaysEncryptedAssignmentMismatchScanner)).Select(ToResult));
-        results.AddRange(report.Find<AlwaysEncryptedComparisonMismatchFinding>(nameof(AlwaysEncryptedComparisonMismatchScanner)).Select(ToResult));
-        results.AddRange(report.Find<RestrictedImplicitAssignmentFinding>("RestrictedImplicitAssignmentScanner").Select(ToResult));
-        results.AddRange(report.Find<RevertCookieTypeMismatchFinding>("RevertCookieTypeMismatchScanner").Select(ToResult));
-        results.AddRange(report.Find<ForXmlExplicitInlineXsdFinding>("ForXmlExplicitInlineXsdScanner").Select(ToResult));
         results.AddRange(report.Find<AlterColumnSafetyFinding>("AlterColumnSafetyScanner").Select(ToResult));
-        results.AddRange(report.Find<DropProtectedObjectFinding>("DropProtectedObjectScanner").Select(ToResult));
-        results.AddRange(report.Find<OnlineRebuildLegacyLobFinding>("OnlineRebuildLegacyLobScanner").Select(ToResult));
-        results.AddRange(report.Find<OperandComparabilityFinding>("OperandComparabilityScanner").Select(ToResult));
-        results.AddRange(report.Find<VectorFunctionArgumentFinding>(nameof(VectorFunctionArgumentScanner)).Select(ToResult));
-        results.AddRange(report.Find<SchemaWithRejectedTypeFinding>(nameof(SchemaWithRejectedTypeScanner)).Select(ToResult));
         results.AddRange(report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>("MemoryOptimizedSchemaOnlyDurabilityScanner").Select(ToResult));
         results.AddRange(report.Find<QueryAntiPatternFinding>("QueryAntiPatternScanner").Select(ToResult));
@@ -144,14 +118,12 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TryCastComputedColumnPredicateFinding>("TryCastComputedColumnPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
-        results.AddRange(report.Find<RowLimitOutOfRangeFinding>(nameof(RowLimitOutOfRangeScanner)).Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
         results.AddRange(report.Find<DanglingObjectReferenceFinding>("DanglingObjectReferenceScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
         results.AddRange(report.Find<MissingStatisticsFinding>("MissingStatisticsScanner").Select(ToResult));
-        results.AddRange(report.Find<SemanticSearchFinding>("SemanticSearchScanner").Select(ToResult));
 
         var notifications = BuildParseHealthNotifications(report.ParseHealth);
         notifications.AddRange(BuildSkippedConstructNotifications(report.SkippedConstructSummary));
@@ -428,71 +400,12 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
     }
 
-    private static SarifResult ToResult(SemanticSearchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SemanticSearchRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var location = finding.ColumnName is { } columnName ? $"'{finding.TableQualifiedName}.{columnName}'" : $"'{finding.TableQualifiedName}'";
-        var message = finding.Kind switch
-        {
-            SemanticSearchFindingKind.TableNotSemanticFullTextIndexed =>
-                $"Semantic search function on {location} - {finding.Detail}, so the call fails (Msg 41202).",
-            SemanticSearchFindingKind.ColumnNotSemanticFullTextIndexed =>
-                $"Semantic search function on {location} - {finding.Detail}, so the call fails (Msg 41203).",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled SemanticSearchFindingKind."),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(ExternalTableUnsupportedColumnTypeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ExternalTableUnsupportedColumnTypeRuleId, finding.Confidence);
-        var message = $"External table column '{finding.TableQualifiedName}.{finding.ColumnName}' is declared or resolves to {finding.TypeDisplay} - this type is not supported with external tables (Msg 46518/15877).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
     private static SarifResult ToResult(VectorLiteralConversionFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.VectorLiteralConversionRuleId(finding.Kind), finding.Confidence);
         var message = finding.Kind == VectorLiteralConversionFindingKind.ElementCountMismatch
             ? $"String literal '{finding.LiteralText}' converted to {finding.TargetTypeDisplay} has {finding.ActualElementCount} element(s), not {finding.DeclaredDimensions} - the vector dimensions do not match; the conversion fails at execution (Msg 42204)."
             : $"String literal '{finding.LiteralText}' converted to {finding.TargetTypeDisplay} contains a {finding.ElementKind} element - the JSON array must contain only numbers; the conversion fails at execution (Msg 13670).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(FullTextPredicateInAggregateFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.FullTextPredicateInAggregateRuleId, finding.Confidence);
-        var message = $"{finding.AggregateFunctionName}(...) nests a {finding.FullTextFunctionName} full-text predicate - full-text predicates cannot appear in an aggregate expression; the statement does not compile (Msg 30082).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(ChangeTrackingEncryptedPrimaryKeyFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ChangeTrackingEncryptedPrimaryKeyRuleId, finding.Confidence);
-        var message = $"ENABLE CHANGE_TRACKING targets '{finding.TableQualifiedName}', whose primary key column '{finding.ColumnName}' is Always Encrypted - change tracking does not support an encrypted primary key column; the statement fails (Msg 22118).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(XmlSchemaCollectionDisallowedTypeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.XmlSchemaCollectionDisallowedTypeRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == XmlSchemaCollectionDisallowedTypeKind.NotationType
-            ? $"XML schema collection '{finding.SchemaCollectionQualifiedName}' uses the XML Schema type NOTATION - this type is not supported; the schema collection never registers (Msg 9337)."
-            : $"XML schema collection '{finding.SchemaCollectionQualifiedName}' uses the built-in XML Schema type {finding.XsdTypeName} (or a type derived from it) as an element's type or an extension/restriction base - this is not permitted; the schema collection never registers (Msg 6995).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(XmlSchemaCollectionMismatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.XmlSchemaCollectionMismatchRuleId, finding.Confidence);
-        var message = $"'{finding.TargetVariableName}' (XML({finding.TargetSchemaCollectionName})) is assigned directly from '{finding.SourceVariableName}' (XML({finding.SourceSchemaCollectionName})) - implicit conversion between XML types constrained by different schema collections is not allowed; the statement does not compile (Msg 527).";
 
         return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -799,8 +712,7 @@ public static class SarifReportWriter
     {
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ControlFlowRiskRuleId(finding.Kind), finding.Confidence);
-        var baseLevel = finding.Kind is ControlFlowRiskFindingKind.CursorFetchColumnCountMismatch
-            or ControlFlowRiskFindingKind.EmptyCatchBlock
+        var baseLevel = finding.Kind is ControlFlowRiskFindingKind.EmptyCatchBlock
             or ControlFlowRiskFindingKind.CaseExpressionMissingElse
             or ControlFlowRiskFindingKind.NonDeterministicCaseInput
             ? LevelError
@@ -1045,46 +957,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
-    private static SarifResult ToResult(WindowFunctionArgumentFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.WindowFunctionArgumentRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            WindowFunctionArgumentFindingKind.LagLeadNegativeOffset =>
-                $"{finding.FunctionName}'s offset argument '{finding.ArgumentText}' constant-folds to a negative value - oracle-confirmed (Msg 8730) this fails the moment any row reaches the window function.",
-            WindowFunctionArgumentFindingKind.PercentileOutOfRange =>
-                $"{finding.FunctionName}'s percentile argument '{finding.ArgumentText}' constant-folds to a value outside [0, 1] - oracle-confirmed (Msg 8727) this fails the moment any row reaches the function.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(StringSplitArgumentFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.StringSplitArgumentRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            StringSplitArgumentFindingKind.SeparatorNotSingleCharacter =>
-                $"STRING_SPLIT's separator argument '{finding.ArgumentText}' is not exactly one character - oracle-confirmed (Msg 214) this call fails at compile/bind time.",
-            StringSplitArgumentFindingKind.ArgumentTypeNotCharacter =>
-                $"STRING_SPLIT's argument '{finding.ArgumentText}' has type {finding.DetailText}, not a character type - oracle-confirmed (Msg 8116) this call fails at compile/bind time.",
-            StringSplitArgumentFindingKind.EnableOrdinalNotConstant =>
-                $"STRING_SPLIT's enable_ordinal argument '{finding.ArgumentText}' is not a constant - oracle-confirmed (Msg 8748) enable_ordinal only supports constant values, not variables or columns.",
-            StringSplitArgumentFindingKind.EnableOrdinalTypeNotInteger =>
-                $"STRING_SPLIT's enable_ordinal argument '{finding.ArgumentText}' has type {finding.DetailText}, not int/bit - oracle-confirmed (Msg 8116) this call fails at compile/bind time.",
-            StringSplitArgumentFindingKind.EnableOrdinalInvalidValue =>
-                $"STRING_SPLIT's enable_ordinal argument '{finding.ArgumentText}' is not 0 or 1 - oracle-confirmed (Msg 4199) this call fails at bind time.",
-            StringSplitArgumentFindingKind.ThreeArgumentFormRequiresNewerEngine =>
-                $"STRING_SPLIT's 3-argument ordinality form is used against a connected engine reporting major version {finding.DetailText} - oracle-confirmed (Msg 8144, SQL Server 2019) the 3-argument form only exists from SQL Server 2022 (major version 16) onward.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
     private static SarifResult ToResult(BoundedStringBuiltinTruncationFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.BoundedStringBuiltinTruncationRuleId(finding.Kind), finding.Confidence);
@@ -1099,81 +971,6 @@ public static class SarifReportWriter
                 $"SPACE's requested {finding.ComputedLength}-character result is over its fixed {finding.CapBytes}-byte cap - oracle-confirmed the excess is silently truncated away, with no error.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
         };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(RestoreOptionConflictFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RestoreOptionConflictRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            RestoreOptionConflictKind.RecoveryAndNoRecovery => "RESTORE with both RECOVERY and NORECOVERY always fails - the two describe mutually exclusive end states for the database (Msg 3031).",
-            RestoreOptionConflictKind.RecoveryAndStandby => "RESTORE with both RECOVERY and STANDBY always fails - the two describe mutually exclusive end states for the database (Msg 3031).",
-            RestoreOptionConflictKind.NoRecoveryAndStandby => "RESTORE with both NORECOVERY and STANDBY always fails - the two describe mutually exclusive end states for the database (Msg 3031).",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(ViewCheckOptionContradictionFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ViewCheckOptionContradictionRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"This value for '{finding.ColumnName}' falls outside the range view '{finding.ViewQualifiedName}' allows through its own WHERE clause - the view was created WITH CHECK OPTION, so the engine always rejects this row (Msg 550).";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(CreateDatabaseOptionConflictFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CreateDatabaseOptionConflictRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        const string message = "CREATE DATABASE with both CONTAINMENT = PARTIAL and CATALOG_COLLATION always fails - the two are mutually exclusive on this engine (Msg 12845).";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(GraphPseudoColumnAssignmentFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.GraphPseudoColumnAssignmentRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"{finding.StatementKind} assigns '{finding.PseudoColumnName}' directly - it is a hidden, system-managed column on a SQL Graph node/edge table and always rejects a direct value.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(LegacyLobUtf8CollationFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.LegacyLobUtf8CollationRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"Column '{finding.ColumnName}' on {finding.TableQualifiedName} is {finding.TypeDisplay} with collation '{finding.CollationName}' - TEXT/NTEXT cannot carry a UTF-8 or supplementary-character-aware collation, so this CREATE/ALTER never compiles.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(LegacyLobConversionTargetFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.LegacyLobConversionTargetRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"Conversion targets {finding.TypeDisplay} with collation '{finding.CollationName}' - TEXT/NTEXT cannot carry a UTF-8 or supplementary-character-aware collation, so this statement never compiles.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(GroupByValidityFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.GroupByValidityRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var clause = finding.Kind switch
-        {
-            GroupByValidityFindingKind.Having => "HAVING clause",
-            GroupByValidityFindingKind.OrderBy => "ORDER BY clause",
-            _ => "select list",
-        };
-        var message = $"'{finding.ExpressionText}' in the {clause} is neither an aggregate function argument nor contained in the GROUP BY clause - this statement never compiles.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
@@ -1210,8 +1007,6 @@ public static class SarifReportWriter
         {
             TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath =>
                 $"SET IMPLICIT_TRANSACTIONS ON silently opens a transaction at line {finding.BeginTransactionLine} with no matching BEGIN TRANSACTION - it reaches this point with no intervening COMMIT/ROLLBACK, leaving @@TRANCOUNT elevated by one on this path.",
-            TransactionHygieneFindingKind.CommitAfterXactAbortDoomsTransaction =>
-                $"COMMIT TRANSACTION here always fails: SET XACT_ABORT ON dooms the transaction opened at line {finding.BeginTransactionLine} the instant an error is caught by this CATCH block, and a doomed transaction cannot be committed (Msg 3930) - only ROLLBACK is possible.",
             _ =>
                 $"BEGIN TRANSACTION at line {finding.BeginTransactionLine} reaches this point with no intervening COMMIT/ROLLBACK - @@TRANCOUNT is left elevated by one on this path, holding its locks until the session or connection pool eventually clears it.",
         };
@@ -1301,15 +1096,11 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.IndexHintRuleId(finding.Kind), finding.Confidence);
         var message = finding.Kind switch
         {
-            IndexHintFindingKind.IndexDoesNotExist =>
-                $"INDEX hint on {finding.TableQualifiedName} names '{finding.HintedIndexName}', which does not exist in the catalog - oracle-confirmed this is a hard compile error (Msg 308) every time this statement runs.",
             IndexHintFindingKind.HintedIndexNotSeekable =>
                 $"INDEX hint on {finding.TableQualifiedName} forces index '{finding.HintedIndexName}', whose leading key column {finding.LeadingColumnName} is never bound anywhere in this statement - oracle-confirmed this degrades the forced index to a full scan instead of a seek.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
         };
-        var level = finding.Kind == IndexHintFindingKind.IndexDoesNotExist
-            ? FloorLevelForConfidence(LevelError, finding.Confidence)
-            : FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
@@ -1394,15 +1185,6 @@ public static class SarifReportWriter
         var message = $"CTE '{finding.CteName}' is referenced {finding.ReferenceCount} times downstream of its own WITH clause - each reference independently re-runs the CTE's own defining query, SQL Server does not materialize it once and reuse it.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(RecursiveCteAnchorTypeMismatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RecursiveCteAnchorTypeMismatchRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"Recursive CTE '{finding.CteName}' column '{finding.ColumnName}' resolves to {finding.RecursiveTypeDisplay} in the recursive member but {finding.AnchorTypeDisplay} in the anchor member - SQL Server rejects this at compile time (Msg 240).";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
     private static SarifResult ToResult(NestedViewDepthFinding finding)
@@ -1519,84 +1301,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-    private static SarifResult ToResult(AlwaysEncryptedOrderByFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlwaysEncryptedOrderByRuleId, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' ({finding.EncryptionTypeDisplay}) is referenced in this ORDER BY clause - an Always Encrypted column can never be sorted on; the statement does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(AlwaysEncryptedAssignmentMismatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlwaysEncryptedAssignmentMismatchRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == AlwaysEncryptedAssignmentMismatchKind.LiteralSource
-            ? $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned a literal value directly - the server cannot encrypt a plaintext literal without a column-encryption-aware client; the statement does not compile."
-            : $"'{finding.TargetTableQualifiedName}.{finding.TargetColumnName}' ({finding.TargetEncryptionTypeDisplay}) is assigned from '{finding.SourceTableQualifiedName}.{finding.SourceColumnName}' ({finding.SourceEncryptionTypeDisplay}) - the Always Encrypted state differs between source and target; the statement does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(AlwaysEncryptedComparisonMismatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlwaysEncryptedComparisonMismatchRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind switch
-        {
-            AlwaysEncryptedComparisonMismatchKind.LiteralOperand =>
-                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against a literal value directly - the server cannot compare ciphertext against a plaintext literal; the statement does not compile.",
-            AlwaysEncryptedComparisonMismatchKind.EncryptionStateMismatch =>
-                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - the Always Encrypted state differs between the two operands; the statement does not compile.",
-            AlwaysEncryptedComparisonMismatchKind.DeterministicRangeComparison =>
-                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) using a range operator (<, >, BETWEEN, ...) - deterministic encryption only supports equality comparisons; the statement does not compile.",
-            AlwaysEncryptedComparisonMismatchKind.RandomizedWithoutEnclave =>
-                $"'{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' ({finding.FirstEncryptionTypeDisplay}) is compared against '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' ({finding.SecondEncryptionTypeDisplay}) - randomized encryption without a secure-enclave-enabled column encryption key does not support this comparison; the statement does not compile.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled AlwaysEncryptedComparisonMismatchKind."),
-        };
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(RowLimitOutOfRangeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RowLimitOutOfRangeRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind switch
-        {
-            RowLimitOutOfRangeKind.TopRowCountNegative => $"TOP ({finding.LiteralValueDisplay}) is a negative literal row count - the statement does not compile.",
-            RowLimitOutOfRangeKind.OffsetNegative => $"OFFSET {finding.LiteralValueDisplay} ROWS is a negative literal - the statement does not compile.",
-            RowLimitOutOfRangeKind.FetchNotPositive => $"FETCH NEXT {finding.LiteralValueDisplay} ROWS ONLY must be greater than zero - the statement does not compile.",
-            RowLimitOutOfRangeKind.TableSamplePercentOutOfRange => $"TABLESAMPLE ({finding.LiteralValueDisplay} PERCENT) is outside the valid 0-100 range - the statement does not compile.",
-            RowLimitOutOfRangeKind.TableSampleRowsNotPositive => $"TABLESAMPLE ({finding.LiteralValueDisplay} ROWS) must be greater than zero - the statement does not compile.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled RowLimitOutOfRangeKind."),
-        };
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(RestrictedImplicitAssignmentFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RestrictedImplicitAssignmentRuleId, finding.Confidence);
-        var message = $"'{finding.TargetVariableName}' ({finding.TargetTypeDisplay}) is assigned directly from '{finding.SourceVariableName}' ({finding.SourceTypeDisplay}) - no implicit conversion exists between these types; the statement does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(RevertCookieTypeMismatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RevertCookieTypeMismatchRuleId, finding.Confidence);
-        var message = $"REVERT WITH COOKIE references '{finding.CookieVariableName}' ({finding.CookieTypeDisplay}), not varbinary(100) - the engine only accepts the fixed varbinary(100) cookie shape; the statement does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(ForXmlExplicitInlineXsdFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ForXmlExplicitInlineXsdRuleId, finding.Confidence);
-        const string message = "FOR XML EXPLICIT is combined with XMLSCHEMA - this combination does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
 
     private static SarifResult ToResult(AlterColumnSafetyFinding finding)
     {
@@ -1605,89 +1309,12 @@ public static class SarifReportWriter
         {
             AlterColumnSafetyKind.PrecisionOrScaleNarrowing =>
                 $"'{finding.TableQualifiedName}.{finding.ColumnName}' is narrowed from {finding.PreviousType} to {finding.NewType} - this fails at DDL time if an existing value no longer fits, or silently rounds away digits past the new scale if it does.",
-            AlterColumnSafetyKind.IncompatibleFamilyConversion =>
-                $"'{finding.TableQualifiedName}.{finding.ColumnName}' is retyped from {finding.PreviousType} to {finding.NewType} - there is no implicit conversion between the character and binary families, and ALTER COLUMN has no syntax to carry an explicit CONVERT; the statement does not compile.",
             AlterColumnSafetyKind.TemporalOffsetDropped =>
                 $"'{finding.TableQualifiedName}.{finding.ColumnName}' is retyped from {finding.PreviousType} to {finding.NewType} - the UTC offset is silently dropped, keeping the local date/time digits unchanged rather than normalizing to UTC.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled AlterColumnSafetyKind."),
         };
 
         return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
-    private static SarifResult ToResult(DropProtectedObjectFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DropProtectedObjectRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind switch
-        {
-            DropProtectedObjectKind.SchemaNotEmpty =>
-                $"DROP SCHEMA '{finding.ObjectName}' fails (Msg 3729) because at least one object still references the schema - every object in the schema must be dropped or moved first.",
-            DropProtectedObjectKind.FixedDatabaseRole =>
-                $"DROP ROLE '{finding.ObjectName}' fails (Msg 15150) because it names one of the engine's fixed database roles, which can never be dropped.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled DropProtectedObjectKind."),
-        };
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(OnlineRebuildLegacyLobFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.OnlineRebuildLegacyLobRuleId(finding.Kind), finding.Confidence);
-        var statementLabel = finding.Kind switch
-        {
-            OnlineRebuildLegacyLobKind.AlterTableRebuild => "ALTER TABLE ... REBUILD WITH (ONLINE = ON)",
-            OnlineRebuildLegacyLobKind.AlterIndexAllRebuild => "ALTER INDEX ALL ... REBUILD WITH (ONLINE = ON)",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled OnlineRebuildLegacyLobKind."),
-        };
-        var message = $"{statementLabel} on '{finding.TableQualifiedName}' fails (Msg 2725) because column '{finding.ColumnName}' is {finding.TypeDisplay} - text, ntext, image, and FILESTREAM columns can never be carried through an online index rebuild.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(OperandComparabilityFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.OperandComparabilityRuleId(finding.Kind), finding.Confidence);
-        var typeLabel = finding.Kind switch
-        {
-            OperandComparabilityFindingKind.Xml => "xml",
-            OperandComparabilityFindingKind.Json => "json",
-            OperandComparabilityFindingKind.Spatial => "geometry/geography",
-            _ => "text/ntext/image",
-        };
-        var positionText = finding.Context switch
-        {
-            OperandComparabilityContext.Comparison => $"compared with {finding.OperatorText} in this predicate",
-            OperandComparabilityContext.In => "used in an IN list",
-            OperandComparabilityContext.Between => "used in a BETWEEN",
-            OperandComparabilityContext.NullIf => "used in a NULLIF",
-            OperandComparabilityContext.OrderBy => "referenced in this ORDER BY clause",
-            OperandComparabilityContext.GroupBy => "referenced in this GROUP BY clause",
-            OperandComparabilityContext.Distinct => "selected under SELECT DISTINCT",
-            OperandComparabilityContext.PartitionBy => "referenced in this window function's PARTITION BY clause",
-            _ => "used in a comparison",
-        };
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' ({finding.TypeDisplay}) is {positionText} - the {typeLabel} data type is not comparable here; the statement does not compile.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(VectorFunctionArgumentFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.VectorFunctionArgumentRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == VectorFunctionArgumentFindingKind.DimensionMismatch
-            ? $"{finding.FunctionName}'s two vector arguments declare different dimensions ({finding.TypeDisplay} vs {finding.OtherTypeDisplay}) - the vector dimensions do not match; the call fails at execution for every row (Msg 42204)."
-            : $"{finding.FunctionName}'s {finding.ArgumentDescription} is {finding.TypeDisplay}, not a VECTOR(n) value - the statement does not compile (Msg 8116).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(SchemaWithRejectedTypeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SchemaWithRejectedTypeRuleId(finding.Kind), finding.Confidence);
-        var clauseText = finding.Kind == SchemaWithRejectedTypeKind.OpenXmlClrType ? "OPENXML ... WITH" : "OPENROWSET(BULK ...) inline-schema WITH";
-        var message = $"{clauseText} schema column '{finding.ColumnName}' is declared {finding.TypeDisplay} - this clause's fixed type gate always rejects this type.";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
     private static SarifResult ToResult(ExecuteAtLargeObjectParameterFinding finding)
@@ -1720,10 +1347,7 @@ public static class SarifReportWriter
             QueryAntiPatternFindingKind.CountStarVariableExistenceCheck => LevelError,
             QueryAntiPatternFindingKind.NonAggregateHavingPredicate => LevelWarning,
 
-            QueryAntiPatternFindingKind.MergeNonUniqueUsingSource => LevelError,
             QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion => LevelError,
-            QueryAntiPatternFindingKind.GroupingSetsCardinalityLimitExceeded => LevelError,
-            QueryAntiPatternFindingKind.GroupingArgumentNotInGroupByList => LevelError,
             _ => LevelWarning,
         };
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.QueryAntiPatternRuleId(finding.Kind), finding.Confidence);
@@ -1792,14 +1416,6 @@ public static class SarifReportWriter
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TempTableExecShapeRuleId(finding.Kind), finding.Confidence);
 
-        if (finding.Kind == TempTableExecShapeFindingKind.ColumnCountMismatch)
-        {
-
-            var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-            var message = $"INSERT INTO {finding.TempTableQualifiedName} EXEC {finding.ExecutedProcQualifiedName}: the INSERT targets {finding.TempTableDeclaredColumnCount} column(s) but the executed proc's real result set describes {finding.DescribedColumnCount} - this raises a hard error (Msg 213/8164) every time it runs.";
-            return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-        }
-
         var typeLevel = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var typeMessage = $"INSERT INTO {finding.TempTableQualifiedName} EXEC {finding.ExecutedProcQualifiedName}: position {finding.ColumnPosition} ('{finding.ColumnName}', {finding.TempColumnTypeDisplay}) receives {finding.DescribedColumnTypeDisplay} from the executed proc's real result set - {DescribeWriteLossKind(finding.WriteLoss!.Value)}.";
         return BuildResult(ruleId, typeLevel, typeMessage, finding.SourcePath, finding.Line, startColumn: finding.Column);
@@ -1808,14 +1424,6 @@ public static class SarifReportWriter
     private static SarifResult ToResult(ExecResultSetsShapeFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ExecResultSetsShapeRuleId(finding.Kind), finding.Confidence);
-
-        if (finding.Kind == ExecResultSetsShapeFindingKind.ColumnCountMismatch)
-        {
-
-            var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-            var message = $"EXEC {finding.ExecutedProcQualifiedName} WITH RESULT SETS declares {finding.DeclaredColumnCount} column(s) but the executed proc's real result set describes {finding.DescribedColumnCount} - this raises a hard error (Msg 11537) every time it runs.";
-            return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-        }
 
         var typeLevel = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var typeMessage = $"EXEC {finding.ExecutedProcQualifiedName} WITH RESULT SETS: position {finding.ColumnPosition} ('{finding.ColumnName}', {finding.DeclaredColumnTypeDisplay}) receives {finding.DescribedColumnTypeDisplay} from the executed proc's real result set - {DescribeWriteLossKind(finding.WriteLoss!.Value)}.";

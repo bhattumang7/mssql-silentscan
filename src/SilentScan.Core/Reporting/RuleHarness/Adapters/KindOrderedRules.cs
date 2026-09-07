@@ -34,24 +34,6 @@ internal sealed class WindowFrameRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => WindowFrameScanner.Harvest((WindowFrameScanner.Rule)moduleRule);
 }
 
-internal sealed class WindowFunctionArgumentRule : IPerFileRule
-{
-    public string Id => "WindowFunctionArgumentScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => WindowFunctionArgumentScanner.Scan(parseResult);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<WindowFunctionArgumentFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => WindowFunctionArgumentScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => WindowFunctionArgumentScanner.Harvest((WindowFunctionArgumentScanner.Rule)moduleRule);
-}
-
-internal sealed class StringSplitArgumentRule : IPerFileRule
-{
-    public string Id => "StringSplitArgumentScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringSplitArgumentScanner.Scan(parseResult, context.Catalog);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<StringSplitArgumentFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringSplitArgumentScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringSplitArgumentScanner.Harvest((StringSplitArgumentScanner.Rule)moduleRule);
-}
-
 internal sealed class BoundedStringBuiltinTruncationRule : IPerFileRule
 {
     public string Id => "BoundedStringBuiltinTruncationScanner";

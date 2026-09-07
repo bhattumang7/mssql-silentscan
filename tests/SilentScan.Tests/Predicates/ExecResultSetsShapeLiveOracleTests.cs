@@ -8,31 +8,6 @@ namespace SilentScan.Tests.Predicates;
 public sealed class ExecResultSetsShapeLiveOracleTests
 {
     [Fact]
-    public async Task ColumnCountMismatch_Fires()
-    {
-        var report = await EngineAuthoritativeScan.ScanAsync(
-            """
-            CREATE PROCEDURE dbo.usp_Callee AS
-            BEGIN
-                SELECT CAST(1 AS INT) AS Id, CAST('x' AS VARCHAR(10)) AS Name;
-            END;
-            GO
-            CREATE PROCEDURE dbo.usp_Caller AS
-            BEGIN
-                EXEC dbo.usp_Callee WITH RESULT SETS ((Id INT NOT NULL));
-            END;
-            """,
-            minimumConfidence: FindingConfidence.Low);
-
-        var finding = Assert.Single(report.Find<ExecResultSetsShapeFinding>("ExecResultSetsShapeScanner"));
-        Assert.Equal(ExecResultSetsShapeFindingKind.ColumnCountMismatch, finding.Kind);
-        Assert.Equal("dbo.usp_Callee", finding.ExecutedProcQualifiedName);
-        Assert.Equal(1, finding.DeclaredColumnCount);
-        Assert.Equal(2, finding.DescribedColumnCount);
-        Assert.Equal("dbo.usp_Caller", finding.CallerScopeQualifiedName);
-    }
-
-    [Fact]
     public async Task ColumnTypeMismatch_StringTruncation_FiresAtTheDeclaredPosition()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(

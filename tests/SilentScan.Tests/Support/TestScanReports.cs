@@ -42,7 +42,6 @@ public static class TestScanReports
         IReadOnlyList<UntrustedConstraintFinding>? UntrustedConstraintFindings = null,
         IReadOnlyList<CascadingForeignKeyFinding>? CascadingForeignKeyFindings = null,
         IReadOnlyList<MultiReferencedCteFinding>? MultiReferencedCteFindings = null,
-        IReadOnlyList<RecursiveCteAnchorTypeMismatchFinding>? RecursiveCteAnchorTypeMismatchFindings = null,
         IReadOnlyList<NestedViewDepthFinding>? NestedViewDepthFindings = null,
         IReadOnlyList<PostExpansionJoinWidthFinding>? PostExpansionJoinWidthFindings = null,
         IReadOnlyList<SelectStarViewFinding>? SelectStarViewFindings = null,
@@ -95,22 +94,13 @@ public static class TestScanReports
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
         IReadOnlyList<DanglingObjectReferenceFinding>? DanglingObjectReferenceFindings = null,
         IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null,
-        IReadOnlyList<AlwaysEncryptedOrderByFinding>? AlwaysEncryptedOrderByFindings = null,
-        IReadOnlyList<RestrictedImplicitAssignmentFinding>? RestrictedImplicitAssignmentFindings = null,
-        IReadOnlyList<RevertCookieTypeMismatchFinding>? RevertCookieTypeMismatchFindings = null,
-        IReadOnlyList<ForXmlExplicitInlineXsdFinding>? ForXmlExplicitInlineXsdFindings = null,
         IReadOnlyList<TriggerOrderFinding>? TriggerOrderFindings = null,
         IReadOnlyList<MissingStatisticsFinding>? MissingStatisticsFindings = null,
-        IReadOnlyList<OperandComparabilityFinding>? OperandComparabilityFindings = null,
         IReadOnlyList<MemoryOptimizedSchemaOnlyDurabilityFinding>? MemoryOptimizedSchemaOnlyDurabilityFindings = null,
-        IReadOnlyList<WindowFunctionArgumentFinding>? WindowFunctionArgumentFindings = null,
-        IReadOnlyList<StringSplitArgumentFinding>? StringSplitArgumentFindings = null,
         IReadOnlyList<BoundedStringBuiltinTruncationFinding>? BoundedStringBuiltinTruncationFindings = null,
         IReadOnlyList<FloatOrderDependentAggregateFinding>? FloatOrderDependentAggregateFindings = null,
         IReadOnlyList<DynamicDataMaskingFinding>? DynamicDataMaskingFindings = null,
         IReadOnlyList<AlterColumnSafetyFinding>? AlterColumnSafetyFindings = null,
-        IReadOnlyList<DropProtectedObjectFinding>? DropProtectedObjectFindings = null,
-        IReadOnlyList<OnlineRebuildLegacyLobFinding>? OnlineRebuildLegacyLobFindings = null,
         IReadOnlyList<SpExecuteSqlParameterMismatchFinding>? SpExecuteSqlParameterMismatchFindings = null,
         IReadOnlyList<SkippedConstruct>? SkippedConstructs = null,
         SkippedConstructSummary? SkippedConstructSummary = null,
@@ -161,7 +151,6 @@ public static class TestScanReports
         Set("UntrustedConstraintScanner", UntrustedConstraintFindings);
         Set("CascadingForeignKeyScanner", CascadingForeignKeyFindings);
         Set("MultiReferencedCteScanner", MultiReferencedCteFindings);
-        Set("RecursiveCteAnchorTypeMismatchScanner", RecursiveCteAnchorTypeMismatchFindings);
         Set("NestedViewDepthScanner", NestedViewDepthFindings);
         Set("PostExpansionJoinWidthScanner", PostExpansionJoinWidthFindings);
         Set("SelectStarViewScanner", SelectStarViewFindings);
@@ -212,22 +201,13 @@ public static class TestScanReports
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
         Set("DanglingObjectReferenceScanner", DanglingObjectReferenceFindings);
         Set("ForcedParameterizationScanner", ForcedParameterizationFindings);
-        Set("AlwaysEncryptedOrderByScanner", AlwaysEncryptedOrderByFindings);
-        Set("RestrictedImplicitAssignmentScanner", RestrictedImplicitAssignmentFindings);
-        Set("RevertCookieTypeMismatchScanner", RevertCookieTypeMismatchFindings);
-        Set("ForXmlExplicitInlineXsdScanner", ForXmlExplicitInlineXsdFindings);
         Set("TriggerOrderScanner", TriggerOrderFindings);
         Set("MissingStatisticsScanner", MissingStatisticsFindings);
-        Set("OperandComparabilityScanner", OperandComparabilityFindings);
         Set("MemoryOptimizedSchemaOnlyDurabilityScanner", MemoryOptimizedSchemaOnlyDurabilityFindings);
-        Set("WindowFunctionArgumentScanner", WindowFunctionArgumentFindings);
-        Set("StringSplitArgumentScanner", StringSplitArgumentFindings);
         Set("BoundedStringBuiltinTruncationScanner", BoundedStringBuiltinTruncationFindings);
         Set("FloatOrderDependentAggregateScanner", FloatOrderDependentAggregateFindings);
         Set(nameof(DynamicDataMaskingScanner), DynamicDataMaskingFindings);
         Set("AlterColumnSafetyScanner", AlterColumnSafetyFindings);
-        Set("DropProtectedObjectScanner", DropProtectedObjectFindings);
-        Set("OnlineRebuildLegacyLobScanner", OnlineRebuildLegacyLobFindings);
         Set("SpExecuteSqlParameterMismatchScanner", SpExecuteSqlParameterMismatchFindings);
 
         return new ScanReport(
