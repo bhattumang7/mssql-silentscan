@@ -273,6 +273,13 @@ statement — is uncontroversial syntax, not a claim needing verification).
   deterministic columns, matching the scanner's unconditional check; the
   `RandomizedWithoutEnclave` enclave-support gate, the equality-vs-range
   classification, and the literal/None-vs-None exclusions all check out.
+- `AlwaysEncryptedAssignmentMismatchScanner` — found and fixed a real gap:
+  `INSERT` handling only inspected the `VALUES` source form, silently
+  skipping the identical column-to-column encryption-mismatch check for
+  `INSERT ... SELECT`'s positional column mapping, even though Msg 206
+  fires identically either way; oracle-confirmed and closed. The
+  `UPDATE`/`MERGE` `SET`-clause path and the literal-source checks
+  (VALUES and SET) were already correct.
 - `GroupByValidityScanner` — found and fixed a real gap: the HAVING/ORDER BY
   boolean walk only checked an `IN` predicate's left operand for the
   literal-value-list form, silently skipping the same check for the
