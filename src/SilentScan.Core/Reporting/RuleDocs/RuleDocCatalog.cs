@@ -60,6 +60,7 @@ public static class RuleDocCatalog
         [StringBuiltin.UnistrUnpairedSurrogate.RuleId] = StringBuiltin.UnistrUnpairedSurrogate.Content,
         [StringBuiltin.RegexpReplaceDollarBackreference.RuleId] = StringBuiltin.RegexpReplaceDollarBackreference.Content,
         [StringBuiltin.RegexpDefaultCaseSensitiveOnCiColumn.RuleId] = StringBuiltin.RegexpDefaultCaseSensitiveOnCiColumn.Content,
+        [StringBuiltin.RegexpAccentInsensitiveColumn.RuleId] = StringBuiltin.RegexpAccentInsensitiveColumn.Content,
         [JsonBuiltin.JsonArrayAggMissingOrder.RuleId] = JsonBuiltin.JsonArrayAggMissingOrder.Content,
         [JsonBuiltin.JsonObjectDuplicateKey.RuleId] = JsonBuiltin.JsonObjectDuplicateKey.Content,
         [Query.ForXmlPathMissingOrder.RuleId] = Query.ForXmlPathMissingOrder.Content,

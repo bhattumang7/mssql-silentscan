@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">279 rules. 190 carry fix guidance; 23 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">280 rules. 191 carry fix guidance; 23 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -521,6 +521,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <section class="family-section">
     <h2>string-builtin</h2>
     <ul class="rule-list">
+      <li><a class="id" href="rules/string-builtin-regexp-accent-insensitive-column-unsupported.html">Regexp Accent Insensitive Column Unsupported</a> <code class="rule-key">silentscan/string-builtin/regexp-accent-insensitive-column-unsupported</code><span class="snippet">A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR/REGEXP_MATCHES/REGEXP_SPLIT_TO_TABLE call&#x27;s subject is a column with an accent-insensitive collation, and the call&#x27;s literal pattern contains a letter.</span></li>
       <li><a class="id" href="rules/string-builtin-regexp-default-case-sensitive-on-ci-collation.html">Regexp Default Case Sensitive On Ci Collation</a> <code class="rule-key">silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation</code><span class="snippet">A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR/REGEXP_MATCHES/REGEXP_SPLIT_TO_TABLE call&#x27;s subject is a column with a case-insensitive collation, and the call&#x27;s literal pattern contains a letter, but the call has no match_type argument whose last c/i flag character is &#x27;i&#x27;.</span></li>
       <li><a class="id" href="rules/string-builtin-regexp-replace-dollar-backreference.html">Regexp Replace Dollar Backreference</a> <code class="rule-key">silentscan/string-builtin/regexp-replace-dollar-backreference</code><span class="snippet">A REGEXP_REPLACE() call&#x27;s literal replacement string contains a $N token where N is within the number of capturing groups in the call&#x27;s literal pattern.</span></li>
       <li><a class="id" href="rules/string-builtin-replace-truncated.html">Replace Truncated</a> <code class="rule-key">silentscan/string-builtin/replace-truncated</code><span class="snippet">REPLACE&#x27;s first (input) argument is a literal not typed VARCHAR(MAX)/NVARCHAR(MAX), so its return type is capped at VARCHAR(8000)/NVARCHAR(4000).</span></li>
