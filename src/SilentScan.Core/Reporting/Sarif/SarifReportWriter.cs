@@ -139,10 +139,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>("MemoryOptimizedUnsupportedColumnTypeScanner").Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedUtf8CollationFinding>("MemoryOptimizedUtf8CollationScanner").Select(ToResult));
-        results.AddRange(report.Find<NativelyCompiledUnsupportedBuiltinFinding>("NativelyCompiledUnsupportedBuiltinScanner").Select(ToResult));
-        results.AddRange(report.Find<NativelyCompiledClrTypeFinding>("NativelyCompiledClrTypeScanner").Select(ToResult));
-        results.AddRange(report.Find<NativelyCompiledErrorOutsideCatchFinding>("NativelyCompiledErrorOutsideCatchScanner").Select(ToResult));
-        results.AddRange(report.Find<NativelyCompiledInterpretedCalleeFinding>("NativelyCompiledInterpretedCalleeScanner").Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedLedgerConflictFinding>("MemoryOptimizedLedgerConflictScanner").Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>("MemoryOptimizedUnsupportedIndexOptionScanner").Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedForeignKeyFinding>("MemoryOptimizedForeignKeyScanner").Select(ToResult));
@@ -548,45 +544,6 @@ public static class SarifReportWriter
         var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' is declared {finding.TypeDisplay} COLLATE {finding.CollationName} on memory-optimized table '{finding.TableQualifiedName}' - a UTF-8 collation on a char/varchar column is not supported on a memory-optimized table at all (Msg 12356), so the statement does not deploy.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
-    private static SarifResult ToResult(NativelyCompiledUnsupportedBuiltinFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NativelyCompiledUnsupportedBuiltinRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"Natively compiled module '{finding.ModuleQualifiedName}' calls {finding.FunctionName}(), which is not supported with natively compiled modules (Msg 10794), so the statement does not compile.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(NativelyCompiledClrTypeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NativelyCompiledClrTypeRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var kindText = finding.Kind == NativelyCompiledClrTypeKind.Parameter ? "parameter" : "local variable";
-        var message = $"Natively compiled module '{finding.ModuleQualifiedName}' declares {kindText} '{finding.MemberName}' typed {finding.TypeQualifiedName}, a CLR user-defined type, which is not supported with natively compiled modules (Msg 10794), so the statement does not compile.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(NativelyCompiledErrorOutsideCatchFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NativelyCompiledErrorOutsideCatchRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = $"Natively compiled module '{finding.ModuleQualifiedName}' calls {finding.FunctionName}() outside a CATCH block, which is not supported with natively compiled modules (Msg 10792), so the statement does not compile.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(NativelyCompiledInterpretedCalleeFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NativelyCompiledInterpretedCalleeRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var message = finding.Kind == NativelyCompiledInterpretedCalleeKind.ExecutedProcedure
-            ? $"Natively compiled module '{finding.ModuleQualifiedName}' executes '{finding.CalleeQualifiedName}', which is not itself natively compiled - EXECUTE inside a natively compiled module only supports executing another natively compiled module (Msg 12342), so the statement does not compile."
-            : $"Natively compiled module '{finding.ModuleQualifiedName}' calls '{finding.CalleeQualifiedName}', which is not itself natively compiled - only natively compiled modules can call other natively compiled modules (Msg 12344), so the statement does not compile.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
     private static SarifResult ToResult(MemoryOptimizedLedgerConflictFinding finding)

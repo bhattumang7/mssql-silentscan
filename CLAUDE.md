@@ -10,6 +10,21 @@ else restricts what SilentScan can detect or how it detects it.
 findings) is the deliverable. **Precision beats recall everywhere** — one false
 positive in a published finding is worse than ten missed true positives.
 
+## Hard-error DDL/DML is out of scope
+If SQL Server itself refuses to compile or deploy something with a hard,
+synchronous error (a `CREATE`/`ALTER` that fails outright, a statement that
+never parses/binds), don't build a rule to catch it. Two independent reasons,
+either one is sufficient:
+- **Unreachable via the real entry point.** `scan-db` reads an
+  already-deployed catalog from `sys.*`. Anything that fails to deploy can
+  never exist there to be scanned — see the `FullTextIndexDdlScanner` and
+  `ComputedColumnIndexKeyScanner` removals for the pattern.
+- **Not our job.** Catching what the engine already refuses at compile/deploy
+  time means re-deriving the engine's own validation logic — at the limit,
+  reimplementing the compiler. The engine already tells the user, immediately
+  and loudly, exactly what's wrong. SilentScan's value is surfacing what the
+  engine stays silent about, not duplicating what it already shouts.
+
 ## Do not launch agents
 Keep the urge to spin up agents in control. For very small tasks do not spin up agents.
 

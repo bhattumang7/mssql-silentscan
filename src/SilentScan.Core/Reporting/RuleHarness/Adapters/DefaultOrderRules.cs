@@ -11,14 +11,6 @@ internal sealed class WaitForRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => WaitForScanner.Harvest((WaitForScanner.Rule)moduleRule);
 }
 
-internal sealed class NativelyCompiledUnsupportedBuiltinRule : IPerFileRule
-{
-    public string Id => "NativelyCompiledUnsupportedBuiltinScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledUnsupportedBuiltinScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledUnsupportedBuiltinScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NativelyCompiledUnsupportedBuiltinScanner.Harvest((NativelyCompiledUnsupportedBuiltinScanner.Rule)moduleRule);
-}
-
 internal sealed class RestoreOptionConflictRule : IPerFileRule
 {
     public string Id => "RestoreOptionConflictScanner";
@@ -376,30 +368,6 @@ internal sealed class UnpivotExactTypeMismatchRule : IPerFileRule
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => UnpivotExactTypeMismatchScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => UnpivotExactTypeMismatchScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => UnpivotExactTypeMismatchScanner.Harvest((UnpivotExactTypeMismatchScanner.Rule)moduleRule);
-}
-
-internal sealed class NativelyCompiledClrTypeRule : IPerFileRule
-{
-    public string Id => "NativelyCompiledClrTypeScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledClrTypeScanner.Scan(parseResult, context.Catalog);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledClrTypeScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NativelyCompiledClrTypeScanner.Harvest((NativelyCompiledClrTypeScanner.Rule)moduleRule);
-}
-
-internal sealed class NativelyCompiledErrorOutsideCatchRule : IPerFileRule
-{
-    public string Id => "NativelyCompiledErrorOutsideCatchScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledErrorOutsideCatchScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledErrorOutsideCatchScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NativelyCompiledErrorOutsideCatchScanner.Harvest((NativelyCompiledErrorOutsideCatchScanner.Rule)moduleRule);
-}
-
-internal sealed class NativelyCompiledInterpretedCalleeRule : IPerFileRule
-{
-    public string Id => "NativelyCompiledInterpretedCalleeScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledInterpretedCalleeScanner.Scan(parseResult, context.Catalog);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NativelyCompiledInterpretedCalleeScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NativelyCompiledInterpretedCalleeScanner.Harvest((NativelyCompiledInterpretedCalleeScanner.Rule)moduleRule);
 }
 
 internal sealed class MemoryOptimizedLedgerConflictRule : IPerFileRule
