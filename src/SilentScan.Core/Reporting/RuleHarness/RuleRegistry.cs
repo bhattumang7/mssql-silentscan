@@ -20,6 +20,7 @@ public static class RuleRegistry
         new StringAggMissingOrderRule(),
         new ForXmlPathMissingOrderRule(),
         new JsonArrayAggMissingOrderRule(),
+        new JsonObjectDuplicateKeyRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),
