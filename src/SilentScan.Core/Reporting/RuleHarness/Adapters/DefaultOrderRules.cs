@@ -62,8 +62,8 @@ internal sealed class LegacyLobConversionTargetRule : IPerFileRule
 internal sealed class GroupByValidityRule : IPerFileRule
 {
     public string Id => "GroupByValidityScanner";
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => GroupByValidityScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => GroupByValidityScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => GroupByValidityScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => GroupByValidityScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => GroupByValidityScanner.Harvest((GroupByValidityScanner.Rule)moduleRule);
 }
 
