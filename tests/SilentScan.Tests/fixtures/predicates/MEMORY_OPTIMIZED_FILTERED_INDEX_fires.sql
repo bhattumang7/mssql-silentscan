@@ -1,7 +1,0 @@
-CREATE TABLE dbo.Widget
-(
-    WidgetId INT NOT NULL PRIMARY KEY NONCLUSTERED,
-    Amount INT NULL
-) WITH (MEMORY_OPTIMIZED = ON);
-GO
-CREATE INDEX IX_Widget_Amount ON dbo.Widget (Amount) WHERE Amount IS NOT NULL;

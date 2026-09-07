@@ -44,57 +44,11 @@ internal sealed class MaxTypedColumnRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MaxTypedColumnScanner.Scan(context.Catalog);
 }
 
-internal sealed class ColumnstoreUnsupportedColumnTypeRule : ICatalogRule
-{
-    public string Id => "ColumnstoreUnsupportedColumnTypeScanner";
-    public bool ApplyConfidenceFilter => false;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => ColumnstoreUnsupportedColumnTypeScanner.Scan(context.Catalog);
-}
-
-internal sealed class SelectiveXmlIndexValueColumnRule : ICatalogRule
-{
-    public string Id => "SelectiveXmlIndexValueColumnScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => SelectiveXmlIndexValueColumnScanner.Scan(context.Catalog);
-}
-
-internal sealed class MemoryOptimizedUnsupportedColumnTypeRule : ICatalogRule
-{
-    public string Id => "MemoryOptimizedUnsupportedColumnTypeScanner";
-    public bool ApplyConfidenceFilter => false;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedUnsupportedColumnTypeScanner.Scan(context.Catalog);
-}
-
-internal sealed class MemoryOptimizedUtf8CollationRule : ICatalogRule
-{
-    public string Id => "MemoryOptimizedUtf8CollationScanner";
-    public bool ApplyConfidenceFilter => false;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedUtf8CollationScanner.Scan(context.Catalog);
-}
-
-internal sealed class MemoryOptimizedUnsupportedIndexOptionRule : ICatalogRule
-{
-    public string Id => "MemoryOptimizedUnsupportedIndexOptionScanner";
-    public bool ApplyConfidenceFilter => false;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedUnsupportedIndexOptionScanner.Scan(context.Catalog);
-}
-
 internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
 {
     public string Id => "MemoryOptimizedSchemaOnlyDurabilityScanner";
     public bool ApplyConfidenceFilter => false;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedSchemaOnlyDurabilityScanner.Scan(context.Catalog);
-}
-
-internal sealed class AlwaysEncryptedKeyColumnRule : ICatalogRule
-{
-    public string Id => "AlwaysEncryptedKeyColumnScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => AlwaysEncryptedKeyColumnScanner.Scan(context.Catalog);
-}
-
-internal sealed class AlwaysEncryptedUnsupportedColumnRule : ICatalogRule
-{
-    public string Id => "AlwaysEncryptedUnsupportedColumnScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => AlwaysEncryptedUnsupportedColumnScanner.Scan(context.Catalog);
 }
 
 internal sealed class AlterColumnSafetyRule : ICatalogRule
@@ -125,13 +79,6 @@ internal sealed class LegacyLobUtf8CollationRule : ICatalogRule
 {
     public string Id => "LegacyLobUtf8CollationScanner";
     public IReadOnlyList<IFinding> Scan(RuleContext context) => LegacyLobUtf8CollationScanner.Scan(context.Catalog);
-}
-
-internal sealed class MemoryOptimizedForeignKeyRule : ICatalogRule
-{
-    public string Id => "MemoryOptimizedForeignKeyScanner";
-    public bool ApplyConfidenceFilter => false;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedForeignKeyScanner.Scan(context.Catalog);
 }
 
 internal sealed class NonPersistedComputedColumnRule : ICatalogRule

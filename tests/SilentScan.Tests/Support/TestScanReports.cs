@@ -1,11 +1,9 @@
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Diagnostics;
 using SilentScan.Core.Lineage;
-using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Core.Reporting;
 using SilentScan.Core.Rules;
-using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Tests.Support;
 
@@ -97,7 +95,6 @@ public static class TestScanReports
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
         IReadOnlyList<DanglingObjectReferenceFinding>? DanglingObjectReferenceFindings = null,
         IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null,
-        IReadOnlyList<ColumnstoreUnsupportedColumnTypeFinding>? ColumnstoreUnsupportedColumnTypeFindings = null,
         IReadOnlyList<AlwaysEncryptedOrderByFinding>? AlwaysEncryptedOrderByFindings = null,
         IReadOnlyList<RestrictedImplicitAssignmentFinding>? RestrictedImplicitAssignmentFindings = null,
         IReadOnlyList<RevertCookieTypeMismatchFinding>? RevertCookieTypeMismatchFindings = null,
@@ -105,18 +102,12 @@ public static class TestScanReports
         IReadOnlyList<TriggerOrderFinding>? TriggerOrderFindings = null,
         IReadOnlyList<MissingStatisticsFinding>? MissingStatisticsFindings = null,
         IReadOnlyList<OperandComparabilityFinding>? OperandComparabilityFindings = null,
-        IReadOnlyList<MemoryOptimizedUnsupportedColumnTypeFinding>? MemoryOptimizedUnsupportedColumnTypeFindings = null,
-        IReadOnlyList<MemoryOptimizedUnsupportedIndexOptionFinding>? MemoryOptimizedUnsupportedIndexOptionFindings = null,
-        IReadOnlyList<MemoryOptimizedForeignKeyFinding>? MemoryOptimizedForeignKeyFindings = null,
         IReadOnlyList<MemoryOptimizedSchemaOnlyDurabilityFinding>? MemoryOptimizedSchemaOnlyDurabilityFindings = null,
         IReadOnlyList<WindowFunctionArgumentFinding>? WindowFunctionArgumentFindings = null,
         IReadOnlyList<StringSplitArgumentFinding>? StringSplitArgumentFindings = null,
         IReadOnlyList<BoundedStringBuiltinTruncationFinding>? BoundedStringBuiltinTruncationFindings = null,
-        IReadOnlyList<SelectiveXmlIndexValueColumnFinding>? SelectiveXmlIndexValueColumnFindings = null,
         IReadOnlyList<FloatOrderDependentAggregateFinding>? FloatOrderDependentAggregateFindings = null,
         IReadOnlyList<DynamicDataMaskingFinding>? DynamicDataMaskingFindings = null,
-        IReadOnlyList<AlwaysEncryptedKeyColumnFinding>? AlwaysEncryptedKeyColumnFindings = null,
-        IReadOnlyList<AlwaysEncryptedUnsupportedColumnFinding>? AlwaysEncryptedUnsupportedColumnFindings = null,
         IReadOnlyList<AlterColumnSafetyFinding>? AlterColumnSafetyFindings = null,
         IReadOnlyList<DropProtectedObjectFinding>? DropProtectedObjectFindings = null,
         IReadOnlyList<OnlineRebuildLegacyLobFinding>? OnlineRebuildLegacyLobFindings = null,
@@ -221,7 +212,6 @@ public static class TestScanReports
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
         Set("DanglingObjectReferenceScanner", DanglingObjectReferenceFindings);
         Set("ForcedParameterizationScanner", ForcedParameterizationFindings);
-        Set("ColumnstoreUnsupportedColumnTypeScanner", ColumnstoreUnsupportedColumnTypeFindings);
         Set("AlwaysEncryptedOrderByScanner", AlwaysEncryptedOrderByFindings);
         Set("RestrictedImplicitAssignmentScanner", RestrictedImplicitAssignmentFindings);
         Set("RevertCookieTypeMismatchScanner", RevertCookieTypeMismatchFindings);
@@ -229,18 +219,12 @@ public static class TestScanReports
         Set("TriggerOrderScanner", TriggerOrderFindings);
         Set("MissingStatisticsScanner", MissingStatisticsFindings);
         Set("OperandComparabilityScanner", OperandComparabilityFindings);
-        Set("MemoryOptimizedUnsupportedColumnTypeScanner", MemoryOptimizedUnsupportedColumnTypeFindings);
-        Set("MemoryOptimizedUnsupportedIndexOptionScanner", MemoryOptimizedUnsupportedIndexOptionFindings);
-        Set("MemoryOptimizedForeignKeyScanner", MemoryOptimizedForeignKeyFindings);
         Set("MemoryOptimizedSchemaOnlyDurabilityScanner", MemoryOptimizedSchemaOnlyDurabilityFindings);
         Set("WindowFunctionArgumentScanner", WindowFunctionArgumentFindings);
         Set("StringSplitArgumentScanner", StringSplitArgumentFindings);
         Set("BoundedStringBuiltinTruncationScanner", BoundedStringBuiltinTruncationFindings);
-        Set("SelectiveXmlIndexValueColumnScanner", SelectiveXmlIndexValueColumnFindings);
         Set("FloatOrderDependentAggregateScanner", FloatOrderDependentAggregateFindings);
         Set(nameof(DynamicDataMaskingScanner), DynamicDataMaskingFindings);
-        Set("AlwaysEncryptedKeyColumnScanner", AlwaysEncryptedKeyColumnFindings);
-        Set("AlwaysEncryptedUnsupportedColumnScanner", AlwaysEncryptedUnsupportedColumnFindings);
         Set("AlterColumnSafetyScanner", AlterColumnSafetyFindings);
         Set("DropProtectedObjectScanner", DropProtectedObjectFindings);
         Set("OnlineRebuildLegacyLobScanner", OnlineRebuildLegacyLobFindings);

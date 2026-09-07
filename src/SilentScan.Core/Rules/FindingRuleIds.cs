@@ -40,7 +40,6 @@ public static class FindingRuleIds
         NonIndexableColumnFindingKind.LegacyLargeObject => "silentscan/catalog/legacy-large-object-column",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled NonIndexableColumnFindingKind."),
     };
-    public const string ColumnstoreUnsupportedColumnTypeRuleId = "silentscan/catalog/columnstore-unsupported-column-type";
     public const string ExternalTableUnsupportedColumnTypeRuleId = "silentscan/predicates/external-table-unsupported-column-type";
     public const string FullTextPredicateInAggregateRuleId = "silentscan/predicates/full-text-predicate-in-aggregate";
     public const string ChangeTrackingEncryptedPrimaryKeyRuleId = "silentscan/predicates/change-tracking-encrypted-primary-key";
@@ -50,12 +49,6 @@ public static class FindingRuleIds
         XmlSchemaCollectionDisallowedTypeKind.NotationType => "silentscan/predicates/xml-schema-collection-notation-type",
         XmlSchemaCollectionDisallowedTypeKind.IdOrIdRefType => "silentscan/predicates/xml-schema-collection-id-idref-type",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled XmlSchemaCollectionDisallowedTypeKind."),
-    };
-    public static string SelectiveXmlIndexValueColumnRuleId(SelectiveXmlIndexValueColumnFindingKind kind) => kind switch
-    {
-        SelectiveXmlIndexValueColumnFindingKind.TooWide => "silentscan/catalog/selective-xml-index-value-column-too-wide",
-        SelectiveXmlIndexValueColumnFindingKind.LargeObject => "silentscan/catalog/selective-xml-index-value-column-large-object",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SelectiveXmlIndexValueColumnFindingKind."),
     };
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => kind switch
     {
@@ -92,13 +85,6 @@ public static class FindingRuleIds
     public const string RestrictedImplicitAssignmentRuleId = "silentscan/predicates/restricted-implicit-assignment";
     public const string RevertCookieTypeMismatchRuleId = "silentscan/predicates/revert-cookie-type-mismatch";
     public const string ForXmlExplicitInlineXsdRuleId = "silentscan/predicates/for-xml-explicit-inline-xsd";
-    public const string AlwaysEncryptedKeyColumnRuleId = "silentscan/catalog/always-encrypted-non-enclave-key-column";
-    public static string AlwaysEncryptedUnsupportedColumnRuleId(AlwaysEncryptedUnsupportedColumnKind kind) => kind switch
-    {
-        AlwaysEncryptedUnsupportedColumnKind.UnsupportedDataType => "silentscan/catalog/always-encrypted-unsupported-data-type",
-        AlwaysEncryptedUnsupportedColumnKind.IdentityColumn => "silentscan/catalog/always-encrypted-identity-column",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlwaysEncryptedUnsupportedColumnKind."),
-    };
     public const string TriggerOrderRuleId = "silentscan/catalog/trigger-firing-order-undefined";
     public static string AlterColumnSafetyRuleId(AlterColumnSafetyKind kind) => kind switch
     {
@@ -155,30 +141,11 @@ public static class FindingRuleIds
         OnlineRebuildLegacyLobKind.DropIndexOnline => "silentscan/catalog/online-rebuild-legacy-lob-drop-index",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled OnlineRebuildLegacyLobKind."),
     };
-    public const string MemoryOptimizedUnsupportedColumnTypeRuleId = "silentscan/catalog/memory-optimized-unsupported-column-type";
     public const string UnpivotExactTypeMismatchRuleId = "silentscan/catalog/unpivot-exact-type-mismatch";
     public const string SchemaboundAliasTypeRuleId = "silentscan/catalog/schemabound-alias-type";
     public const string SparseColumnDisallowedTypeRuleId = "silentscan/catalog/sparse-column-disallowed-type";
     public const string LegacyLobUtf8CollationRuleId = "silentscan/catalog/legacy-lob-utf8-collation";
     public const string LegacyLobConversionTargetRuleId = "silentscan/predicates/legacy-lob-conversion-target";
-    public const string MemoryOptimizedUtf8CollationRuleId = "silentscan/catalog/memory-optimized-utf8-collation";
-    public const string MemoryOptimizedLedgerConflictRuleId = "silentscan/catalog/memory-optimized-ledger-conflict";
-    public static string MemoryOptimizedUnsupportedIndexOptionRuleId(MemoryOptimizedUnsupportedIndexOptionKind kind) => kind switch
-    {
-        MemoryOptimizedUnsupportedIndexOptionKind.ClusteredIndex => "silentscan/catalog/memory-optimized-clustered-index",
-        MemoryOptimizedUnsupportedIndexOptionKind.IncludedColumns => "silentscan/catalog/memory-optimized-index-included-columns",
-        MemoryOptimizedUnsupportedIndexOptionKind.FilteredIndex => "silentscan/catalog/memory-optimized-filtered-index",
-        MemoryOptimizedUnsupportedIndexOptionKind.IgnoreDupKey => "silentscan/catalog/memory-optimized-index-ignore-dup-key",
-        MemoryOptimizedUnsupportedIndexOptionKind.RowOrPageLockingOption => "silentscan/catalog/memory-optimized-index-row-or-page-locking-option",
-        MemoryOptimizedUnsupportedIndexOptionKind.OptimizeForSequentialKey => "silentscan/catalog/memory-optimized-index-optimize-for-sequential-key",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled MemoryOptimizedUnsupportedIndexOptionKind."),
-    };
-    public static string MemoryOptimizedForeignKeyRuleId(MemoryOptimizedForeignKeyFindingKind kind) => kind switch
-    {
-        MemoryOptimizedForeignKeyFindingKind.CrossStorageForeignKey => "silentscan/catalog/memory-optimized-cross-storage-foreign-key",
-        MemoryOptimizedForeignKeyFindingKind.ReferentialAction => "silentscan/catalog/memory-optimized-foreign-key-referential-action",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled MemoryOptimizedForeignKeyFindingKind."),
-    };
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = "silentscan/catalog/memory-optimized-schema-only-durability";
     public const string QueryAntiPatternTableVariableLowCompatEstimateRuleId = "silentscan/query/table-variable-low-compat-estimate";
     public const string QueryAntiPatternTableVariablePspSkipRuleId = "silentscan/query/table-variable-psp-skip";
