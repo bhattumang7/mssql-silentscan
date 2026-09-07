@@ -124,6 +124,14 @@ internal sealed class JsonObjectDuplicateKeyRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonObjectDuplicateKeyScanner.Harvest((JsonObjectDuplicateKeyScanner.Rule)moduleRule);
 }
 
+internal sealed class UnistrUnpairedSurrogateRule : IPerFileRule
+{
+    public string Id => "UnistrUnpairedSurrogateScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => UnistrUnpairedSurrogateScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => UnistrUnpairedSurrogateScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => UnistrUnpairedSurrogateScanner.Harvest((UnistrUnpairedSurrogateScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";

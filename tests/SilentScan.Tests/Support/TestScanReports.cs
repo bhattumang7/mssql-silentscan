@@ -93,6 +93,7 @@ public static class TestScanReports
         IReadOnlyList<ForXmlPathMissingOrderFinding>? ForXmlPathMissingOrderFindings = null,
         IReadOnlyList<JsonArrayAggMissingOrderFinding>? JsonArrayAggMissingOrderFindings = null,
         IReadOnlyList<JsonObjectDuplicateKeyFinding>? JsonObjectDuplicateKeyFindings = null,
+        IReadOnlyList<UnistrUnpairedSurrogateFinding>? UnistrUnpairedSurrogateFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -204,6 +205,7 @@ public static class TestScanReports
         Set("ForXmlPathMissingOrderScanner", ForXmlPathMissingOrderFindings);
         Set("JsonArrayAggMissingOrderScanner", JsonArrayAggMissingOrderFindings);
         Set("JsonObjectDuplicateKeyScanner", JsonObjectDuplicateKeyFindings);
+        Set("UnistrUnpairedSurrogateScanner", UnistrUnpairedSurrogateFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
