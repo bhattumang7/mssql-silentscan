@@ -120,6 +120,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<StringAggMissingOrderFinding>("StringAggMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<ForXmlPathMissingOrderFinding>("ForXmlPathMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<JsonArrayAggMissingOrderFinding>("JsonArrayAggMissingOrderScanner").Select(ToResult));
+        results.AddRange(report.Find<JsonObjectDuplicateKeyFinding>("JsonObjectDuplicateKeyScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
@@ -870,6 +871,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.JsonArrayAggMissingOrderRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = "JSON_ARRAYAGG with no ORDER BY - the array element order is not guaranteed and changes silently with the chosen plan (e.g. an added or dropped index); JSON_ARRAYAGG orders its own way, via an ORDER BY inside the call's argument list, not WITHIN GROUP.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(JsonObjectDuplicateKeyFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.JsonObjectDuplicateKeyRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"JSON_OBJECT call repeats the literal key '{finding.DuplicateKey}' - the engine accepts this with no error and emits both keys, but JSON_VALUE and similar readers silently resolve to the first occurrence, discarding every later value written under the same key.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }

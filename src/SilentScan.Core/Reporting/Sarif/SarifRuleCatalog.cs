@@ -180,6 +180,7 @@ public static class SarifRuleCatalog
     public const string StringAggMissingOrderRuleId = FindingRuleIds.StringAggMissingOrderRuleId;
     public const string ForXmlPathMissingOrderRuleId = FindingRuleIds.ForXmlPathMissingOrderRuleId;
     public const string JsonArrayAggMissingOrderRuleId = FindingRuleIds.JsonArrayAggMissingOrderRuleId;
+    public const string JsonObjectDuplicateKeyRuleId = FindingRuleIds.JsonObjectDuplicateKeyRuleId;
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
     public const string AggregateDivisionColumnstoreRuleId = FindingRuleIds.AggregateDivisionColumnstoreRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;

@@ -2549,3 +2549,28 @@ rule for any of these shapes.
   fully-parseable "no order specified anywhere" shape
   (`JsonOrderByClause is null`), the same shape `StringAggMissingOrderRuleId`
   already covers for STRING_AGG.
+
+* **`JsonObjectDuplicateKeyRuleId` shipped - JSON_OBJECT with the same
+  literal key written twice is a real, previously undocumented silent-loss
+  shape.** Oracle-confirmed (Docker, SQL Server 2025): `JSON_OBJECT('a':1,
+  'a':2)` is accepted with no error and produces `{"a":1,"a":2}` - the
+  engine performs no uniqueness check on JSON_OBJECT's own key list, and
+  both keys survive unchanged in the JSON text. The actual data loss shows
+  up one step later: `JSON_VALUE(doc, '$.a')` against that same JSON always
+  resolves to the *first* occurrence (`1`), silently discarding every later
+  value written under the repeated key - confirmed the resolution order is
+  first-wins, not last-wins, which is the opposite of what "later pair
+  overrides an earlier one" intuition would predict. `OPENJSON`'s default
+  row-per-key schema does return both rows (it is not deduplicating), so the
+  loss is specific to single-value lookup (`JSON_VALUE` and any `OPENJSON
+  ... WITH` column path resolving the same way), not a property of the JSON
+  document itself. Key comparison is ordinal/case-sensitive - `JSON_OBJECT
+  ('a':1, 'A':2)` produces two independently addressable keys, confirmed via
+  `JSON_VALUE(doc, '$.A')` returning `2` - so the rule only flags an exact,
+  same-case literal match. `JSON_OBJECT` parses via ScriptDom's own
+  `jsonObjectBuiltInFunctionCall` grammar (`FunctionCall.JsonParameters`, a
+  `List<JsonKeyValue>` with `JsonKeyName`/`JsonValue` each a
+  `ScalarExpression`), so the rule only fires when `JsonKeyName` is a
+  `StringLiteral` on both sides of the match - a variable, parameter, or
+  computed key is skipped as not statically decidable, the same boundary
+  every other literal-comparison rule in this project already draws.
