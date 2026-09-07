@@ -197,6 +197,7 @@ public static class FindingRuleIds
     public const string BareTopNoOrderByRuleId = "silentscan/query/bare-top-no-order-by";
     public const string StringAggMissingOrderRuleId = "silentscan/string-builtin/string-agg-missing-order";
     public const string ForXmlPathMissingOrderRuleId = "silentscan/query/for-xml-path-missing-order";
+    public const string JsonArrayAggMissingOrderRuleId = "silentscan/json-builtin/json-arrayagg-missing-order";
     public const string StringConcatNullRuleId = "silentscan/predicate/plus-operator-null-propagation";
     public const string AggregateDivisionColumnstoreRuleId = "silentscan/predicate/aggregate-division-columnstore-batch-mode";
     public const string SecurityPredicateIndexRuleId = "silentscan/catalog/rls-predicate-unindexed-column";

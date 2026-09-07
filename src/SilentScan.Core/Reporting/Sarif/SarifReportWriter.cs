@@ -119,6 +119,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
         results.AddRange(report.Find<StringAggMissingOrderFinding>("StringAggMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<ForXmlPathMissingOrderFinding>("ForXmlPathMissingOrderScanner").Select(ToResult));
+        results.AddRange(report.Find<JsonArrayAggMissingOrderFinding>("JsonArrayAggMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
@@ -860,6 +861,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ForXmlPathMissingOrderRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = "SELECT ... FOR XML PATH with no ORDER BY - the row order feeding this classic string-concatenation idiom is not guaranteed and changes silently with the chosen plan (e.g. an added or dropped index), the same missing-order gap STRING_AGG has.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(JsonArrayAggMissingOrderFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.JsonArrayAggMissingOrderRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = "JSON_ARRAYAGG with no ORDER BY - the array element order is not guaranteed and changes silently with the chosen plan (e.g. an added or dropped index); JSON_ARRAYAGG orders its own way, via an ORDER BY inside the call's argument list, not WITHIN GROUP.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
