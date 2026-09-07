@@ -96,6 +96,7 @@ public static class TestScanReports
         IReadOnlyList<UnistrUnpairedSurrogateFinding>? UnistrUnpairedSurrogateFindings = null,
         IReadOnlyList<RegexpReplaceDollarBackreferenceFinding>? RegexpReplaceDollarBackreferenceFindings = null,
         IReadOnlyList<RegexpDefaultCaseSensitiveOnCiColumnFinding>? RegexpDefaultCaseSensitiveOnCiColumnFindings = null,
+        IReadOnlyList<RegexpAccentInsensitiveColumnFinding>? RegexpAccentInsensitiveColumnFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
@@ -210,6 +211,7 @@ public static class TestScanReports
         Set("UnistrUnpairedSurrogateScanner", UnistrUnpairedSurrogateFindings);
         Set("RegexpReplaceDollarBackreferenceScanner", RegexpReplaceDollarBackreferenceFindings);
         Set("RegexpDefaultCaseSensitiveOnCiColumnScanner", RegexpDefaultCaseSensitiveOnCiColumnFindings);
+        Set("RegexpAccentInsensitiveColumnScanner", RegexpAccentInsensitiveColumnFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);

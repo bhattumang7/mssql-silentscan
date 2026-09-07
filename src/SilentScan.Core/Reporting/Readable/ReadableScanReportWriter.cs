@@ -177,6 +177,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(UnistrUnpairedSurrogate(report, headingLevel, pathBase));
         blocks.AddRange(RegexpReplaceDollarBackreference(report, headingLevel, pathBase));
         blocks.AddRange(RegexpDefaultCaseSensitiveOnCiColumn(report, headingLevel, pathBase));
+        blocks.AddRange(RegexpAccentInsensitiveColumn(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -276,6 +277,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "UNISTR escape with an unpaired surrogate", report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count);
         AddCount(counts, "REGEXP_REPLACE with a $N backreference", report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Count);
         AddCount(counts, "REGEXP_* call defaults to case-sensitive on a case-insensitive column", report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Count);
+        AddCount(counts, "REGEXP_* call on an accent-insensitive column has no accent-insensitive match mode", report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -2110,6 +2112,28 @@ public static class ReadableScanReportWriter
         yield return new ReadableBlock.Table(
             [WhereHeader, "Function", "Column"],
             [.. report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.FunctionName,
+                $"{f.TableQualifiedName}.{f.ColumnName}",
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> RegexpAccentInsensitiveColumn(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"REGEXP_* call on an accent-insensitive column has no accent-insensitive match mode ({report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A REGEXP_LIKE/REGEXP_REPLACE/REGEXP_COUNT/REGEXP_SUBSTR/REGEXP_MATCHES/REGEXP_SPLIT_TO_TABLE call's subject column has an accent-insensitive collation. Oracle-confirmed no match_type flag restores accent folding - unlike the case-sensitivity gap, there is no argument that fixes this.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.RegexpAccentInsensitiveColumnRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Function", "Column"],
+            [.. report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.FunctionName,
