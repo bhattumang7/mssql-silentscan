@@ -109,10 +109,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(SelectiveXmlIndexValueColumn(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedUnsupportedColumnType(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedUtf8Collation(report, headingLevel, pathBase));
-        blocks.AddRange(NativelyCompiledUnsupportedBuiltin(report, headingLevel, pathBase));
-        blocks.AddRange(NativelyCompiledClrType(report, headingLevel, pathBase));
-        blocks.AddRange(NativelyCompiledErrorOutsideCatch(report, headingLevel, pathBase));
-        blocks.AddRange(NativelyCompiledInterpretedCallee(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedLedgerConflict(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedUnsupportedIndexOption(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedForeignKey(report, headingLevel, pathBase));
@@ -282,11 +278,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Secondary selective XML indexes over an oversized/large-object value column (does not deploy)", report.Find<SelectiveXmlIndexValueColumnFinding>(nameof(SelectiveXmlIndexValueColumnScanner)).Count);
         AddCount(counts, "Unsupported column type on a memory-optimized table (does not deploy)", report.Find<MemoryOptimizedUnsupportedColumnTypeFinding>(nameof(MemoryOptimizedUnsupportedColumnTypeScanner)).Count);
         AddCount(counts, "UTF-8 collation on a memory-optimized table column (does not deploy)", report.Find<MemoryOptimizedUtf8CollationFinding>(nameof(MemoryOptimizedUtf8CollationScanner)).Count);
-        AddCount(counts, "Unsupported built-in function inside a natively compiled module (does not compile)", report.Find<NativelyCompiledUnsupportedBuiltinFinding>(nameof(NativelyCompiledUnsupportedBuiltinScanner)).Count);
-        AddCount(counts, "CLR user-defined type parameter/variable inside a natively compiled module (does not compile)", report.Find<NativelyCompiledClrTypeFinding>(nameof(NativelyCompiledClrTypeScanner)).Count);
         AddCount(counts, "Semantic search function calls that fail at execution", report.Find<SemanticSearchFinding>(nameof(SemanticSearchScanner)).Count);
-        AddCount(counts, "ERROR_* call outside a CATCH block inside a natively compiled module (does not compile)", report.Find<NativelyCompiledErrorOutsideCatchFinding>(nameof(NativelyCompiledErrorOutsideCatchScanner)).Count);
-        AddCount(counts, "Interpreted (non-native) routine called from a natively compiled module (does not compile)", report.Find<NativelyCompiledInterpretedCalleeFinding>(nameof(NativelyCompiledInterpretedCalleeScanner)).Count);
         AddCount(counts, "MEMORY_OPTIMIZED and LEDGER both specified on the same table (does not deploy)", report.Find<MemoryOptimizedLedgerConflictFinding>(nameof(MemoryOptimizedLedgerConflictScanner)).Count);
         AddCount(counts, "Unsupported index option on a memory-optimized table (does not deploy)", report.Find<MemoryOptimizedUnsupportedIndexOptionFinding>(nameof(MemoryOptimizedUnsupportedIndexOptionScanner)).Count);
         AddCount(counts, "Unsupported memory-optimized foreign key (does not deploy)", report.Find<MemoryOptimizedForeignKeyFinding>(nameof(MemoryOptimizedForeignKeyScanner)).Count);
@@ -1117,97 +1109,6 @@ public static class ReadableScanReportWriter
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.TypeDisplay,
                 f.CollationName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NativelyCompiledUnsupportedBuiltin(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NativelyCompiledUnsupportedBuiltinFinding>(nameof(NativelyCompiledUnsupportedBuiltinScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Unsupported built-in function inside a natively compiled module ({report.Find<NativelyCompiledUnsupportedBuiltinFinding>(nameof(NativelyCompiledUnsupportedBuiltinScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A natively compiled stored procedure or function calls a built-in function outside the documented supported surface for native modules - oracle-confirmed real compilation fails with Msg 10794.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NativelyCompiledUnsupportedBuiltinRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ModuleHeader, FunctionHeader],
-            [.. report.Find<NativelyCompiledUnsupportedBuiltinFinding>(nameof(NativelyCompiledUnsupportedBuiltinScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ModuleQualifiedName,
-                f.FunctionName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NativelyCompiledClrType(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NativelyCompiledClrTypeFinding>(nameof(NativelyCompiledClrTypeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"CLR user-defined type parameter/variable inside a natively compiled module ({report.Find<NativelyCompiledClrTypeFinding>(nameof(NativelyCompiledClrTypeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A natively compiled stored procedure or function declares a parameter or local variable typed as a CLR user-defined type - oracle-confirmed real compilation fails with Msg 10794.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NativelyCompiledClrTypeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ModuleHeader, "Kind", "Name", "Type"],
-            [.. report.Find<NativelyCompiledClrTypeFinding>(nameof(NativelyCompiledClrTypeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ModuleQualifiedName,
-                f.Kind == NativelyCompiledClrTypeKind.Parameter ? "Parameter" : "Local variable",
-                f.MemberName,
-                f.TypeQualifiedName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NativelyCompiledErrorOutsideCatch(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NativelyCompiledErrorOutsideCatchFinding>(nameof(NativelyCompiledErrorOutsideCatchScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"ERROR_* call outside a CATCH block inside a natively compiled module ({report.Find<NativelyCompiledErrorOutsideCatchFinding>(nameof(NativelyCompiledErrorOutsideCatchScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A natively compiled stored procedure or function calls ERROR_MESSAGE()/ERROR_NUMBER()/ERROR_SEVERITY()/ERROR_STATE()/ERROR_LINE()/ERROR_PROCEDURE() outside a CATCH block - oracle-confirmed real compilation fails with Msg 10792.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NativelyCompiledErrorOutsideCatchRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ModuleHeader, FunctionHeader],
-            [.. report.Find<NativelyCompiledErrorOutsideCatchFinding>(nameof(NativelyCompiledErrorOutsideCatchScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ModuleQualifiedName,
-                f.FunctionName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NativelyCompiledInterpretedCallee(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NativelyCompiledInterpretedCalleeFinding>(nameof(NativelyCompiledInterpretedCalleeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Interpreted (non-native) routine called from a natively compiled module ({report.Find<NativelyCompiledInterpretedCalleeFinding>(nameof(NativelyCompiledInterpretedCalleeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A natively compiled stored procedure or function executes or calls a routine that the scanned SQL itself defines without NATIVE_COMPILATION - oracle-confirmed real compilation fails (Msg 12342 for EXEC, Msg 12344 for a function call).");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NativelyCompiledInterpretedCalleeRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ModuleHeader, "Kind", CalleeHeader],
-            [.. report.Find<NativelyCompiledInterpretedCalleeFinding>(nameof(NativelyCompiledInterpretedCalleeScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ModuleQualifiedName,
-                f.Kind == NativelyCompiledInterpretedCalleeKind.ExecutedProcedure ? "EXEC" : "Function call",
-                f.CalleeQualifiedName,
             })]);
     }
 

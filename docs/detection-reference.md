@@ -1052,82 +1052,23 @@ real `WITH (MEMORY_OPTIMIZED = ON)` table.
 
 ## Natively compiled T-SQL module restrictions
 
-Oracle-confirmed directly (Docker, SQL Server 2022, compat 160) against a
-real `CREATE PROCEDURE ... WITH NATIVE_COMPILATION` / `CREATE FUNCTION ...
-WITH NATIVE_COMPILATION` module.
+A `CREATE`/`ALTER ... WITH NATIVE_COMPILATION` module that calls an
+unsupported built-in, carries an unsupported query hint, references a CLR
+UDT, uses `ERROR_*` outside a `CATCH` block, or calls a non-natively-compiled
+routine always fails to compile (a hard, synchronous Msg 10794/10792/12342/
+12344 at `CREATE`/`ALTER` time) - oracle-confirmed directly (Docker, SQL
+Server 2022/2025) across all five shapes. A rule family for these was
+shipped and then removed: `scan-db` reads only an already-deployed catalog
+from `sys.*`, and a module that fails to compile can never exist there to be
+scanned, the same reachability gap that killed `FullTextIndexDdlScanner`
+(see CLAUDE.md's "Hard-error DDL/DML is out of scope"). Do not re-propose a
+rule for any of these shapes.
 
-- **A built-in function call inside a natively compiled module fails (Msg
-  10794, "The function '<name>' is not supported with natively compiled
-  modules.") for a specific, individually confirmed set of common functions**:
-  `UPPER`, `LOWER`, `REPLACE`, `CHARINDEX`, `STUFF`, `REVERSE`, `PATINDEX`,
-  `QUOTENAME`, `DATALENGTH`, `ISNUMERIC`, `ISDATE`, `HASHBYTES`, `CONCAT`,
-  `FORMAT`, `SOUNDEX` - and the aggregate `STDEV` (Msg 10794 too, "The
-  aggregate function 'STDEV' is not supported..."; `STDEVP`/`VAR`/`VARP` not
-  individually probed but documented as the same family). `STRING_AGG` and
-  `STRING_SPLIT` are denylisted from Microsoft's own unsupported-construct
-  documentation, not independently oracle-probed here.
-- **Microsoft's own "supported functions" list for native modules is
-  incomplete on a current engine - do not treat absence from it as proof of
-  rejection.** `DATENAME` compiles cleanly inside a natively compiled module
-  even though only `DATEPART` (not `DATENAME`) is named in the published
-  list; `COALESCE`, `IIF`, and `CAST`/`CONVERT`/`TRY_CAST`/`TRY_CONVERT` also
-  compile cleanly despite not appearing in the "Built-in Functions" section
-  (they are separate ScriptDom node kinds, not `FunctionCall`, and are
-  rewritten to/treated as `CASE`, which SQL Server 2017+ supports). This is
-  why the shipped rule is a denylist of individually confirmed-rejected
-  names, never an allowlist complement.
-- **`LEFT(...)`/`RIGHT(...)` also fail (Msg 10794)** but are parsed as their
-  own ScriptDom node kinds (`LeftFunctionCall`/`RightFunctionCall`), not
-  `FunctionCall` - shipped as unconditional (name-implied, no lookup needed)
-  findings via their own `IModuleRule`/`ModuleWalker` hooks alongside the
-  denylist.
-- **`ERROR_MESSAGE()`/`ERROR_NUMBER()`/`ERROR_SEVERITY()`/`ERROR_STATE()`/
-  `ERROR_LINE()`/`ERROR_PROCEDURE()` are supported inside a natively compiled
-  module but only inside a `CATCH` block** - calling any of them elsewhere
-  fails (Msg 10792, "...cannot appear outside of a catch block"; oracle-
-  confirmed individually for all six), not Msg 10794. A context restriction,
-  not an unsupported-function rejection - shipped as
-  `NativelyCompiledErrorOutsideCatchRuleId`, tracking CATCH-block nesting via
-  dedicated `ModuleWalker` enter/leave hooks around `TryCatchStatement`'s
-  `CatchStatements` list (distinct from the existing `TryCatchStatement`
-  enter/leave hooks, which span both the `TRY` and `CATCH` bodies).
-- **A CLR user-defined type (`CREATE TYPE ... EXTERNAL NAME`) used as a
-  parameter or local variable's type inside a natively compiled module always
-  fails (Msg 10794, "The type '<name>' is not supported with natively
-  compiled modules.")** - oracle-confirmed directly (CLR enabled on
-  `mssql-silentscan-sql` for this probe: `sp_configure 'clr enabled', 1` /
-  `'clr strict security', 0`; a minimal net472 CLR UDT built, deployed via
-  `CREATE ASSEMBLY`/`CREATE TYPE ... EXTERNAL NAME`, then referenced by a
-  `DECLARE`/parameter inside a `WITH NATIVE_COMPILATION` procedure). Decidable
-  purely by name: the catalog tracks CLR UDT qualified names from
-  `CreateTypeUdtStatement` and checks a native module's own parameter/DECLARE
-  type references against that set - no resolution of the CLR type's actual
-  shape is needed. Shipped as `NativelyCompiledClrTypeRuleId`.
-- **Calling a routine that is itself not natively compiled from inside a
-  natively compiled module always fails, but with a different error
-  depending on the call shape**: `EXEC` against an interpreted procedure
-  fails with Msg 12342 ("The EXECUTE statement in natively compiled modules
-  only supports executing natively compiled modules."); calling an
-  interpreted scalar function fails with Msg 12344 ("Only natively compiled
-  modules can be used with natively compiled modules.") - both
-  oracle-confirmed independently, and confirmed clean for the reverse
-  (calling another natively compiled procedure via `EXEC` deploys cleanly).
-  Shipped as `NativelyCompiledInterpretedCalleeRuleId`: the catalog tracks
-  every scanned `CREATE`/`ALTER`/`CREATE OR ALTER PROCEDURE`/`FUNCTION`'s
-  native-compilation status by qualified name (`DatabaseCatalog
-  .AddRoutineNativeCompilation`/`TryGetRoutineIsNativelyCompiled`, populated
-  in `CatalogBuilder.VisitScopedBody`), and a native module's own `EXEC`/
-  function-call targets are checked against it; a callee whose own
-  definition isn't among the scanned files is never treated as interpreted
-  (unresolved is not evidence of rejection).
-- **"Deep type" rejection beyond the denylist above was not further
-  oracle-tested this pass** - the shipped denylist (see above) covers the
-  specific functions individually confirmed rejected; the full unsupported
-  surface is not enumerated.
 - **`GENERATED ALWAYS AS ROW START/END` (temporal) on a memory-optimized
   table deploys cleanly** - oracle-tested; not the restriction the original
   task item loosely gestured at. The `LEDGER`/`MEMORY_OPTIMIZED` conflict
-  above (shipped) is the closest confirmed fact found in this area.
+  (shipped, catalog-observable) is the closest confirmed fact found in this
+  area.
 
 ## Settled (do not re-propose)
 

@@ -578,20 +578,11 @@ public static class CatalogBuilder
                 {
                     RegisterProcedureParameters(body.Parameters);
                 }
-
-                catalog.AddRoutineNativeCompilation(_currentScope!, IsNativelyCompiled(body));
             }
 
             node.AcceptChildren(this);
             _currentScope = previous;
         }
-
-        private static bool IsNativelyCompiled(ProcedureStatementBodyBase node) => node switch
-        {
-            ProcedureStatementBody procedure => procedure.Options.Any(o => o.OptionKind == ProcedureOptionKind.NativeCompilation),
-            FunctionStatementBody function => function.Options.Any(o => o.OptionKind == FunctionOptionKind.NativeCompilation),
-            _ => false,
-        };
 
         private void RegisterTableValuedParameters(IList<ProcedureParameter> parameters)
         {
