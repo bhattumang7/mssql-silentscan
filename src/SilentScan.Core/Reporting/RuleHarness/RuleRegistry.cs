@@ -18,6 +18,7 @@ public static class RuleRegistry
         new CatchAllPredicateRule(),
         new BareTopNoOrderByRule(),
         new StringAggMissingOrderRule(),
+        new ForXmlPathMissingOrderRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),

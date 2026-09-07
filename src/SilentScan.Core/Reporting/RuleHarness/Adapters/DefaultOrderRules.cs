@@ -100,6 +100,14 @@ internal sealed class StringAggMissingOrderRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringAggMissingOrderScanner.Harvest((StringAggMissingOrderScanner.Rule)moduleRule);
 }
 
+internal sealed class ForXmlPathMissingOrderRule : IPerFileRule
+{
+    public string Id => "ForXmlPathMissingOrderScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.Scan(parseResult);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ForXmlPathMissingOrderScanner.Harvest((ForXmlPathMissingOrderScanner.Rule)moduleRule);
+}
+
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";
