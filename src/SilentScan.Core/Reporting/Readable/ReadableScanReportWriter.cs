@@ -174,6 +174,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ForXmlPathMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(JsonArrayAggMissingOrder(report, headingLevel, pathBase));
         blocks.AddRange(JsonObjectDuplicateKey(report, headingLevel, pathBase));
+        blocks.AddRange(UnistrUnpairedSurrogate(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
         blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
@@ -270,6 +271,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "FOR XML PATH concatenation with no ORDER BY", report.Find<ForXmlPathMissingOrderFinding>(nameof(ForXmlPathMissingOrderScanner)).Count);
         AddCount(counts, "JSON_ARRAYAGG with no ORDER BY", report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Count);
         AddCount(counts, "JSON_OBJECT with a repeated literal key", report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count);
+        AddCount(counts, "UNISTR escape with an unpaired surrogate", report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
         AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
@@ -2044,6 +2046,27 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.DuplicateKey,
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> UnistrUnpairedSurrogate(ScanReport report, int level, string? pathBase)
+    {
+        if (report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"UNISTR escape with an unpaired surrogate ({report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A UNISTR() string literal contains a \\XXXX or \\+XXXXXX escape sequence naming a UTF-16 surrogate code point with no matching pair immediately alongside it. Oracle-confirmed the engine accepts this with no error, producing a value that silently contains an ill-formed, unpaired surrogate code unit.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.UnistrUnpairedSurrogateRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Escape sequence"],
+            [.. report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.EscapeSequence,
             })]);
     }
 

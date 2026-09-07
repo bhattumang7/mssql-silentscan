@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">276 rules. 187 carry fix guidance; 23 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">277 rules. 188 carry fix guidance; 23 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -525,6 +525,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/string-builtin-replicate-truncated.html">Replicate Truncated</a> <code class="rule-key">silentscan/string-builtin/replicate-truncated</code><span class="snippet">REPLICATE&#x27;s first argument is a literal not typed VARCHAR(MAX)/NVARCHAR(MAX), so its return type is capped at VARCHAR(8000)/NVARCHAR(4000) regardless of the actual repeated length.</span></li>
       <li><a class="id" href="rules/string-builtin-space-truncated.html">Space Truncated</a> <code class="rule-key">silentscan/string-builtin/space-truncated</code><span class="snippet">SPACE always returns VARCHAR, capped at 8000 bytes regardless of the requested count.</span></li>
       <li><a class="id" href="rules/string-builtin-string-agg-missing-order.html">String Agg Missing Order</a> <code class="rule-key">silentscan/string-builtin/string-agg-missing-order</code><span class="snippet">STRING_AGG without WITHIN GROUP (ORDER BY ...) has no guaranteed concatenation order.</span></li>
+      <li><a class="id" href="rules/string-builtin-unistr-unpaired-surrogate.html">Unistr Unpaired Surrogate</a> <code class="rule-key">silentscan/string-builtin/unistr-unpaired-surrogate</code><span class="snippet">A UNISTR() call&#x27;s string literal argument contains a \XXXX or \&#x2B;XXXXXX Unicode escape sequence whose code point falls in the UTF-16 surrogate range (U&#x2B;D800-U&#x2B;DFFF) without being paired with its matching high/low counterpart immediately alongside it.</span></li>
     </ul>
   </section>
 
