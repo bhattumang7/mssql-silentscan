@@ -41,12 +41,6 @@ correctness bugs found; 0 remain open below.
 - `AggregateDivisionColumnstoreScanner` — message is explicitly framed as an
   unproven structural heuristic (`FindingConfidence.Low`, no hard engine
   claim to falsify); detection logic matches that deliberately loose scope.
-- `AlwaysEncryptedKeyColumnScanner` — the `EncryptionType: Randomized,
-  EnclaveSupport: Disabled` gate matches real engine behavior for all three
-  key-column kinds (index, constraint, statistics); additionally
-  live-verified the `CREATE STATISTICS` path directly (raises Msg 33573,
-  matching the index/constraint paths already covered by existing oracle
-  tests).
 - `CartesianJoinScanner` — purely structural claim (no oracle-verifiable
   engine-error text to check); traced the connectivity/union-find logic
   through third-table transitivity, self-references, parenthesized/negated
@@ -118,24 +112,6 @@ correctness bugs found; 0 remain open below.
   column (Msg 1919), while legacy `TEXT`/`NTEXT`/`IMAGE` is rejected even
   as an INCLUDE column (Msg 1999) — matches the rule's two separate
   messages exactly.
-- `MemoryOptimizedForeignKeyScanner` — cross-storage FK (Msg 10778) and
-  non-`NO ACTION` referential actions between two memory-optimized tables
-  (Msg 10794) match existing oracle coverage; additionally live-verified
-  `ON DELETE SET NULL` (not just CASCADE) also fails the same way,
-  confirming the scanner's blanket action check is correct. FK catalog data
-  is read live from `sys.foreign_keys`, engine-authoritative by
-  construction.
-- `MemoryOptimizedUnsupportedColumnTypeScanner` — live-verified all six
-  listed types (`xml`, `sql_variant`, `text`, `ntext`, `image`, `timestamp`)
-  each fail with Msg 10794 on a memory-optimized table, matching the rule's
-  claim verbatim; the rule text doesn't claim exhaustiveness, so absent
-  spatial/CLR-UDT coverage is a scope gap, not a divergence.
-- `MemoryOptimizedUnsupportedIndexOptionScanner` — the columnstore
-  early-exit can't hide a real gap (nonclustered columnstore is flatly
-  rejected on memory-optimized tables regardless of filter/include, and
-  clustered columnstore syntactically can't carry INCLUDE/WHERE at all);
-  clustered/included-column/filtered-index checks already oracle-tested
-  (Msg 12317/10664/10794).
 - `MissingStatisticsScanner` — auto-create-stats gate and
   leading-vs-non-leading statistic-column coverage logic both already
   oracle-tested end-to-end against a live catalog; the underlying catalog
@@ -225,13 +201,6 @@ statement — is uncontroversial syntax, not a claim needing verification).
   explicitly documented as an intentional design choice (already
   oracle-tested scan-vs-seek claim, deliberately declines an unproven
   "forces serial execution" claim).
-- `SelectiveXmlIndexValueColumnScanner` — both the 900-byte boundary (900
-  OK, 901 fails Msg 6395) and the large-object case (Msg 6391)
-  oracle-confirmed exact; separately confirmed this rule's `FOR (...)`
-  clause is syntactically restricted to exactly one path on the real engine
-  (a multi-path form is a parse error), so it does not share
-  `IndexDesignScanner`'s composite-key-sum gap — checked and ruled out, not
-  overlooked.
 - `SelectStarViewScanner` — star-consumer exclusion, full-explicit-selection
   exclusion, multi-source unqualified-column decline, and CTE/derived-table
   non-attribution all match existing test coverage; a pure code-structure

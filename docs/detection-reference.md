@@ -445,8 +445,12 @@ confirmed independently of any one tool's output.
   Non-string promoted path types (`INT`, `BIGINT`, ...) never trigger either check.
   `VARBINARY`/`TEXT`/`NTEXT`/`DATETIME2` and other unsupported promoted-path types are rejected
   outright at the primary `CREATE SELECTIVE XML INDEX` statement itself (Msg 6375, "data type ...
-  is not allowed") - a distinct, simpler, already-primary-time failure, out of scope for the
-  value-column-width rule.
+  is not allowed") - a distinct, simpler, already-primary-time failure. The secondary-index-time
+  failure (Msg 6391/6395) is itself atomic - `sys.indexes`/`sys.xml_indexes` confirmed the
+  secondary index is never created - so the rejected state can never land in a live catalog
+  either; the once-shipped `SelectiveXmlIndexValueColumnRuleId` rule built on this fact has since
+  been removed as unreachable via `scan-db`, the same reachability gap as the memory-optimized
+  structural restrictions above.
 
 - **`REGEXP_LIKE` can produce a real Index Seek even when the pattern is a variable or parameter
   - the engine derives the seek range at runtime via dedicated range-bound intrinsics, not only at
@@ -992,63 +996,35 @@ condition for it was found precise enough to gate on.
 
 ## Memory-optimized (Hekaton) table structural restrictions
 
-Oracle-confirmed directly (Docker, SQL Server 2022, compat 160) against a
-real `WITH (MEMORY_OPTIMIZED = ON)` table.
+Oracle-confirmed directly (Docker, SQL Server 2022/2025) against a real
+`WITH (MEMORY_OPTIMIZED = ON)` table: a rowstore CLUSTERED index (including
+the bare-`PRIMARY KEY` default), INCLUDE columns on any index, a filtered
+(`WHERE`) index, a foreign key crossing memory-optimized/disk-based storage
+in either direction, a non-`NO ACTION` referential action between two
+memory-optimized tables, an unsupported column type (`xml`/`json`/
+`sql_variant`/`text`/`ntext`/`image`/`timestamp`/`rowversion`/`hierarchyid`/
+`geometry`/`geography`), a `char`/`varchar` column with a UTF-8 collation,
+and `LEDGER = ON` combined with `MEMORY_OPTIMIZED = ON` all fail with a
+hard, synchronous DDL error (Msg 12317/10664/10794/10778/12356/12359
+respectively) - every one of these confirmed atomic for every DDL path that
+could produce it, not just the `CREATE TABLE` form that first surfaced it:
+an `ALTER TABLE ADD`/`ALTER COLUMN`, an `ALTER TABLE ADD INDEX`/`ADD
+CONSTRAINT`, and widening a column already covered by an index (blocked by
+the index's own column dependency) all fail the same way. No CREATE/ALTER
+path leaves the rejected state reachable in a live catalog, so `scan-db`
+(which reads only an already-deployed catalog) could never see it - out of
+scope per the hard-error DDL/DML rule in `CLAUDE.md`; no rule scanners are
+shipped for any of these. `VARCHAR(MAX)`/`NVARCHAR(MAX)`/`VARBINARY(MAX)`, a
+`PERSISTED` computed column, and a custom `IDENTITY` seed/increment other
+than `(1,1)` (Msg 12339) are all legal on a memory-optimized table and must
+not be flagged if a future rule ever touches this area again.
 
-- **A rowstore CLUSTERED index (including the default for a bare `PRIMARY
-  KEY` with no explicit `NONCLUSTERED`/`CLUSTERED` keyword) always fails
-  (Msg 12317)** - a memory-optimized table has no on-disk heap/clustered
-  storage at all. A clustered COLUMNSTORE index is unaffected: it is a
-  legal, separate index kind on a memory-optimized table and must not be
-  flagged.
-- **INCLUDE columns on any index always fail (Msg 10664)**, independent of
-  the index otherwise being HASH or NONCLUSTERED.
-- **A filtered (`WHERE`) index is rejected by the T-SQL parser itself (Msg
-  46107, "Filtered indexes are not supported on memory optimized tables"),
-  not by the engine at deploy time.** A `.sql` file containing this shape
-  fails to parse at all - it never reaches a scannable catalog in either
-  file-parsing or a live database (the CREATE could never have deployed).
-  There is no live-catalog or parsed-DDL state this can ever be caught from
-  downstream; do not re-propose a catalog-level rule for it.
-- **A foreign key relationship between a memory-optimized table and a
-  non-memory-optimized table always fails (Msg 10778), in both directions**
-  (memory-optimized table referencing a disk-based table, and a disk-based
-  table referencing a memory-optimized one) - confirmed independently for
-  each direction, not inferred from one.
-- **`ON DELETE`/`ON UPDATE` `CASCADE`/`SET NULL`/`SET DEFAULT` on a foreign
-  key fails (Msg 10794) only when both the referencing and referenced table
-  are memory-optimized.** When either side is disk-based, the cross-storage
-  restriction above already fires first (a foreign key spanning storage
-  engines can never legally carry any referential action at all).
-- **Unsupported column types**: `xml`, `sql_variant`, `text`, `ntext`,
-  `image`, `timestamp`/`rowversion` (Msg 10794 for each). `VARCHAR(MAX)`/
-  `NVARCHAR(MAX)`/`VARBINARY(MAX)`, a `PERSISTED` computed column, and a
-  custom `IDENTITY` seed/increment other than `(1,1)` (a separate,
-  independently confirmed restriction, Msg 12339 - not yet built into a
-  rule) are all legal on a memory-optimized table; do not flag them.
-- **`hierarchyid`/`geometry`/`geography` also always fail (Msg 10794)** on a
-  memory-optimized table, identical to the other unsupported types above -
-  oracle-confirmed directly. The type resolver already distinguishes these
-  three built-in CLR-backed types by name from an arbitrary CLR UDT (they
-  resolve to their own `SqlTypeCategory` members, not an unresolved/null
-  `SqlType`), so `MemoryOptimizedUnsupportedColumnTypeScanner`'s denylist
-  covers them alongside `xml`/`sql_variant`/`text`/`ntext`/`image`/
-  `timestamp`.
-- **A `char`/`varchar` column carrying a UTF-8 collation (`_UTF8` suffix)
-  always fails (Msg 12356)** - independent of whether the table is ever
-  touched by a natively compiled module; the CREATE/ALTER TABLE statement
-  itself never deploys. `nvarchar`/`nchar` columns with the same collation
-  deploy cleanly (the `_UTF8` flag is a no-op for already-Unicode types).
-- **There is no fixed byte-size ceiling enforced on a memory-optimized
-  table's row at CREATE TABLE or INSERT time** on SQL Server 2022 - directly
-  probed with three `CHAR(8000)` columns (24,000+ fixed bytes) both
-  deploying and accepting an INSERT with no error. The commonly cited
-  8,060-byte in-row limit for memory-optimized tables does not hold on a
-  current engine; do not implement a rule for it.
-- **`WITH (LEDGER = ON)` combined with `MEMORY_OPTIMIZED = ON` always fails
-  (Msg 12359, "Ledger tables are not supported with memory optimized
-  tables.")** - a plain table-option conflict, decidable purely from the
-  table's own declared options; shipped as `MemoryOptimizedLedgerConflictRuleId`.
+There is no fixed byte-size ceiling enforced on a memory-optimized table's
+row at CREATE TABLE or INSERT time on SQL Server 2022 - directly probed
+with three `CHAR(8000)` columns (24,000+ fixed bytes) both deploying and
+accepting an INSERT with no error. The commonly cited 8,060-byte in-row
+limit for memory-optimized tables does not hold on a current engine; do not
+implement a rule for it.
 
 ## Natively compiled T-SQL module restrictions
 
@@ -1749,22 +1725,6 @@ rule for any of these shapes.
   arbitrary SELECT-list column types needs the full FROM-scope lineage
   machinery this family doesn't otherwise depend on.
 
-* **`ColumnstoreUnsupportedColumnTypeScanner` widening: no feature-switch-
-  gated type exists to widen further.** Msg 35343's type gate is now fully
-  covered (`sql_variant`, `xml`, `hierarchyid`, `geometry`, `geography`,
-  `ntext`, `text`, `image`, `timestamp`/`rowversion` unconditionally; MAX-
-  length `varchar`/`nvarchar`/`varbinary` on nonclustered only). Oracle-
-  confirmed (SQL Server 2025, Docker) there is no database-compatibility-
-  level dependence for any of these — `sql_variant` on a clustered columnstore
-  index fails with Msg 35343 identically at every compatibility level from
-  100 through 170. An alias type over `sql_variant` isn't itself legal T-SQL
-  (`CREATE TYPE ... FROM SQL_VARIANT` is rejected outright), so there's no
-  alias-indirection gap to close either. Two adjacent columnstore rejections
-  exist but are structurally different mechanisms, not a column-type
-  restriction, and are correctly out of this scanner's scope: a sparse
-  column (any type) hits Msg 35309, and a non-persisted computed column hits
-  Msg 35307 — both already tracked as their own separate backlog items.
-
 * **`IndexDesignFindingKind.NoRecomputeStatistics` already covers `CREATE
   INDEX`/`ALTER INDEX ... REBUILD WITH (STATISTICS_NORECOMPUTE = ON)`, not
   just `CREATE`/`UPDATE STATISTICS ... WITH NORECOMPUTE`.** Oracle-confirmed
@@ -1872,19 +1832,20 @@ rule for any of these shapes.
   `ProcedureBodyFlowWalker` consumers have it, not just this rule); fixing it
   needs real label/jump-target resolution across the walker, out of
   proportion for this rule alone.
-* **Rule harness (`Reporting/RuleHarness/`): 5 catalog rules deliberately skip
-  centralized confidence filtering.** `ColumnstoreUnsupportedColumnTypeScanner`,
+* **Rule harness (`Reporting/RuleHarness/`): `SecurityPredicateIndexScanner`
+  deliberately skips centralized confidence filtering.** It sets
+  `ApplyConfidenceFilter => false` on its `RuleRunner` adapter. This is not
+  an oversight — the pre-harness `ScanReportBuilder` never filtered this
+  finding stream by `minimumConfidence` (confirmed against `git show HEAD`
+  prior to the harness migration), so it ships at `FindingConfidence.Medium`
+  by design and would otherwise vanish under the CLI's `--confidence high`
+  default. Do not add it back to the default-filtered set without checking
+  whether its findings still surface at `high`. (Four other catalog rules
+  previously shared this same opt-out - `ColumnstoreUnsupportedColumnTypeScanner`,
   `MemoryOptimizedUnsupportedColumnTypeScanner`,
-  `MemoryOptimizedUnsupportedIndexOptionScanner`,
-  `MemoryOptimizedForeignKeyScanner`, and `SecurityPredicateIndexScanner`
-  set `ApplyConfidenceFilter => false` on their `RuleRunner` adapter. This is
-  not an oversight — the pre-harness `ScanReportBuilder` never filtered these
-  five finding streams by `minimumConfidence` (confirmed against `git show
-  HEAD` prior to the harness migration), so several of them ship at
-  `FindingConfidence.Medium` by design and would otherwise vanish under the
-  CLI's `--confidence high` default. Do not add these five back to the
-  default-filtered set without checking whether their findings still surface
-  at `high`.
+  `MemoryOptimizedUnsupportedIndexOptionScanner`, and
+  `MemoryOptimizedForeignKeyScanner` - all since removed as unreachable via
+  `scan-db`; see the memory-optimized structural-restrictions note above.)
 * **Rule harness registration test does not check `RuleCatalog` linkage.**
   The original task description wanted reflection-enforced "registered ⇔
   invoked ⇔ in `RuleCatalog`" three-way equivalence. That third leg isn't
@@ -1905,25 +1866,33 @@ rule for any of these shapes.
   `RuleContext`, `RuleRunner`, `RuleRegistry`, one adapter per migrated
   scanner) lives in `Reporting/RuleHarness/` referencing it forward, not the
   other way round.
-* **Always Encrypted: only the non-enclave index/constraint/statistics key
-  case shipped (`AlwaysEncryptedKeyColumnRuleId`).** A general comparison/
-  join/predicate against an enclave-required AE column, and a procedure
-  parameter with mismatched declared type/length/collation/encryption
-  metadata compared against an AE column, both turn out not to be
-  statically decidable from T-SQL source at all: whether a connecting
-  client has Always-Encrypted parameterization enabled, and what CEK/
-  algorithm/type metadata it attaches to a given parameter, are TDS-
-  protocol-level facts the driver supplies at execution time — nothing in
-  a T-SQL script or stored procedure declaration carries them. Oracle-
-  verified (against the standing Docker instance): a plain literal or
-  `@variable` compared to an AE column always fails with the same generic
-  "Operand type clash" (Msg 206) regardless of encryption type, enclave
-  configuration, or whether the parameter's declared type matches the
-  column - the source text alone can't distinguish "would work with an
-  AE-enabled client" from "can never work." The index/constraint/
-  statistics-key case is different and did ship: it's a pure DDL-time
-  catalog fact (RANDOMIZED column + a column encryption key whose column
-  master key lacks `ENCLAVE_COMPUTATIONS`), independent of any client.
+* **Always Encrypted: general comparison/predicate cases are not statically
+  decidable, and the once-shipped non-enclave index/constraint/statistics
+  key case (`AlwaysEncryptedKeyColumnRuleId`) has since been removed as
+  unreachable via `scan-db`.** A general comparison/join/predicate against
+  an enclave-required AE column, and a procedure parameter with mismatched
+  declared type/length/collation/encryption metadata compared against an AE
+  column, both turn out not to be statically decidable from T-SQL source at
+  all: whether a connecting client has Always-Encrypted parameterization
+  enabled, and what CEK/algorithm/type metadata it attaches to a given
+  parameter, are TDS-protocol-level facts the driver supplies at execution
+  time — nothing in a T-SQL script or stored procedure declaration carries
+  them. Oracle-verified (against the standing Docker instance): a plain
+  literal or `@variable` compared to an AE column always fails with the
+  same generic "Operand type clash" (Msg 206) regardless of encryption
+  type, enclave configuration, or whether the parameter's declared type
+  matches the column - the source text alone can't distinguish "would work
+  with an AE-enabled client" from "can never work." The index/constraint/
+  statistics-key case looked different (a pure DDL-time catalog fact:
+  RANDOMIZED column + a column encryption key whose column master key
+  lacks `ENCLAVE_COMPUTATIONS`) but oracle-confirmed CREATE/ALTER always
+  fails atomically for every DDL path that could produce it (CREATE TABLE,
+  ALTER TABLE ADD CONSTRAINT, CREATE INDEX, CREATE STATISTICS), so the
+  rejected state can never land in a live catalog either - same
+  unreachability as the memory-optimized structural restrictions above.
+  Likewise `AlwaysEncryptedUnsupportedColumnRuleId` (unsupported data type,
+  Msg 33280; IDENTITY column, Msg 2749) - both also confirmed atomic across
+  every DDL path - has been removed for the same reason.
 * **Confidence stays.** Load-bearing in the `--confidence` filter, the SARIF
   tier, and `DynamicSqlPipeline`'s downgrade of findings that rest on an
   assumption.
