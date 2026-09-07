@@ -121,6 +121,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ForXmlPathMissingOrderFinding>("ForXmlPathMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<JsonArrayAggMissingOrderFinding>("JsonArrayAggMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<JsonObjectDuplicateKeyFinding>("JsonObjectDuplicateKeyScanner").Select(ToResult));
+        results.AddRange(report.Find<UnistrUnpairedSurrogateFinding>("UnistrUnpairedSurrogateScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
@@ -880,6 +881,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.JsonObjectDuplicateKeyRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = $"JSON_OBJECT call repeats the literal key '{finding.DuplicateKey}' - the engine accepts this with no error and emits both keys, but JSON_VALUE and similar readers silently resolve to the first occurrence, discarding every later value written under the same key.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(UnistrUnpairedSurrogateFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.UnistrUnpairedSurrogateRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"UNISTR() escape sequence '{finding.EscapeSequence}' encodes an unpaired UTF-16 surrogate code point - the engine accepts this with no error and returns a value containing an ill-formed surrogate, silently, at evaluation, UTF-8 conversion, and JSON serialization alike.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unistr Unpaired Surrogate - SilentScan rules</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --accent: #0a5cff;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --fires-bg: #fff5f5;
+  --fires-border: #e0a0a0;
+  --clean-bg: #f2fbf3;
+  --clean-border: #9fcfa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4993ff;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --fires-bg: #1e1315;
+    --fires-border: #6e3b3b;
+    --clean-bg: #131e14;
+    --clean-border: #3b6e42;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-top: 0; margin-bottom: 2.5rem; }
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: 0.15em 0.4em; font-size: 0.9em; }
+pre { padding: 0.9rem 1rem; overflow-x: auto; font-size: 0.85em; margin: 0.5rem 0; }
+a { color: var(--accent); }
+.back-link { display: inline-block; margin-bottom: 1.5rem; }
+.rule { border-top: 1px solid var(--border); padding: 1.5rem 0; }
+.rule:first-of-type { border-top: none; }
+.rule-id { font-size: 1rem; margin: 0 0 0.5rem; }
+.rationale { margin: 0.5rem 0; }
+.fix { margin: 0.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); }
+.fix-label { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.example { margin: 0.5rem 0; font-size: 0.9em; color: var(--muted); }
+.example-path { font-size: 0.8em; color: var(--muted); margin: 0 0 0.3rem; }
+.example-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1rem 0 0.3rem; }
+.example-explanation { font-size: 0.9em; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+.fires-block pre { background: var(--fires-bg); border: 1px solid var(--fires-border); }
+.clean-block pre { background: var(--clean-bg); border: 1px solid var(--clean-border); }
+.fires-label { color: #c14040; }
+.clean-label { color: #2f8f42; }
+.family-section { margin-top: 2rem; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.rule-list li { padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.rule-list li:first-child { border-top: none; }
+.rule-list .id { font-weight: 600; }
+.rule-list .snippet { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.15rem; }
+.rule-key { color: var(--muted); font-size: 0.8em; margin: 0 0 1.5rem; }
+.rule-key code { padding: 0.1em 0.35em; }
+footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="../rules.html">&larr; All rules</a>
+  <h1>Unistr Unpaired Surrogate</h1>
+  <p class="rule-key"><code>silentscan/string-builtin/unistr-unpaired-surrogate</code></p>
+  <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
+  <h2>Why is this an issue?</h2>
+  <p class="rationale">A UNISTR() call&#x27;s string literal argument contains a \XXXX or \&#x2B;XXXXXX Unicode escape sequence whose code point falls in the UTF-16 surrogate range (U&#x2B;D800-U&#x2B;DFFF) without being paired with its matching high/low counterpart immediately alongside it. Oracle-confirmed the engine accepts this with no error at the point of evaluation, conversion to a UTF-8 collation, or FOR JSON serialization, silently producing an NVARCHAR value that contains an unpaired UTF-16 surrogate code unit - an ill-formed value under the Unicode standard even though SQL Server itself never rejects it. The engine&#x27;s own JSON text parser, by contrast, explicitly rejects an unpaired surrogate escape with an error, so this is not a case where surrogate validation is unsupported everywhere - only UNISTR skips it.</p>
+  <p class="rationale">UNISTR turns \XXXX and \&#x2B;XXXXXX escape sequences in a string literal into the Unicode code points they name. A code point in the UTF-16 surrogate range (U&#x2B;D800-U&#x2B;DFFF) is never a valid character on its own - it only means something as one half of a high/low surrogate pair used to represent a character outside the Basic Multilingual Plane. Oracle-confirmed (SQL Server 2025): UNISTR(N&#x27;\D800&#x27;) is accepted with no error and returns a two-byte NVARCHAR value holding that single, unpaired surrogate code unit - an ill-formed value under the Unicode standard that SQL Server itself never rejects, at creation, at conversion to a UTF-8 collation, or when serialized through FOR JSON. A high surrogate not immediately followed by its matching low surrogate, a low surrogate on its own, or a pair written in the wrong order, all produce the same silent result: one or more unpaired surrogate code units baked into the string.</p>
+  <p class="rationale">This is not a case where SQL Server can&#x27;t validate surrogate pairs - its own JSON text parser does exactly that, rejecting an unpaired escape outright. UNISTR simply skips the check the engine already knows how to perform, so a typo in a hex digit (\D800 instead of the intended \D841\DE41, say) turns a working escape into a lookalike that passes silently and can surface later as corrupted or rejected text wherever the value eventually crosses something that does enforce well-formed Unicode - a UTF-8 boundary, a downstream JSON consumer, or another system entirely.</p>
+  <p class="rationale">Only a literal string argument is checked - a UNISTR call built from a variable, parameter, or expression could still hide the same defect, but its content isn&#x27;t known until runtime.</p>
+  <h2>How can I fix it?</h2>
+  <p class="rationale">Only use a lone \XXXX or \&#x2B;XXXXXX escape for a code point outside U&#x2B;D800-U&#x2B;DFFF, and always write a high surrogate immediately followed by its matching low surrogate as a pair when representing a character outside the Basic Multilingual Plane.</p>
+  <h3>UNISTR escape with an unpaired surrogate</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>SELECT UNISTR(N&#x27;\D800&#x27;) AS BrokenChar;</code></pre></div>
+  <p class="example-explanation">\D800 is a lone high surrogate with no matching low surrogate immediately after it. The engine accepts this with no error and returns a value holding one unpaired, ill-formed code unit.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>SELECT UNISTR(N&#x27;\D800\DC00&#x27;) AS FixedChar;</code></pre></div>
+  <p class="example-explanation">The high surrogate \D800 is immediately followed by a valid low surrogate \DC00, forming a well-formed pair that represents a single character outside the Basic Multilingual Plane.</p>
+  <footer>
+    Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
+  </footer>
+</main>
+</body>
+</html>

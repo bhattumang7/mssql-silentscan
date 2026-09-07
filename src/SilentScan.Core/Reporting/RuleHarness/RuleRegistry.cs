@@ -21,6 +21,7 @@ public static class RuleRegistry
         new ForXmlPathMissingOrderRule(),
         new JsonArrayAggMissingOrderRule(),
         new JsonObjectDuplicateKeyRule(),
+        new UnistrUnpairedSurrogateRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
         new AggregateDivisionColumnstoreRule(),
