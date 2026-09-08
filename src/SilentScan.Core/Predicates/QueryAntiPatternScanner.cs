@@ -4,7 +4,6 @@ using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates.Normalization;
 using SilentScan.Core.Common;
-using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -63,6 +62,7 @@ public static class QueryAntiPatternScanner
         public List<QueryAntiPatternFinding> Findings { get; } = [];
 
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
 
         private FromScopeResolver.ResolutionContext ResolutionContext(IReadOnlyDictionary<string, ResolvedRelation> cteRelations) =>
             new(catalog, EmptyResolvedViews, sourcePath, Ledger: null, cteRelations, ProcScope: null);
@@ -84,17 +84,23 @@ public static class QueryAntiPatternScanner
             {
                 foreach (var variableRef in CollectVariableTableReferences(tableReference))
                 {
-                    if (!_tableVariableNames.Contains(variableRef.Variable.Name))
-                    {
-                        continue;
-                    }
-
-                    if (catalog.CompatibilityLevel is { } level && level < 150)
+                    if (_tableVariableNames.Contains(variableRef.Variable.Name)
+                        && catalog.CompatibilityLevel is { } level && level < 150)
                     {
                         Findings.Add(new QueryAntiPatternFinding(
                             QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, sourcePath,
                             variableRef.StartLine, variableRef.StartColumn,
                             $"{variableRef.Variable.Name} (connected compatibility level {level}, below 150)",
+                            FindingConfidence.High));
+                    }
+
+                    if (_tableValuedParameterNames.Contains(variableRef.Variable.Name)
+                        && catalog.CompatibilityLevel is >= 170)
+                    {
+                        Findings.Add(new QueryAntiPatternFinding(
+                            QueryAntiPatternFindingKind.TableVariablePspSkip, sourcePath,
+                            variableRef.StartLine, variableRef.StartColumn,
+                            variableRef.Variable.Name,
                             FindingConfidence.High));
                     }
                 }
@@ -166,6 +172,7 @@ public static class QueryAntiPatternScanner
             InspectCountStarExistenceSequence(node.Statements);
             InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
             _tableVariableNames.Clear();
+            _tableValuedParameterNames.Clear();
         }
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
@@ -190,11 +197,6 @@ public static class QueryAntiPatternScanner
 
         private void InspectTableValuedParameters(IList<ProcedureParameter> parameters)
         {
-            if (catalog.CompatibilityLevel is not >= 170)
-            {
-                return;
-            }
-
             foreach (var parameter in parameters)
             {
                 if (parameter.DataType is not UserDataTypeReference userType
@@ -203,10 +205,7 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.TableVariablePspSkip, sourcePath,
-                    parameter.StartLine, parameter.StartColumn, parameter.VariableName.Value,
-                    FindingConfidence.High));
+                _tableValuedParameterNames.Add(parameter.VariableName.Value);
             }
         }
 
