@@ -421,8 +421,11 @@ public static partial class DynamicSqlPipeline
         }
 
         var map = elisionMap ?? script.SegmentMap.Map;
-        var outcome = elisionMap is null ? DynamicSqlOutcome.AnalyzedLiteral : DynamicSqlOutcome.PartiallyAnalyzed;
-        var reason = elisionMap is null ? null : "optional-fragment-elided";
+        var (outcome, reason) = elisionMap is not null
+            ? (DynamicSqlOutcome.PartiallyAnalyzed, "optional-fragment-elided")
+            : script.Confidence == FindingConfidence.Medium
+                ? (DynamicSqlOutcome.Unanalyzable, "value-substituted-with-symbolic-hole")
+                : (DynamicSqlOutcome.AnalyzedLiteral, (string?)null);
         accumulator.Findings.Add(new DynamicSqlFinding(
             script.CallSite.SourcePath, script.CallSite.Line, script.CallSite.Column, outcome, reason));
 

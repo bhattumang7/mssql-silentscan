@@ -1610,13 +1610,6 @@
     "reason": "Incorrect syntax near the keyword 'PROCEDURE'."
   },
   {
-    "ruleId": "silentscan/security/unprovable-dynamic-sql-text",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
-  },
-  {
     "ruleId": "silentscan/security/weak-hash-algorithm",
     "variant": "Compliant",
     "exampleIndex": 0,
