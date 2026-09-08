@@ -85,6 +85,7 @@ public static class TestScanReports
         IReadOnlyList<CrossModuleLockOrderFinding>? CrossModuleLockOrderFindings = null,
         IReadOnlyList<TriggerRecursionCycleFinding>? TriggerRecursionCycleFindings = null,
         IReadOnlyList<CheckConstraintFinding>? CheckConstraintFindings = null,
+        IReadOnlyList<CheckConstraintPredicateContradictionFinding>? CheckConstraintPredicateContradictionFindings = null,
         IReadOnlyList<DefaultNullableConstraintFinding>? DefaultNullableConstraintFindings = null,
         IReadOnlyList<TryCastComputedColumnPredicateFinding>? TryCastComputedColumnPredicateFindings = null,
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
@@ -108,7 +109,6 @@ public static class TestScanReports
         IReadOnlyList<BoundedStringBuiltinTruncationFinding>? BoundedStringBuiltinTruncationFindings = null,
         IReadOnlyList<FloatOrderDependentAggregateFinding>? FloatOrderDependentAggregateFindings = null,
         IReadOnlyList<DynamicDataMaskingFinding>? DynamicDataMaskingFindings = null,
-        IReadOnlyList<AlterColumnSafetyFinding>? AlterColumnSafetyFindings = null,
         IReadOnlyList<SpExecuteSqlParameterMismatchFinding>? SpExecuteSqlParameterMismatchFindings = null,
         IReadOnlyList<SkippedConstruct>? SkippedConstructs = null,
         SkippedConstructSummary? SkippedConstructSummary = null,
@@ -200,6 +200,7 @@ public static class TestScanReports
         Set("CrossModuleLockOrderScanner", CrossModuleLockOrderFindings);
         Set("TriggerRecursionCycleScanner", TriggerRecursionCycleFindings);
         Set("CheckConstraintScanner", CheckConstraintFindings);
+        Set(nameof(CheckConstraintPredicateContradictionScanner), CheckConstraintPredicateContradictionFindings);
         Set("DefaultNullableConstraintScanner", DefaultNullableConstraintFindings);
         Set("TryCastComputedColumnPredicateScanner", TryCastComputedColumnPredicateFindings);
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
@@ -223,7 +224,6 @@ public static class TestScanReports
         Set("BoundedStringBuiltinTruncationScanner", BoundedStringBuiltinTruncationFindings);
         Set("FloatOrderDependentAggregateScanner", FloatOrderDependentAggregateFindings);
         Set(nameof(DynamicDataMaskingScanner), DynamicDataMaskingFindings);
-        Set("AlterColumnSafetyScanner", AlterColumnSafetyFindings);
         Set("SpExecuteSqlParameterMismatchScanner", SpExecuteSqlParameterMismatchFindings);
 
         return new ScanReport(

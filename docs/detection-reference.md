@@ -180,9 +180,8 @@ confirmed independently of any one tool's output.
   implicit conversion exists that way. Independently, an `ALTER COLUMN`
   that changes only length, or only collation (same string family, e.g.
   `Latin1_General_CI_AS` to `Latin1_General_CS_AS`), always deploys too;
-  neither is a real risk on its own. `AlterColumnSafetyScanner`'s
-  `IncompatibleFamilyConversion` kind flags exactly the one failing
-  direction.
+  neither is a real risk on its own. Not modeled: the failing direction is a
+  hard, loud DDL-time error (out of scope), and no rule exists for it.
 
 - **`ALTER TABLE ... ALTER COLUMN` narrowing a `DECIMAL`/`NUMERIC` column's
   declared precision or scale below its current catalog value is a DDL-time
@@ -194,10 +193,16 @@ confirmed independently of any one tool's output.
   digits past the new scale are rounded away with no warning. A
   `TIME`/`DATETIME2`/`DATETIMEOFFSET` column's fractional-seconds scale
   narrowing only ever takes the silent-rounding path - truncating digits
-  past a time value's seconds can't overflow. `AlterColumnSafetyScanner`'s
-  `PrecisionOrScaleNarrowing` kind flags the declared-type narrowing itself
-  (source-text comparison, no data inspection), since either outcome is a
-  real risk.
+  past a time value's seconds can't overflow. Not modeled: detecting this
+  requires comparing a column's declared type before and after an
+  `ALTER COLUMN`, but a live catalog read (`scan-db`'s only entry point)
+  retains no history of a table's past DDL - `sys.columns` only ever shows
+  the current type. The prior type is recoverable only when the `ALTER
+  COLUMN` statement's own text happens to survive as part of a persisted
+  routine body (an unusual deployment shape), not for the normal case of a
+  top-level deployment script, so a rule keyed on this comparison is
+  unreachable via the tool's real entry point and was removed rather than
+  kept silent.
 
 - **The full `binary`/`varbinary`/`char`/`varchar`/`nchar`/`nvarchar`
   precedence order is a single total order with no ties**, confirmed

@@ -64,8 +64,8 @@ internal static class NumericScaleNarrowing
                 CompliantSql: """
                     CREATE TABLE dbo.InvoiceLines
                     (
-                        InvoiceLineId INT           NOT NULL PRIMARY KEY,
-                        LineTotal     DECIMAL(18,6) NOT NULL
+                        InvoiceLineId INT            NOT NULL PRIMARY KEY,
+                        LineTotal     DECIMAL(20,12) NOT NULL
                     );
 
                     DECLARE @unitPrice DECIMAL(18,6) = 19.995000;
@@ -75,6 +75,6 @@ internal static class NumericScaleNarrowing
                     SET LineTotal = @unitPrice * @quantity
                     WHERE InvoiceLineId = 1;
                     """,
-                CompliantExplanation: "LineTotal now carries the same scale as the calculation, so no digits are silently rounded away on write."),
+                CompliantExplanation: "DECIMAL(18,6) * DECIMAL(18,6) produces a result scale of 6+6=12, not 6 - LineTotal is widened to DECIMAL(20,12) to actually hold that scale, so no digits are silently rounded away on write."),
         ]);
 }

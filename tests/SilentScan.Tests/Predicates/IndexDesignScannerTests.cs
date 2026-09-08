@@ -526,15 +526,13 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
-    public void TimestampColumn_FiresNamingKindOnly_LowConfidence()
+    public void TimestampColumn_NeverFiresColumnTypeSignals()
     {
         var catalog = new DatabaseCatalog();
         catalog.AddOrReplace(Table("dbo", "Audited", [Column("RowVer", new SqlType(SqlTypeCategory.Timestamp))], []));
 
         var findings = IndexDesignScanner.Scan(catalog);
 
-        var finding = Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.TimestampColumnNaming);
-        Assert.Equal(FindingConfidence.Low, finding.Confidence);
         Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.DeprecatedLobColumnType);
     }
 
@@ -546,7 +544,7 @@ public sealed class IndexDesignScannerTests
 
         var findings = IndexDesignScanner.Scan(catalog);
 
-        Assert.DoesNotContain(findings, f => f.Kind is IndexDesignFindingKind.DeprecatedLobColumnType or IndexDesignFindingKind.TimestampColumnNaming);
+        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.DeprecatedLobColumnType);
     }
 
     [Fact]

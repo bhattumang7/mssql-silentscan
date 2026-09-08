@@ -704,6 +704,22 @@ public sealed class QueryAntiPatternScannerTests
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop);
     }
 
+    [Fact]
+    public void MultiRowInsert_IntoIgnoreDupKeyUniqueIndex_FollowedByRowCountGuard_NeverFires()
+    {
+        var findings = ScanCoupon(
+            """
+            INSERT INTO dbo.Coupon (Code, Pct) VALUES ('SAVE10', 10), ('SAVE20', 20), ('SAVE10', 15);
+            IF @@ROWCOUNT <> 3
+            BEGIN
+                THROW 51000, 'One or more coupon codes were duplicates and were not inserted.', 1;
+            END
+            """,
+            ignoreDupKey: true);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop);
+    }
+
     private static IReadOnlyList<QueryAntiPatternFinding> ScanSwitch(string ddl, string switchSql)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{ddl}\nGO\n{switchSql}");

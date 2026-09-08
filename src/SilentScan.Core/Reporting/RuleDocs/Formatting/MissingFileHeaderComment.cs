@@ -30,13 +30,13 @@ internal static class MissingFileHeaderComment
                     """,
                 NoncompliantExplanation: "The procedure body begins immediately with no comment describing its purpose or ownership.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetActiveOrders
                     -- Returns the id of every order currently in the Active status.
+                    CREATE PROCEDURE dbo.GetActiveOrders
                     AS
                     BEGIN
                         SELECT OrderId FROM dbo.Orders WHERE Status = 'Active';
                     END
                     """,
-                CompliantExplanation: "A leading comment documents the procedure's purpose before its first statement."),
+                CompliantExplanation: "A leading comment before the module's own definition documents its purpose before the first statement."),
         ]);
 }

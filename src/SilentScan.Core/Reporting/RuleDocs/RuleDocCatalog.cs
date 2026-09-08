@@ -120,8 +120,6 @@ public static class RuleDocCatalog
         [Predicates.FloatOrderDependentAggregate.RuleId] = Predicates.FloatOrderDependentAggregate.Content,
         [Predicates.DynamicDataMaskingPredicateExposure.RuleId] = Predicates.DynamicDataMaskingPredicateExposure.Content,
         [Predicates.DynamicDataMaskingComputedExpressionCollapse.RuleId] = Predicates.DynamicDataMaskingComputedExpressionCollapse.Content,
-        [Predicates.AlterColumnPrecisionScaleNarrowing.RuleId] = Predicates.AlterColumnPrecisionScaleNarrowing.Content,
-        [Predicates.AlterColumnTemporalOffsetDropped.RuleId] = Predicates.AlterColumnTemporalOffsetDropped.Content,
         [Predicates.ExecuteAtLargeObjectParameterCrashesSession.RuleId] = Predicates.ExecuteAtLargeObjectParameterCrashesSession.Content,
 
         [Catalog.UntrustedForeignKey.RuleId] = Catalog.UntrustedForeignKey.Content,
@@ -220,7 +218,6 @@ public static class RuleDocCatalog
         [IndexDesign.HypotheticalIndex.RuleId] = IndexDesign.HypotheticalIndex.Content,
         [IndexDesign.FilterColumnNotInIndex.RuleId] = IndexDesign.FilterColumnNotInIndex.Content,
         [IndexDesign.DeprecatedLobColumnType.RuleId] = IndexDesign.DeprecatedLobColumnType.Content,
-        [IndexDesign.TimestampColumnNaming.RuleId] = IndexDesign.TimestampColumnNaming.Content,
         [IndexDesign.FloatOrRealIndexKeyColumn.RuleId] = IndexDesign.FloatOrRealIndexKeyColumn.Content,
         [IndexDesign.NoRecomputeStatistics.RuleId] = IndexDesign.NoRecomputeStatistics.Content,
         [IndexDesign.VariableLengthKeyColumnExceedsKeyLimit.RuleId] = IndexDesign.VariableLengthKeyColumnExceedsKeyLimit.Content,

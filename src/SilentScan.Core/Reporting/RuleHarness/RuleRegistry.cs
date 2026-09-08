@@ -74,7 +74,6 @@ public static class RuleRegistry
         new ProcCallTableValuedArgumentMismatchRule(),
         new SpExecuteSqlParameterMismatchRule(),
         new MaxTypedColumnRule(),
-        new AlterColumnSafetyRule(),
         new MemoryOptimizedSchemaOnlyDurabilityRule(),
         new NonPersistedComputedColumnRule(),
         new UntrustedConstraintRule(),
