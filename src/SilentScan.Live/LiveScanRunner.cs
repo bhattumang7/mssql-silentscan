@@ -116,6 +116,14 @@ public static class LiveScanRunner
                 parsedForPredicateScan, catalog: catalog, minimumConfidence: minimumConfidence, resolvedLineage: lineage, progress: progress);
         }
 
+        using (var catalogNamingStage = progress.Begin("checking catalog table/column names for reserved keywords"))
+        {
+            var catalogNamingFindings = NamingScanner.ScanCatalogNames(catalog).Where(f => f.Confidence <= minimumConfidence).ToList();
+            var combinedNamingFindings = report.Find<NamingFinding>("NamingScanner").Concat(catalogNamingFindings).ToList();
+            report = report.WithFindings("NamingScanner", combinedNamingFindings);
+            catalogNamingStage.Complete($"{catalogNamingFindings.Count:N0} findings");
+        }
+
         TempTableExecShapeReport tempTableExecShape;
         using (var tempTableStage = progress.Begin("checking INSERT...EXEC temp-table shapes"))
         {

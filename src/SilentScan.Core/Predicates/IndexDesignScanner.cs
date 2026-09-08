@@ -421,17 +421,6 @@ public static class IndexDesignScanner
                         table.SourcePath,
                         table.SourceLine));
                     break;
-
-                case SqlTypeCategory.Timestamp:
-                    findings.Add(new IndexDesignFinding(
-                        IndexDesignFindingKind.TimestampColumnNaming,
-                        table.QualifiedName,
-                        IndexName: null,
-                        $"'{table.QualifiedName}.{column.Name}' is declared timestamp - since SQL Server 2005, rowversion is a synonym for the exact same underlying type (not a functional deprecation, unlike text/ntext/image); Microsoft recommends the rowversion spelling for new development purely to avoid the name colliding with the unrelated SQL-standard TIMESTAMP datetime type.",
-                        table.SourcePath,
-                        table.SourceLine,
-                        FindingConfidence.Low));
-                    break;
             }
         }
     }

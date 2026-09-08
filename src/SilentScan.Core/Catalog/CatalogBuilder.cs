@@ -1125,10 +1125,6 @@ public static class CatalogBuilder
                     newType = newType with { Collation = catalog.DefaultCollation };
                 }
 
-                catalog.AddAlterColumnEvent(new CatalogAlterColumnEvent(
-                    qualifiedName, columnName, existingColumn.Type, newType, sourcePath, alterColumn.StartLine,
-                    IsOnline(alterColumn.Options), alterColumn.StartColumn));
-
                 updatedColumns = existing.Columns
                     .Select(c => string.Equals(c.Name, columnName, StringComparison.OrdinalIgnoreCase)
                         ? c with { Type = newType, IsMasked = false, MaskingFunctionName = null }

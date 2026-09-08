@@ -46,6 +46,44 @@ public static class NamingScanner
     }
     internal static Rule CreateRule(string sourcePath, DatabaseCatalog? catalog = null) => new(sourcePath, catalog?.IdentifierComparer ?? StringComparer.OrdinalIgnoreCase, catalog);
 
+    public static IReadOnlyList<NamingFinding> ScanCatalogNames(DatabaseCatalog catalog)
+    {
+        var findings = new List<NamingFinding>();
+
+        foreach (var table in catalog.Tables)
+        {
+            if (table.Kind is not (CatalogTableKind.Table or CatalogTableKind.TableType))
+            {
+                continue;
+            }
+
+            if (ReservedKeywords.Contains(table.Name))
+            {
+                findings.Add(new NamingFinding(
+                    NamingFindingKind.ReservedKeywordAsIdentifier, table.QualifiedName, table.SourcePath, table.SourceLine, Column: 1,
+                    $"Table name \"{table.Name}\" is a reserved T-SQL keyword."));
+            }
+
+            foreach (var column in table.Columns)
+            {
+                if (ReservedKeywords.Contains(column.Name))
+                {
+                    findings.Add(new NamingFinding(
+                        NamingFindingKind.ReservedKeywordAsIdentifier, table.QualifiedName, table.SourcePath, table.SourceLine, Column: 1,
+                        $"Column name \"{column.Name}\" is a reserved T-SQL keyword."));
+                }
+            }
+        }
+
+        return
+        [
+            .. findings
+                .OrderBy(f => f.SourcePath, StringComparer.Ordinal)
+                .ThenBy(f => f.Line)
+                .ThenBy(f => f.Column),
+        ];
+    }
+
     internal static IReadOnlyList<NamingFinding> Harvest(Rule rule) =>
             [
             .. rule.Findings

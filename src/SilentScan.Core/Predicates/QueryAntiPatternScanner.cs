@@ -110,7 +110,6 @@ public static class QueryAntiPatternScanner
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {
             InspectSiteIfNamedTable(node.InsertSpecification.Target);
-            InspectMultiRowInsertIgnoreDupKey(node);
         }
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
@@ -156,12 +155,16 @@ public static class QueryAntiPatternScanner
             }
         }
 
-        public void OnEnterStatementList(StatementList node, ModuleWalker walker) =>
+        public void OnEnterStatementList(StatementList node, ModuleWalker walker)
+        {
             InspectCountStarExistenceSequence(node.Statements);
+            InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
+        }
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
         {
             InspectCountStarExistenceSequence(node.Statements);
+            InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
             _tableVariableNames.Clear();
         }
 
@@ -288,32 +291,63 @@ public static class QueryAntiPatternScanner
                 FindingConfidence.Medium));
         }
 
-        private void InspectMultiRowInsertIgnoreDupKey(InsertStatement node)
+        private void InspectMultiRowInsertIgnoreDupKeySequence(IList<TSqlStatement> statements)
         {
-            if (node.InsertSpecification.InsertSource is not ValuesInsertSource { RowValues.Count: > 1 }
-                || node.InsertSpecification.Target is not NamedTableReference named)
+            for (var i = 0; i < statements.Count; i++)
             {
-                return;
-            }
+                if (statements[i] is not InsertStatement node
+                    || node.InsertSpecification.InsertSource is not ValuesInsertSource { RowValues.Count: > 1 }
+                    || node.InsertSpecification.Target is not NamedTableReference named)
+                {
+                    continue;
+                }
 
-            var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject));
-            var resolved = catalog.Find(qualifiedName);
-            if (resolved is not { Kind: CatalogTableKind.Table })
+                var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject));
+                var resolved = catalog.Find(qualifiedName);
+                if (resolved is not { Kind: CatalogTableKind.Table })
+                {
+                    continue;
+                }
+
+                var hazardIndex = resolved.Indexes.FirstOrDefault(ix => ix.IsUnique && ix.IgnoreDupKey);
+                if (hazardIndex is null)
+                {
+                    continue;
+                }
+
+                if (i + 1 < statements.Count && NextStatementGuardsRowCount(statements[i + 1]))
+                {
+                    continue;
+                }
+
+                Findings.Add(new QueryAntiPatternFinding(
+                    QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop, sourcePath,
+                    node.StartLine, node.StartColumn,
+                    $"Multi-row INSERT into '{qualifiedName}' - unique index '{hazardIndex.Name}' has IGNORE_DUP_KEY=ON, so a row whose key duplicates an existing (or an earlier row in this same batch's) value is silently skipped instead of raising an error.",
+                    FindingConfidence.High));
+            }
+        }
+
+        private static bool NextStatementGuardsRowCount(TSqlStatement statement)
+        {
+            var collector = new RowCountReferenceCollector();
+            statement.Accept(collector);
+            return collector.Found;
+        }
+
+        private sealed class RowCountReferenceCollector : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(GlobalVariableExpression node)
             {
-                return;
-            }
+                if (string.Equals(node.Name, "@@ROWCOUNT", StringComparison.OrdinalIgnoreCase))
+                {
+                    Found = true;
+                }
 
-            var hazardIndex = resolved.Indexes.FirstOrDefault(ix => ix.IsUnique && ix.IgnoreDupKey);
-            if (hazardIndex is null)
-            {
-                return;
+                base.ExplicitVisit(node);
             }
-
-            Findings.Add(new QueryAntiPatternFinding(
-                QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop, sourcePath,
-                node.StartLine, node.StartColumn,
-                $"Multi-row INSERT into '{qualifiedName}' - unique index '{hazardIndex.Name}' has IGNORE_DUP_KEY=ON, so a row whose key duplicates an existing (or an earlier row in this same batch's) value is silently skipped instead of raising an error.",
-                FindingConfidence.High));
         }
 
         private static IEnumerable<NamedTableReference> CollectNamedTableReferences(TableReference tableReference)

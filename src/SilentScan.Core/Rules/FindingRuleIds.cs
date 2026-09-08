@@ -49,12 +49,6 @@ public static class FindingRuleIds
     public const string FloatEqualityRuleId = "silentscan/predicates/float-equality";
     public const string FloatOrderDependentAggregateRuleId = "silentscan/predicates/float-order-dependent-aggregate";
     public const string TriggerOrderRuleId = "silentscan/catalog/trigger-firing-order-undefined";
-    public static string AlterColumnSafetyRuleId(AlterColumnSafetyKind kind) => kind switch
-    {
-        AlterColumnSafetyKind.PrecisionOrScaleNarrowing => "silentscan/catalog/alter-column-precision-scale-narrowing",
-        AlterColumnSafetyKind.TemporalOffsetDropped => "silentscan/catalog/alter-column-temporal-offset-dropped",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled AlterColumnSafetyKind."),
-    };
     public static string ExecuteAtLargeObjectParameterRuleId(ExecuteAtLargeObjectParameterFindingKind kind) => kind switch
     {
         ExecuteAtLargeObjectParameterFindingKind.CrashesSession => "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
@@ -309,7 +303,6 @@ public static class FindingRuleIds
         IndexDesignFindingKind.HypotheticalIndex => "silentscan/index-design/hypothetical-index",
         IndexDesignFindingKind.FilterColumnNotInIndex => "silentscan/index-design/filter-column-not-in-index",
         IndexDesignFindingKind.DeprecatedLobColumnType => "silentscan/index-design/deprecated-lob-column-type",
-        IndexDesignFindingKind.TimestampColumnNaming => "silentscan/index-design/timestamp-column-naming",
         IndexDesignFindingKind.FloatOrRealIndexKeyColumn => "silentscan/index-design/float-or-real-index-key-column",
         IndexDesignFindingKind.NoRecomputeStatistics => "silentscan/index-design/no-recompute-statistics",
         IndexDesignFindingKind.VariableLengthKeyColumnExceedsKeyLimit => "silentscan/index-design/variable-length-key-column-exceeds-key-limit",

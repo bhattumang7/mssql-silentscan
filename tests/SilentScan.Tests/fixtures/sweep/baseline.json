@@ -1,0 +1,2144 @@
+[
+  {
+    "ruleId": "silentscan/call-graph/argument-type-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "The variable name '@rate' has already been declared. Variable names must be unique within a query batch or stored procedure."
+  },
+  {
+    "ruleId": "silentscan/call-graph/argument-type-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 1,
+    "outcome": "DeployFailed",
+    "reason": "The variable name '@tax' has already been declared. Variable names must be unique within a query batch or stored procedure."
+  },
+  {
+    "ruleId": "silentscan/call-graph/argument-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 1,
+    "outcome": "DeployFailed",
+    "reason": "The variable name '@tax' has already been declared. Variable names must be unique within a query batch or stored procedure."
+  },
+  {
+    "ruleId": "silentscan/call-graph/sp-executesql-parameter-type-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/call-graph/sp-executesql-parameter-type-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 1,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/call-graph/sp-executesql-parameter-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/call-graph/sp-executesql-parameter-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 1,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/call-graph/table-valued-argument-column-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "'CREATE/ALTER PROCEDURE' must be the first statement in a query batch."
+  },
+  {
+    "ruleId": "silentscan/call-graph/tvf-argument-type-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/call-graph/tvf-argument-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/catalog/cross-table-fk-type-drift",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Column 'dbo.Customers.CustomerId' is not the same data type as referencing column 'Orders.CustomerId' in foreign key 'FK__Orders__Customer__398D8EEE'."
+  },
+  {
+    "ruleId": "silentscan/catalog/memory-optimized-schema-only-durability",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Cannot create memory optimized tables. To create memory optimized tables, the database must have a MEMORY_OPTIMIZED_FILEGROUP that is online and has at least one container."
+  },
+  {
+    "ruleId": "silentscan/catalog/memory-optimized-schema-only-durability",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Cannot create memory optimized tables. To create memory optimized tables, the database must have a MEMORY_OPTIMIZED_FILEGROUP that is online and has at least one container."
+  },
+  {
+    "ruleId": "silentscan/catalog/rls-predicate-unindexed-column",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "The specified schema name \"Security\" either does not exist or you do not have permission to use it."
+  },
+  {
+    "ruleId": "silentscan/catalog/stale-select-star-view",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/catalog/stale-select-star-view",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/catalog/trigger-firing-order-undefined",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/catalog/trigger-firing-order-undefined",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/case-expression-missing-else",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/case-expression-missing-else",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/cursor-close-on-commit",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/dirty-read-isolation-hint",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/dirty-read-isolation-hint",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/duplicated-call-argument",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/duplicated-call-argument",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/empty-catch-block",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/empty-catch-block",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/legacy-identity-intrinsic",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/legacy-identity-intrinsic",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/non-deterministic-case-input",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/non-deterministic-case-input",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/read-committed-lock-reverts-row-versioning",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/read-committed-lock-reverts-row-versioning",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/trigger-emits-output",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/trigger-emits-output",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/truncate-swallowed-by-catch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/truncate-swallowed-by-catch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/control-flow/waitfor",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/cross-module/inconsistent-lock-order",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-close-on",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-close-on",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-create-statistics-off",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-create-statistics-off",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-shrink-on",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-shrink-on",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-update-statistics-off",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/auto-update-statistics-off",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/compatibility-level-behind-engine-default",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/compatibility-level-behind-engine-default",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/page-verify-not-checksum",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/page-verify-not-checksum",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/plan-guide-alters-optimization",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/plan-guide-alters-optimization",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/query-store-capture-mode-not-auto",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/query-store-not-read-write",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/spatial-persisted-computed-column-compatibility-change",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/database/target-recovery-time-unset",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/database/target-recovery-time-unset",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dead-code/redundant-jump",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/deprecated-set-rowcount",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/deprecated-set-rowcount",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/equals-null-comparison",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/equals-null-comparison",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-lob-function",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-lob-function",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-lob-statement",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-lob-statement",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-system-compatibility-view",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/legacy-system-compatibility-view",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/like-with-no-wildcard",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/like-with-no-wildcard",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/non-ansi-comparison-operator",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/non-ansi-comparison-operator",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/not-equals-null-comparison",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/not-equals-null-comparison",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/numbered-procedure-execution",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/numbered-procedure-execution",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/removed-security-stored-procedure",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/removed-security-stored-procedure",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/string-literal-column-alias",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/string-literal-column-alias",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/table-hint-without-with",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/table-hint-without-with",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/task-comment-fixme",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/task-comment-fixme",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/task-comment-todo",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/deprecated-syntax/task-comment-todo",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/all-branches-identical",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/all-branches-identical",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/always-true-or-false-literal-comparison",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/always-true-or-false-literal-comparison",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/collapsible-nested-if",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/collapsible-nested-if",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/commented-out-code",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/commented-out-code",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/duplicate-sibling-condition",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/duplicate-sibling-condition",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/duplicated-string-literal",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/duplicated-string-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/identical-binary-operands",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/identical-binary-operands",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/identical-branch-bodies",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/identical-branch-bodies",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/mutually-exclusive-and-condition",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/mutually-exclusive-and-condition",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/negated-comparison-as-opposite",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/negated-comparison-as-opposite",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/nested-conditional-expression",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/nested-conditional-expression",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/redundant-and-condition",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/redundant-and-condition",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/repeated-unary-operator",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/repeated-unary-operator",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/self-assignment",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/self-assignment",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/single-iteration-loop",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/duplication/single-iteration-loop",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dynamic-sql/analyzed",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dynamic-sql/exec-with-result-sets-column-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dynamic-sql/inner-parse-failed",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dynamic-sql/insert-exec-temp-table-column-type-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/dynamic-sql/unanalyzable",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/constant-foldable-expression-literal",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/constant-foldable-expression-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/convert-style-code-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/dml-output-list-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/group-by-expression-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/having-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/like-pattern-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/order-by-expression-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/select-list-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/table-sample-size-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/forced-parameterization/top-or-paging-literal",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/dangling-statement-after-unbraced-body",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/dangling-statement-after-unbraced-body",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/if-following-prior-block-end",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/if-following-prior-block-end",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/missing-begin-end",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/missing-begin-end",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/multiple-declarations-per-line",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/multiple-declarations-per-line",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/multiple-statements-per-line",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/multiple-statements-per-line",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/redundant-parentheses",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/redundant-parentheses",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/single-line-conditional-body",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/single-line-conditional-body",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/tab-character",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/formatting/tab-character",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/hint/index-not-seekable",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/hint/index-not-seekable",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/identity/range-near-exhaustion",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/index-design/columnstore-index-on-dml-target-table",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Must declare the scalar variable \"@OrderId\"."
+  },
+  {
+    "ruleId": "silentscan/index-design/disabled-index",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/disabled-index",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/filter-column-not-in-index",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "The operation failed because an index or statistics with name 'IX_Orders_Active' already exists on table 'dbo.Orders'."
+  },
+  {
+    "ruleId": "silentscan/index-design/hypothetical-index",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/hypothetical-index",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/mergeable-indexes-differing-include-only",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/mergeable-indexes-differing-include-only",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/no-recompute-statistics",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/no-recompute-statistics",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/non-aligned-partitioned-index",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Invalid partition scheme 'PsOrderDate' specified."
+  },
+  {
+    "ruleId": "silentscan/index-design/non-aligned-partitioned-index",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/index-design/row-or-page-locking-disabled",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index-design/row-or-page-locking-disabled",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/index/json-contains-rewrite-eligible",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Column, parameter, or variable #2: Cannot find data type json."
+  },
+  {
+    "ruleId": "silentscan/index/json-contains-rewrite-eligible",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Unknown object type 'JSON' used in a CREATE, DROP, or ALTER statement."
+  },
+  {
+    "ruleId": "silentscan/index/key-lookup-prone",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "The operation failed because an index or statistics with name 'IX_Orders_Status' already exists on table 'dbo.Orders'."
+  },
+  {
+    "ruleId": "silentscan/join/always-false-inner-join-predicate",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/always-false-inner-join-predicate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/cartesian-comma-join",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/cartesian-comma-join",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/cartesian-cross-join",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/cartesian-cross-join",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/outer-join-predicate-collapse",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/join/outer-join-predicate-collapse",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/json-builtin/json-arrayagg-missing-order",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/json-builtin/json-arrayagg-missing-order",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/json-builtin/json-object-duplicate-key",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/json-builtin/json-object-duplicate-key",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/expression-derived-column",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/multi-referenced-cte",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/multi-referenced-cte",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/nested-view-depth",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/post-expansion-join-width",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/select-star-view",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/lineage/select-star-view",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/case-branch-too-long",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/case-branch-too-long",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/line-too-long",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/line-too-long",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/module-too-long",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/module-too-long",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/nesting-too-deep",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/metrics/routine-too-long",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/routine-too-long",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-case-branches",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-case-branches",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-conditional-operators",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-conditional-operators",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-parameters",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/metrics/too-many-parameters",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/naming/redundant-type-qualifier",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Column, parameter, or variable #1: Cannot find data type MyType."
+  },
+  {
+    "ruleId": "silentscan/naming/redundant-type-qualifier",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Column, parameter, or variable #1: Cannot find data type dbo.MyType."
+  },
+  {
+    "ruleId": "silentscan/predicate/try-cast-computed-column",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Computed column 'ParsedDate' in table 'Events' cannot be persisted because the column is non-deterministic."
+  },
+  {
+    "ruleId": "silentscan/predicates/catch-all-parameter",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/dynamic-data-masking-predicate-exposure",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Must declare the scalar variable \"@customerId\"."
+  },
+  {
+    "ruleId": "silentscan/predicates/dynamic-data-masking-predicate-exposure",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Must declare the scalar variable \"@candidateSsn\"."
+  },
+  {
+    "ruleId": "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/filtered-index-parameter-mismatch",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/filtered-index-parameter-mismatch",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/local-variable-predicate",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/local-variable-predicate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/oversized-parameter",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/reassigned-parameter",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/predicates/reassigned-parameter",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/query/for-xml-path-missing-order",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/query/for-xml-path-missing-order",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/query/global-cursor-declaration",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/query/linked-server-or-cross-database-reference",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Could not find server 'RemoteServer' in sys.servers. Verify that the correct server name was specified. If necessary, execute the stored procedure sp_addlinkedserver to add the server to sys.servers."
+  },
+  {
+    "ruleId": "silentscan/query/table-variable-low-compat-estimate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/query/table-variable-psp-skip",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/query/unqualified-table-reference",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/query/unqualified-table-reference",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/in-computed-column-or-constraint",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/in-predicate",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/in-predicate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/in-select-or-expression",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/in-select-or-expression",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/nested-under-view-or-tvf",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Invalid object name 'dbo.LineItem'."
+  },
+  {
+    "ruleId": "silentscan/scalar-udf/nested-under-view-or-tvf",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/security/hard-coded-credential",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Incorrect syntax near the keyword 'PROCEDURE'."
+  },
+  {
+    "ruleId": "silentscan/security/unprovable-dynamic-sql-text",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/security/weak-hash-algorithm",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/security/weak-hash-algorithm",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/security/weak-hash-algorithm-sensitive-context",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/security/weak-hash-algorithm-sensitive-context",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/bare-select-star",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/bare-select-star",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/insert-without-column-list",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/insert-without-column-list",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/ordinal-order-by",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/statement-shape/ordinal-order-by",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-accent-insensitive-column-unsupported",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-accent-insensitive-column-unsupported",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-replace-dollar-backreference",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/regexp-replace-dollar-backreference",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/replace-truncated",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/replace-truncated",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/replicate-truncated",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/replicate-truncated",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/space-truncated",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/space-truncated",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/string-agg-missing-order",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/string-agg-missing-order",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/unistr-unpaired-surrogate",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/string-builtin/unistr-unpaired-surrogate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tier1/charindex-or-left-on-column",
+    "variant": "Noncompliant",
+    "exampleIndex": 1,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tier1/date-function-on-column",
+    "variant": "Compliant",
+    "exampleIndex": 1,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tier1/date-function-on-column",
+    "variant": "Noncompliant",
+    "exampleIndex": 1,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tier1/function-wrapped-column",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/tier1/regexp-pattern-no-literal-prefix",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "'REGEXP_LIKE' is not a recognized built-in function name."
+  },
+  {
+    "ruleId": "silentscan/tier1/regexp-pattern-no-literal-prefix",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "'REGEXP_LIKE' is not a recognized built-in function name."
+  },
+  {
+    "ruleId": "silentscan/trigger/direct-recursive-trigger",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/direct-recursive-trigger",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/instead-of-insert-filtered-no-reject-path",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/instead-of-insert-filtered-no-reject-path",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/logon-trigger-host-name-gate",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/logon-trigger-host-name-gate",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/multi-hop-recursion-cycle",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/multi-row-unsafe-keyed-dml",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/multi-row-unsafe-keyed-dml",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/multi-row-unsafe-single-row-assignment",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/multi-row-unsafe-single-row-assignment",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/no-early-out-for-empty-invocation",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/no-early-out-for-empty-invocation",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/update-function-without-value-comparison",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/trigger/update-function-without-value-comparison",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/correlated-apply",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/correlated-apply",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/from-or-join",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/from-or-join",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/insert-exec",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/nested-under-view-or-tvf",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/nested-under-view-or-tvf",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/standalone",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/tvf-fence/standalone",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/verdict/collation-conflict",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "DeployFailed",
+    "reason": "Cannot resolve the collation conflict between \"SQL_Latin1_General_CP1_CI_AS\" and \"Latin1_General_CI_AS\" in the equal to operation."
+  },
+  {
+    "ruleId": "silentscan/verdict/range-seek",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/verdict/scan-forced",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/view/order-by-not-guaranteed",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/view/order-by-not-guaranteed",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/view/top-percent-order-by-no-op",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/view/top-percent-order-by-no-op",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/window-frame/explicit-range",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/window-frame/explicit-range",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/window-frame/implicit-default-range",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/window-frame/implicit-default-range",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/write-loss/approximate-to-exact-truncation",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/write-loss/length-truncation",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "OwnRuleSilent",
+    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+  },
+  {
+    "ruleId": "silentscan/write-loss/unicode-to-non-unicode",
+    "variant": "Compliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  },
+  {
+    "ruleId": "silentscan/write-loss/unicode-to-non-unicode",
+    "variant": "Noncompliant",
+    "exampleIndex": 0,
+    "outcome": "NotSelfContained",
+    "reason": "example has no deployable object definition and no extractable prelude"
+  }
+]
