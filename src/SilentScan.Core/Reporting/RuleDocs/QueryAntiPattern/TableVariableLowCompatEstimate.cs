@@ -58,7 +58,8 @@ internal static class TableVariableLowCompatEstimate
             new RuleDocExample(
                 Title: "A table variable loaded with thousands of rows, estimated at 1",
                 NoncompliantSql: """
-                    -- Database compatibility level 140 (SQL Server 2017) or lower.
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 140;
+
                     CREATE TABLE dbo.Orders
                     (
                         OrderId    INT      NOT NULL PRIMARY KEY,
