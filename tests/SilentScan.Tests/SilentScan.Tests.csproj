@@ -31,6 +31,7 @@
   <ItemGroup>
     <None Include="fixtures/**/*.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="fixtures/sweep/baseline.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fixtures/sweep/metamorphic-baseline.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

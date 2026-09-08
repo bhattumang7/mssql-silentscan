@@ -56,4 +56,33 @@ public static class SweepReportWriter
 
         return sb.ToString();
     }
+
+    public static string WriteJson(IReadOnlyList<MetamorphicResult> results) => JsonSerializer.Serialize(
+        results.Select(r => new
+        {
+            r.BaseCase.RuleId,
+            r.BaseCase.ExampleIndex,
+            r.MutationName,
+            Outcome = r.Outcome.ToString(),
+            r.BaselineFiredRuleIds,
+            r.MutatedFiredRuleIds,
+        }),
+        JsonOptions);
+
+    public static string WriteReadable(IReadOnlyList<MetamorphicResult> results)
+    {
+        var sb = new StringBuilder();
+        var mismatches = results.Where(r => r.Outcome == MetamorphicOutcome.Mismatched).ToList();
+
+        sb.AppendLine(CultureInfo.InvariantCulture, $"{results.Count} mutation(s) parsed and deployed; {mismatches.Count} changed the fired-rule-id set.");
+        foreach (var mismatch in mismatches.OrderBy(r => r.BaseCase.RuleId, StringComparer.Ordinal).ThenBy(r => r.MutationName, StringComparer.Ordinal))
+        {
+            sb.AppendLine();
+            sb.AppendLine(CultureInfo.InvariantCulture, $"  {mismatch.BaseCase.RuleId} example #{mismatch.BaseCase.ExampleIndex} x {mismatch.MutationName}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"    baseline: {string.Join(", ", mismatch.BaselineFiredRuleIds.OrderBy(id => id, StringComparer.Ordinal))}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"    mutated:  {string.Join(", ", mismatch.MutatedFiredRuleIds.OrderBy(id => id, StringComparer.Ordinal))}");
+        }
+
+        return sb.ToString();
+    }
 }
