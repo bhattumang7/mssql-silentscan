@@ -97,7 +97,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ProcCallTableValuedArgumentMismatch(report, headingLevel, pathBase));
         blocks.AddRange(SpExecuteSqlParameterMismatch(report, headingLevel, pathBase));
         blocks.AddRange(TemporalBoundary(report, headingLevel, pathBase));
-        blocks.AddRange(JsonIndexRewrite(report, headingLevel, pathBase));
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
         blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
@@ -230,7 +229,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "EXEC call-site table-valued parameter columns risking silent data loss when their caller-side table variable was populated", report.Find<ProcCallTableValuedArgumentMismatchFinding>(nameof(ProcCallTableValuedArgumentMismatchScanner)).Count);
         AddCount(counts, "sp_executesql call-site arguments risking silent data loss against their own declared parameter type", report.Find<SpExecuteSqlParameterMismatchFinding>(nameof(SpExecuteSqlParameterMismatchScanner)).Count);
         AddCount(counts, "BETWEEN predicates silently excluding rows at an imprecise end-of-period boundary", report.Find<TemporalBoundaryPrecisionFinding>(nameof(NonSargablePredicateScanner)).Count);
-        AddCount(counts, "JSON_VALUE equality predicates eligible for a JSON_CONTAINS index rewrite", report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
         AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
@@ -857,28 +855,6 @@ public static class ReadableScanReportWriter
                 f.ColumnScale.ToString(CultureInfo.InvariantCulture),
                 f.BoundaryLiteralText,
                 f.BoundaryLiteralFractionalDigits.ToString(CultureInfo.InvariantCulture),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> JsonIndexRewrite(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"JSON_VALUE predicates eligible for a JSON index rewrite ({report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "The column has a JSON index (SQL Server 2025), but JSON_VALUE(column, path) = value still forces a Clustered Index Scan - oracle-confirmed via real plan XML. Rewrite the comparison as JSON_CONTAINS(column, value, path) = 1, which seeks the JSON index instead.");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "JSON path", "Predicate"],
-            [.. report.Find<JsonIndexRewriteFinding>(nameof(NonSargablePredicateScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.JsonPath,
-                f.PredicateFragmentText,
             })]);
     }
 

@@ -11,8 +11,6 @@ internal static class JsonComputedColumnMatcher
 
     public static bool IsJsonPathFunction(string functionName) => JsonPathFunctionNames.Contains(functionName);
 
-    public static bool IsJsonValueFunction(string functionName) => string.Equals(functionName, "JSON_VALUE", StringComparison.OrdinalIgnoreCase);
-
     public static bool HasIndexedMatchingComputedColumn(
         DatabaseCatalog catalog, string tableQualifiedName, string sourceColumnName, FunctionCall predicateCall)
     {

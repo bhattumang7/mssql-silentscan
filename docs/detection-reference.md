@@ -1081,32 +1081,17 @@ rule for any of these shapes.
   T-SQL procedures via live `DESCRIBE`, which is the part of this space
   that is decidable.
 
-* **`JsonIndexRewriteEligibleRuleId` shipped — `JSON_VALUE(column, path) = value`
-  never seeks a JSON index (SQL Server 2025) even when one exists on the column;
-  only `JSON_CONTAINS(column, value, path) = 1` does.** Oracle-confirmed (Docker,
-  SQL Server 2025) via real plan XML on a 5000-row JSON-indexed table:
-  `JSON_VALUE(j,'$.a') = '2500'` compiles to a `Clustered Index Scan` regardless of
-  the JSON index, while `JSON_CONTAINS(j, 2500, '$.a') = 1` against the identical
-  table compiles to `Nested Loops` with `Clustered Index Seek` operators against
-  the JSON index by name. `JSON_CONTAINS`'s signature is `(json_expr, sql_scalar_value,
-  json_path)` — the value must be a native SQL-typed argument (an `int`/`nvarchar`
-  literal, variable, or parameter), not a JSON-encoded string; passing the value as
-  a quoted string (e.g. `'1'` instead of `1`) silently returns 0/false rather than
-  matching. Returns `NULL` when the path doesn't exist, `1`/`0` for match/no-match
-  otherwise. `CREATE JSON INDEX` requires the native `JSON` column type (rejects
-  `NVARCHAR(MAX)`) and `SET QUOTED_IDENTIFIER ON`. The rule fires on the
-  `JSON_VALUE(...) = value` shape (RETURNING clause or not — ScriptDom keeps the
-  RETURNING type out of `FunctionCall.Parameters`, so the 2-parameter match is
-  unaffected) when the column has a JSON index; it does not suppress the general
-  function-wrapped-column finding, since the predicate as written stays
-  non-sargable regardless. JSON indexes are tracked in `CatalogIndex` via a new
-  `IsJsonIndex` flag but deliberately excluded from every existing "usable index"
-  filter across `IndexCoverageScanner`, `CompositeIndexLeadingColumnScanner`,
-  `SecurityPredicateIndexScanner`, `TemporalTableHistoryIndexGapScanner`, and the
-  duplicate/subsumed-index, FK-leading-index, and partition-alignment checks in
-  `IndexDesignScanner` — a JSON index is not seekable via a plain equality
-  comparison on the column the way a B-tree index is, so treating it as one there
-  would misfire.
+* **`JsonIndexRewriteEligibleRuleId` shipped, then removed.** The rule fired on
+  `JSON_VALUE(column, path) = value` and recommended rewriting to
+  `JSON_CONTAINS(column, value, path) = 1` on the claim that the rewrite makes
+  the predicate seek a JSON index. Oracle-confirmed (SQL Server 2025) that
+  `JSON_CONTAINS(...) = 1` only seeks a JSON index when `path` targets an array
+  (membership check) — never for a scalar property path such as `$.status`.
+  `JSON_VALUE` returns `NULL` for any path targeting an array or object, so the
+  predicate shape the rule detects can, by construction, only ever be the scalar
+  case — the one case where the recommended rewrite does not work. No reachable
+  noncompliant example has a working fix, so the rule was removed rather than
+  narrowed.
 
 * **`OPENJSON WITH` schema projecting a native `json`-typed column while an
   "enabling feature switch" is off - killed, no such switch exists.** The item
