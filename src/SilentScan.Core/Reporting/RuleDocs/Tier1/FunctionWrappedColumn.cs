@@ -54,26 +54,26 @@ internal static class FunctionWrappedColumn
         Examples:
         [
             new RuleDocExample(
-                Title: "A date-part function forces a scan",
+                Title: "An arithmetic function forces a scan",
                 NoncompliantSql: """
-                    CREATE TABLE dbo.Orders
+                    CREATE TABLE dbo.Accounts
                     (
-                        OrderId  INT      NOT NULL PRIMARY KEY,
-                        OrderDate DATETIME NOT NULL
+                        AccountId INT NOT NULL PRIMARY KEY,
+                        Balance   INT NOT NULL
                     );
-                    CREATE INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate);
+                    CREATE INDEX IX_Accounts_Balance ON dbo.Accounts(Balance);
 
-                    SELECT OrderId
-                    FROM dbo.Orders
-                    WHERE YEAR(OrderDate) = 2018;
+                    SELECT AccountId
+                    FROM dbo.Accounts
+                    WHERE ABS(Balance) = 100;
                     """,
-                NoncompliantExplanation: "YEAR(OrderDate) must be evaluated per row before it can be compared to 2018 - the index on OrderDate is never consulted, and the engine scans every row in the table.",
+                NoncompliantExplanation: "ABS(Balance) must be evaluated per row before it can be compared to 100 - the index on Balance is never consulted, and the engine scans every row in the table.",
                 CompliantSql: """
-                    SELECT OrderId
-                    FROM dbo.Orders
-                    WHERE OrderDate >= '20180101' AND OrderDate < '20190101';
+                    SELECT AccountId
+                    FROM dbo.Accounts
+                    WHERE Balance = 100 OR Balance = -100;
                     """,
-                CompliantExplanation: "OrderDate now appears bare on both sides of the range - the optimizer can seek IX_Orders_OrderDate directly to 2018-01-01 and scan forward only through matching rows."),
+                CompliantExplanation: "Balance now appears bare in both branches - the optimizer can seek IX_Accounts_Balance for each value directly."),
             new RuleDocExample(
                 Title: "ISNULL wrapping the column",
                 NoncompliantSql: """

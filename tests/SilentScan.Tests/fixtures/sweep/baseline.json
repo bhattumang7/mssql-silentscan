@@ -1537,7 +1537,7 @@
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+    "reason": "rule only fires at database compatibility level 170+, which the sweep's fixed Docker target instance does not support (its max supported compatibility level is 160); reproducing this would require routing this rule's example at a newer-instance sweep target"
   },
   {
     "ruleId": "silentscan/query/unqualified-table-reference",
@@ -1818,13 +1818,6 @@
     "exampleIndex": 1,
     "outcome": "NotSelfContained",
     "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/tier1/function-wrapped-column",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
   },
   {
     "ruleId": "silentscan/tier1/regexp-pattern-no-literal-prefix",

@@ -98,13 +98,13 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">For a date-part function like YEAR(SomeDate) = 2018, the fix is a literal date range: SomeDate &gt;= &#x27;20180101&#x27; AND SomeDate &lt; &#x27;20190101&#x27;. Both bounds are plain comparisons against the raw column, so the optimizer can seek to the first matching row and scan forward only through the matching range.</p>
   <p class="rationale">For ISNULL(Age, 0) = 0, rewrite as Age = 0 OR Age IS NULL - logically identical (a NULL Age or an Age of 0 both match), but now Age appears unwrapped on both branches, so each branch can seek independently.</p>
   <p class="rationale">For CASE/COALESCE/IIF wrapping the column, the same principle applies: work out what set of raw-column conditions the wrapped expression is equivalent to, and write that directly instead of relying on the engine to evaluate the function per row.</p>
-  <h3>A date-part function forces a scan</h3>
+  <h3>An arithmetic function forces a scan</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>CREATE TABLE dbo.Orders&#xA;(&#xA;    OrderId  INT      NOT NULL PRIMARY KEY,&#xA;    OrderDate DATETIME NOT NULL&#xA;);&#xA;CREATE INDEX IX_Orders_OrderDate ON dbo.Orders(OrderDate);&#xA;&#xA;SELECT OrderId&#xA;FROM dbo.Orders&#xA;WHERE YEAR(OrderDate) = 2018;</code></pre></div>
-  <p class="example-explanation">YEAR(OrderDate) must be evaluated per row before it can be compared to 2018 - the index on OrderDate is never consulted, and the engine scans every row in the table.</p>
+  <div class="fires-block"><pre><code>CREATE TABLE dbo.Accounts&#xA;(&#xA;    AccountId INT NOT NULL PRIMARY KEY,&#xA;    Balance   INT NOT NULL&#xA;);&#xA;CREATE INDEX IX_Accounts_Balance ON dbo.Accounts(Balance);&#xA;&#xA;SELECT AccountId&#xA;FROM dbo.Accounts&#xA;WHERE ABS(Balance) = 100;</code></pre></div>
+  <p class="example-explanation">ABS(Balance) must be evaluated per row before it can be compared to 100 - the index on Balance is never consulted, and the engine scans every row in the table.</p>
   <p class="example-label clean-label">Compliant solution</p>
-  <div class="clean-block"><pre><code>SELECT OrderId&#xA;FROM dbo.Orders&#xA;WHERE OrderDate &gt;= &#x27;20180101&#x27; AND OrderDate &lt; &#x27;20190101&#x27;;</code></pre></div>
-  <p class="example-explanation">OrderDate now appears bare on both sides of the range - the optimizer can seek IX_Orders_OrderDate directly to 2018-01-01 and scan forward only through matching rows.</p>
+  <div class="clean-block"><pre><code>SELECT AccountId&#xA;FROM dbo.Accounts&#xA;WHERE Balance = 100 OR Balance = -100;</code></pre></div>
+  <p class="example-explanation">Balance now appears bare in both branches - the optimizer can seek IX_Accounts_Balance for each value directly.</p>
   <h3>ISNULL wrapping the column</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
   <div class="fires-block"><pre><code>CREATE TABLE dbo.Users&#xA;(&#xA;    UserId INT NOT NULL PRIMARY KEY,&#xA;    Age    INT NULL&#xA;);&#xA;CREATE INDEX IX_Users_Age ON dbo.Users(Age);&#xA;&#xA;SELECT UserId&#xA;FROM dbo.Users&#xA;WHERE ISNULL(Age, 0) = 0;</code></pre></div>
