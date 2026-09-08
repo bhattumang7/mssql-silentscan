@@ -31,19 +31,51 @@ internal static class NestingTooDeep
                             BEGIN
                                 IF EXISTS (SELECT 1 FROM dbo.Inventory WHERE OrderId = @orderId AND Quantity > 0)
                                 BEGIN
-                                    UPDATE dbo.Orders SET Status = 'Processed' WHERE OrderId = @orderId;
+                                    IF NOT EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId AND Status = 'OnHold')
+                                    BEGIN
+                                        IF EXISTS (SELECT 1 FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId WHERE o.OrderId = @orderId AND c.IsActive = 1)
+                                        BEGIN
+                                            IF NOT EXISTS (SELECT 1 FROM dbo.CustomerHolds h JOIN dbo.Orders o ON o.CustomerId = h.CustomerId WHERE o.OrderId = @orderId)
+                                            BEGIN
+                                                IF EXISTS (SELECT 1 FROM dbo.PaymentAuthorizations WHERE OrderId = @orderId AND IsApproved = 1)
+                                                BEGIN
+                                                    IF NOT EXISTS (SELECT 1 FROM dbo.FraudFlags WHERE OrderId = @orderId)
+                                                    BEGIN
+                                                        IF EXISTS (SELECT 1 FROM dbo.ShippingAddresses WHERE OrderId = @orderId AND IsVerified = 1)
+                                                        BEGIN
+                                                            IF NOT EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId AND IsPriceOverridden = 1)
+                                                            BEGIN
+                                                                IF EXISTS (SELECT 1 FROM dbo.Warehouses w JOIN dbo.Inventory i ON i.WarehouseId = w.WarehouseId WHERE i.OrderId = @orderId AND w.IsOperational = 1)
+                                                                BEGIN
+                                                                    UPDATE dbo.Orders SET Status = 'Processed' WHERE OrderId = @orderId;
+                                                                END
+                                                            END
+                                                        END
+                                                    END
+                                                END
+                                            END
+                                        END
+                                    END
                                 END
                             END
                         END
                     END
                     """,
-                NoncompliantExplanation: "Three levels of nested IFs force a reader to track all three conditions at once to know whether the UPDATE ever runs.",
+                NoncompliantExplanation: "Eleven levels of nested IFs force a reader to track all eleven conditions at once to know whether the UPDATE ever runs.",
                 CompliantSql: """
                     CREATE PROCEDURE dbo.ProcessOrder (@orderId INT) AS
                     BEGIN
                         IF NOT EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId) RETURN;
                         IF EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId AND Status = 'Cancelled') RETURN;
                         IF NOT EXISTS (SELECT 1 FROM dbo.Inventory WHERE OrderId = @orderId AND Quantity > 0) RETURN;
+                        IF EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId AND Status = 'OnHold') RETURN;
+                        IF NOT EXISTS (SELECT 1 FROM dbo.Customers c JOIN dbo.Orders o ON o.CustomerId = c.CustomerId WHERE o.OrderId = @orderId AND c.IsActive = 1) RETURN;
+                        IF EXISTS (SELECT 1 FROM dbo.CustomerHolds h JOIN dbo.Orders o ON o.CustomerId = h.CustomerId WHERE o.OrderId = @orderId) RETURN;
+                        IF NOT EXISTS (SELECT 1 FROM dbo.PaymentAuthorizations WHERE OrderId = @orderId AND IsApproved = 1) RETURN;
+                        IF EXISTS (SELECT 1 FROM dbo.FraudFlags WHERE OrderId = @orderId) RETURN;
+                        IF NOT EXISTS (SELECT 1 FROM dbo.ShippingAddresses WHERE OrderId = @orderId AND IsVerified = 1) RETURN;
+                        IF EXISTS (SELECT 1 FROM dbo.Orders WHERE OrderId = @orderId AND IsPriceOverridden = 1) RETURN;
+                        IF NOT EXISTS (SELECT 1 FROM dbo.Warehouses w JOIN dbo.Inventory i ON i.WarehouseId = w.WarehouseId WHERE i.OrderId = @orderId AND w.IsOperational = 1) RETURN;
 
                         UPDATE dbo.Orders SET Status = 'Processed' WHERE OrderId = @orderId;
                     END
