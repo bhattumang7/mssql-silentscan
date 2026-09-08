@@ -1533,13 +1533,6 @@
     "reason": "Could not find server 'RemoteServer' in sys.servers. Verify that the correct server name was specified. If necessary, execute the stored procedure sp_addlinkedserver to add the server to sys.servers."
   },
   {
-    "ruleId": "silentscan/query/table-variable-low-compat-estimate",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
-  },
-  {
     "ruleId": "silentscan/query/table-variable-psp-skip",
     "variant": "Noncompliant",
     "exampleIndex": 0,
