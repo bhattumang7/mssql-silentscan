@@ -389,7 +389,7 @@
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+    "reason": "rule only fires when the deployed database's compatibility level lags behind the instance's own default; the sweep harness pins every deployed database to the same fixed compatibility level as the instance default, so this precondition can never be reproduced via fresh sweep deployment"
   },
   {
     "ruleId": "silentscan/database/target-recovery-time-unset",
@@ -1061,7 +1061,7 @@
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
+    "reason": "rule fires on the identity column's actual current value, a genuine data-state fact; the doc example's 'production value 250' is only a comment (inserting 250 rows to reproduce it is not a viable doc example), so a freshly deployed sweep database never reaches the exhausted state the rule detects"
   },
   {
     "ruleId": "silentscan/index-design/columnstore-index-on-dml-target-table",
@@ -1132,20 +1132,6 @@
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
     "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/index-design/non-aligned-partitioned-index",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Invalid partition scheme 'PsOrderDate' specified."
-  },
-  {
-    "ruleId": "silentscan/index-design/non-aligned-partitioned-index",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
   },
   {
     "ruleId": "silentscan/index-design/row-or-page-locking-disabled",

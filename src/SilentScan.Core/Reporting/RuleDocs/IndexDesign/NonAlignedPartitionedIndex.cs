@@ -46,11 +46,11 @@ internal static class NonAlignedPartitionedIndex
                         CONSTRAINT PK_Orders PRIMARY KEY CLUSTERED (OrderDate, OrderId)
                     ) ON PsOrderDate(OrderDate);
 
-                    CREATE NONCLUSTERED INDEX IX_Orders_Region ON dbo.Orders(Region);
+                    CREATE NONCLUSTERED INDEX IX_Orders_Region ON dbo.Orders(Region) ON [PRIMARY];
                     """,
-                NoncompliantExplanation: "IX_Orders_Region has no ON clause, so it lands on the default [PRIMARY] filegroup - a single, unpartitioned structure sitting on top of a partitioned table. It cannot switch with the table's own partitions, and rebuilding it always rebuilds the whole index.",
+                NoncompliantExplanation: "IX_Orders_Region is explicitly placed ON [PRIMARY] - a single, unpartitioned filegroup sitting on top of a partitioned table, overriding the alignment SQL Server would otherwise apply by default if no ON clause were given at all. It cannot switch with the table's own partitions, and rebuilding it always rebuilds the whole index.",
                 CompliantSql: """
-                    CREATE NONCLUSTERED INDEX IX_Orders_Region ON dbo.Orders(Region) ON PsOrderDate(OrderDate);
+                    CREATE NONCLUSTERED INDEX IX_Orders_Region ON dbo.Orders(Region) WITH (DROP_EXISTING = ON) ON PsOrderDate(OrderDate);
                     """,
                 CompliantExplanation: "Building the index on the table's own partition scheme, keyed on the table's own partitioning column (OrderDate), keeps every partition's own nonclustered index physically aligned with the matching data partition."),
         ]);

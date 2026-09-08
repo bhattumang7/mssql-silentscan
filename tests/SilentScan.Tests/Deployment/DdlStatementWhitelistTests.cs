@@ -26,6 +26,8 @@ public sealed class DdlStatementWhitelistTests
     [InlineData("CREATE SYNONYM dbo.S FOR dbo.T;")]
     [InlineData("DROP TABLE dbo.T;")]
     [InlineData("DROP VIEW dbo.V;")]
+    [InlineData("CREATE PARTITION FUNCTION PfT (date) AS RANGE RIGHT FOR VALUES ('2025-01-01');")]
+    [InlineData("CREATE PARTITION SCHEME PsT AS PARTITION PfT ALL TO ([PRIMARY]);")]
     public void DisallowedStatementTypeNames_KnownSchemaOnlyStatements_AllAllowed(string sql)
     {
         var batch = ParseSingleBatch(sql);
