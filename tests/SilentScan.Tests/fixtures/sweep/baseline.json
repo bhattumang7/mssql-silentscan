@@ -2079,13 +2079,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/write-loss/length-truncation",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
-  },
-  {
     "ruleId": "silentscan/write-loss/unicode-to-non-unicode",
     "variant": "Compliant",
     "exampleIndex": 0,
