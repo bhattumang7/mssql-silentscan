@@ -1344,13 +1344,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/metrics/nesting-too-deep",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule does not fire on its own noncompliant example via the live scan-db path"
-  },
-  {
     "ruleId": "silentscan/metrics/routine-too-long",
     "variant": "Compliant",
     "exampleIndex": 0,
