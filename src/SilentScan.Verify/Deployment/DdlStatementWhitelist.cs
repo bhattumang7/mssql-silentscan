@@ -35,6 +35,9 @@ public static class DdlStatementWhitelist
         typeof(CreateSchemaStatement),
         typeof(CreateSynonymStatement),
         typeof(DropSynonymStatement),
+
+        typeof(CreatePartitionFunctionStatement),
+        typeof(CreatePartitionSchemeStatement),
     ];
 
     private static readonly HashSet<Type> ProcedureAndTriggerDefinitionTypes =
