@@ -50,13 +50,6 @@ public sealed record CatalogTable(
             && comparer.Equals(i.KeyColumns[0], columnName));
     }
 
-    public bool HasJsonIndex(string columnName, StringComparer? identifierComparer = null)
-    {
-        var comparer = identifierComparer ?? StringComparer.OrdinalIgnoreCase;
-        return Indexes.Any(i => i.IsJsonIndex && !i.IsDisabled && i.KeyColumns.Count > 0
-            && comparer.Equals(i.KeyColumns[0], columnName));
-    }
-
     public bool IsColumnStoredInAnIndex(string columnName, StringComparer? identifierComparer = null)
     {
         var comparer = identifierComparer ?? StringComparer.OrdinalIgnoreCase;
