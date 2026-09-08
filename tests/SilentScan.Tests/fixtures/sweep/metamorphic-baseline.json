@@ -1,0 +1,14 @@
+[
+  {
+    "RuleId": "silentscan/metrics/nesting-too-deep",
+    "ExampleIndex": 0,
+    "MutationName": "comment-injection",
+    "Reason": "The doc example's deep indentation already sits near the line-length threshold; injecting a comment pushes one line over it, which is a real, expected line-too-long finding on the mutated text, not a scanner defect."
+  },
+  {
+    "RuleId": "silentscan/metrics/nesting-too-deep",
+    "ExampleIndex": 0,
+    "MutationName": "identifier-bracket-quoting",
+    "Reason": "The doc example's deep indentation already sits near the line-length threshold; bracket-quoting identifiers pushes one line over it, which is a real, expected line-too-long finding on the mutated text, not a scanner defect."
+  }
+]
