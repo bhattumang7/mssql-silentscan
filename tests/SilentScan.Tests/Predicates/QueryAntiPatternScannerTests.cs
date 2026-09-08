@@ -24,11 +24,11 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT 1;",
+            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
             compatibilityLevel: 170);
 
         var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -37,14 +37,39 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void TableValuedParameter_BelowCompat170_NeverFiresTableVariablePspSkip()
+    public void TableValuedParameterReadAsTableSource_BelowCompat170_NeverFiresTableVariablePspSkip()
+    {
+        var findings = Scan(
+            "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
+            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            compatibilityLevel: 160);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
+    }
+
+    [Fact]
+    public void TableValuedParameter_DeclaredButNeverReadAsTableSource_NeverFiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
             + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT 1;",
-            compatibilityLevel: 160);
+            compatibilityLevel: 170);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
+    }
+
+    [Fact]
+    public void TableValuedParameter_ReadInOneStatementOnly_OnlyFiresForTheStatementThatReadsIt()
+    {
+        var findings = Scan(
+            "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
+            + "CREATE PROCEDURE dbo.P @CustomerId INT, @ids dbo.IdList READONLY AS "
+            + "DECLARE @c INT = (SELECT COUNT(*) FROM @ids); "
+            + "SELECT Id FROM dbo.Big WHERE Id = @CustomerId;",
+            compatibilityLevel: 170);
+
+        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
+        Assert.Equal("@ids", finding.DetailText);
     }
 
     [Fact]
@@ -932,44 +957,44 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void AlterProcedure_TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void AlterProcedure_TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT 1;",
+            + "ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
 
     [Fact]
-    public void CreateOrAlterProcedure_TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void CreateOrAlterProcedure_TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE OR ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT 1;",
+            + "CREATE OR ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
 
     [Fact]
-    public void AlterFunction_TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void AlterFunction_TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN RETURN 1; END;",
+            + "ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
 
     [Fact]
-    public void CreateOrAlterFunction_TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void CreateOrAlterFunction_TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE OR ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN RETURN 1; END;",
+            + "CREATE OR ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1035,11 +1060,11 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void CreateFunction_TableValuedParameter_AtCompat170_FiresTableVariablePspSkip()
+    public void CreateFunction_TableValuedParameterReadAsTableSource_AtCompat170_FiresTableVariablePspSkip()
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN RETURN 1; END;",
+            + "CREATE FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
