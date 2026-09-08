@@ -20,13 +20,11 @@ internal static class UnistrUnpairedSurrogate
             low surrogate on its own, or a pair written in the wrong order, all produce the same
             silent result: one or more unpaired surrogate code units baked into the string.
 
-            This is not a case where SQL Server can't validate surrogate pairs - its own JSON text
-            parser does exactly that, rejecting an unpaired escape outright. UNISTR simply skips
-            the check the engine already knows how to perform, so a typo in a hex digit (\D800
-            instead of the intended \D841\DE41, say) turns a working escape into a lookalike that
-            passes silently and can surface later as corrupted or rejected text wherever the value
-            eventually crosses something that does enforce well-formed Unicode - a UTF-8 boundary,
-            a downstream JSON consumer, or another system entirely.
+            UNISTR performs no surrogate-pairing validation at all, so a typo in a hex digit
+            (\D800 instead of the intended \D841\DE41, say) turns a working escape into a
+            lookalike that passes silently and can surface later as corrupted or misinterpreted
+            text wherever the value eventually crosses a system that does enforce well-formed
+            Unicode.
 
             Only a literal string argument is checked - a UNISTR call built from a variable,
             parameter, or expression could still hide the same defect, but its content isn't known
