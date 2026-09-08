@@ -54,10 +54,10 @@ internal static class ApproximateTruncation
                     );
 
                     UPDATE dbo.OrderStats
-                    SET AvgUnitPrice = 19.99
+                    SET AvgUnitPrice = 19.99e0
                     WHERE OrderId = 1;
                     """,
-                NoncompliantExplanation: "19.99 is an approximate/decimal value being narrowed into an exact INT column - the engine truncates it to 19 with no error, silently losing .99.",
+                NoncompliantExplanation: "19.99e0 is a FLOAT literal (scientific-notation numerics are always approximate, unlike a plain decimal literal) being narrowed into an exact INT column - the engine truncates it to 19 with no error, silently losing .99.",
                 CompliantSql: """
                     CREATE TABLE dbo.OrderStats
                     (
