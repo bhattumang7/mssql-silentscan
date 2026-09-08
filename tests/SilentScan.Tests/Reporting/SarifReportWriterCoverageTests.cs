@@ -347,6 +347,19 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
+    [InlineData(CheckConstraintPredicateContradictionKind.CheckConstraintInterval, "silentscan/correctness/check-constraint-predicate-contradiction")]
+    [InlineData(CheckConstraintPredicateContradictionKind.NotNullConstraint, "silentscan/correctness/not-null-predicate-contradiction")]
+    public void Write_CheckConstraintPredicateContradictionFinding_IsIncludedInSarifResults(CheckConstraintPredicateContradictionKind kind, string expectedRuleId)
+    {
+        var finding = new CheckConstraintPredicateContradictionFinding(kind, "dbo.Orders", "Amount", "CK_Orders_Amount", "test.sql", 1, 1);
+        var report = TestScanReports.Build(CheckConstraintPredicateContradictionFindings: [finding]);
+
+        var result = FirstResult(report);
+
+        Assert.Equal(expectedRuleId, result.GetProperty("ruleId").GetString());
+    }
+
+    [Theory]
     [InlineData(SetOptionFindingKind.QuotedIdentifierOffBlocksIndexedFeature, "compiled under QUOTED_IDENTIFIER OFF")]
     [InlineData(SetOptionFindingKind.AnsiNullsOffBlocksIndexedFeature, "compiled under ANSI_NULLS OFF")]
     [InlineData(SetOptionFindingKind.NumericRoundabortOnBlocksIndexedFeature, "SET NUMERIC_ROUNDABORT ON")]
@@ -700,7 +713,6 @@ public sealed class SarifReportWriterCoverageTests
     [Theory]
     [InlineData(IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable, "warning")]
     [InlineData(IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization, "warning")]
-    [InlineData(IndexDesignFindingKind.TimestampColumnNaming, "note")]
     [InlineData(IndexDesignFindingKind.HeapWithNonclusteredIndexes, "error")]
     public void Write_IndexDesignFinding_MapsKindToItsOwnLevelBucket(IndexDesignFindingKind kind, string expectedLevel)
     {

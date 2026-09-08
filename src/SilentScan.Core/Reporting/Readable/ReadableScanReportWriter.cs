@@ -158,7 +158,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
         blocks.AddRange(FloatOrderDependentAggregate(report, headingLevel, pathBase));
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
-        blocks.AddRange(AlterColumnSafety(report, headingLevel, pathBase));
         blocks.AddRange(ExecuteAtLargeObjectParameter(report, headingLevel, pathBase));
         blocks.AddRange(QueryAntiPattern(report, headingLevel, pathBase));
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
@@ -258,7 +257,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
-        AddCount(counts, "ALTER COLUMN safety", report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count);
         AddCount(counts, "EXECUTE (...) AT large-object/xml parameter", report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Count);
         AddCount(counts, "Query anti-patterns", report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count);
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
@@ -1532,41 +1530,6 @@ public static class ReadableScanReportWriter
                 $"Referenced at line {f.Line}, column {f.Column}.",
             })]);
     }
-
-    private static IEnumerable<ReadableBlock> AlterColumnSafety(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"ALTER COLUMN safety ({report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An ALTER TABLE ... ALTER COLUMN either narrows a numeric or var-time column's declared precision/scale below its current catalog value, retypes a char/nchar/varchar/nvarchar column directly to binary/varbinary, or retypes a DATETIMEOFFSET column into an offset-unaware temporal type - all either fail or silently lose data at DDL time.");
-
-        foreach (var group in report.Find<AlterColumnSafetyFinding>(nameof(AlterColumnSafetyScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{AlterColumnSafetyTitle(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AlterColumnSafetyRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, "Previous type", "New type"],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.PreviousType.ToString(),
-                    f.NewType.ToString(),
-                })]);
-        }
-    }
-
-    private static string AlterColumnSafetyTitle(AlterColumnSafetyKind kind) => kind switch
-    {
-        AlterColumnSafetyKind.PrecisionOrScaleNarrowing => "Precision/scale narrowing",
-        AlterColumnSafetyKind.TemporalOffsetDropped => "Temporal offset dropped",
-        _ => "Unknown",
-    };
 
     private static IEnumerable<ReadableBlock> ExecuteAtLargeObjectParameter(ScanReport report, int level, string? pathBase)
     {

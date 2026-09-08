@@ -28,8 +28,6 @@ public enum IndexDesignFindingKind
 
     DeprecatedLobColumnType,
 
-    TimestampColumnNaming,
-
     FloatOrRealIndexKeyColumn,
 
     NoRecomputeStatistics,

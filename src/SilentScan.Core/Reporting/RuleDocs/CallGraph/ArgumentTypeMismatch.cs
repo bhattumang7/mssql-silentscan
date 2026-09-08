@@ -12,13 +12,13 @@ internal static class ArgumentTypeMismatch
             it resolves a real `EXEC dbo.SomeProc @arg = @callerVariable` call site, looks up the
             caller's own declared type for `@callerVariable`, and compares it against the callee's
             declared parameter type from `sys.parameters`. When the caller's type risks losing
-            information on the way in - a DECIMAL variable with fewer fractional digits than the
-            parameter expects, an INT passed where the parameter is a narrower type, a string
-            variable shorter than the parameter's declared length - the value is silently narrowed
-            or truncated during parameter marshalling, before the procedure body ever runs a single
-            statement. No error is raised for an implicit narrowing conversion at parameter binding;
-            the procedure simply receives a value that's already lost precision, scale, or characters
-            relative to what the caller thought it was passing.
+            information on the way in - a DECIMAL variable with more fractional digits than the
+            parameter's declared scale, a string variable longer than the parameter's declared
+            length - the value is silently narrowed or truncated during parameter marshalling,
+            before the procedure body ever runs a single statement. No error is raised for an
+            implicit narrowing conversion at parameter binding; the procedure simply receives a
+            value that's already lost precision, scale, or characters relative to what the caller
+            thought it was passing.
 
             This is classified the same way an INSERT or UPDATE assignment's silent data loss is,
             because the underlying mechanism is identical - it's an assignment, not a predicate. A
@@ -39,23 +39,23 @@ internal static class ArgumentTypeMismatch
         Examples:
         [
             new RuleDocExample(
-                Title: "A narrower caller variable silently truncated at the call site",
+                Title: "A wider caller variable silently rounded at the call site",
                 NoncompliantSql: """
                     CREATE PROCEDURE dbo.usp_ApplyDiscount
-                        @DiscountRate DECIMAL(9,4)
+                        @DiscountRate DECIMAL(9,2)
                     AS
                     BEGIN
                         UPDATE dbo.Products SET Price = Price * (1 - @DiscountRate);
                     END;
 
                     -- Caller:
-                    DECLARE @rate INT = 1;
+                    DECLARE @rate DECIMAL(9,4) = 0.1567;
                     EXEC dbo.usp_ApplyDiscount @DiscountRate = @rate;
                     """,
-                NoncompliantExplanation: "@rate is INT, so the value passed for a DECIMAL(9,4) parameter can only ever be a whole number - any fractional discount rate the caller intended (0.15 for 15%, say) is impossible to express through this variable, and the mismatch is invisible unless the two declarations are compared side by side.",
+                NoncompliantExplanation: "@rate holds 0.1567, but the DECIMAL(9,2) parameter can only carry two fractional digits - the value is silently rounded to 0.16 at the call boundary before the procedure body ever runs, and the mismatch is invisible unless the two declarations are compared side by side.",
                 CompliantSql: """
                     -- Caller:
-                    DECLARE @rate DECIMAL(9,4) = 0.15;
+                    DECLARE @rate DECIMAL(9,2) = 0.16;
                     EXEC dbo.usp_ApplyDiscount @DiscountRate = @rate;
                     """,
                 CompliantExplanation: "The caller's variable now matches the parameter's declared type and scale exactly - the value crosses the call boundary with no implicit narrowing conversion."),

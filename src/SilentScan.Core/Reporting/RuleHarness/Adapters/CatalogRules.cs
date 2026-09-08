@@ -51,12 +51,6 @@ internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedSchemaOnlyDurabilityScanner.Scan(context.Catalog);
 }
 
-internal sealed class AlterColumnSafetyRule : ICatalogRule
-{
-    public string Id => "AlterColumnSafetyScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => AlterColumnSafetyScanner.Scan(context.Catalog);
-}
-
 internal sealed class NonPersistedComputedColumnRule : ICatalogRule
 {
     public string Id => "NonPersistedComputedColumnScanner";

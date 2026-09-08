@@ -25,7 +25,6 @@ public sealed class DatabaseCatalog
 
     private readonly List<CatalogCheckConstraint> _checkConstraints = [];
     private readonly List<CatalogTriggerEvent> _triggerEvents = [];
-    private readonly List<CatalogAlterColumnEvent> _alterColumnEvents = [];
     private readonly List<CatalogDropSchemaEvent> _dropSchemaEvents = [];
     private readonly List<CatalogDropRoleEvent> _dropRoleEvents = [];
     private readonly List<CatalogAlterTableRebuildEvent> _alterTableRebuildEvents = [];
@@ -152,10 +151,6 @@ public sealed class DatabaseCatalog
     public void AddTriggerEvent(CatalogTriggerEvent triggerEvent) => _triggerEvents.Add(triggerEvent);
 
     public IReadOnlyList<CatalogTriggerEvent> TriggerEvents => _triggerEvents;
-
-    public void AddAlterColumnEvent(CatalogAlterColumnEvent alterColumnEvent) => _alterColumnEvents.Add(alterColumnEvent);
-
-    public IReadOnlyList<CatalogAlterColumnEvent> AlterColumnEvents => _alterColumnEvents;
 
     public void AddDropSchemaEvent(CatalogDropSchemaEvent dropSchemaEvent) => _dropSchemaEvents.Add(dropSchemaEvent);
 

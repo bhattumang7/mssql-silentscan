@@ -104,7 +104,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner").Select(ToResult));
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
-        results.AddRange(report.Find<AlterColumnSafetyFinding>("AlterColumnSafetyScanner").Select(ToResult));
         results.AddRange(report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>("MemoryOptimizedSchemaOnlyDurabilityScanner").Select(ToResult));
         results.AddRange(report.Find<QueryAntiPatternFinding>("QueryAntiPatternScanner").Select(ToResult));
@@ -113,6 +112,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<CrossModuleLockOrderFinding>("CrossModuleLockOrderScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerRecursionCycleFinding>("TriggerRecursionCycleScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintFinding>("CheckConstraintScanner").Select(ToResult));
+        results.AddRange(report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Select(ToResult));
         results.AddRange(report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<TryCastComputedColumnPredicateFinding>("TryCastComputedColumnPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
@@ -471,6 +471,17 @@ public static class SarifReportWriter
                 $"'{finding.ModuleQualifiedName}': SET ANSI_PADDING OFF{touchedDisplay}.",
             _ => $"'{finding.ModuleQualifiedName}': SET CONCAT_NULL_YIELDS_NULL OFF{touchedDisplay}.",
         };
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
+    }
+
+    private static SarifResult ToResult(CheckConstraintPredicateContradictionFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CheckConstraintPredicateContradictionRuleId(finding.Kind), finding.Confidence);
+        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
+        var message = finding.Kind == CheckConstraintPredicateContradictionKind.CheckConstraintInterval
+            ? $"'{finding.TableQualifiedName}.{finding.ColumnName}' is compared against a literal that falls entirely outside trusted CHECK constraint '{finding.ConstraintName}''s own interval - the optimizer proves this branch unsatisfiable at compile time and folds it to a Constant Scan."
+            : $"'{finding.TableQualifiedName}.{finding.ColumnName}' is tested IS NULL, but the catalog declares this column NOT NULL - the optimizer proves this branch unsatisfiable at compile time and folds it to a Constant Scan.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -1291,7 +1302,6 @@ public static class SarifReportWriter
         {
             IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable => LevelWarning,
             IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization => LevelWarning,
-            IndexDesignFindingKind.TimestampColumnNaming => LevelNote,
             _ => LevelError,
         };
         var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
@@ -1340,21 +1350,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-
-    private static SarifResult ToResult(AlterColumnSafetyFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AlterColumnSafetyRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind switch
-        {
-            AlterColumnSafetyKind.PrecisionOrScaleNarrowing =>
-                $"'{finding.TableQualifiedName}.{finding.ColumnName}' is narrowed from {finding.PreviousType} to {finding.NewType} - this fails at DDL time if an existing value no longer fits, or silently rounds away digits past the new scale if it does.",
-            AlterColumnSafetyKind.TemporalOffsetDropped =>
-                $"'{finding.TableQualifiedName}.{finding.ColumnName}' is retyped from {finding.PreviousType} to {finding.NewType} - the UTC offset is silently dropped, keeping the local date/time digits unchanged rather than normalizing to UTC.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled AlterColumnSafetyKind."),
-        };
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
 
     private static SarifResult ToResult(ExecuteAtLargeObjectParameterFinding finding)
     {

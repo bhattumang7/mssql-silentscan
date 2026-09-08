@@ -42,7 +42,6 @@ public static class SarifRuleCatalog
     public const string FloatEqualityRuleId = FindingRuleIds.FloatEqualityRuleId;
     public const string FloatOrderDependentAggregateRuleId = FindingRuleIds.FloatOrderDependentAggregateRuleId;
     public const string TriggerOrderRuleId = FindingRuleIds.TriggerOrderRuleId;
-    public static string AlterColumnSafetyRuleId(AlterColumnSafetyKind kind) => FindingRuleIds.AlterColumnSafetyRuleId(kind);
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = FindingRuleIds.MemoryOptimizedSchemaOnlyDurabilityRuleId;
     public const string QueryAntiPatternTableVariableLowCompatEstimateRuleId = FindingRuleIds.QueryAntiPatternTableVariableLowCompatEstimateRuleId;
     public const string QueryAntiPatternTableVariablePspSkipRuleId = FindingRuleIds.QueryAntiPatternTableVariablePspSkipRuleId;

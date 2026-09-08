@@ -4,6 +4,7 @@ using SilentScan.Core.Predicates;
 using SilentScan.Core.Reporting;
 using SilentScan.Core.Reporting.RuleDocs;
 using SilentScan.Core.Reporting.Sarif;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Tests.Predicates;
 
@@ -53,6 +54,48 @@ public sealed class NamingScannerTests
     public void OrdinaryColumnName_NeverFiresReservedKeyword()
     {
         var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL, Amount INT NULL);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
+    }
+
+    [Fact]
+    public void ScanCatalogNames_ReservedKeywordAsTableName_Fires()
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(new CatalogTable(
+            "dbo", "order", CatalogTableKind.Table,
+            [new CatalogColumn("Id", new SqlType(SqlTypeCategory.Int), IsNullable: false, IsIdentity: false, IsComputed: false, IsPersisted: false)],
+            [], SourcePath: "dbo.order", SourceLine: 0));
+
+        var findings = NamingScanner.ScanCatalogNames(catalog);
+
+        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
+    }
+
+    [Fact]
+    public void ScanCatalogNames_ReservedKeywordAsColumnName_Fires()
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(new CatalogTable(
+            "dbo", "T", CatalogTableKind.Table,
+            [new CatalogColumn("select", new SqlType(SqlTypeCategory.Int), IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false)],
+            [], SourcePath: "dbo.T", SourceLine: 0));
+
+        var findings = NamingScanner.ScanCatalogNames(catalog);
+
+        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
+    }
+
+    [Fact]
+    public void ScanCatalogNames_OrdinaryTableAndColumnNames_NeverFireReservedKeyword()
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(new CatalogTable(
+            "dbo", "Orders", CatalogTableKind.Table,
+            [new CatalogColumn("Amount", new SqlType(SqlTypeCategory.Int), IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false)],
+            [], SourcePath: "dbo.Orders", SourceLine: 0));
+
+        var findings = NamingScanner.ScanCatalogNames(catalog);
 
         Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
     }
