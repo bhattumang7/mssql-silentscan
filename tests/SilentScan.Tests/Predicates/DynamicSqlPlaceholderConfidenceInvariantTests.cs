@@ -87,6 +87,28 @@ public sealed class DynamicSqlPlaceholderConfidenceInvariantTests
         Assert.All(report.Find<WriteLossFinding>("TypedPredicateExtractor"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
     }
 
+    [Fact]
+    public async Task ExecOfConcatenatedUnresolvableProcParameter_ReportsUnprovableDynamicSqlText()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.usp_RunReport
+                @TableName SYSNAME
+            AS
+            BEGIN
+                DECLARE @sql NVARCHAR(200) = N'SELECT * FROM ' + @TableName;
+                EXEC (@sql);
+            END;
+            """;
+
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS", minimumConfidence: FindingConfidence.Low);
+        foreach (var file in report.ParseHealth.Files)
+        {
+            Assert.Empty(file.Errors);
+        }
+
+        Assert.Contains(report.Find<SecurityFinding>("SecurityScanner"), f => f.Kind == SecurityFindingKind.UnprovableDynamicSqlText);
+    }
+
     private static readonly string[] AuthorizedConstructionSites = ["DynamicSqlTransfer.cs"];
 
     [Fact]
