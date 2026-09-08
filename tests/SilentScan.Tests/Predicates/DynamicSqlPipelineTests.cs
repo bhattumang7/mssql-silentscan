@@ -891,7 +891,7 @@ public sealed class DynamicSqlPipelineTests : OracleTestFixture
         var result = DynamicSqlPipeline.Analyze([script], catalog, lineage);
 
         var dynamicFinding = Assert.Single(result.Findings);
-        Assert.Equal(DynamicSqlOutcome.AnalyzedLiteral, dynamicFinding.Outcome);
+        Assert.Equal(DynamicSqlOutcome.Unanalyzable, dynamicFinding.Outcome);
 
         var typedFinding = Assert.Single(result.TypedFindings);
         Assert.Equal("Col", typedFinding.Column.ColumnName);

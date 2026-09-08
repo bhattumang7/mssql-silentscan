@@ -3492,7 +3492,7 @@ public sealed class DynamicSqlScannerTests
     }
 
     [Fact]
-    public void Analyze_ExecOfDropFunctionNamedFromSymbolicProcParam_TreatsIdentifierPositionAsSafe()
+    public void Analyze_ExecOfDropFunctionNamedFromSymbolicProcParam_ReportsUnprovableTextWithNoFabricatedFinding()
     {
 
         var (extraction, pipeline) = ProbePipeline("""
@@ -3506,7 +3506,7 @@ public sealed class DynamicSqlScannerTests
         Assert.Empty(extraction.Findings);
         Assert.Single(extraction.AnalyzableScripts);
         var finding = Assert.Single(pipeline.Findings);
-        Assert.Equal(DynamicSqlOutcome.AnalyzedLiteral, finding.Outcome);
+        Assert.Equal(DynamicSqlOutcome.Unanalyzable, finding.Outcome);
     }
 
     private static (DynamicSqlExtractionResult Extraction, DynamicSqlPipelineResult Pipeline) ProbePipeline(string sql)
@@ -3922,7 +3922,6 @@ public sealed class DynamicSqlScannerTests
 
         Assert.Empty(extraction.Findings);
         Assert.Equal(2, extraction.AnalyzableScripts.Count);
-        Assert.DoesNotContain(pipeline.Findings, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         Assert.Contains(extraction.AnalyzableScripts, s =>
             s.InnerText.Contains("__silentscan_sym_", StringComparison.Ordinal)
             && s.InnerText.Contains("INSERT INTO #BlitzResults (CheckID) SELECT 160 HAVING COUNT(DISTINCT plan_handle) > __silentscan_sym_", StringComparison.Ordinal)
@@ -3991,7 +3990,6 @@ public sealed class DynamicSqlScannerTests
             """);
 
         Assert.Empty(extraction.Findings);
-        Assert.DoesNotContain(pipeline.Findings, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         var script = Assert.Single(extraction.AnalyzableScripts);
         Assert.StartsWith("SELECT __silentscan_sym_", script.InnerText, StringComparison.Ordinal);
     }
