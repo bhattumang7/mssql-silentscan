@@ -1148,20 +1148,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/index/json-contains-rewrite-eligible",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Column, parameter, or variable #2: Cannot find data type json."
-  },
-  {
-    "ruleId": "silentscan/index/json-contains-rewrite-eligible",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Unknown object type 'JSON' used in a CREATE, DROP, or ALTER statement."
-  },
-  {
     "ruleId": "silentscan/index/key-lookup-prone",
     "variant": "Compliant",
     "exampleIndex": 0,
