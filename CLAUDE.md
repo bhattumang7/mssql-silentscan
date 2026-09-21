@@ -53,12 +53,17 @@ Do not write unnecessary markdown documents that won't have meaning in 10 years.
 - `mssql-silentscan-sql`, `silentscan-sql2025` (this is SQL 2025 instance), and `silentscan-sql` are local SQL instances in Docker for running tests and verifying behaviour. silentscan-mssql-fts-2025 has full text search installed.
 
 ## Adding red test first
-Add a red test first before adding a correction in SUT.
+Add a red test first before adding a correction in SUT. When the correction changes what a
+rule claims about the engine, the red test is the oracle test, not a fixture that only proves
+the scanner agrees with itself.
 
 ## Every rule needs an oracle test
-A rule is not done, and may not stay published, until an integration test in
-`tests/SilentScan.Tests/Integration` proves its claim against a real SQL Server
-instance and would fail if the claim were false. Tag it
+A rule is not done, and may not stay published, until a test under
+`tests/SilentScan.Tests` proves its claim against a real SQL Server instance and
+would fail if the claim were false. No rule is judged "syntax-only" or
+"structural" to escape this: the claim in its rationale is an engine fact, and
+that fact is what the test checks, with a sibling case that must not show the
+effect. Fixtures that only show the scanner firing do not count. Tag it
 `[Trait("Category", "Oracle")]` plus `[Trait("Rule", "<rule-id>")]` (repeat the
 `Rule` trait for each rule the test backs). `RuleOracleCoverageTests` fails
 listing every published rule with no such test. If the claim cannot be backed
