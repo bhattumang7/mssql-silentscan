@@ -7,7 +7,6 @@ public enum NonIndexableColumnFindingKind
 {
     MaxLength,
 
-    LegacyLargeObject,
 }
 
 public sealed record MaxTypedColumnFinding(

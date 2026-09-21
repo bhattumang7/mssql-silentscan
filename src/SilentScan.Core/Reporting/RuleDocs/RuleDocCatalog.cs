@@ -109,7 +109,6 @@ public static class RuleDocCatalog
         [CallGraph.TableValuedArgumentMismatch.RuleId] = CallGraph.TableValuedArgumentMismatch.Content,
         [CallGraph.SpExecuteSqlParameterMismatch.RuleId] = CallGraph.SpExecuteSqlParameterMismatch.Content,
         [Catalog.MaxTypedColumn.RuleId] = Catalog.MaxTypedColumn.Content,
-        [Catalog.LegacyLargeObjectColumn.RuleId] = Catalog.LegacyLargeObjectColumn.Content,
         [Catalog.RecompilesEveryCall.RuleId] = Catalog.RecompilesEveryCall.Content,
         [Catalog.TableValuedFunctionReturnUsesDatabaseCollation.RuleId] = Catalog.TableValuedFunctionReturnUsesDatabaseCollation.Content,
         [Predicates.FloatEquality.RuleId] = Predicates.FloatEquality.Content,
@@ -139,8 +138,6 @@ public static class RuleDocCatalog
 
         [Security.HardCodedCredential.RuleId] = Security.HardCodedCredential.Content,
         [Security.HardCodedIpAddress.RuleId] = Security.HardCodedIpAddress.Content,
-        [Security.WeakHashAlgorithm.RuleId] = Security.WeakHashAlgorithm.Content,
-        [Security.WeakHashAlgorithmInSensitiveContext.RuleId] = Security.WeakHashAlgorithmInSensitiveContext.Content,
         [Security.ExternalRestEndpointCall.RuleId] = Security.ExternalRestEndpointCall.Content,
 
         [ControlFlow.EmptyCatchBlock.RuleId] = ControlFlow.EmptyCatchBlock.Content,
@@ -208,7 +205,6 @@ public static class RuleDocCatalog
         [IndexDesign.NoRecomputeStatistics.RuleId] = IndexDesign.NoRecomputeStatistics.Content,
         [IndexDesign.VariableLengthKeyColumnExceedsKeyLimit.RuleId] = IndexDesign.VariableLengthKeyColumnExceedsKeyLimit.Content,
         [IndexDesign.MergeableIndexesDifferingIncludeOnly.RuleId] = IndexDesign.MergeableIndexesDifferingIncludeOnly.Content,
-        [IndexDesign.ColumnstoreIndexOnDmlTargetTable.RuleId] = IndexDesign.ColumnstoreIndexOnDmlTargetTable.Content,
         [IndexDesign.MonotonicClusteredKeyMissingSequentialOptimization.RuleId] = IndexDesign.MonotonicClusteredKeyMissingSequentialOptimization.Content,
         [IndexDesign.NonAlignedPartitionedIndex.RuleId] = IndexDesign.NonAlignedPartitionedIndex.Content,
         [IndexDesign.RowOrPageLockingDisabled.RuleId] = IndexDesign.RowOrPageLockingDisabled.Content,
@@ -270,7 +266,6 @@ public static class RuleDocCatalog
         [DeprecatedSyntax.TableHintWithoutWith.RuleId] = DeprecatedSyntax.TableHintWithoutWith.Content,
         [DeprecatedSyntax.NumberedProcedureDefinition.RuleId] = DeprecatedSyntax.NumberedProcedureDefinition.Content,
         [DeprecatedSyntax.NumberedProcedureExecution.RuleId] = DeprecatedSyntax.NumberedProcedureExecution.Content,
-        [DeprecatedSyntax.StringLiteralColumnAlias.RuleId] = DeprecatedSyntax.StringLiteralColumnAlias.Content,
         [DeprecatedSyntax.RemovedSecurityStoredProcedure.RuleId] = DeprecatedSyntax.RemovedSecurityStoredProcedure.Content,
         [DeprecatedSyntax.DeprecatedSetRowcount.RuleId] = DeprecatedSyntax.DeprecatedSetRowcount.Content,
         [DeprecatedSyntax.LegacyLobStatement.RuleId] = DeprecatedSyntax.LegacyLobStatement.Content,

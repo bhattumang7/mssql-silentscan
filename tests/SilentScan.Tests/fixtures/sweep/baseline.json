@@ -518,20 +518,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/deprecated-syntax/string-literal-column-alias",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/deprecated-syntax/string-literal-column-alias",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/deprecated-syntax/table-hint-without-with",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -1006,13 +992,6 @@
     "exampleIndex": 0,
     "outcome": "OwnRuleSilent",
     "reason": "rule fires on the identity column's actual current value, a genuine data-state fact; the doc example's 'production value 250' is only a comment (inserting 250 rows to reproduce it is not a viable doc example), so a freshly deployed sweep database never reaches the exhausted state the rule detects"
-  },
-  {
-    "ruleId": "silentscan/index-design/columnstore-index-on-dml-target-table",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Must declare the scalar variable \"@OrderId\"."
   },
   {
     "ruleId": "silentscan/index-design/disabled-index",
@@ -1517,34 +1496,6 @@
     "exampleIndex": 0,
     "outcome": "DeployFailed",
     "reason": "Incorrect syntax near the keyword 'PROCEDURE'."
-  },
-  {
-    "ruleId": "silentscan/security/weak-hash-algorithm",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/security/weak-hash-algorithm",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/security/weak-hash-algorithm-sensitive-context",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/security/weak-hash-algorithm-sensitive-context",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
     "ruleId": "silentscan/statement-shape/bare-select-star",

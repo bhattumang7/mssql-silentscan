@@ -353,15 +353,6 @@ public static class DeprecatedSyntaxScanner
             }
         }
 
-        public void OnEnterSelectScalarExpression(SelectScalarExpression node, ModuleWalker walker)
-        {
-            if (node.ColumnName?.ValueExpression is StringLiteral { Value: { } alias })
-            {
-                Add(DeprecatedSyntaxFindingKind.StringLiteralColumnAlias, node.ColumnName,
-                    $"Column alias \"{alias}\" is written as a string literal - a deprecated aliasing form.");
-            }
-        }
-
         public void OnEnterSetRowCountStatement(SetRowCountStatement node, ModuleWalker walker)
         {
             Add(DeprecatedSyntaxFindingKind.DeprecatedSetRowcount, node,

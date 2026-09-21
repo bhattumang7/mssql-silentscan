@@ -36,7 +36,6 @@ public enum IndexDesignFindingKind
 
     MergeableIndexesDifferingIncludeOnly,
 
-    ColumnstoreIndexOnDmlTargetTable,
 
     MonotonicClusteredKeyMissingSequentialOptimization,
 

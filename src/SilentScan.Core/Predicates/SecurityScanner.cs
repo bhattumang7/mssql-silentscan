@@ -17,11 +17,6 @@ public static partial class SecurityScanner
     private static IEnumerable<string> SplitIntoWords(string identifier) =>
         WordTokenRegex().Matches(identifier).Select(m => m.Value);
 
-    private static readonly HashSet<string> WeakHashAlgorithms = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "MD2", "MD4", "MD5", "SHA", "SHA1",
-    };
-
     private static bool IsBenignIpAddress(string ip)
     {
         if (ip.StartsWith("127.", StringComparison.Ordinal)
@@ -83,7 +78,6 @@ public static partial class SecurityScanner
     {
         public List<SecurityFinding> Findings { get; } = [];
 
-        private bool _inBooleanComparison;
 
         public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
         {
@@ -134,43 +128,11 @@ public static partial class SecurityScanner
             }
         }
 
-        public void OnEnterBooleanComparisonExpressionScope(BooleanComparisonExpression node, ModuleWalker walker) =>
-            _inBooleanComparison = true;
-
-        public void OnLeaveBooleanComparisonExpressionScope(BooleanComparisonExpression node, ModuleWalker walker) =>
-            _inBooleanComparison = false;
-
-        public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
-        {
-            if (string.Equals(node.FunctionName?.Value, "HASHBYTES", StringComparison.OrdinalIgnoreCase)
-                && node.Parameters is [StringLiteral { Value: { } algorithm }, ..] parameters
-                && WeakHashAlgorithms.Contains(algorithm))
-            {
-                var sensitive = _inBooleanComparison
-                    || (parameters.Count > 1 && IsCredentialSuggestiveOperand(parameters[1]));
-
-                Findings.Add(new SecurityFinding(
-                    sensitive ? SecurityFindingKind.WeakHashAlgorithmInSensitiveContext : SecurityFindingKind.WeakHashAlgorithm,
-                    sourcePath, node.StartLine, node.StartColumn,
-                    sensitive
-                        ? $"HASHBYTES('{algorithm}', ...) uses a cryptographically broken/deprecated algorithm in what looks like a security-sensitive context (a credential-named value, or a direct comparison) - use SHA2_256 or SHA2_512 instead."
-                        : $"HASHBYTES('{algorithm}', ...) uses a cryptographically broken/deprecated algorithm - fine for a non-security checksum/dedup use, but prefer SHA2_256/SHA2_512 if this value has any security purpose.",
-                    sensitive ? FindingConfidence.Medium : FindingConfidence.High));
-            }
-        }
-
         private void AddCredential(string variableName, TSqlFragment site) =>
             Findings.Add(new SecurityFinding(
                 SecurityFindingKind.HardCodedCredential,
                 sourcePath, site.StartLine, site.StartColumn,
                 $"'{variableName}' looks like it holds a credential and is assigned a literal string directly in source text - keep credentials in a secrets store or external configuration, never embedded in a script.",
                 FindingConfidence.Low));
-
-        private static bool IsCredentialSuggestiveOperand(ScalarExpression expression) => expression switch
-        {
-            VariableReference v => IsCredentialSuggestiveName(v.Name),
-            ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } last] } => IsCredentialSuggestiveName(last.Value),
-            _ => false,
-        };
     }
 }

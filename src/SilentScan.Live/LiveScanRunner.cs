@@ -180,8 +180,7 @@ public static class LiveScanRunner
         using (var indexDesignStage = progress.Begin("checking clustered/heap index design"))
         {
 
-            var dmlTargetTables = DmlTargetTableScanner.Scan(parseResultSource(indexDesignStage), catalog, indexDesignStage);
-            var indexDesignFindings = IndexDesignScanner.Scan(catalog, dmlTargetTables, indexDesignStage).Where(f => f.Confidence <= minimumConfidence).ToList();
+            var indexDesignFindings = IndexDesignScanner.Scan(catalog, indexDesignStage).Where(f => f.Confidence <= minimumConfidence).ToList();
             report = report.WithFindings("IndexDesignScanner", indexDesignFindings);
             indexDesignStage.Complete($"{indexDesignFindings.Count:N0} findings");
         }

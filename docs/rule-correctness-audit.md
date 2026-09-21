@@ -65,13 +65,6 @@ correctness bugs found; 0 remain open below.
   column is still nullable, matching the uncontested fact that a `DEFAULT`
   only applies when a column is omitted from an INSERT's column list, and
   an explicit `NULL` always overrides it.
-- `DmlTargetTable` (helper feeding `IndexDesignScanner`'s
-  `ColumnstoreIndexOnDmlTargetTable` rule, no own finding/rule id) — wired
-  correctly, not dead code; `DmlWriteTargetResolver` correctly excludes CTE
-  self-references and only resolves catalog-confirmed real tables
-  (synonyms resolved through), matching its "direct DML target" framing —
-  writes through an updatable view are intentionally out of scope, same as
-  sibling rules.
 - `FloatOrderDependentAggregateScanner` — aggregate-name gate (SUM/AVG/VAR/
   VARP/STDEV/STDEVP only, MIN/MAX/COUNT excluded) matches the rule doc's
   explicit claim; `OverClause is null` deliberately excludes windowed
@@ -180,8 +173,7 @@ statement — is uncontroversial syntax, not a claim needing verification).
   oracle-verified via a plan-inlining sweep (49 scalar-subquery table
   references inlines, 50 doesn't) — exact match to the scanner's `> 49`
   gate.
-- `SecurityScanner` — weak-hash-algorithm set (MD2/MD4/MD5/SHA/SHA1) matches
-  the documented `HASHBYTES` deprecated-algorithm list; credential/IP
+- `SecurityScanner` — credential/IP
   heuristics carry no falsifiable engine-behavior claim.
 - `SecurityPredicateIndexScanner` — leading-key-column-only match is
   explicitly documented as an intentional design choice (already

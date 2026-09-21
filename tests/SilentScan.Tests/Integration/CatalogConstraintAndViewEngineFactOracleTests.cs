@@ -96,7 +96,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/legacy-large-object-column")]
     [Trait("Rule", "silentscan/index-design/deprecated-lob-column-type")]
     public async Task TextColumnCannotBeIndexedOrIncluded_ButMaxColumnCanBeIncluded()
     {

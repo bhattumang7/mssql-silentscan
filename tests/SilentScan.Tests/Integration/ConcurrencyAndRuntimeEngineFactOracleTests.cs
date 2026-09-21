@@ -10,16 +10,6 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
     protected override string DatabaseNameSeed => nameof(ConcurrencyAndRuntimeEngineFactOracleTests);
 
     protected override string Ddl => """
-        CREATE TABLE dbo.CsTarget (Id INT NOT NULL, V INT NOT NULL);
-        CREATE CLUSTERED COLUMNSTORE INDEX CCI ON dbo.CsTarget;
-        INSERT INTO dbo.CsTarget SELECT TOP (200000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1 FROM sys.all_objects a, sys.all_objects b, sys.all_objects c;
-        CREATE TABLE dbo.CsIndexed (Id INT NOT NULL, V INT NOT NULL);
-        CREATE CLUSTERED COLUMNSTORE INDEX CCI ON dbo.CsIndexed;
-        CREATE NONCLUSTERED INDEX IX_CsIndexed_Id ON dbo.CsIndexed(Id);
-        INSERT INTO dbo.CsIndexed SELECT Id, V FROM dbo.CsTarget;
-        CREATE TABLE dbo.RsTarget (Id INT NOT NULL PRIMARY KEY, V INT NOT NULL);
-        INSERT INTO dbo.RsTarget SELECT Id, V FROM dbo.CsTarget;
-        GO
         CREATE TABLE dbo.Dr (Id INT PRIMARY KEY, V INT NOT NULL);
         INSERT INTO dbo.Dr VALUES (1, 10), (2, 20);
         GO
@@ -110,27 +100,6 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
 
     [GeneratedRegex(@"Table 'Cn'\..*?logical reads (\d+)")]
     private static partial Regex LogicalReadsRegex();
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/columnstore-index-on-dml-target-table")]
-    public async Task ColumnstoreRowgroupDelete_BlocksAnotherDeleteInSameRowgroup_RowstoreControlDoesNot()
-    {
-        Assert.True(await ScalarAsync<int>("SELECT COUNT(*) FROM sys.dm_db_column_store_row_group_physical_stats WHERE object_id = OBJECT_ID('dbo.CsTarget') AND state_desc = 'COMPRESSED';") > 0);
-
-        await using var first = await OpenConnectionAsync();
-        await using var second = await OpenConnectionAsync();
-        await ExecuteAsync(first, "BEGIN TRAN; DELETE FROM dbo.CsTarget WHERE Id = 1; DELETE FROM dbo.CsIndexed WHERE Id = 1; DELETE FROM dbo.RsTarget WHERE Id = 1;");
-        await ExecuteAsync(second, "SET LOCK_TIMEOUT 1000;");
-
-        var columnstore = await SqlErrorNumberAsync(second, "DELETE FROM dbo.CsTarget WHERE Id = 2;");
-        var indexedSeek = await SqlErrorNumberAsync(second, "DELETE FROM dbo.CsIndexed WHERE Id = 2;");
-        var rowstore = await SqlErrorNumberAsync(second, "DELETE FROM dbo.RsTarget WHERE Id = 2;");
-        await ExecuteAsync(first, "ROLLBACK;");
-
-        Assert.Equal(1222, columnstore);
-        Assert.Null(rowstore);
-        Assert.Null(indexedSeek);
-    }
 
     [Fact]
     [Trait("Rule", "silentscan/control-flow/dirty-read-isolation-hint")]

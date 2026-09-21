@@ -71,16 +71,6 @@ public sealed class DeprecatedAndSecurityEngineFactOracleTests : OracleTestFixtu
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/deprecated-syntax/string-literal-column-alias")]
-    public async Task StringLiteralAlias_IncrementsDeprecatedCounter_IdentifierAliasDoesNot()
-    {
-        var (control, feature) = await CounterDeltasAsync("String literals as column aliases", $"SELECT 1 AS Foo{Guid.NewGuid():N};", $"SELECT 'Foo{Guid.NewGuid():N}' = 1;");
-
-        Assert.Equal(0, control);
-        Assert.True(feature >= 1);
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/deprecated-syntax/table-hint-without-with")]
     public async Task TableHintWithoutWith_IncrementsDeprecatedCounter_WithKeywordDoesNot()
     {
@@ -88,17 +78,6 @@ public sealed class DeprecatedAndSecurityEngineFactOracleTests : OracleTestFixtu
 
         Assert.Equal(0, control);
         Assert.True(feature >= 1);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/security/weak-hash-algorithm")]
-    [Trait("Rule", "silentscan/security/weak-hash-algorithm-sensitive-context")]
-    public async Task WeakHashAlgorithms_ProduceNarrowerDigestsThanSha2()
-    {
-        Assert.Equal(16, await ScalarAsync<int>("SELECT DATALENGTH(HASHBYTES('MD5', 'a'));"));
-        Assert.Equal(20, await ScalarAsync<int>("SELECT DATALENGTH(HASHBYTES('SHA1', 'a'));"));
-        Assert.Equal(32, await ScalarAsync<int>("SELECT DATALENGTH(HASHBYTES('SHA2_256', 'a'));"));
-        Assert.Equal(64, await ScalarAsync<int>("SELECT DATALENGTH(HASHBYTES('SHA2_512', 'a'));"));
     }
 
     [Fact]
