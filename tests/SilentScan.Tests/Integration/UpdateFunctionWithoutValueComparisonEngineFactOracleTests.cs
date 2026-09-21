@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Integration;
@@ -24,18 +23,15 @@ public sealed class UpdateFunctionWithoutValueComparisonEngineFactOracleTests : 
         """;
 
     [Fact]
-    public async Task UpdateFunction_ReturnsTrue_ForAColumnRewrittenWithItsOwnUnchangedValue()
+    public async Task UpdateFunction_ReturnsTrue_ForAColumnRewrittenWithItsOwnUnchangedValue_ColumnAbsentFromSetListControlDoesNot()
     {
-        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
-        await connection.OpenAsync();
+        await ExecuteAsync("UPDATE dbo.T2 SET Id = 1 WHERE Id = 1;");
+        var loggedWithColumnAbsentFromSetList = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T2Log;");
 
-        await using var updateCommand = connection.CreateCommand();
-        updateCommand.CommandText = "UPDATE dbo.T2 SET Val = 100 WHERE Id = 1;";
-        await updateCommand.ExecuteNonQueryAsync();
+        await ExecuteAsync("UPDATE dbo.T2 SET Val = 100 WHERE Id = 1;");
+        var loggedWithUnchangedValueRewritten = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T2Log;");
 
-        await using var countCommand = connection.CreateCommand();
-        countCommand.CommandText = "SELECT COUNT(*) FROM dbo.T2Log;";
-        var triggerFiredCount = (int)(await countCommand.ExecuteScalarAsync())!;
-        Assert.Equal(1, triggerFiredCount);
+        Assert.Equal(0, loggedWithColumnAbsentFromSetList);
+        Assert.Equal(1, loggedWithUnchangedValueRewritten);
     }
 }

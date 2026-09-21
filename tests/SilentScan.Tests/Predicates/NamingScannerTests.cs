@@ -27,121 +27,6 @@ public sealed class NamingScannerTests
     }
 
     [Fact]
-    public void ReservedKeywordAsTableName_Fires()
-    {
-        var findings = Scan("CREATE TABLE dbo.[order] (Id INT NOT NULL);");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void OrdinaryTableName_NeverFiresReservedKeyword()
-    {
-        var findings = Scan("CREATE TABLE dbo.Orders (Id INT NOT NULL);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ReservedKeywordAsColumnName_Fires()
-    {
-        var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL, [select] INT NULL);");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void OrdinaryColumnName_NeverFiresReservedKeyword()
-    {
-        var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL, Amount INT NULL);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ScanCatalogNames_ReservedKeywordAsTableName_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddOrReplace(new CatalogTable(
-            "dbo", "order", CatalogTableKind.Table,
-            [new CatalogColumn("Id", new SqlType(SqlTypeCategory.Int), IsNullable: false, IsIdentity: false, IsComputed: false, IsPersisted: false)],
-            [], SourcePath: "dbo.order", SourceLine: 0));
-
-        var findings = NamingScanner.ScanCatalogNames(catalog);
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ScanCatalogNames_ReservedKeywordAsColumnName_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddOrReplace(new CatalogTable(
-            "dbo", "T", CatalogTableKind.Table,
-            [new CatalogColumn("select", new SqlType(SqlTypeCategory.Int), IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false)],
-            [], SourcePath: "dbo.T", SourceLine: 0));
-
-        var findings = NamingScanner.ScanCatalogNames(catalog);
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ScanCatalogNames_OrdinaryTableAndColumnNames_NeverFireReservedKeyword()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddOrReplace(new CatalogTable(
-            "dbo", "Orders", CatalogTableKind.Table,
-            [new CatalogColumn("Amount", new SqlType(SqlTypeCategory.Int), IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false)],
-            [], SourcePath: "dbo.Orders", SourceLine: 0));
-
-        var findings = NamingScanner.ScanCatalogNames(catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ReservedKeywordAsProcedureName_Fires()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.[transaction] AS BEGIN SELECT 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void ReservedKeywordAsIndexName_Fires()
-    {
-        var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL);\nCREATE INDEX [key] ON dbo.T (Id);");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void SpPrefixOnProcedure_Fires()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.sp_DoSomething AS BEGIN SELECT 1; END");
-
-        var finding = Assert.Single(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-        Assert.Contains("sp_DoSomething", finding.DetailText);
-    }
-
-    [Fact]
-    public void SpPrefixOnFunction_Fires()
-    {
-        var findings = Scan("CREATE FUNCTION dbo.sp_Calculate() RETURNS INT AS BEGIN RETURN 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-    }
-
-    [Fact]
-    public void OrdinaryProcedureName_NeverFiresSpPrefix()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.DoSomething AS BEGIN SELECT 1; END");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-    }
-
-    [Fact]
     public void UnqualifiedCreateProcedure_Fires()
     {
         var findings = Scan("CREATE PROCEDURE DoSomething AS BEGIN SELECT 1; END");
@@ -239,22 +124,6 @@ public sealed class NamingScannerTests
     }
 
     [Fact]
-    public void AlterProcedureSpPrefix_Fires()
-    {
-        var findings = Scan("ALTER PROCEDURE dbo.sp_DoSomething AS BEGIN SELECT 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-    }
-
-    [Fact]
-    public void AlterProcedureOrdinaryName_NeverFiresSpPrefix()
-    {
-        var findings = Scan("ALTER PROCEDURE dbo.DoSomething AS BEGIN SELECT 1; END");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-    }
-
-    [Fact]
     public void AlterProcedureUnqualified_Fires()
     {
         var findings = Scan("ALTER PROCEDURE DoSomething AS BEGIN SELECT 1; END");
@@ -268,14 +137,6 @@ public sealed class NamingScannerTests
         var findings = Scan("ALTER PROCEDURE dbo.DoSomething AS BEGIN SELECT 1; END");
 
         Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.UnqualifiedCreate);
-    }
-
-    [Fact]
-    public void AlterFunctionSpPrefix_Fires()
-    {
-        var findings = Scan("ALTER FUNCTION dbo.sp_Calculate() RETURNS INT AS BEGIN RETURN 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
     }
 
     [Fact]
@@ -303,30 +164,6 @@ public sealed class NamingScannerTests
     }
 
     [Fact]
-    public void CreateViewReservedKeywordName_Fires()
-    {
-        var findings = Scan("CREATE VIEW dbo.[key] AS SELECT 1 AS Col;");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void OrdinaryViewName_NeverFiresReservedKeyword()
-    {
-        var findings = Scan("CREATE VIEW dbo.MyView AS SELECT 1 AS Col;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void AlterViewReservedKeywordName_Fires()
-    {
-        var findings = Scan("ALTER VIEW dbo.[key] AS SELECT 1 AS Col;");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
     public void AlterViewUnqualified_Fires()
     {
         var findings = Scan("ALTER VIEW MyView AS SELECT 1 AS Col;");
@@ -343,67 +180,6 @@ public sealed class NamingScannerTests
     }
 
     [Fact]
-    public void CreateTriggerReservedKeywordName_Fires()
-    {
-        var findings = Scan("CREATE TRIGGER dbo.[trigger] ON dbo.T AFTER INSERT AS BEGIN SELECT 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void OrdinaryTriggerName_NeverFiresReservedKeyword()
-    {
-        var findings = Scan("CREATE TRIGGER dbo.T_AfterInsert ON dbo.T AFTER INSERT AS BEGIN SELECT 1; END");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void AlterTriggerReservedKeywordName_Fires()
-    {
-        var findings = Scan("ALTER TRIGGER dbo.[trigger] ON dbo.T AFTER INSERT AS BEGIN SELECT 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void SpPrefixCheck_IsCaseInsensitive_Fires()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.SP_Foo AS BEGIN SELECT 1; END");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-    }
-
-    [Fact]
-    public void ReservedKeywordCheck_IsCaseInsensitive_Fires()
-    {
-        var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL, [Select] INT NULL);");
-
-        Assert.Contains(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void IdentifierContainingReservedWordAsSubstring_NeverFires()
-    {
-        var findings = Scan("CREATE TABLE dbo.T (Id INT NOT NULL, OrderId INT NULL);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == NamingFindingKind.ReservedKeywordAsIdentifier);
-    }
-
-    [Fact]
-    public void MultipleProcedures_OnlyBadRoutineFlagged_DetailTextNamesCorrectRoutine()
-    {
-        var sql = "CREATE PROCEDURE dbo.sp_Bad AS BEGIN SELECT 1; END;\n" +
-                  "GO\n" +
-                  "CREATE PROCEDURE dbo.Good AS BEGIN SELECT 1; END;";
-        var findings = Scan(sql);
-
-        var finding = Assert.Single(findings, f => f.Kind == NamingFindingKind.SpPrefixOnUserRoutine);
-        Assert.Contains("sp_Bad", finding.DetailText);
-        Assert.DoesNotContain("Good\"", finding.DetailText);
-    }
-
-    [Fact]
     public void UnqualifiedCreateProcedure_DetailTextNamesProcedureAndOmitsSchema()
     {
         var findings = Scan("CREATE PROCEDURE DoSomething AS BEGIN SELECT 1; END");
@@ -412,29 +188,5 @@ public sealed class NamingScannerTests
         Assert.Equal(
             "Procedure \"DoSomething\" is created with no explicit schema qualifier - its real owning schema depends on the connecting principal's own default schema.",
             finding.DetailText);
-    }
-
-    [Fact]
-    public void SpPrefixRuleRationale_StatesLocalDatabaseWinsOverMaster_NotMasterFirst()
-    {
-        var rule = Assert.Single(
-            RuleCatalog.BaseRules,
-            r => r.Id == SarifRuleCatalog.NamingSpPrefixOnUserRoutineRuleId);
-
-        Assert.DoesNotContain("master database first", rule.Rationale, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("searches the master", rule.Rationale, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("shadow", rule.Rationale, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("master", rule.Rationale, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void SpPrefixRuleDoc_StatesLocalDatabaseWinsOverMaster_NotMasterFirst()
-    {
-        var whyItMatters = RuleDocCatalog.ByRuleId[SarifRuleCatalog.NamingSpPrefixOnUserRoutineRuleId].WhyItMatters;
-
-        Assert.DoesNotContain("looked up in the `master` database FIRST", whyItMatters, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("resolved against the caller's own database FIRST", whyItMatters, StringComparison.Ordinal);
-        Assert.Contains("shadow", whyItMatters, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("falls through to", whyItMatters, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -33,7 +33,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<SargabilityFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<TypedPredicateFinding>(nameof(TypedPredicateExtractor)).Where(f => f.Verdict is not (Verdict.Unknown or Verdict.OperandClash)).Select(ToResult));
         results.AddRange(report.Find<ExpressionDerivedFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
-        results.AddRange(report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<WriteLossFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<TvfFenceFinding>("TvfFenceScanner").Select(ToResult));
         results.AddRange(report.Find<ScalarUdfFinding>("ScalarUdfScanner").Select(ToResult));
@@ -95,11 +94,9 @@ public static class SarifReportWriter
         results.AddRange(report.Find<SecurityFinding>("SecurityScanner").Select(ToResult));
         results.AddRange(report.Find<IndexDesignFinding>("IndexDesignScanner").Select(ToResult));
         results.AddRange(report.Find<ForcedParameterizationFinding>("ForcedParameterizationScanner").Select(ToResult));
-        results.AddRange(report.Find<IdentityRangeFinding>("IdentityRangeScanner").Select(ToResult));
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner").Select(ToResult));
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
-        results.AddRange(report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>("MemoryOptimizedSchemaOnlyDurabilityScanner").Select(ToResult));
         results.AddRange(report.Find<QueryAntiPatternFinding>("QueryAntiPatternScanner").Select(ToResult));
         results.AddRange(report.Find<IndexCoverageFinding>("IndexCoverageScanner").Select(ToResult));
@@ -272,16 +269,6 @@ public static class SarifReportWriter
         var level = anyUnderlyingIndexed ? LevelError : DowngradeOneLevel(LevelError);
         level = FloorLevelForConfidence(level, finding.Confidence);
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ExpressionDerivedRuleId, finding.Confidence);
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.ColumnPosition);
-    }
-
-    private static SarifResult ToResult(CollationConflictFinding finding)
-    {
-
-        var message = $"Collation conflict: '{finding.FirstTableQualifiedName}.{finding.FirstColumnName}' (COLLATE {finding.FirstCollationName}) {finding.Operator} '{finding.SecondTableQualifiedName}.{finding.SecondColumnName}' (COLLATE {finding.SecondCollationName}) does not compile.{DynamicSqlOriginNote(finding.DynamicSqlCallSite)}";
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CollationConflictRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.ColumnPosition);
     }
@@ -681,10 +668,7 @@ public static class SarifReportWriter
     {
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SecurityRuleId(finding.Kind), finding.Confidence);
-        var baseLevel = finding.Kind is SecurityFindingKind.HardCodedIpAddress
-            ? LevelError
-            : LevelWarning;
-        var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
 
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -1225,16 +1209,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: null);
     }
 
-    private static SarifResult ToResult(IdentityRangeFinding finding)
-    {
-
-        var baseLevel = finding.Kind == IdentityRangeFindingKind.IdentityRangeNearExhaustion ? LevelError : LevelNote;
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.IdentityRangeRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
-
-        return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
     private static SarifResult ToResult(FloatEqualityFinding finding)
     {
 
@@ -1267,16 +1241,6 @@ public static class SarifReportWriter
     }
 
 
-    private static SarifResult ToResult(ExecuteAtLargeObjectParameterFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ExecuteAtLargeObjectParameterRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind == ExecuteAtLargeObjectParameterFindingKind.CrashesSession
-            ? $"Parameter @{finding.VariableName} ({finding.TypeDisplay}) is passed to EXECUTE (...) AT - a large-object-typed parameter here crashes the connection with an internal assertion failure (Msg 3624), not a clean error."
-            : $"Parameter @{finding.VariableName} ({finding.TypeDisplay}) is passed to EXECUTE (...) AT - the xml data type is not supported as a parameter to remote calls (Msg 9512).";
-
-        return BuildResult(ruleId, LevelError, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
     private static SarifResult ToResult(TriggerOrderFinding finding)
     {
 
@@ -1297,7 +1261,6 @@ public static class SarifReportWriter
             QueryAntiPatternFindingKind.CountStarVariableExistenceCheck => LevelError,
             QueryAntiPatternFindingKind.NonAggregateHavingPredicate => LevelWarning,
 
-            QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion => LevelError,
             _ => LevelWarning,
         };
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.QueryAntiPatternRuleId(finding.Kind), finding.Confidence);
@@ -1396,8 +1359,6 @@ public static class SarifReportWriter
         var level = finding.Kind switch
         {
             TvfFenceFindingKind.CorrelatedApply or TvfFenceFindingKind.NestedUnderViewOrTvf => LevelError,
-            TvfFenceFindingKind.FromOrJoin or TvfFenceFindingKind.InsertExec => LevelWarning,
-            TvfFenceFindingKind.Standalone => LevelNote,
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled TvfFenceFindingKind."),
         };
         level = FloorLevelForConfidence(level, finding.Confidence);
@@ -1409,12 +1370,6 @@ public static class SarifReportWriter
                 $"'{finding.FunctionQualifiedName}' ({finding.FunctionKind}) is CROSS/OUTER APPLYed with an argument correlated to {string.Join(", ", finding.CorrelatedOuterColumns ?? [])} - the body re-executes once per outer row; interleaved execution does not rescue this.",
             TvfFenceFindingKind.NestedUnderViewOrTvf =>
                 $"'{finding.ReferencedObjectQualifiedName}' inherits an optimization fence from '{finding.FunctionQualifiedName}' ({finding.FunctionKind}) {finding.Depth} layer(s) down, introduced at {finding.OriginSourcePath}:{finding.OriginLine}.",
-            TvfFenceFindingKind.FromOrJoin =>
-                $"'{finding.FunctionQualifiedName}' ({finding.FunctionKind}) is referenced directly in FROM/JOIN - the optimizer cannot see into its body and estimates a fixed row count.",
-            TvfFenceFindingKind.InsertExec =>
-                $"INSERT ... EXEC '{finding.ReferencedObjectQualifiedName}' forces the procedure's entire result set to be spooled to a worktable before insertion.",
-            TvfFenceFindingKind.Standalone =>
-                $"'{finding.FunctionQualifiedName}' ({finding.FunctionKind}) is referenced standalone - the fence is real but nothing surrounds it for the fixed estimate to poison.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled TvfFenceFindingKind."),
         };
         message += DynamicSqlOriginNote(finding.DynamicSqlCallSite);

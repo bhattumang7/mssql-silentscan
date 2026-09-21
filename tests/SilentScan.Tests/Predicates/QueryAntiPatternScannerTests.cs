@@ -312,55 +312,6 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void UnionOfTwoDistinctLiteralEqualityBranches_Fires()
-    {
-        var findings = Scan(
-            "SELECT * FROM dbo.Big WHERE Col = 'a' UNION SELECT * FROM dbo.Big WHERE Col = 'b';");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void UnionOfThreeDistinctLiteralEqualityBranches_Fires()
-    {
-        var findings = Scan(
-            "SELECT * FROM dbo.Big WHERE Col = 'a' "
-            + "UNION SELECT * FROM dbo.Big WHERE Col = 'b' "
-            + "UNION SELECT * FROM dbo.Big WHERE Col = 'c';");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionAll_NeverFires()
-    {
-        var findings = Scan(
-            "SELECT * FROM dbo.Big WHERE Col = 'a' UNION ALL SELECT * FROM dbo.Big WHERE Col = 'b';");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionWithOverlappingLiteral_NeverFires()
-    {
-        var findings = Scan(
-            "SELECT * FROM dbo.Big WHERE Col = 'a' UNION SELECT * FROM dbo.Big WHERE Col = 'a';");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionWithJoinBranch_NeverFires()
-    {
-        var findings = Scan(
-            "SELECT a.Id FROM dbo.A a JOIN dbo.B b ON a.Id = b.AId WHERE a.Id = 1 "
-            + "UNION SELECT Id FROM dbo.A WHERE Id = 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
     public void SelectDistinctJoinOnNonUniqueColumn_Fires()
     {
         var findings = Scan("SELECT DISTINCT a.Id FROM dbo.A a JOIN dbo.C c ON a.Id = c.AId;");
@@ -509,64 +460,6 @@ public sealed class QueryAntiPatternScannerTests
             + "WHEN MATCHED AND s.AId > 0 THEN DELETE;");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeUnconditionalDelete);
-    }
-
-    [Fact]
-    public void RecursiveCteWithNoMaxRecursionOption_Fires()
-    {
-        var findings = Scan(
-            "WITH r AS (SELECT Id FROM dbo.A WHERE Id = 1 UNION ALL SELECT a.Id FROM dbo.A a JOIN r ON a.Id = r.Id + 1) "
-            + "SELECT Id FROM r;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void RecursiveCteWithMaxRecursionOption_NeverFires()
-    {
-        var findings = Scan(
-            "WITH r AS (SELECT Id FROM dbo.A WHERE Id = 1 UNION ALL SELECT a.Id FROM dbo.A a JOIN r ON a.Id = r.Id + 1) "
-            + "SELECT Id FROM r OPTION (MAXRECURSION 500);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
-    }
-
-    [Fact]
-    public void NonRecursiveCte_NeverFiresMaxRecursion()
-    {
-        var findings = Scan(
-            "WITH r AS (SELECT Id FROM dbo.A) SELECT Id FROM r;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
-    }
-
-    [Fact]
-    public void RecursiveCteSelfReference_UnderCaseSensitiveCollation_MismatchedCaseDoesNotSelfReference()
-    {
-        var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\n"
-            + "WITH r AS (SELECT Id FROM dbo.A WHERE Id = 1 UNION ALL SELECT a.Id FROM dbo.A a JOIN R ON a.Id = R.Id + 1) "
-            + "SELECT Id FROM r;");
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-
-        var catalog = CatalogBuilder.Build([result], manifestDeclaredCollation: "Latin1_General_CS_AS");
-        var findings = QueryAntiPatternScanner.Scan(result, catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
-    }
-
-    [Fact]
-    public void RecursiveCteSelfReference_UnderCaseInsensitiveCollation_MismatchedCaseStillSelfReferences()
-    {
-        var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\n"
-            + "WITH r AS (SELECT Id FROM dbo.A WHERE Id = 1 UNION ALL SELECT a.Id FROM dbo.A a JOIN R ON a.Id = R.Id + 1) "
-            + "SELECT Id FROM r;");
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-
-        var catalog = CatalogBuilder.Build([result], manifestDeclaredCollation: "SQL_Latin1_General_CP1_CI_AS");
-        var findings = QueryAntiPatternScanner.Scan(result, catalog);
-
-        Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion);
     }
 
     [Fact]
@@ -1188,42 +1081,5 @@ public sealed class QueryAntiPatternScannerTests
             "SELECT DISTINCT a.Id FROM dbo.A a JOIN dbo.C c ON 1 = 1;");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.DistinctMaskingJoinFanout);
-    }
-
-    [Fact]
-    public void UnionBranchIsUnflattenableParenthesizedQuery_NeverFiresDisjointness()
-    {
-        var findings = Scan(
-            "SELECT Id FROM dbo.A WHERE Id = 1 "
-            + "UNION (SELECT Id FROM dbo.A WHERE Id = 2 UNION ALL SELECT Id FROM dbo.A WHERE Id = 3);");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionBranchesFilterDifferentTables_NeverFiresDisjointness()
-    {
-        var findings = Scan(
-            "SELECT Id FROM dbo.A WHERE Id = 1 UNION SELECT Id FROM dbo.C WHERE AId = 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionBranchHasMultiTableFrom_NeverFiresDisjointness()
-    {
-        var findings = Scan(
-            "SELECT a.Id FROM dbo.A a, dbo.C c WHERE a.Id = 1 UNION SELECT Id FROM dbo.A WHERE Id = 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
-    }
-
-    [Fact]
-    public void UnionBranchUsesNonEqualsComparison_NeverFiresDisjointness()
-    {
-        var findings = Scan(
-            "SELECT Id FROM dbo.A WHERE Id <> 1 UNION SELECT Id FROM dbo.A WHERE Id = 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches);
     }
 }

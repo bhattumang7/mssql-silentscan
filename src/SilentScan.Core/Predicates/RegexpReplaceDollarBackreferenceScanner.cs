@@ -58,29 +58,11 @@ public static class RegexpReplaceDollarBackreferenceScanner
         private static int CountCaptureGroups(string pattern)
         {
             var groupCount = 0;
-            var inCharacterClass = false;
             var i = 0;
 
             while (i < pattern.Length)
             {
                 var c = pattern[i];
-
-                if (inCharacterClass)
-                {
-                    if (c == '\\' && i + 1 < pattern.Length)
-                    {
-                        i += 2;
-                        continue;
-                    }
-
-                    if (c == ']')
-                    {
-                        inCharacterClass = false;
-                    }
-
-                    i++;
-                    continue;
-                }
 
                 if (c == '\\' && i + 1 < pattern.Length)
                 {
@@ -90,18 +72,7 @@ public static class RegexpReplaceDollarBackreferenceScanner
 
                 if (c == '[')
                 {
-                    inCharacterClass = true;
-                    i++;
-                    if (i < pattern.Length && pattern[i] == '^')
-                    {
-                        i++;
-                    }
-
-                    if (i < pattern.Length && pattern[i] == ']')
-                    {
-                        i++;
-                    }
-
+                    i = SkipCharacterClass(pattern, i);
                     continue;
                 }
 
@@ -120,6 +91,38 @@ public static class RegexpReplaceDollarBackreferenceScanner
             }
 
             return groupCount;
+        }
+
+        private static int SkipCharacterClass(string pattern, int openIndex)
+        {
+            var i = openIndex + 1;
+            if (i < pattern.Length && pattern[i] == '^')
+            {
+                i++;
+            }
+
+            if (i < pattern.Length && pattern[i] == ']')
+            {
+                i++;
+            }
+
+            while (i < pattern.Length)
+            {
+                if (pattern[i] == '\\' && i + 1 < pattern.Length)
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (pattern[i] == ']')
+                {
+                    return i + 1;
+                }
+
+                i++;
+            }
+
+            return i;
         }
 
         private static List<string> FindDollarBackreferenceTokens(string replacement, int groupCount)

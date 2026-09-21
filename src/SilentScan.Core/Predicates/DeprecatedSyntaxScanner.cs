@@ -19,18 +19,6 @@ public static class DeprecatedSyntaxScanner
         "sysremotelogins", "sysservers", "systypes", "sysusers",
     };
 
-    private static readonly HashSet<string> RemovedSecurityStoredProcedureNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sp_addapprole", "sp_addlogin", "sp_addremotelogin", "sp_addrole", "sp_addrolemember",
-        "sp_addserver", "sp_addsrvrolemember", "sp_adduser", "sp_approlepassword", "sp_change_users_login",
-        "sp_changedbowner", "sp_changeobjectowner",
-        "sp_dbfixedrolepermission", "sp_defaultdb", "sp_defaultlanguage", "sp_denylogin", "sp_dropalias",
-        "sp_dropapprole", "sp_droplogin", "sp_dropremotelogin", "sp_droprole", "sp_droprolemember",
-        "sp_dropsrvrolemember", "sp_dropuser", "sp_grantdbaccess", "sp_grantlogin", "sp_helpremotelogin",
-        "sp_helprotect", "sp_helpuser", "sp_password", "sp_remoteoption", "sp_revokedbaccess",
-        "sp_revokelogin", "sp_srvrolepermission",
-    };
-
     public static IReadOnlyList<DeprecatedSyntaxFinding> Scan(SqlParseResult parseResult, DatabaseCatalog? catalog = null)
     {
         var rule = CreateRule(parseResult, catalog);
@@ -215,14 +203,6 @@ public static class DeprecatedSyntaxScanner
     private static bool IsNullLiteral(ScalarExpression expression) =>
         expression is NullLiteral;
 
-    private static string OperatorText(BooleanComparisonType type) => type switch
-    {
-        BooleanComparisonType.NotLessThan => "!<",
-        BooleanComparisonType.NotGreaterThan => "!>",
-        BooleanComparisonType.NotEqualToExclamation => "!=",
-        _ => type.ToString(),
-    };
-
     private static (DeprecatedSyntaxFindingKind Kind, string Detail)? ClassifyComparison(
         BooleanComparisonType comparisonType, bool comparesToNull, bool ansiNullsIsOff)
     {
@@ -236,10 +216,6 @@ public static class DeprecatedSyntaxScanner
                 when comparesToNull && !ansiNullsIsOff:
                 return (DeprecatedSyntaxFindingKind.NotEqualsNullComparison,
                     "\"<> NULL\"/\"!= NULL\" never matches any row under the default ANSI_NULLS ON session setting - use \"IS NOT NULL\".");
-
-            case BooleanComparisonType.NotEqualToExclamation or BooleanComparisonType.NotLessThan or BooleanComparisonType.NotGreaterThan:
-                return (DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator,
-                    $"Non-ANSI comparison operator \"{OperatorText(comparisonType)}\" used - write the ANSI-standard form instead.");
 
             default:
                 return null;
@@ -321,20 +297,10 @@ public static class DeprecatedSyntaxScanner
 
         public void OnEnterExecutableProcedureReference(ExecutableProcedureReference node, ModuleWalker walker)
         {
-            if (node.ProcedureReference?.ProcedureReference is { } procRef)
+            if (node.ProcedureReference?.ProcedureReference is { Number: not null } procRef)
             {
-                if (procRef.Number is not null)
-                {
-                    Add(DeprecatedSyntaxFindingKind.NumberedProcedureExecution, node,
-                        $"\"{SchemaObjectNameHelper.Qualify(procRef.Name)}\" invoked by its numbered-procedure-group number - a deprecated T-SQL feature.");
-                }
-
-                var routineName = procRef.Name.BaseIdentifier.Value;
-                if (RemovedSecurityStoredProcedureNames.Contains(routineName))
-                {
-                    Add(DeprecatedSyntaxFindingKind.RemovedSecurityStoredProcedure, node,
-                        $"\"{routineName}\" is a legacy security-administration procedure superseded by CREATE LOGIN/CREATE USER/ALTER ROLE - some names in this family are already fully removed from current SQL Server versions.");
-                }
+                Add(DeprecatedSyntaxFindingKind.NumberedProcedureExecution, node,
+                    $"\"{SchemaObjectNameHelper.Qualify(procRef.Name)}\" invoked by its numbered-procedure-group number - a deprecated T-SQL feature.");
             }
         }
 

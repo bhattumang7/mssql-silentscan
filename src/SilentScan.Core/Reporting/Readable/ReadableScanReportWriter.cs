@@ -72,7 +72,6 @@ public static class ReadableScanReportWriter
 
         var blocks = new List<ReadableBlock>();
         blocks.AddRange(Summary(report, headingLevel));
-        blocks.AddRange(CollationConflicts(report, headingLevel, pathBase));
         blocks.AddRange(TypedSection(
             report, Verdict.ScanForced, headingLevel, pathBase,
             "Implicit conversions that force a scan",
@@ -148,11 +147,9 @@ public static class ReadableScanReportWriter
         blocks.AddRange(Security(report, headingLevel, pathBase));
         blocks.AddRange(IndexDesign(report, headingLevel, pathBase));
         blocks.AddRange(ForcedParameterization(report, headingLevel, pathBase));
-        blocks.AddRange(IdentityRange(report, headingLevel, pathBase));
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
         blocks.AddRange(FloatOrderDependentAggregate(report, headingLevel, pathBase));
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
-        blocks.AddRange(ExecuteAtLargeObjectParameter(report, headingLevel, pathBase));
         blocks.AddRange(QueryAntiPattern(report, headingLevel, pathBase));
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
         blocks.AddRange(TriggerCorrectness(report, headingLevel, pathBase));
@@ -195,7 +192,6 @@ public static class ReadableScanReportWriter
             $"{Count(health.TotalFiles, "file")} scanned, {parsed} parsed cleanly ({Percent(health.ParseSuccessRate)}).");
 
         var counts = new List<IReadOnlyList<string>>();
-        AddCount(counts, "Collation conflicts (query does not compile)", report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Implicit conversions forcing a scan", summary.ScanForcedCount, summary.DistinctScanForcedCount);
         AddCount(counts, "Implicit conversions degrading the seek", summary.RangeSeekCount, summary.DistinctRangeSeekCount);
         AddCount(counts, "Expression-derived columns in predicates", report.Find<ExpressionDerivedFinding>(nameof(TypedPredicateExtractor)).Count);
@@ -230,11 +226,9 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Security", report.Find<SecurityFinding>(nameof(SecurityScanner)).Count);
         AddCount(counts, "Physical/schema index design (heap/clustered-key quality)", report.Find<IndexDesignFinding>(nameof(IndexDesignScanner)).Count);
         AddCount(counts, "Forced-parameterization-defeating query shapes", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
-        AddCount(counts, "Identity/sequence range signals", report.Find<IdentityRangeFinding>(nameof(IdentityRangeScanner)).Count);
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
-        AddCount(counts, "EXECUTE (...) AT large-object/xml parameter", report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner)).Count);
         AddCount(counts, "Query anti-patterns", report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count);
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
         AddCount(counts, "Trigger correctness", report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).Count);
@@ -358,28 +352,6 @@ public static class ReadableScanReportWriter
         false => "no",
         null => "unresolved",
     };
-
-    private static IEnumerable<ReadableBlock> CollationConflicts(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Collation conflicts ({report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "These comparisons put two explicitly different collations on either side, which SQL Server rejects at compile time (Msg 468) - the query does not run at all. That outranks any seek-versus-scan question, so they are listed first.");
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CollationConflictRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Left", "Right", OperatorHeader],
-            [.. report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, f.DynamicSqlCallSite, pathBase, f.Confidence),
-                $"{f.FirstTableQualifiedName}.{f.FirstColumnName} COLLATE {f.FirstCollationName}",
-                $"{f.SecondTableQualifiedName}.{f.SecondColumnName} COLLATE {f.SecondCollationName}",
-                f.Operator,
-            })]);
-    }
 
     private static IEnumerable<ReadableBlock> ExpressionDerived(ScanReport report, int level, string? pathBase)
     {
@@ -564,9 +536,6 @@ public static class ReadableScanReportWriter
     {
         TvfFenceFindingKind.CorrelatedApply => "Correlated CROSS/OUTER APPLY (re-executes per outer row)",
         TvfFenceFindingKind.NestedUnderViewOrTvf => "Fence inherited through a view/TVF layer",
-        TvfFenceFindingKind.FromOrJoin => "Direct FROM/JOIN reference",
-        TvfFenceFindingKind.InsertExec => "INSERT ... EXEC (forced worktable materialization)",
-        TvfFenceFindingKind.Standalone => "Standalone reference (fence present, nothing to poison)",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled TvfFenceFindingKind."),
     };
 
@@ -1056,7 +1025,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Naming and identifier risks ({report.Find<NamingFinding>(nameof(NamingScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A reserved keyword used as an identifier, a user-defined procedure/function named with the \"sp_\" prefix, a schema-scoped CREATE with no explicit schema qualifier, and a redundant \"dbo.\" qualifier on a type reference.");
+            "A reserved keyword used as an identifier, a schema-scoped CREATE with no explicit schema qualifier, and a redundant \"dbo.\" qualifier on a type reference.");
 
         foreach (var group in report.Find<NamingFinding>(nameof(NamingScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
@@ -1288,33 +1257,6 @@ public static class ReadableScanReportWriter
         _ => false,
     };
 
-    private static IEnumerable<ReadableBlock> IdentityRange(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<IdentityRangeFinding>(nameof(IdentityRangeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Identity/sequence range signals ({report.Find<IdentityRangeFinding>(nameof(IdentityRangeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Live-mode only. An IDENTITY column that has consumed most of its declared type's representable range - data-state-decidable, meaningful ONLY against a production-shaped target; never read the absence of this finding as a passing signal on a low-value development database.");
-
-        foreach (var group in report.Find<IdentityRangeFinding>(nameof(IdentityRangeScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.IdentityRangeRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    f.ColumnName,
-                    f.DetailText,
-                })]);
-        }
-    }
-
     private static IEnumerable<ReadableBlock> FloatEquality(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count == 0)
@@ -1388,29 +1330,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> ExecuteAtLargeObjectParameter(ScanReport report, int level, string? pathBase)
-    {
-        var findings = report.Find<ExecuteAtLargeObjectParameterFinding>(nameof(ExecuteAtLargeObjectParameterScanner));
-        if (findings.Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"EXECUTE (...) AT large-object/xml parameter ({findings.Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An EXECUTE ('...', @param, ...) AT linked_server/data_source call passes a VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX) or xml-typed local variable or parameter as one of the remote call's arguments. A large-object-typed value there crashes the connection with an internal engine assertion failure rather than a clean error; an xml-typed value is rejected outright (Msg 9512, \"Xml data type is not supported as a parameter to remote calls\").");
-
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ParameterHeader, "Type", DetailHeader],
-            [.. findings.Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"@{f.VariableName}",
-                f.TypeDisplay,
-                RuleDocSite.Url(SarifRuleCatalog.ExecuteAtLargeObjectParameterRuleId(f.Kind)),
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> QueryAntiPattern(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count == 0)
@@ -1420,7 +1339,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Query anti-patterns ({report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "Structurally-provable query shapes from two DBA-script-family sweep batches: a table variable used as a query source under a low compatibility level or a growing WHILE loop (stale/fixed cardinality estimate), a WHILE loop doing single-row DML keyed to its own tracked variable (RBAR), a cursor declared without LOCAL, COUNT(*) assigned to a variable then compared only to zero (a real full-set scan, unlike the inline scalar-subquery form the optimizer already rewrites), a non-aggregate HAVING predicate that belongs in WHERE, a UNION of provably disjoint branches, a SELECT DISTINCT join not backed by a unique index, an unqualified table reference at a real query site, three MERGE hazards (missing HOLDLOCK, a non-unique USING source, an unconditional DELETE branch), a recursive CTE with no MAXRECURSION option, a whole-table UPDATE/DELETE with no WHERE and no TOP, and a linked-server/cross-database table reference.");
+            "Structurally-provable query shapes from two DBA-script-family sweep batches: a table variable used as a query source under a low compatibility level or a growing WHILE loop (stale/fixed cardinality estimate), a WHILE loop doing single-row DML keyed to its own tracked variable (RBAR), a cursor declared without LOCAL, COUNT(*) assigned to a variable then compared only to zero (a real full-set scan, unlike the inline scalar-subquery form the optimizer already rewrites), a non-aggregate HAVING predicate that belongs in WHERE, a SELECT DISTINCT join not backed by a unique index, an unqualified table reference at a real query site, three MERGE hazards (missing HOLDLOCK, a non-unique USING source, an unconditional DELETE branch), a recursive CTE with no MAXRECURSION option, a whole-table UPDATE/DELETE with no WHERE and no TOP, and a linked-server/cross-database table reference.");
 
         foreach (var group in report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {

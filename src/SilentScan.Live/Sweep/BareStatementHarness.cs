@@ -20,47 +20,7 @@ public static class BareStatementHarness
             return sql;
         }
 
-        var rewritten = new System.Text.StringBuilder();
-        var harnessCounter = 0;
-        var pendingRun = new List<string>();
-        var pendingDdl = new List<string>();
-
-        void FlushRun()
-        {
-            if (pendingRun.Count == 0)
-            {
-                return;
-            }
-
-            harnessCounter++;
-            rewritten.AppendLine(CultureInfo.InvariantCulture, $"CREATE PROCEDURE dbo.__SilentScanHarness_{harnessCounter} AS");
-            rewritten.AppendLine("BEGIN");
-            foreach (var statementText in pendingRun)
-            {
-                rewritten.AppendLine(statementText);
-            }
-
-            rewritten.AppendLine("END");
-            rewritten.AppendLine("GO");
-            pendingRun.Clear();
-        }
-
-        void FlushDdl()
-        {
-            if (pendingDdl.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var statementText in pendingDdl)
-            {
-                rewritten.AppendLine(statementText);
-            }
-
-            rewritten.AppendLine("GO");
-            pendingDdl.Clear();
-        }
-
+        var writer = new HarnessWriter();
         var tokens = parseResult.Fragment.ScriptTokenStream;
 
         foreach (var statement in statements)
@@ -69,24 +29,83 @@ public static class BareStatementHarness
             var statementText = sql.Substring(leadingStart, statement.StartOffset + statement.FragmentLength - leadingStart);
             if (IsNonDdlStatement(statement))
             {
-                FlushDdl();
-                pendingRun.Add(statementText);
+                writer.AddRunStatement(statementText);
             }
             else
             {
-                FlushRun();
-                if (MustBeFirstStatementInBatch(statement))
-                {
-                    FlushDdl();
-                }
-
-                pendingDdl.Add(statementText);
+                writer.AddDdlStatement(statementText, MustBeFirstStatementInBatch(statement));
             }
         }
 
-        FlushRun();
-        FlushDdl();
-        return rewritten.ToString();
+        return writer.Finish();
+    }
+
+    private sealed class HarnessWriter
+    {
+        private readonly System.Text.StringBuilder _rewritten = new();
+        private readonly List<string> _pendingRun = [];
+        private readonly List<string> _pendingDdl = [];
+        private int _harnessCounter;
+
+        public void AddRunStatement(string statementText)
+        {
+            FlushDdl();
+            _pendingRun.Add(statementText);
+        }
+
+        public void AddDdlStatement(string statementText, bool mustBeFirstInBatch)
+        {
+            FlushRun();
+            if (mustBeFirstInBatch)
+            {
+                FlushDdl();
+            }
+
+            _pendingDdl.Add(statementText);
+        }
+
+        public string Finish()
+        {
+            FlushRun();
+            FlushDdl();
+            return _rewritten.ToString();
+        }
+
+        private void FlushRun()
+        {
+            if (_pendingRun.Count == 0)
+            {
+                return;
+            }
+
+            _harnessCounter++;
+            _rewritten.AppendLine(CultureInfo.InvariantCulture, $"CREATE PROCEDURE dbo.__SilentScanHarness_{_harnessCounter} AS");
+            _rewritten.AppendLine("BEGIN");
+            foreach (var statementText in _pendingRun)
+            {
+                _rewritten.AppendLine(statementText);
+            }
+
+            _rewritten.AppendLine("END");
+            _rewritten.AppendLine("GO");
+            _pendingRun.Clear();
+        }
+
+        private void FlushDdl()
+        {
+            if (_pendingDdl.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var statementText in _pendingDdl)
+            {
+                _rewritten.AppendLine(statementText);
+            }
+
+            _rewritten.AppendLine("GO");
+            _pendingDdl.Clear();
+        }
     }
 
     private static int LeadingCommentStart(IList<TSqlParserToken>? tokens, TSqlStatement statement)

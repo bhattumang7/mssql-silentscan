@@ -46,38 +46,6 @@ public sealed class DeprecatedSyntaxScannerTests
     }
 
     [Fact]
-    public void NotLessThanOperator_FiresNonAnsi()
-    {
-        var findings = Scan("SELECT 1 WHERE 1 !< 2;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void NotGreaterThanOperator_FiresNonAnsi()
-    {
-        var findings = Scan("SELECT 1 WHERE 1 !> 2;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void ExclamationNotEqual_NotComparedToNull_FiresNonAnsi()
-    {
-        var findings = Scan("SELECT 1 WHERE 1 != 2;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void AnsiNotEqual_NeverFiresNonAnsi()
-    {
-        var findings = Scan("SELECT 1 WHERE 1 <> 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
     public void EqualsNull_Fires()
     {
         var findings = Scan("SELECT * FROM dbo.T WHERE Col = NULL;");
@@ -199,53 +167,11 @@ public sealed class DeprecatedSyntaxScannerTests
     }
 
     [Fact]
-    public void ExclamationNotEqualNull_AdHocScriptAfterSetAnsiNullsOff_FiresNonAnsiOnly()
-    {
-        var findings = Scan("SET ANSI_NULLS OFF; SELECT * FROM dbo.T WHERE Col != NULL;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NotEqualsNullComparison);
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void BracketsNotEqualNull_AdHocScriptAfterSetAnsiNullsOff_FiresNeither()
-    {
-        var findings = Scan("SET ANSI_NULLS OFF; SELECT * FROM dbo.T WHERE Col <> NULL;");
-
-        Assert.DoesNotContain(findings, f => f.Kind is DeprecatedSyntaxFindingKind.NotEqualsNullComparison or DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void NotLessThanNull_AdHocScript_StillFiresNonAnsi()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col !< NULL;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
-    public void NotGreaterThanNull_AdHocScript_StillFiresNonAnsi()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col !> NULL;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
-    }
-
-    [Fact]
     public void NotEqualToBracketsNull_Fires()
     {
         var findings = Scan("SELECT * FROM dbo.T WHERE Col <> NULL;");
 
         Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NotEqualsNullComparison);
-    }
-
-    [Fact]
-    public void NotEqualToExclamationNull_FiresNotEqualsNullOnly()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col != NULL;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NotEqualsNullComparison);
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator);
     }
 
     [Fact]
@@ -358,22 +284,6 @@ public sealed class DeprecatedSyntaxScannerTests
         var findings = Scan("EXEC dbo.Foo;");
 
         Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.NumberedProcedureExecution);
-    }
-
-    [Fact]
-    public void RemovedSecurityStoredProcedure_Fires()
-    {
-        var findings = Scan("EXEC sp_addlogin 'someuser';");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.RemovedSecurityStoredProcedure);
-    }
-
-    [Fact]
-    public void OrdinaryUserProcedure_NeverFiresRemovedSecurityProcedure()
-    {
-        var findings = Scan("EXEC dbo.spDoSomething;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.RemovedSecurityStoredProcedure);
     }
 
     [Fact]

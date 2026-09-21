@@ -5,13 +5,6 @@ namespace SilentScan.Core.Predicates;
 
 public enum SecurityFindingKind
 {
-    HardCodedCredential,
-
-    HardCodedIpAddress,
-
-
-
-
     ExternalRestEndpointCall,
 }
 

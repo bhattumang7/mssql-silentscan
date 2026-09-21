@@ -16,25 +16,6 @@ public sealed class DeprecatedAndSecurityEngineFactOracleTests : OracleTestFixtu
         CREATE PROCEDURE dbo.NP;2 AS SELECT 'two' AS V;
         GO
         CREATE PROCEDURE dbo.PlainProc AS SELECT 'plain' AS V;
-        GO
-        CREATE PROCEDURE dbo.OpenSecrets AS
-        BEGIN
-            DECLARE @Password VARCHAR(30) = 'hunter2-secret';
-            DECLARE @Host VARCHAR(30) = '10.211.55.7';
-            SELECT @Password, @Host;
-        END
-        GO
-        CREATE PROCEDURE dbo.HiddenSecrets WITH ENCRYPTION AS
-        BEGIN
-            DECLARE @Password VARCHAR(30) = 'hunter2-secret';
-            DECLARE @Host VARCHAR(30) = '10.211.55.7';
-            SELECT @Password, @Host;
-        END
-        GO
-        CREATE USER definer WITHOUT LOGIN;
-        GRANT VIEW DEFINITION ON dbo.OpenSecrets TO definer;
-        GRANT VIEW DEFINITION ON dbo.HiddenSecrets TO definer;
-        GO
         """;
 
     private const string DeprecatedCounter = "SELECT ISNULL(SUM(cntr_value), 0) FROM sys.dm_os_performance_counters WHERE object_name LIKE '%Deprecated Features%' AND instance_name = '{0}';";
@@ -78,21 +59,5 @@ public sealed class DeprecatedAndSecurityEngineFactOracleTests : OracleTestFixtu
 
         Assert.Equal(0, control);
         Assert.True(feature >= 1);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/security/hard-coded-credential")]
-    [Trait("Rule", "silentscan/security/hard-coded-ip-address")]
-    public async Task LiteralsInModuleText_AreReadableWithViewDefinitionOnly_EncryptedControlHidesThem()
-    {
-        await using var connection = await OpenConnectionAsync();
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'definer';");
-        var open = await ScalarAsync<string>(connection, "SELECT OBJECT_DEFINITION(OBJECT_ID('dbo.OpenSecrets'));");
-        var hidden = await ScalarAsync<string>(connection, "SELECT OBJECT_DEFINITION(OBJECT_ID('dbo.HiddenSecrets'));");
-        await ExecuteAsync(connection, "REVERT;");
-
-        Assert.Contains("hunter2-secret", open);
-        Assert.Contains("10.211.55.7", open);
-        Assert.Null(hidden);
     }
 }

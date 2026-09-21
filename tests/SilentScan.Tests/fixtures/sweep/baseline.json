@@ -462,20 +462,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/deprecated-syntax/non-ansi-comparison-operator",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/deprecated-syntax/non-ansi-comparison-operator",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/deprecated-syntax/not-equals-null-comparison",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -498,20 +484,6 @@
   },
   {
     "ruleId": "silentscan/deprecated-syntax/numbered-procedure-execution",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/deprecated-syntax/removed-security-stored-procedure",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/deprecated-syntax/removed-security-stored-procedure",
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
@@ -987,13 +959,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/identity/range-near-exhaustion",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "OwnRuleSilent",
-    "reason": "rule fires on the identity column's actual current value, a genuine data-state fact; the doc example's 'production value 250' is only a comment (inserting 250 rows to reproduce it is not a viable doc example), so a freshly deployed sweep database never reaches the exhausted state the rule detects"
-  },
-  {
     "ruleId": "silentscan/index-design/disabled-index",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -1344,20 +1309,6 @@
     "reason": "Must declare the scalar variable \"@candidateSsn\"."
   },
   {
-    "ruleId": "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/predicates/execute-at-large-object-parameter-crashes-session",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/predicates/filtered-index-parameter-mismatch",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -1489,13 +1440,6 @@
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
     "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/security/hard-coded-credential",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Incorrect syntax near the keyword 'PROCEDURE'."
   },
   {
     "ruleId": "silentscan/statement-shape/bare-select-star",
@@ -1806,27 +1750,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/tvf-fence/from-or-join",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/tvf-fence/from-or-join",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/tvf-fence/insert-exec",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/tvf-fence/nested-under-view-or-tvf",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -1839,27 +1762,6 @@
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
     "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/tvf-fence/standalone",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/tvf-fence/standalone",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/verdict/collation-conflict",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Cannot resolve the collation conflict between \"SQL_Latin1_General_CP1_CI_AS\" and \"Latin1_General_CI_AS\" in the equal to operation."
   },
   {
     "ruleId": "silentscan/verdict/range-seek",

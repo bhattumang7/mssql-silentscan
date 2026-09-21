@@ -20,7 +20,6 @@ public enum QueryAntiPatternFindingKind
 
     NonAggregateHavingPredicate,
 
-    UnionOfProvablyDisjointBranches,
 
     DistinctMaskingJoinFanout,
 
@@ -30,7 +29,6 @@ public enum QueryAntiPatternFindingKind
 
     MergeUnconditionalDelete,
 
-    RecursiveCteMissingMaxRecursion,
 
     UnboundedTableWrite,
 

@@ -615,21 +615,6 @@ public sealed class ReadableScanReportWriterTests
     }
 
     [Fact]
-    public void TvfFence_NonCorrelatedKind_FallsBackToFragmentTextAndDashOrigin()
-    {
-        var standalone = new TvfFenceFinding(
-            TvfFenceFindingKind.Standalone, null, "dbo.fn_Y", null, "a.sql", 1, 1,
-            ReferenceFragmentText: "SELECT * FROM dbo.fn_Y()");
-        var report = Blank().WithFindings("TvfFenceScanner", [standalone]);
-
-        var table = TableAfterHeading(BuildBlocks(report), "Standalone reference");
-
-        var row = Assert.Single(table.Rows);
-        Assert.Equal("SELECT * FROM dbo.fn_Y()", row[5]);
-        Assert.Equal("-", row[4]);
-    }
-
-    [Fact]
     public void ScalarUdfDetail_CombinesBlockerFoldingAndClrDataAccessInOrder()
     {
         var finding = new ScalarUdfFinding(

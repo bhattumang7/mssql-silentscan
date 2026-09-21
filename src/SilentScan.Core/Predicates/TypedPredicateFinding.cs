@@ -31,7 +31,6 @@ public sealed record TypedPredicateFinding(
 public sealed record PredicateExtractionResult(
     IReadOnlyList<TypedPredicateFinding> TypedFindings,
     IReadOnlyList<ExpressionDerivedFinding> ExpressionDerivedFindings,
-    IReadOnlyList<CollationConflictFinding> CollationConflictFindings,
     IReadOnlyList<WriteLossFinding> WriteLossFindings,
     IReadOnlyList<SkippedConstruct> SkippedConstructs,
     IReadOnlyList<UnderLengthParameterFinding> UnderLengthParameterFindings,

@@ -26,7 +26,7 @@ public sealed class SarifReportWriterTests
 
         Assert.Equal("2.1.0", document.RootElement.GetProperty("version").GetString());
         var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
-        var expectedCount = report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count + report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count + report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count + report.Find<CollationConflictFinding>("TypedPredicateExtractor").Count + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count
+        var expectedCount = report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count + report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count + report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count
             + report.Find<TvfFenceFinding>("TvfFenceScanner").Count + report.Find<ScalarUdfFinding>("ScalarUdfScanner").Count + report.Find<AnsiPaddingOffColumnFinding>("AnsiPaddingOffColumnScanner").Count + report.Find<ProcCallArgumentMismatchFinding>("ProcCallArgumentMismatchScanner").Count + report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Count
             + report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Count + report.Find<UnderLengthParameterFinding>("TypedPredicateExtractor").Count + report.Find<AnsiPaddingMismatchFinding>("TypedPredicateExtractor").Count + report.Find<PartialCompositeForeignKeyJoinFinding>("PartialCompositeForeignKeyJoinScanner").Count + report.Find<SetOptionFinding>("SetOptionScanner").Count
             + report.Find<CatchAllPredicateFinding>("CatchAllPredicateScanner").Count + report.Find<LocalVariablePredicateFinding>("TypedPredicateExtractor").Count + report.Find<NotInNullableSubqueryFinding>("NotInNullableSubqueryScanner").Count + report.Find<NonUniqueUpdateSourceFinding>("NonUniqueUpdateSourceScanner").Count + report.Find<ForcedSerialFinding>("ForcedSerialScanner").Count
@@ -212,20 +212,6 @@ public sealed class SarifReportWriterTests
         Assert.Equal(
             Enum.GetValues<IndexDesignFindingKind>().Length,
             Enum.GetValues<IndexDesignFindingKind>().Select(SarifRuleCatalog.IndexDesignRuleId).Distinct().Count());
-    }
-
-    [Fact]
-    public void Write_RuleCatalog_CoversEveryIdentityRangeFindingKind()
-    {
-        foreach (var kind in Enum.GetValues<IdentityRangeFindingKind>())
-        {
-            var ruleId = SarifRuleCatalog.IdentityRangeRuleId(kind);
-            Assert.Contains(SarifRuleCatalog.AllRules, r => r.Id == ruleId);
-        }
-
-        Assert.Equal(
-            Enum.GetValues<IdentityRangeFindingKind>().Length,
-            Enum.GetValues<IdentityRangeFindingKind>().Select(SarifRuleCatalog.IdentityRangeRuleId).Distinct().Count());
     }
 
     [Fact]

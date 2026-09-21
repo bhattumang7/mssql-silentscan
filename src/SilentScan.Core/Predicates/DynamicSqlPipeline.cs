@@ -64,7 +64,6 @@ public static partial class DynamicSqlPipeline
             accumulator.Tier1.AddRange(DedupeTier1(PreferBestConfidencePerKey(perCallSite.Tier1, Tier1Key, f => f.Confidence)));
             accumulator.Typed.AddRange(TypedFindingDeduplicator.Dedupe(PreferBestConfidencePerKey(perCallSite.Typed, TypedKey, f => f.Confidence)));
             accumulator.ExpressionDerived.AddRange(DedupeExpressionDerived(PreferBestConfidencePerKey(perCallSite.ExpressionDerived, ExpressionDerivedKey, f => f.Confidence)));
-            accumulator.CollationConflicts.AddRange(DedupeCollationConflicts(PreferBestConfidencePerKey(perCallSite.CollationConflicts, CollationConflictKey, f => f.Confidence)));
             accumulator.Unparameterized.AddRange(DedupeUnparameterized(PreferBestConfidencePerKey(perCallSite.Unparameterized, UnparameterizedKey, f => f.Confidence)));
             accumulator.WriteLoss.AddRange(DedupeWriteLoss(PreferBestConfidencePerKey(perCallSite.WriteLoss, WriteLossKey, f => f.Confidence)));
             accumulator.TvfFence.AddRange(DedupeTvfFence(PreferBestConfidencePerKey(perCallSite.TvfFence, TvfFenceKey, f => f.Confidence)));
@@ -97,16 +96,6 @@ public static partial class DynamicSqlPipeline
         finding.ColumnName,
         string.Join(',', finding.TransformationChain.Select(t => t.Description)),
         string.Join(',', finding.UnderlyingBaseColumns.Select(b => $"{b.TableQualifiedName}.{b.ColumnName}:{b.Indexed}")));
-
-    private static List<CollationConflictFinding> DedupeCollationConflicts(List<CollationConflictFinding> findings)
-    {
-        var seen = new HashSet<(string, string, string, string, string, string, string)>();
-        return findings.Where(finding => seen.Add(CollationConflictKey(finding))).ToList();
-    }
-
-    private static (string, string, string, string, string, string, string) CollationConflictKey(CollationConflictFinding finding) => (
-        finding.FirstTableQualifiedName, finding.FirstColumnName, finding.FirstCollationName,
-        finding.SecondTableQualifiedName, finding.SecondColumnName, finding.SecondCollationName, finding.Operator);
 
     private static List<UnparameterizedDynamicSqlFinding> DedupeUnparameterized(List<UnparameterizedDynamicSqlFinding> findings)
     {
@@ -158,7 +147,6 @@ public static partial class DynamicSqlPipeline
 
         public List<ExpressionDerivedFinding> ExpressionDerived { get; } = [];
 
-        public List<CollationConflictFinding> CollationConflicts { get; } = [];
 
         public List<WriteLossFinding> WriteLoss { get; } = [];
 
@@ -171,7 +159,7 @@ public static partial class DynamicSqlPipeline
         public List<SkippedConstruct> Skipped { get; } = [];
 
         public DynamicSqlPipelineResult ToResult() =>
-            new(Findings, Tier1, Typed, ExpressionDerived, CollationConflicts, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped);
+            new(Findings, Tier1, Typed, ExpressionDerived, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped);
     }
 
     private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel);
@@ -469,11 +457,6 @@ public static partial class DynamicSqlPipeline
             accumulator.ExpressionDerived.Add(Remap(expressionFinding, script, map));
         }
 
-        foreach (var collationConflict in extraction.CollationConflictFindings)
-        {
-            accumulator.CollationConflicts.Add(Remap(collationConflict, script, map));
-        }
-
         foreach (var writeLoss in extraction.WriteLossFindings)
         {
             accumulator.WriteLoss.Add(Remap(writeLoss, script, map));
@@ -491,7 +474,6 @@ public static partial class DynamicSqlPipeline
         accumulator.Tier1.AddRange(nested.Tier1Findings);
         accumulator.Typed.AddRange(nested.TypedFindings);
         accumulator.ExpressionDerived.AddRange(nested.ExpressionDerivedFindings);
-        accumulator.CollationConflicts.AddRange(nested.CollationConflictFindings);
         accumulator.WriteLoss.AddRange(nested.WriteLossFindings);
         accumulator.TvfFence.AddRange(nested.TvfFenceFindings);
         accumulator.ScalarUdf.AddRange(nested.ScalarUdfFindings);
@@ -554,7 +536,7 @@ public static partial class DynamicSqlPipeline
 
         if (nestedExtraction.AnalyzableScripts.Count == 0)
         {
-            return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], [], []);
+            return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], []);
         }
 
         if (depth >= MaxNestingDepth)
@@ -564,7 +546,7 @@ public static partial class DynamicSqlPipeline
                 .Select(nestedScript => script.SegmentMap.Map(nestedScript.CallSite.Line, nestedScript.CallSite.Column))
                 .Select(callSite => new DynamicSqlFinding(callSite.SourcePath, callSite.Line, callSite.Column, DynamicSqlOutcome.Unanalyzable, "max-nesting-depth-exceeded")));
 
-            return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], [], []);
+            return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], []);
         }
 
         var seeds = BuildArgumentBindingSeeds(nestedExtraction.AnalyzableScripts, outerDeclaredParameters, context.Catalog.IdentifierComparer);
@@ -576,7 +558,6 @@ public static partial class DynamicSqlPipeline
             [.. nestedResult.Tier1Findings.Select(f => RemapNested(f, script))],
             [.. nestedResult.TypedFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.ExpressionDerivedFindings.Select(f => RemapNested(f, script))],
-            [.. nestedResult.CollationConflictFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.WriteLossFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.TvfFenceFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.ScalarUdfFindings.Select(f => RemapNested(f, script))],
@@ -592,7 +573,7 @@ public static partial class DynamicSqlPipeline
             .Select(nestedScript => map(nestedScript.CallSite.Line, nestedScript.CallSite.Column))
             .Select(callSite => new DynamicSqlFinding(callSite.SourcePath, callSite.Line, callSite.Column, DynamicSqlOutcome.Unanalyzable, "nested-dynamic-sql-inside-symbolic-value")));
 
-        return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], [], []);
+        return new DynamicSqlPipelineResult(findings, [], [], [], [], [], [], [], []);
     }
 
     private static bool IsEntirelyPlaceholder(string innerText, IReadOnlyList<PlaceholderOccurrence> occurrences)
@@ -701,7 +682,6 @@ public sealed record DynamicSqlPipelineResult(
     IReadOnlyList<SargabilityFinding> Tier1Findings,
     IReadOnlyList<TypedPredicateFinding> TypedFindings,
     IReadOnlyList<ExpressionDerivedFinding> ExpressionDerivedFindings,
-    IReadOnlyList<CollationConflictFinding> CollationConflictFindings,
     IReadOnlyList<WriteLossFinding> WriteLossFindings,
     IReadOnlyList<TvfFenceFinding> TvfFenceFindings,
     IReadOnlyList<ScalarUdfFinding> ScalarUdfFindings,
