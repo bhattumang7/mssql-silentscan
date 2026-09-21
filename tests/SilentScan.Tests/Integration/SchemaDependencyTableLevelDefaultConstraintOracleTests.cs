@@ -5,6 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/scalar-udf/in-computed-column-or-constraint")]
 public sealed class SchemaDependencyTableLevelDefaultConstraintOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;

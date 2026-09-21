@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/catch-all-parameter")]
 public sealed class CatchAllPredicateOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CatchAllPredicateOracleTests);

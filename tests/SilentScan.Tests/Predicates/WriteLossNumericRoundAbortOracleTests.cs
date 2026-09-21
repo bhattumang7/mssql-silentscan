@@ -8,6 +8,9 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/write-loss/numeric-scale-narrowing")]
+[Trait("Rule", "silentscan/write-loss/length-truncation")]
+[Trait("Rule", "silentscan/write-loss/approximate-to-exact-truncation")]
 public sealed class WriteLossNumericRoundAbortOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WriteLossNumericRoundAbortOracleTests);

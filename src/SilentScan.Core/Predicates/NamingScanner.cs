@@ -50,13 +50,8 @@ public static class NamingScanner
     {
         var findings = new List<NamingFinding>();
 
-        foreach (var table in catalog.Tables)
+        foreach (var table in catalog.Tables.Where(table => table.Kind is CatalogTableKind.Table or CatalogTableKind.TableType))
         {
-            if (table.Kind is not (CatalogTableKind.Table or CatalogTableKind.TableType))
-            {
-                continue;
-            }
-
             if (ReservedKeywords.Contains(table.Name))
             {
                 findings.Add(new NamingFinding(
@@ -64,14 +59,11 @@ public static class NamingScanner
                     $"Table name \"{table.Name}\" is a reserved T-SQL keyword."));
             }
 
-            foreach (var column in table.Columns)
+            foreach (var column in table.Columns.Where(column => ReservedKeywords.Contains(column.Name)))
             {
-                if (ReservedKeywords.Contains(column.Name))
-                {
-                    findings.Add(new NamingFinding(
-                        NamingFindingKind.ReservedKeywordAsIdentifier, table.QualifiedName, table.SourcePath, table.SourceLine, Column: 1,
-                        $"Column name \"{column.Name}\" is a reserved T-SQL keyword."));
-                }
+                findings.Add(new NamingFinding(
+                    NamingFindingKind.ReservedKeywordAsIdentifier, table.QualifiedName, table.SourcePath, table.SourceLine, Column: 1,
+                    $"Column name \"{column.Name}\" is a reserved T-SQL keyword."));
             }
         }
 

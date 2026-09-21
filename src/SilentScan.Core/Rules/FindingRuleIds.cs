@@ -164,7 +164,6 @@ public static class FindingRuleIds
     public const string ForcedSerialTableVariableModificationRuleId = "silentscan/forced-serial/table-variable-modification";
     public const string ForcedSerialFastForwardCursorRuleId = "silentscan/forced-serial/fast-forward-cursor";
     public const string ForcedSerialNonParallelizableIntrinsicRuleId = "silentscan/forced-serial/nonparallelizable-intrinsic";
-    public const string UntrustedForeignKeyRuleId = "silentscan/catalog/untrusted-foreign-key";
     public const string UntrustedCheckConstraintRuleId = "silentscan/catalog/untrusted-check-constraint";
     public const string CascadingForeignKeyRuleId = "silentscan/catalog/cascading-foreign-key";
     public const string MultiReferencedCteRuleId = "silentscan/lineage/multi-referenced-cte";
@@ -199,7 +198,6 @@ public static class FindingRuleIds
     public const string StringConcatNullRuleId = "silentscan/predicate/plus-operator-null-propagation";
     public const string AggregateDivisionColumnstoreRuleId = "silentscan/predicate/aggregate-division-columnstore-batch-mode";
     public const string SecurityPredicateIndexRuleId = "silentscan/catalog/rls-predicate-unindexed-column";
-    public const string DanglingObjectReferenceRuleId = "silentscan/catalog/dangling-object-reference";
     public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => kind switch
     {
         ModuleCompileFlagFindingKind.RecompilesEveryCall => "silentscan/catalog/with-recompile",
@@ -504,7 +502,6 @@ public static class FindingRuleIds
     };
     public static string UntrustedConstraintRuleId(UntrustedConstraintFindingKind kind) => kind switch
     {
-        UntrustedConstraintFindingKind.ForeignKey => UntrustedForeignKeyRuleId,
         UntrustedConstraintFindingKind.CheckConstraint => UntrustedCheckConstraintRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled UntrustedConstraintFindingKind."),
     };

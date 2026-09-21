@@ -6,6 +6,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/deprecated-syntax/legacy-lob-statement")]
+[Trait("Rule", "silentscan/deprecated-syntax/legacy-lob-function")]
 public sealed class DeprecatedSyntaxLegacyLobOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DeprecatedSyntaxLegacyLobOracleTests);

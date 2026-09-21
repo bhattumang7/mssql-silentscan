@@ -100,7 +100,6 @@ public static class TestScanReports
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
-        IReadOnlyList<DanglingObjectReferenceFinding>? DanglingObjectReferenceFindings = null,
         IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null,
         IReadOnlyList<TriggerOrderFinding>? TriggerOrderFindings = null,
         IReadOnlyList<MissingStatisticsFinding>? MissingStatisticsFindings = null,
@@ -214,7 +213,6 @@ public static class TestScanReports
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
-        Set("DanglingObjectReferenceScanner", DanglingObjectReferenceFindings);
         Set("ForcedParameterizationScanner", ForcedParameterizationFindings);
         Set("TriggerOrderScanner", TriggerOrderFindings);
         Set("MissingStatisticsScanner", MissingStatisticsFindings);

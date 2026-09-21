@@ -4,6 +4,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/dynamic-data-masking-predicate-exposure")]
+[Trait("Rule", "silentscan/predicates/dynamic-data-masking-computed-expression-collapse")]
 public sealed class DynamicDataMaskingOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DynamicDataMaskingOracleTests);
@@ -23,7 +25,7 @@ public sealed class DynamicDataMaskingOracleTests : OracleTestFixture
         GO
         """;
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

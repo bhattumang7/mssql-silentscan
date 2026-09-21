@@ -6,7 +6,6 @@ namespace SilentScan.Core.Predicates;
 
 public enum UntrustedConstraintFindingKind
 {
-    ForeignKey,
     CheckConstraint,
 }
 
@@ -22,4 +21,3 @@ public sealed record UntrustedConstraintFinding(
 
     public SourceSpan Location => new(SourcePath, Line, 1);
 }
-

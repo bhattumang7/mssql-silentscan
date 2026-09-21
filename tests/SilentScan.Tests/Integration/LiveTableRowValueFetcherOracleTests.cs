@@ -127,7 +127,7 @@ public sealed class LiveTableRowValueFetcherOracleTests : OracleTestFixture
         Assert.Null(result);
     }
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

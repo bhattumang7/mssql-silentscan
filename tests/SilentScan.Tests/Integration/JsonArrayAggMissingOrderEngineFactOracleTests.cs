@@ -5,6 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/json-builtin/json-arrayagg-missing-order")]
 public sealed class JsonArrayAggMissingOrderEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = new(

@@ -5,6 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/naming/redundant-type-qualifier")]
 public sealed class NamingScannerRedundantTypeQualifierOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;

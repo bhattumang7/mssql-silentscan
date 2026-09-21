@@ -6,6 +6,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/verdict/collation-conflict")]
 public sealed class CollationConflictVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanCollationConflictVerifierTest";

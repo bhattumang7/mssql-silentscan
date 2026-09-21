@@ -153,7 +153,6 @@ public static class SarifRuleCatalog
     public const string ForcedSerialTableVariableModificationRuleId = FindingRuleIds.ForcedSerialTableVariableModificationRuleId;
     public const string ForcedSerialFastForwardCursorRuleId = FindingRuleIds.ForcedSerialFastForwardCursorRuleId;
     public const string ForcedSerialNonParallelizableIntrinsicRuleId = FindingRuleIds.ForcedSerialNonParallelizableIntrinsicRuleId;
-    public const string UntrustedForeignKeyRuleId = FindingRuleIds.UntrustedForeignKeyRuleId;
     public const string UntrustedCheckConstraintRuleId = FindingRuleIds.UntrustedCheckConstraintRuleId;
     public const string CascadingForeignKeyRuleId = FindingRuleIds.CascadingForeignKeyRuleId;
     public const string MultiReferencedCteRuleId = FindingRuleIds.MultiReferencedCteRuleId;
@@ -186,7 +185,6 @@ public static class SarifRuleCatalog
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
     public const string AggregateDivisionColumnstoreRuleId = FindingRuleIds.AggregateDivisionColumnstoreRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;
-    public const string DanglingObjectReferenceRuleId = FindingRuleIds.DanglingObjectReferenceRuleId;
     public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => FindingRuleIds.ModuleCompileFlagRuleId(kind);
     public static string WindowFrameRuleId(WindowFrameFindingKind kind) => FindingRuleIds.WindowFrameRuleId(kind);
     public static string BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind kind) => FindingRuleIds.BoundedStringBuiltinTruncationRuleId(kind);

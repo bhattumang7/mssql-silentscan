@@ -4,6 +4,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/write-loss/unicode-to-non-unicode")]
+[Trait("Rule", "silentscan/write-loss/numeric-scale-narrowing")]
 public sealed class WriteLossOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WriteLossOracleTests);

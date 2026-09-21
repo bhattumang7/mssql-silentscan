@@ -6,6 +6,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/catalog/column-ansi-padding-off")]
 public sealed class AnsiPaddingOffColumnScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(AnsiPaddingOffColumnScannerOracleTests);

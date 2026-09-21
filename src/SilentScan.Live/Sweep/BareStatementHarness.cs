@@ -65,7 +65,7 @@ public static class BareStatementHarness
 
         foreach (var statement in statements)
         {
-            var leadingStart = LeadingCommentStart(sql, tokens, statement);
+            var leadingStart = LeadingCommentStart(tokens, statement);
             var statementText = sql.Substring(leadingStart, statement.StartOffset + statement.FragmentLength - leadingStart);
             if (IsNonDdlStatement(statement))
             {
@@ -89,7 +89,7 @@ public static class BareStatementHarness
         return rewritten.ToString();
     }
 
-    private static int LeadingCommentStart(string sql, IList<TSqlParserToken>? tokens, TSqlStatement statement)
+    private static int LeadingCommentStart(IList<TSqlParserToken>? tokens, TSqlStatement statement)
     {
         if (tokens is null)
         {

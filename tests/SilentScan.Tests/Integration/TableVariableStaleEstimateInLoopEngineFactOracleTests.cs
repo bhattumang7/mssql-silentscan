@@ -5,7 +5,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-public sealed class TableVariableStaleEstimateInLoopEngineFactOracleTests : OracleTestFixture
+[Trait("Rule", "silentscan/query/table-variable-stale-estimate-in-loop")]
+public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTests : OracleTestFixture
 {
     private const int LoopIterations = 200;
 
@@ -75,16 +76,20 @@ public sealed class TableVariableStaleEstimateInLoopEngineFactOracleTests : Orac
         var planXml = planXmlBuilder.ToString();
         Assert.NotEmpty(planXml);
 
-        var estimateMatches = Regex.Matches(
-            planXml,
-            "StatementText=\"SELECT @total = SUM\\(Amount\\) FROM @Accumulator\"[^>]*StatementEstRows=\"([^\"]*)\"");
+        var estimateMatches = EstimateRegex().Matches(planXml);
         Assert.True(estimateMatches.Count > 1, planXml);
         Assert.All(estimateMatches, m => Assert.Equal("1", m.Groups[1].Value));
 
-        var actualRowMatches = Regex.Matches(planXml, "ActualRows=\"([0-9]+)\"");
+        var actualRowMatches = ActualRowsRegex().Matches(planXml);
         var maxActualRows = actualRowMatches.Select(m => int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)).Max();
         Assert.True(
             maxActualRows >= LoopIterations - 10,
             $"expected actual rows to climb near {LoopIterations}, but the highest observed was {maxActualRows}");
     }
+
+    [GeneratedRegex("StatementText=\"SELECT @total = SUM\\(Amount\\) FROM @Accumulator\"[^>]*StatementEstRows=\"([^\"]*)\"")]
+    private static partial Regex EstimateRegex();
+
+    [GeneratedRegex("ActualRows=\"([0-9]+)\"")]
+    private static partial Regex ActualRowsRegex();
 }

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/forced-serial/table-variable-modification")]
 public sealed class TableVariableModificationOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TableVariableModificationOracleTests);

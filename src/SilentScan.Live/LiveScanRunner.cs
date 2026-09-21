@@ -177,14 +177,6 @@ public static class LiveScanRunner
             forcedParamStage.Complete($"{forcedParameterizationFindings.Count:N0} findings");
         }
 
-        using (var danglingReferenceStage = progress.Begin("checking for references to nonexistent objects"))
-        {
-            var danglingObjectReferenceFindings = (await new DanglingObjectReferenceChecker(connectionString).CheckAsync(danglingReferenceStage, cancellationToken))
-                .Where(f => f.Confidence <= minimumConfidence).ToList();
-            report = report.WithFindings("DanglingObjectReferenceScanner", danglingObjectReferenceFindings);
-            danglingReferenceStage.Complete($"{danglingObjectReferenceFindings.Count:N0} findings");
-        }
-
         using (var indexDesignStage = progress.Begin("checking clustered/heap index design"))
         {
 

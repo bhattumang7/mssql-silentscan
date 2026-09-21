@@ -8,6 +8,8 @@ public enum SweepOutcome
     OwnRuleFiredOnCompliant,
     NotSelfContained,
     ServerScopedSkipped,
+    BehaviorMissing,
+    BehaviorMismatch,
     HarnessError,
 }
 

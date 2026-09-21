@@ -124,7 +124,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
-        results.AddRange(report.Find<DanglingObjectReferenceFinding>("DanglingObjectReferenceScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
         results.AddRange(report.Find<MissingStatisticsFinding>("MissingStatisticsScanner").Select(ToResult));
 
@@ -786,8 +785,7 @@ public static class SarifReportWriter
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.UntrustedConstraintRuleId(finding.Kind), finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var kindDisplay = finding.Kind == UntrustedConstraintFindingKind.ForeignKey ? "foreign key" : "CHECK constraint";
-        var message = $"'{finding.ConstraintName}' ({kindDisplay} on '{finding.TableQualifiedName}') is untrusted - the engine does not guarantee it holds over existing rows, and forfeits join-elimination/constraint-based query rewrites that assume it does.";
+        var message = $"'{finding.ConstraintName}' (CHECK constraint on '{finding.TableQualifiedName}') is untrusted - the engine does not guarantee it holds over existing rows, so constraint-based query rewrites that assume its predicate are unavailable.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
@@ -922,17 +920,6 @@ public static class SarifReportWriter
         var message = $"'{finding.TableQualifiedName}' is secured by RLS policy '{finding.PolicyQualifiedName}''s FILTER predicate '{finding.PredicateFunctionQualifiedName}', bound to column(s) {columns} - none of them leads an active index on this table, so this predicate is silently applied to every SELECT/UPDATE/DELETE against this table as a residual, per-row filter over a full scan rather than a seek.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(DanglingObjectReferenceFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DanglingObjectReferenceRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
-        var referencedName = finding.ReferencedSchemaName is { } schema ? $"{schema}.{finding.ReferencedEntityName}" : finding.ReferencedEntityName;
-        var message = $"{finding.ModuleTypeDescription} '{finding.ModuleQualifiedName}' references '{referencedName}', which does not exist in the database right now - CREATE/ALTER succeeded because SQL Server defers name resolution, but any call that reaches this reference fails with Msg 208 (\"Invalid object name\").";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
     private static SarifResult ToResult(CascadingForeignKeyFinding finding)

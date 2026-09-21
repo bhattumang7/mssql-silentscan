@@ -139,12 +139,9 @@ public static class RegexpDefaultCaseSensitiveOnCiColumnScanner
         private static char? LastCaseFlag(string flags)
         {
             char? last = null;
-            foreach (var c in flags)
+            foreach (var c in flags.Where(c => c is 'c' or 'i'))
             {
-                if (c is 'c' or 'i')
-                {
-                    last = c;
-                }
+                last = c;
             }
 
             return last;

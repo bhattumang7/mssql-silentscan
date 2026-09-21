@@ -6,6 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/control-flow/unassigned-output-parameter")]
 public sealed class OutputParameterOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(OutputParameterOracleTests);
@@ -39,7 +40,7 @@ public sealed class OutputParameterOracleTests : OracleTestFixture
         GO
         """;
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

@@ -9,50 +9,6 @@ public sealed class UntrustedConstraintScannerTests
         new(schema, name, CatalogTableKind.Table, [], [], SourcePath: $"{schema}.{name}", SourceLine: 1);
 
     [Fact]
-    public void UntrustedForeignKey_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddOrReplace(Table("dbo", "Orders"));
-        catalog.AddOrReplace(Table("dbo", "Customers"));
-        catalog.AddForeignKey(new ForeignKeyRelationship("FK_Test", "dbo.Orders", "CustomerId", "dbo.Customers", "CustomerId", IsNotTrusted: true));
-
-        var findings = UntrustedConstraintScanner.Scan(catalog);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(UntrustedConstraintFindingKind.ForeignKey, finding.Kind);
-        Assert.Equal("FK_Test", finding.ConstraintName);
-        Assert.Equal("dbo.Orders", finding.TableQualifiedName);
-    }
-
-    [Fact]
-    public void TrustedForeignKey_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddForeignKey(new ForeignKeyRelationship("FK_Test", "dbo.Orders", "CustomerId", "dbo.Customers", "CustomerId", IsNotTrusted: false));
-
-        Assert.Empty(UntrustedConstraintScanner.Scan(catalog));
-    }
-
-    [Fact]
-    public void UntrustedButDisabledForeignKey_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddForeignKey(new ForeignKeyRelationship("FK_Test", "dbo.Orders", "CustomerId", "dbo.Customers", "CustomerId", IsNotTrusted: true, IsDisabled: true));
-
-        Assert.Empty(UntrustedConstraintScanner.Scan(catalog));
-    }
-
-    [Fact]
-    public void CompositeForeignKey_ReportedOncePerConstraintNotPerColumnPair()
-    {
-        var catalog = new DatabaseCatalog();
-        catalog.AddForeignKey(new ForeignKeyRelationship("FK_Composite", "dbo.OrderLines", "OrderId", "dbo.Orders", "OrderId", IsNotTrusted: true));
-        catalog.AddForeignKey(new ForeignKeyRelationship("FK_Composite", "dbo.OrderLines", "RevisionId", "dbo.Orders", "RevisionId", IsNotTrusted: true));
-
-        Assert.Single(UntrustedConstraintScanner.Scan(catalog));
-    }
-
-    [Fact]
     public void UntrustedCheckConstraint_Fires()
     {
         var catalog = new DatabaseCatalog();

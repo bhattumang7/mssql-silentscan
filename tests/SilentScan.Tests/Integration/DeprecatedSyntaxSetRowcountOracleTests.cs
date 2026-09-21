@@ -6,6 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/deprecated-syntax/deprecated-set-rowcount")]
 public sealed class DeprecatedSyntaxSetRowcountOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DeprecatedSyntaxSetRowcountOracleTests);

@@ -8,6 +8,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/temp-table/unindexed-join-operand")]
 public sealed class UnindexedTempTableUsageCommaCrossJoinOracleTests : OracleTestFixture
 {
     private static readonly XNamespace ShowPlanNs = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";

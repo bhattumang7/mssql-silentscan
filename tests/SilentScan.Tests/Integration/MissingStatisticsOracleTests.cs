@@ -6,6 +6,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/statistics/no-applicable-statistic-auto-create-disabled")]
 public sealed class MissingStatisticsAutoCreateDisabledOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MissingStatisticsAutoCreateDisabledOracleTests);
@@ -40,6 +41,7 @@ public sealed class MissingStatisticsAutoCreateDisabledOracleTests : OracleTestF
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/statistics/no-applicable-statistic-auto-create-disabled")]
 public sealed class MissingStatisticsAutoCreateEnabledOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MissingStatisticsAutoCreateEnabledOracleTests);
@@ -67,6 +69,7 @@ public sealed class MissingStatisticsAutoCreateEnabledOracleTests : OracleTestFi
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/statistics/no-applicable-statistic-auto-create-disabled")]
 public sealed class MissingStatisticsSingleColumnStatisticOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MissingStatisticsSingleColumnStatisticOracleTests);

@@ -8,15 +8,6 @@ public static class UntrustedConstraintScanner
     {
         var findings = new List<UntrustedConstraintFinding>();
 
-        foreach (var fk in catalog.ForeignKeys.Where(fk => fk.IsNotTrusted && !fk.IsDisabled)
-            .DistinctBy(fk => fk.ConstraintName, catalog.IdentifierComparer))
-        {
-            var table = catalog.Find(fk.ParentTableQualifiedName);
-            findings.Add(new UntrustedConstraintFinding(
-                UntrustedConstraintFindingKind.ForeignKey, fk.ConstraintName, fk.ParentTableQualifiedName,
-                table?.SourcePath ?? fk.ParentTableQualifiedName, table?.SourceLine ?? 0));
-        }
-
         foreach (var check in catalog.CheckConstraints.Where(c => c.IsNotTrusted && !c.IsDisabled))
         {
             var table = catalog.Find(check.TableQualifiedName);

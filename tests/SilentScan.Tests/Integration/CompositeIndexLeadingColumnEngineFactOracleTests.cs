@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/index-shape/composite-leading-column-unconstrained")]
 public sealed class CompositeIndexLeadingColumnEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CompositeIndexLeadingColumnEngineFactOracleTests);

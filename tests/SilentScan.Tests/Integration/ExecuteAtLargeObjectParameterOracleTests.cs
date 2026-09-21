@@ -9,6 +9,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/execute-at-large-object-parameter-crashes-session")]
 public sealed class ExecuteAtLargeObjectParameterOracleTests : IAsyncLifetime
 {
     private const string ContainerName = "silentscan-sql2025";

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
 public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
 {
     [Fact]

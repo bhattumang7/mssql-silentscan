@@ -7,6 +7,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/control-flow/trigger-emits-output")]
 [Collection("ServerLevelConfiguration")]
 public sealed class ControlFlowRiskScannerDisallowResultsFromTriggersOracleTests : OracleTestFixture
 {

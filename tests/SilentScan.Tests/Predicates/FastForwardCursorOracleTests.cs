@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/forced-serial/fast-forward-cursor")]
 public sealed class FastForwardCursorOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(FastForwardCursorOracleTests);

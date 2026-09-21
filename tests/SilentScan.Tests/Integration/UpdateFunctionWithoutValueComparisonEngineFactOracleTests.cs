@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/update-function-without-value-comparison")]
 public sealed class UpdateFunctionWithoutValueComparisonEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(UpdateFunctionWithoutValueComparisonEngineFactOracleTests);

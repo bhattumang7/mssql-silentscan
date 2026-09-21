@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/correctness/not-in-nullable-subquery")]
 public sealed class NotInNullableSubqueryOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(NotInNullableSubqueryOracleTests);

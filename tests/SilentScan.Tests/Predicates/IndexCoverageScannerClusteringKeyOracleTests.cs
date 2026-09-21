@@ -7,6 +7,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/index/key-lookup-prone")]
 public sealed class IndexCoverageScannerClusteringKeyOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IndexCoverageScannerClusteringKeyOracleTests);

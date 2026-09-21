@@ -5,6 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/dynamic-sql/exec-with-result-sets-column-type-mismatch")]
 public sealed class ExecResultSetsShapeLiveOracleTests
 {
     [Fact]

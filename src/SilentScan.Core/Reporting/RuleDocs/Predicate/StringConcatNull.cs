@@ -71,6 +71,14 @@ internal static class StringConcatNull
                            CONCAT(FirstName, ' ', MiddleName, ' ', LastName) AS DisplayName
                     FROM dbo.People;
                     """,
-                CompliantExplanation: "CONCAT() treats a NULL MiddleName as an empty string, so DisplayName still resolves to 'FirstName  LastName' instead of collapsing to NULL."),
+                CompliantExplanation: "CONCAT() treats a NULL MiddleName as an empty string, so DisplayName still resolves to 'FirstName  LastName' instead of collapsing to NULL.",
+                NoncompliantProof: new RuleDocBehaviorProof(
+                    SetupSql: "INSERT INTO dbo.People (PersonId, FirstName, MiddleName, LastName) VALUES (1, 'Ada', NULL, 'Lovelace');",
+                    QuerySql: "SELECT FirstName + ' ' + MiddleName + ' ' + LastName FROM dbo.People WHERE PersonId = 1;",
+                    ExpectedScalar: null),
+                CompliantProof: new RuleDocBehaviorProof(
+                    SetupSql: "INSERT INTO dbo.People (PersonId, FirstName, MiddleName, LastName) VALUES (1, 'Ada', NULL, 'Lovelace');",
+                    QuerySql: "SELECT CONCAT(FirstName, ' ', MiddleName, ' ', LastName) FROM dbo.People WHERE PersonId = 1;",
+                    ExpectedScalar: "Ada  Lovelace")),
         ]);
 }

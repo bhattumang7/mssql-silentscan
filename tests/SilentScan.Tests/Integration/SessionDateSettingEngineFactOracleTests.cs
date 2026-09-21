@@ -4,6 +4,8 @@ using SilentScan.Verify;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/session-date/set-dateformat")]
+[Trait("Rule", "silentscan/session-date/set-datefirst")]
 public sealed class SessionDateSettingEngineFactOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;

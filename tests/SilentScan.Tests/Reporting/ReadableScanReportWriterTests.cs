@@ -404,22 +404,6 @@ public sealed class ReadableScanReportWriterTests
     }
 
     [Fact]
-    public void Summary_OnlyOneNonZeroFindingKind_TableHasExactlyOneRowWithDashDistinct()
-    {
-        var report = Blank().WithFindings("DanglingObjectReferenceScanner",
-            [
-                new DanglingObjectReferenceFinding("dbo.usp_X", "procedure", "GoneTable", null, "a.sql", 5, 1),
-            ]);
-
-        var table = TableAfterHeading(BuildBlocks(report), "Summary");
-
-        var row = Assert.Single(table.Rows);
-        Assert.Equal("Reference to a nonexistent object", row[0]);
-        Assert.Equal("1", row[1]);
-        Assert.Equal("-", row[2]);
-    }
-
-    [Fact]
     public void Summary_DistinctCountsAreShownSeparatelyFromOccurrenceCounts()
     {
         var report = Blank() with

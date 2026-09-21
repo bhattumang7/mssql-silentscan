@@ -4,6 +4,7 @@ using SilentScan.Verify;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/json-builtin/json-object-duplicate-key")]
 public sealed class JsonObjectDuplicateKeyEngineFactOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;

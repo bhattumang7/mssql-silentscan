@@ -8,6 +8,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/reassigned-parameter")]
 public sealed class ParameterReassignmentPredicateOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ParameterReassignmentPredicateOracleTests);
