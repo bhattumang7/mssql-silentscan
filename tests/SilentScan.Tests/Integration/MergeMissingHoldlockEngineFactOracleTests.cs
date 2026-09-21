@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/query/merge-missing-holdlock")]
 public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MergeMissingHoldlockEngineFactOracleTests);

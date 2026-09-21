@@ -20,11 +20,6 @@ public static class QueryAntiPatternScanner
         "CHECKSUM_AGG", "GROUPING", "GROUPING_ID", "STDEV", "STDEVP", "STRING_AGG", "VAR", "VARP",
     };
 
-    private static readonly HashSet<string> GroupingFunctionNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "GROUPING", "GROUPING_ID",
-    };
-
     public static IReadOnlyList<QueryAntiPatternFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
         var rule = CreateRule(parseResult, catalog);
@@ -63,9 +58,6 @@ public static class QueryAntiPatternScanner
 
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
-
-        private FromScopeResolver.ResolutionContext ResolutionContext(IReadOnlyDictionary<string, ResolvedRelation> cteRelations) =>
-            new(catalog, EmptyResolvedViews, sourcePath, Ledger: null, cteRelations, ProcScope: null);
 
         private static string? AliasOf(TableReference reference) =>
             reference is NamedTableReference named ? named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value : null;
@@ -134,7 +126,7 @@ public static class QueryAntiPatternScanner
         {
             InspectSiteIfNamedTable(node.MergeSpecification.Target);
             InspectSiteIfNamedTable(node.MergeSpecification.TableReference);
-            InspectMergeHazards(node.MergeSpecification, walker);
+            InspectMergeHazards(node.MergeSpecification);
         }
 
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
@@ -395,7 +387,7 @@ public static class QueryAntiPatternScanner
                 FindingConfidence.Medium));
         }
 
-        private void InspectMergeHazards(MergeSpecification spec, ModuleWalker walker)
+        private void InspectMergeHazards(MergeSpecification spec)
         {
             InspectMergeMissingHoldlock(spec);
             InspectMergeUnconditionalDelete(spec);

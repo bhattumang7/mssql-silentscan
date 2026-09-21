@@ -5,6 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tier1/date-function-on-column")]
 public sealed class DateFunctionOnColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanDateFunctionOracleTest";

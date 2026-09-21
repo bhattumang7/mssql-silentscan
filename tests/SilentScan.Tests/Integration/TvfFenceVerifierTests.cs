@@ -6,6 +6,9 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tvf-fence/from-or-join")]
+[Trait("Rule", "silentscan/tvf-fence/correlated-apply")]
+[Trait("Rule", "silentscan/tvf-fence/insert-exec")]
 public sealed class TvfFenceVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanTvfFenceVerifierTest";

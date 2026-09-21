@@ -9,6 +9,8 @@ using SilentScan.Core.TypeInference;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/verdict/scan-forced")]
+[Trait("Rule", "silentscan/verdict/range-seek")]
 public sealed class CorpusFindingVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanFindingVerifierTest";

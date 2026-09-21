@@ -1,3 +1,5 @@
+using SilentScan.Core.Reporting.RuleDocs;
+
 namespace SilentScan.Live.Sweep;
 
 public enum RuleExampleVariant
@@ -12,4 +14,5 @@ public sealed record RuleExampleCase(
     string Title,
     RuleExampleVariant Variant,
     string DeployableSql,
-    bool IsSelfContained);
+    bool IsSelfContained,
+    RuleDocBehaviorProof? BehaviorProof = null);

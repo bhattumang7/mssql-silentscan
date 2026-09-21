@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/multi-hop-recursion-cycle")]
 public sealed class TriggerRecursionCycleEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TriggerRecursionCycleEngineFactOracleTests);

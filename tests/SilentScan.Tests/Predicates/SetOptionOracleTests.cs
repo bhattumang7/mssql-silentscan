@@ -5,6 +5,11 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/set-option/numeric-roundabort-on")]
+[Trait("Rule", "silentscan/set-option/quoted-identifier-off")]
+[Trait("Rule", "silentscan/set-option/ansi-nulls-off")]
+[Trait("Rule", "silentscan/set-option/ansi-warnings-off")]
+[Trait("Rule", "silentscan/set-option/concat-null-yields-null-off")]
 public sealed class SetOptionOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(SetOptionOracleTests);

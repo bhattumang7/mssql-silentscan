@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/no-early-out-for-empty-invocation")]
 public sealed class NoEarlyOutForEmptyInvocationEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(NoEarlyOutForEmptyInvocationEngineFactOracleTests);

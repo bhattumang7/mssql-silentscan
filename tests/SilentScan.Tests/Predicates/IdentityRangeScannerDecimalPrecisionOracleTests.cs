@@ -5,6 +5,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/identity/range-near-exhaustion")]
 public sealed class IdentityRangeScannerDecimalPrecisionOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IdentityRangeScannerDecimalPrecisionOracleTests);

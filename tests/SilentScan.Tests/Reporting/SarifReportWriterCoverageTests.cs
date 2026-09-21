@@ -132,7 +132,7 @@ public sealed class SarifReportWriterCoverageTests
     public void Write_BuildResult_OmitsStartColumnPropertyWhenNull()
     {
         var report = TestScanReports.Build(
-            UntrustedConstraintFindings: [new UntrustedConstraintFinding(UntrustedConstraintFindingKind.ForeignKey, "FK_Test", "dbo.T", "test.sql", 4)]);
+            UntrustedConstraintFindings: [new UntrustedConstraintFinding(UntrustedConstraintFindingKind.CheckConstraint, "CK_Test", "dbo.T", "test.sql", 4)]);
 
         var region = FirstResult(report).GetProperty("locations")[0].GetProperty("physicalLocation").GetProperty("region");
 
@@ -822,34 +822,6 @@ public sealed class SarifReportWriterCoverageTests
         var report = TestScanReports.Build(SelfReferencingDmlFindings: [finding]);
 
         Assert.DoesNotContain("through view", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_UntrustedConstraintFindingForeignKey_DescribesKindAsForeignKey()
-    {
-        var finding = new UntrustedConstraintFinding(UntrustedConstraintFindingKind.ForeignKey, "FK_Test", "dbo.T", "test.sql", 1);
-        var report = TestScanReports.Build(UntrustedConstraintFindings: [finding]);
-
-        Assert.Contains("(foreign key on 'dbo.T')", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_DanglingObjectReferenceWithSchema_PrefixesReferencedEntityWithSchema()
-    {
-        var finding = new DanglingObjectReferenceFinding("dbo.usp_Test", "Procedure", "Widget", "sales", "test.sql", 1, 1);
-        var report = TestScanReports.Build(DanglingObjectReferenceFindings: [finding]);
-
-        Assert.Contains("references 'sales.Widget'", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_DanglingObjectReferenceWithNoSchema_UsesBareEntityName()
-    {
-        var finding = new DanglingObjectReferenceFinding("dbo.usp_Test", "Procedure", "Widget", null, "test.sql", 1, 1);
-        var report = TestScanReports.Build(DanglingObjectReferenceFindings: [finding]);
-
-        Assert.Contains("references 'Widget'", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-        Assert.DoesNotContain("references 'sales", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/query/for-xml-path-missing-order")]
 public sealed class ForXmlPathMissingOrderEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ForXmlPathMissingOrderEngineFactOracleTests);

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/query/recursive-cte-missing-maxrecursion")]
 public sealed class RecursiveCteMissingMaxRecursionEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(RecursiveCteMissingMaxRecursionEngineFactOracleTests);

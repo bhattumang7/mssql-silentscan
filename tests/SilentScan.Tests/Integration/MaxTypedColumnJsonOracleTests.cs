@@ -8,6 +8,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/catalog/max-typed-column")]
 public sealed class MaxTypedColumnJsonOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = new(

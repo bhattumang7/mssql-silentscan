@@ -5,6 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
 public sealed class ViewOrderingOrderByNotGuaranteedToConsumerEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = new(

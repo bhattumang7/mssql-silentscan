@@ -405,6 +405,18 @@ public static partial class DynamicSqlPipeline
         }
     }
 
+    private static (DynamicSqlOutcome Outcome, string? Reason) ClassifyOutcome(DynamicSqlScript script, Func<int, int, SourceSpan>? elisionMap)
+    {
+        if (elisionMap is not null)
+        {
+            return (DynamicSqlOutcome.PartiallyAnalyzed, "optional-fragment-elided");
+        }
+
+        return script.Confidence == FindingConfidence.Medium
+            ? (DynamicSqlOutcome.Unanalyzable, "value-substituted-with-symbolic-hole")
+            : (DynamicSqlOutcome.AnalyzedLiteral, null);
+    }
+
     private static void ProcessScript(
         DynamicSqlScript script,
         PipelineContext context,
@@ -421,11 +433,7 @@ public static partial class DynamicSqlPipeline
         }
 
         var map = elisionMap ?? script.SegmentMap.Map;
-        var (outcome, reason) = elisionMap is not null
-            ? (DynamicSqlOutcome.PartiallyAnalyzed, "optional-fragment-elided")
-            : script.Confidence == FindingConfidence.Medium
-                ? (DynamicSqlOutcome.Unanalyzable, "value-substituted-with-symbolic-hole")
-                : (DynamicSqlOutcome.AnalyzedLiteral, (string?)null);
+        var (outcome, reason) = ClassifyOutcome(script, elisionMap);
         accumulator.Findings.Add(new DynamicSqlFinding(
             script.CallSite.SourcePath, script.CallSite.Line, script.CallSite.Column, outcome, reason));
 

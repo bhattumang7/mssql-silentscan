@@ -28,6 +28,11 @@ public sealed class DatabaseConfigurationReaderDefaultsOracleTests : OracleTestF
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/auto-shrink-on")]
+[Trait("Rule", "silentscan/database/page-verify-not-checksum")]
+[Trait("Rule", "silentscan/database/query-store-not-read-write")]
+[Trait("Rule", "silentscan/database/query-store-capture-mode-not-auto")]
+[Trait("Rule", "silentscan/database/target-recovery-time-unset")]
 public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderUnhealthyFlagsOracleTests);
@@ -65,6 +70,7 @@ public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : Oracl
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/query-store-capture-mode-not-auto")]
 public sealed class DatabaseConfigurationReaderQueryStoreCaptureModeOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderQueryStoreCaptureModeOracleTests);
@@ -87,6 +93,7 @@ public sealed class DatabaseConfigurationReaderQueryStoreCaptureModeOracleTests 
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/auto-close-on")]
 public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderAutoCloseOracleTests);
@@ -108,6 +115,8 @@ public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTest
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/auto-create-statistics-off")]
+[Trait("Rule", "silentscan/database/auto-update-statistics-off")]
 public sealed class DatabaseConfigurationReaderStatisticsFlagsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderStatisticsFlagsOracleTests);
@@ -137,6 +146,7 @@ public sealed class DatabaseConfigurationReaderStatisticsFlagsOracleTests : Orac
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/compatibility-level-behind-engine-default")]
 public sealed class DatabaseConfigurationReaderCompatibilityLevelOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderCompatibilityLevelOracleTests);
@@ -158,6 +168,7 @@ public sealed class DatabaseConfigurationReaderCompatibilityLevelOracleTests : O
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/spatial-persisted-computed-column-compatibility-change")]
 public sealed class DatabaseConfigurationReaderSpatialPersistedComputedColumnOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderSpatialPersistedComputedColumnOracleTests);
@@ -217,6 +228,7 @@ public sealed class DatabaseConfigurationReaderSpatialPersistedComputedColumnOra
 }
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/database/plan-guide-alters-optimization")]
 public sealed class DatabaseConfigurationReaderPlanGuideOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderPlanGuideOracleTests);

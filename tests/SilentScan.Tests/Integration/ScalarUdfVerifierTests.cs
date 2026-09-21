@@ -8,6 +8,8 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+[Trait("Rule", "silentscan/scalar-udf/in-select-or-expression")]
 public sealed class ScalarUdfVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanScalarUdfVerifierTest";

@@ -1,10 +1,12 @@
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-public sealed class TableVariableLowCompatEstimateEngineFactOracleTests : OracleTestFixture
+[Trait("Rule", "silentscan/query/table-variable-low-compat-estimate")]
+public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TableVariableLowCompatEstimateEngineFactOracleTests);
 
@@ -67,10 +69,11 @@ public sealed class TableVariableLowCompatEstimateEngineFactOracleTests : Oracle
     {
         var planXml = await CaptureTableVariableCountPlanAsync();
 
-        var countStatementMatch = System.Text.RegularExpressions.Regex.Match(
-            planXml,
-            "StatementText=\"SELECT COUNT\\(\\*\\) FROM @t\"[^>]*StatementEstRows=\"([^\"]*)\"");
+        var countStatementMatch = CountEstimateRegex().Match(planXml);
         Assert.True(countStatementMatch.Success, planXml);
         Assert.Equal("1", countStatementMatch.Groups[1].Value);
     }
+
+    [GeneratedRegex("StatementText=\"SELECT COUNT\\(\\*\\) FROM @t\"[^>]*StatementEstRows=\"([^\"]*)\"")]
+    private static partial Regex CountEstimateRegex();
 }

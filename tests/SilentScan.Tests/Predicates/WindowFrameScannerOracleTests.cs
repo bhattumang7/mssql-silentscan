@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/window-frame/implicit-default-range")]
 public sealed class WindowFrameScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WindowFrameScannerOracleTests);
@@ -15,7 +16,7 @@ public sealed class WindowFrameScannerOracleTests : OracleTestFixture
         GO
         """;
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

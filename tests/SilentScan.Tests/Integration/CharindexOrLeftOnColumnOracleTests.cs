@@ -5,6 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tier1/charindex-or-left-on-column")]
 public sealed class CharindexOrLeftOnColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanCharindexOrLeftOracleTest";

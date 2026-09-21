@@ -4,6 +4,9 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/query/bare-top-no-order-by")]
+[Trait("Rule", "silentscan/view/top-percent-order-by-no-op")]
+[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
 public sealed class SecondSweepGLiveOracleTests
 {
     [Fact]

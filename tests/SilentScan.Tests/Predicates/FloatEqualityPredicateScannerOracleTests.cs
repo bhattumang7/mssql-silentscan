@@ -7,6 +7,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/float-equality")]
 public sealed class FloatEqualityPredicateScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(FloatEqualityPredicateScannerOracleTests);

@@ -4,6 +4,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/dml/self-referencing")]
 public sealed class SelfReferencingDmlOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(SelfReferencingDmlOracleTests);

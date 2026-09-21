@@ -4,6 +4,9 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/string-builtin/replicate-truncated")]
+[Trait("Rule", "silentscan/string-builtin/replace-truncated")]
+[Trait("Rule", "silentscan/string-builtin/space-truncated")]
 public sealed class BoundedStringBuiltinTruncationLiveOracleTests
 {
     [Fact]

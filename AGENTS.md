@@ -6,72 +6,161 @@ Static analyser for SQL Server code.
 configuration/catalog data, it's in scope.** That's the whole rule — nothing
 else restricts what SilentScan can detect or how it detects it.
 
-## Comments
-Please remove any existing comments and do not write any new comments in the code.
-    
-## Mark down
-Do not write un necessary mark down documents that wont have meaning in 10 yeares.
-
-**Tool-first.** The tool (`silentscan scan-db`/`scan-corpus-live`, JSON + SARIF
+**Tool-first.** The tool (`silentscan scan-db`, JSON + SARIF
 findings) is the deliverable. **Precision beats recall everywhere** — one false
 positive in a published finding is worse than ten missed true positives.
 
-**Standing docs** — exactly these, updated in place, read fresh each session:
+## Hard errors are out of scope — assume the code executes without error
+Assume every statement SilentScan looks at actually runs to completion
+without throwing. A hard, synchronous error that SQL Server reports loudly
+and unambiguously the moment its path is hit — a `CREATE`/`ALTER` that fails
+outright, a statement that never parses/binds, or a statement that compiles
+fine (including via deferred name resolution, where the referenced object
+doesn't exist yet at `CREATE` time) but always throws the instant it first
+executes — is never in scope, regardless of whether the erroring object is
+reachable in a deployed catalog. Reachability in `sys.*` is necessary but not
+sufficient: the question is not "can `scan-db` see this object," it's "does
+the engine already scream about this the moment it's hit." Two independent
+reasons, either one is sufficient:
+- **Loud, not silent.** SilentScan's whole reason to exist is surfacing what
+  the engine stays silent about. An error the engine already reports,
+  immediately and unmistakably, needs no static analyzer — the first test
+  run or real invocation already tells the user exactly what's wrong. See
+  the `FullTextIndexDdlScanner` and `ComputedColumnIndexKeyScanner` removals
+  for the deploy-time pattern.
+- **Not our job.** Catching what the engine already refuses — whether at
+  compile/deploy time or on first execution — means re-deriving the engine's
+  own validation logic, at the limit reimplementing the compiler.
 
-* `CLAUDE.md` — this contract: current rules, not point-in-time status.
-* `docs/detection-tasklist.md` — the working backlog, and the one sanctioned
-  plan file: open items are recorded there. Once the items are closed, the text is 
-  removed from the file. Try to not write to this unless you absolutely can not do the work.
-* `docs/local-dev.md` — local setup.
+Only build (or keep) a rule for what survives execution without error: a
+wrong or silently lossy result, a precision/rounding loss, a plan-shape or
+performance consequence, an internal engine decision (locking, caching,
+serialization, evaluation order, deferred materialization) that produces a
+correct-looking but wrong outcome. If the only oracle-confirmable fact about
+a rule is "this throws Msg NNNN," it's out of scope, full stop — it doesn't
+matter when in the object's lifecycle that throw happens.
+
+## Do not launch agents
+Keep the urge to spin up agents in control. For very small tasks do not spin up agents.
+
+## Comments
+Remove any existing comments and do not write any new comments in the code. Not optional.
+
+## Markdown
+Do not write unnecessary markdown documents that won't have meaning in 10 years.
+
+## Local database
+- `mssql-silentscan-sql`, `silentscan-sql2025` (this is SQL 2025 instance), and `silentscan-sql` are local SQL instances in Docker for running tests and verifying behaviour. silentscan-mssql-fts-2025 has full text search installed.
+
+## Adding red test first
+Add a red test first before adding a correction in SUT.
+
+## Every rule needs an oracle test
+A rule is not done, and may not stay published, until an integration test in
+`tests/SilentScan.Tests/Integration` proves its claim against a real SQL Server
+instance and would fail if the claim were false. Tag it
+`[Trait("Category", "Oracle")]` plus `[Trait("Rule", "<rule-id>")]` (repeat the
+`Rule` trait for each rule the test backs). `RuleOracleCoverageTests` fails
+listing every published rule with no such test. If the claim cannot be backed
+by a real-database test, delete the rule rather than exempting it.
+The formatting/, metrics/, dead-code/, duplication/, `deprecated-syntax/task-comment-` and
+`control-flow/goto-usage` style families are exempt.
+
+## To do list
+`docs/detection-tasklist.md` has the list of to do items. Read it only if asked.
+
+## Local environment
+- `docs/local-dev.md` — local setup; read only if you need more detail.
+- Use these commands to build and test. Do not run dotnet commands manually (they leak).
+```
+scripts/dotnet-safe.sh build
+scripts/dotnet-safe.sh test
+scripts/dotnet-safe.sh test --filter "FullyQualifiedName~DynamicSql"
+```
+The docker container named `silentscan-mssql-fts` is the full text search SQL server. 
+
+## Published SQL rules
 * `docs/rules.html` (index) and `docs/rules/*.html` (one page per rule).
   Generated by the CLI's `rules-doc` verb from `RuleCatalog`
   (`src/SilentScan.Core/Reporting/RuleCatalog.cs`), the single source of truth
   whose id/rationale/fix-guidance/example data also feeds SARIF's `rules`
   block (`helpUri` links straight to a rule's own page) — never hand-edit
   either; regenerate instead.
+* `./docs` publishes to https://umangbhatt.in/mssql-silentscan/ — everything public goes there.
 
-Any other markdown is disposable: generate it for the session's purpose and
-delete it when the work is done.
-
-# Not stopping for the user
+## Not stopping for the user
 **Don't stop to ask for a yes.** When the only thing you'd ask is "should I
 continue?" or "want me to proceed to the next item?", don't — keep working and
 say what you're doing as you go. If one step genuinely needs a go-ahead (e.g.
 committing), do everything else and surface that step in passing.
 
-## Build and test
+## Confidentiality boundary
+Nothing about the local test database or the `vendor/sql2025` reference code
+leaks — not names, schema, object/column names, row content, or folder
+structure — into code, comments, tests, docs, commit messages, or anything
+published. This holds regardless of scope changes above.
 
-```
-scripts/dotnet-safe.sh build
-scripts/dotnet-safe.sh test
-scripts/dotnet-safe.sh test --filter "FullyQualifiedName~DynamicSql"
-```
+- Local test database: connection details and container setup are in
+  `local-test-database.md` (local-only, gitignored). Use it as the default
+  target for real-database-shaped testing.
+- Reference code: `vendor/sql2025` shows what parts we got wrong compared to
+  real SQL Server; read it via the instructions in
+  `vendor/sql2025/reading_from_folder.md`. Do the high-confidence work only —
+  don't skip things that would cost more later. Being correct and thorough
+  matters most.
+- **Always favor reading `vendor/sql2025` code before deciding anything** —
+  before concluding a claim is correct, before declaring a task/investigation
+  done, before trusting an existing test or public docs as sufficient. Public
+  docs and existing tests describe intended or previously-assumed behavior,
+  not necessarily what the engine's real code does; `vendor/sql2025` can
+  hold detail neither surfaces, and oracle probing alone can miss a
+  divergence a probe simply wasn't shaped to catch. Read the real code first,
+  then oracle-verify the resulting claim — never the other way around, and
+  never skip the code read because a docs page or a test already agrees.
+  
+## Codebase map — what is where
+  - src/SilentScan.Core/Predicates/ — one <Name>Finding.cs (enum+record) and <Name>Scanner.cs
+    (TSqlFragmentVisitor) per rule family; scanners here are the source of every finding.
+  - src/SilentScan.Core/Reporting/ScanReport.cs + ScanReportBuilder.cs — the report's finding-list
+    fields and the scan pipeline that populates them; every new finding list threads through both.
+  - src/SilentScan.Core/Reporting/RuleCatalog.cs — canonical rule id/rationale/fix-guidance list.
+  - src/SilentScan.Core/Reporting/Sarif/SarifRuleCatalog.cs (rule id strings) and
+    SarifReportWriter.cs (finding -> SARIF result) — SARIF output wiring.
+  - src/SilentScan.Core/Reporting/RuleDocs/<Family>/*.cs — per-rule doc content, registered in
+    RuleDocs/RuleDocCatalog.cs; regenerate docs/rules.html + docs/rules/*.html via
+    `dotnet-safe.sh run --project src/SilentScan.Cli -- rules-doc` after editing.
+  - src/SilentScan.Core/Reporting/Readable/ReadableScanReportWriter.cs — human-readable text/
+    markdown report sections, one method per finding family, dispatched from a central list.
+  - tests/SilentScan.Tests/Support/TestScanReports.cs — the one place to build a ScanReport in
+    tests; grep for stray `new ScanReport(` positional call sites too, they don't use it.
+  - docs/detection-tasklist.md — open work items; docs/rules.html/rules/ — published rule docs.
+  - Undocumented ScriptDom AST shape: `DOTNET_ROLL_FORWARD=LatestMajor ilspycmd -t
+    Microsoft.SqlServer.TransactSql.ScriptDom.<TypeName> <scriptdom.dll under ~/.nuget/packages>`.
+  - Oracle-verify actual engine behavior: `docker exec <container> sqlcmd ...` against the local
+    Docker SQL instances, self-contained VALUES-based queries only (no real schema/data).
 
-## Local test database
 
-Connection details and container setup: `local-test-database.md` (local-only,
-gitignored). Use it as the default target for real-database-shaped testing.
+## Rules for unit and integration tests
+`test-check.md` has rules for unit and integration tests. Whenever you write tests, read them first.
 
-**Nothing about it leaks.** Not its name, not schema, object or column names,
-not row content — never into code, comments, tests, docs, commit messages, or
-anything published. Same rule for any other remote database worked with. This
-is a confidentiality boundary, not a detection-scope one — kept regardless of
-scope changes above.
+## Git commit
+Do not mention Claude in the commit message or as coauthor. Do not leak session info anywhere.
+Do not mention dates, numbers, or pass counts (e.g. "pass 1") that would have no meaning in the long run, in the commit message or in the code.
 
-## Docs
+## Sonar
+Run sonar-scan.ps1 and make sure that 0 issues are reported in all aspects. Also, 0 code duplication should be reached.
 
-`./docs` publishes to https://umangbhatt.in/mssql-silentscan/ — everything
-public goes there.
+### Sonar MCP
+If sonar MCP is enabled, get info about all issues and code duplication and then ask the user to disable the MCP to save tokens.
 
-# Reference code
-There is reference code under /home/umang/Desktop/projects/mssql-silentscan/vendor/sql2025
-for you to look at and see what parts we got wrong compared to the real SQL server. Never mention
-any specifics about the sql2025 folder or files or structure in the comments or code or test - the
-details remain between you and me and never goes into the repository itself. This is a
-confidentiality boundary, not a detection-scope one — kept regardless of scope changes above.
-Do the high confidence work only - dont skip stuff that would cost more laster. Being correct and thorough is the most important thing.
-To read what is in there go via the instructions from /vendor/sql2025/reading_from_folder.md
+# Final response: be concise and action-oriented.
+Separate into: Done, Not Done/Unverified, Issues, Next.
+Do not include a chronological work log or repeat details.
+Never call something done unless it was actually verified.
 
-# Git commit
-Do not mention claude in the commit message or as coauthor. Do not leak the session info anywhere.
-Do not mention dates, numbers, pass (pass 1 etc), etc that would have no meaning in long run in the commit message or in the code.
+End with a concise status summary:
+Done | Not Done/Unverified | Issues | Next.
+No work-log narration. Distinguish implemented from verified.
+
+# Compile and test 
+Compile and test takes 5 minutes. So, try to complete as much work as possible before doing this.

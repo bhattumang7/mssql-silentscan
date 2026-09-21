@@ -1,10 +1,12 @@
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-public sealed class TemporalTableHistoryIndexGapEngineFactOracleTests : OracleTestFixture
+[Trait("Rule", "silentscan/catalog/temporal-history-index-gap")]
+public sealed partial class TemporalTableHistoryIndexGapEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TemporalTableHistoryIndexGapEngineFactOracleTests);
 
@@ -117,7 +119,10 @@ public sealed class TemporalTableHistoryIndexGapEngineFactOracleTests : OracleTe
         var planXml = await CaptureTemporalQueryPlanAsync(connection);
 
         Assert.DoesNotContain("PhysicalOp=\"Clustered Index Scan\"", planXml, StringComparison.Ordinal);
-        var seekCount = System.Text.RegularExpressions.Regex.Count(planXml, "PhysicalOp=\"Index Seek\"");
+        var seekCount = IndexSeekRegex().Count(planXml);
         Assert.Equal(2, seekCount);
     }
+
+    [GeneratedRegex("PhysicalOp=\"Index Seek\"")]
+    private static partial Regex IndexSeekRegex();
 }

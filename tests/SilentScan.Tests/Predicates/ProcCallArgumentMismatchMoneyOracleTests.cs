@@ -9,6 +9,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/call-graph/argument-type-mismatch")]
 public sealed class ProcCallArgumentMismatchMoneyOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ProcCallArgumentMismatchMoneyOracleTests);

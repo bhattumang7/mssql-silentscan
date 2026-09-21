@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/correctness/between-end-of-period-boundary")]
 public sealed class TemporalBoundaryPrecisionOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TemporalBoundaryPrecisionOracleTests);

@@ -52,24 +52,27 @@ public static class UnistrUnpairedSurrogateScanner
             var escapes = UnistrEscapeParser.ParseEscapes(value);
             var result = new List<UnistrEscapeParser.UnicodeEscape>();
 
-            for (var i = 0; i < escapes.Count; i++)
+            var index = 0;
+            while (index < escapes.Count)
             {
-                var current = escapes[i];
+                var current = escapes[index];
                 if (current.CodePoint is < 0xD800 or > 0xDFFF)
                 {
+                    index++;
                     continue;
                 }
 
                 if (current.CodePoint is >= 0xD800 and <= 0xDBFF
-                    && i + 1 < escapes.Count
-                    && escapes[i + 1].StartIndex == current.EndIndex
-                    && escapes[i + 1].CodePoint is >= 0xDC00 and <= 0xDFFF)
+                    && index + 1 < escapes.Count
+                    && escapes[index + 1].StartIndex == current.EndIndex
+                    && escapes[index + 1].CodePoint is >= 0xDC00 and <= 0xDFFF)
                 {
-                    i++;
+                    index += 2;
                     continue;
                 }
 
                 result.Add(current);
+                index++;
             }
 
             return result;

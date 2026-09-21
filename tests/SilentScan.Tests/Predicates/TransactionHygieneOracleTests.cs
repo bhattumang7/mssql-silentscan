@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/control-flow/unresolved-transaction")]
 public sealed class TransactionHygieneOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TransactionHygieneOracleTests);
@@ -45,7 +46,7 @@ public sealed class TransactionHygieneOracleTests : OracleTestFixture
         GO
         """;
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

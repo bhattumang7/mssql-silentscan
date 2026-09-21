@@ -7,6 +7,8 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/correctness/check-constraint-predicate-contradiction")]
+[Trait("Rule", "silentscan/correctness/not-null-predicate-contradiction")]
 public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CheckConstraintPredicateContradictionOracleTests);

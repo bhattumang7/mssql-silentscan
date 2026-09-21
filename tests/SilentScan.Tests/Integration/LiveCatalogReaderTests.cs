@@ -258,9 +258,7 @@ public sealed class LiveCatalogReaderTests : OracleTestFixture
 
         var findings = UntrustedConstraintScanner.Scan(catalog);
 
-        Assert.Contains(findings, f => f.Kind == UntrustedConstraintFindingKind.ForeignKey && f.ConstraintName == "FK_UntrustedChildren_Parents");
         Assert.Contains(findings, f => f.Kind == UntrustedConstraintFindingKind.CheckConstraint && f.ConstraintName == "CK_CheckedOrders_Amount");
-        Assert.DoesNotContain(findings, f => f.ConstraintName == "FK_OrdersFk_CustomersFk");
     }
 
     [Fact]

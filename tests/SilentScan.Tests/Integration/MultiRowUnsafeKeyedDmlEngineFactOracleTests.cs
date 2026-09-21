@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/multi-row-unsafe-keyed-dml")]
 public sealed class MultiRowUnsafeKeyedDmlEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MultiRowUnsafeKeyedDmlEngineFactOracleTests);

@@ -6,6 +6,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/join/always-false-inner-join-predicate")]
 public sealed class CartesianJoinAlwaysFalseInnerJoinPredicateOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CartesianJoinAlwaysFalseInnerJoinPredicateOracleTests);

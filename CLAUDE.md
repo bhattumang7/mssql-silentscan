@@ -55,6 +55,17 @@ Do not write unnecessary markdown documents that won't have meaning in 10 years.
 ## Adding red test first
 Add a red test first before adding a correction in SUT.
 
+## Every rule needs an oracle test
+A rule is not done, and may not stay published, until an integration test in
+`tests/SilentScan.Tests/Integration` proves its claim against a real SQL Server
+instance and would fail if the claim were false. Tag it
+`[Trait("Category", "Oracle")]` plus `[Trait("Rule", "<rule-id>")]` (repeat the
+`Rule` trait for each rule the test backs). `RuleOracleCoverageTests` fails
+listing every published rule with no such test. If the claim cannot be backed
+by a real-database test, delete the rule rather than exempting it.
+The formatting/, metrics/, dead-code/, duplication/, `deprecated-syntax/task-comment-` and
+`control-flow/goto-usage` style families are exempt.
+
 ## To do list
 `docs/detection-tasklist.md` has the list of to do items. Read it only if asked.
 

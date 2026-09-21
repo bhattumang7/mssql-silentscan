@@ -22,7 +22,7 @@ public static class RuleExampleCorpus
 
                 if (example.CompliantSql is { } compliantSql)
                 {
-                    cases.Add(BuildCompliantCase(ruleId, exampleIndex, example.Title, example.NoncompliantSql, compliantSql));
+                    cases.Add(BuildCompliantCase(ruleId, exampleIndex, example.Title, example.NoncompliantSql, compliantSql, example.CompliantProof));
                 }
 
                 exampleIndex++;
@@ -39,13 +39,14 @@ public static class RuleExampleCorpus
             example.Title,
             RuleExampleVariant.Noncompliant,
             example.NoncompliantSql,
-            IsSelfContained: HasObjectDefinition(example.NoncompliantSql));
+            IsSelfContained: HasObjectDefinition(example.NoncompliantSql),
+            BehaviorProof: example.NoncompliantProof);
 
-    private static RuleExampleCase BuildCompliantCase(string ruleId, int exampleIndex, string title, string noncompliantSql, string compliantSql)
+    private static RuleExampleCase BuildCompliantCase(string ruleId, int exampleIndex, string title, string noncompliantSql, string compliantSql, RuleDocBehaviorProof? behaviorProof)
     {
         if (HasObjectDefinition(compliantSql))
         {
-            return new RuleExampleCase(ruleId, exampleIndex, title, RuleExampleVariant.Compliant, compliantSql, IsSelfContained: true);
+            return new RuleExampleCase(ruleId, exampleIndex, title, RuleExampleVariant.Compliant, compliantSql, IsSelfContained: true, behaviorProof);
         }
 
         var (prelude, preludeHasObjectDefinition) = ExtractPrelude(noncompliantSql);
@@ -57,7 +58,8 @@ public static class RuleExampleCorpus
             title,
             RuleExampleVariant.Compliant,
             deployable,
-            IsSelfContained: preludeHasObjectDefinition);
+            IsSelfContained: preludeHasObjectDefinition,
+            BehaviorProof: behaviorProof);
     }
 
     private static (string Prelude, bool HasObjectDefinition) ExtractPrelude(string noncompliantSql)

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/index-design/variable-length-key-column-exceeds-key-limit")]
 public sealed class IndexDesignScannerLiveOracleTests
 {
     [Fact]

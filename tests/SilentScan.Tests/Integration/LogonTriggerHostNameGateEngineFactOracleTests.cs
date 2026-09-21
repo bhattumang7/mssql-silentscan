@@ -4,6 +4,7 @@ using SilentScan.Verify;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/logon-trigger-host-name-gate")]
 public sealed class LogonTriggerHostNameGateEngineFactOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;

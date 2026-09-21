@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/naming/sp-prefix-on-user-routine")]
 public sealed class NamingSpPrefixResolutionOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(NamingSpPrefixResolutionOracleTests);

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/forced-parameterization/group-by-expression-literal")]
 public sealed class ForcedParameterizationGroupByOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ForcedParameterizationGroupByOracleTests);

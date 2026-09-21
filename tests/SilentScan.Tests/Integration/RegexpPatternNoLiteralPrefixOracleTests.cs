@@ -8,6 +8,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tier1/regexp-pattern-no-literal-prefix")]
 public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = new(

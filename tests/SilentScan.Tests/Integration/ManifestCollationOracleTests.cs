@@ -5,6 +5,8 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/verdict/scan-forced")]
+[Trait("Rule", "silentscan/verdict/range-seek")]
 public sealed class ManifestCollationOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanManifestCollationOracleTest";

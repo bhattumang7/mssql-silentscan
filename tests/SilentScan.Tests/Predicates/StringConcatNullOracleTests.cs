@@ -5,6 +5,8 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicate/plus-operator-null-propagation")]
+[Trait("Rule", "silentscan/set-option/concat-null-yields-null-off")]
 public sealed class StringConcatNullOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = new(

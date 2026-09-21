@@ -6,6 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/control-flow/cursor-close-on-commit")]
 public sealed class CursorCloseOnCommitScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CursorCloseOnCommitScannerOracleTests);
@@ -19,7 +20,7 @@ public sealed class CursorCloseOnCommitScannerOracleTests : OracleTestFixture
         return CursorCloseOnCommitScanner.Scan(result);
     }
 
-    private async Task<SqlConnection> OpenConnectionAsync()
+    private new async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

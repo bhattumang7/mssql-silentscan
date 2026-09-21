@@ -5,6 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tier1/cast-or-convert-on-column")]
 public sealed class CastOrConvertOnColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanCastOrConvertOracleTest";

@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/trigger/multi-row-unsafe-single-row-assignment")]
 public sealed class MultiRowUnsafeSingleRowAssignmentEngineFactOracleTests : OracleTestFixture
 {
     private static readonly int[] PossibleCapturedValues = [10, 20, 30];

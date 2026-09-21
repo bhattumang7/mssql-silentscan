@@ -6,6 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/deprecated-syntax/legacy-system-compatibility-view")]
 public sealed class DeprecatedSyntaxLegacyCompatibilityViewOracleTests : OracleTestFixture
 {
     private const int InvalidObjectNameErrorNumber = 208;

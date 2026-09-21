@@ -5,6 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/tier1/column-arithmetic")]
 public sealed class ColumnArithmeticOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanColumnArithmeticOracleTest";

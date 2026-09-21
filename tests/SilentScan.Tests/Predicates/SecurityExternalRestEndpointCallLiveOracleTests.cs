@@ -4,6 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/security/external-rest-endpoint-call")]
 public sealed class SecurityExternalRestEndpointCallLiveOracleTests
 {
     [Fact]

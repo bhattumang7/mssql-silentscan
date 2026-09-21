@@ -6,6 +6,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/index-design/row-or-page-locking-disabled")]
 public sealed class IndexDesignScannerRowOrPageLockingDisabledOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IndexDesignScannerRowOrPageLockingDisabledOracleTests);
