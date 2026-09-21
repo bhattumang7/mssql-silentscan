@@ -76,14 +76,13 @@ public sealed class DynamicSqlPlaceholderConfidenceInvariantTests
 
         var totalChecked =
             report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count + report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count + report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count
-            + report.Find<CollationConflictFinding>("TypedPredicateExtractor").Count + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count;
+            + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count;
 
         Assert.True(totalChecked > 0, $"Scenario \"{scenarioName}\" produced no findings of any kind to check.");
 
         Assert.All(report.Find<SargabilityFinding>("NonSargablePredicateScanner"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
         Assert.All(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
         Assert.All(report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
-        Assert.All(report.Find<CollationConflictFinding>("TypedPredicateExtractor"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
         Assert.All(report.Find<WriteLossFinding>("TypedPredicateExtractor"), f => Assert.NotEqual(FindingConfidence.High, f.Confidence));
     }
 

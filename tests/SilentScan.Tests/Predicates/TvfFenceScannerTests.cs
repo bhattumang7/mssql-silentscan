@@ -22,23 +22,6 @@ public sealed class TvfFenceScannerTests
     }
 
     [Fact]
-    public void FromOrJoin_MultiStatementTvfJoinedDirectly_Fires()
-    {
-        var findings = ScanFixture("FROM_OR_JOIN_fires.sql");
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(TvfFenceFindingKind.FromOrJoin, finding.Kind);
-        Assert.Equal("dbo.fn_OrderLines", finding.FunctionQualifiedName);
-        Assert.Equal(TableValuedFunctionKind.MultiStatement, finding.FunctionKind);
-    }
-
-    [Fact]
-    public void FromOrJoin_InlineTvfCalledIdentically_DoesNotFire()
-    {
-        Assert.Empty(ScanFixture("FROM_OR_JOIN_clean.sql"));
-    }
-
-    [Fact]
     public void CorrelatedApply_ArgumentReferencesOuterColumn_Fires()
     {
         var findings = ScanFixture("CORRELATED_APPLY_fires.sql");
@@ -57,7 +40,7 @@ public sealed class TvfFenceScannerTests
     }
 
     [Fact]
-    public void CorrelatedApply_UncorrelatedArgument_ClassifiesAsFromOrJoinNotCorrelated()
+    public void CorrelatedApply_UncorrelatedArgument_DoesNotFire()
     {
         var result = SqlScriptParser.ParseText("test.sql", """
             CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
@@ -79,8 +62,7 @@ public sealed class TvfFenceScannerTests
         var catalog = CatalogBuilder.Build([result]);
         var findings = TvfFenceScanner.Scan(result, catalog, new Dictionary<string, TvfFenceOrigin>());
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(TvfFenceFindingKind.FromOrJoin, finding.Kind);
+        Assert.Empty(findings);
     }
 
     [Fact]
@@ -118,38 +100,5 @@ public sealed class TvfFenceScannerTests
     public void NestedUnderViewOrTvf_ViaInlineTvfWrappingAnotherInlineTvf_DoesNotFire()
     {
         Assert.Empty(ScanFixture("NESTED_UNDER_VIEW_OR_TVF_via_inline_tvf_clean.sql"));
-    }
-
-    [Fact]
-    public void InsertExec_ExecutesProcedureIntoTable_Fires()
-    {
-        var findings = ScanFixture("INSERT_EXEC_fires.sql");
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(TvfFenceFindingKind.InsertExec, finding.Kind);
-        Assert.Equal("dbo.usp_GetOrderIds", finding.ReferencedObjectQualifiedName);
-        Assert.Null(finding.FunctionQualifiedName);
-    }
-
-    [Fact]
-    public void InsertExec_OrdinaryInsertSelect_DoesNotFire()
-    {
-        Assert.Empty(ScanFixture("INSERT_EXEC_clean.sql"));
-    }
-
-    [Fact]
-    public void Standalone_LoneMultiStatementTvfReference_Fires()
-    {
-        var findings = ScanFixture("STANDALONE_fires.sql");
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(TvfFenceFindingKind.Standalone, finding.Kind);
-        Assert.Equal("dbo.fn_ActiveOrderIds", finding.FunctionQualifiedName);
-    }
-
-    [Fact]
-    public void Standalone_LoneInlineTvfReference_DoesNotFire()
-    {
-        Assert.Empty(ScanFixture("STANDALONE_clean.sql"));
     }
 }

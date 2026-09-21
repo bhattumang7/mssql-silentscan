@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">253 rules. 180 carry fix guidance; 20 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">239 rules. 170 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -193,11 +193,9 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/deprecated-syntax-legacy-lob-function.html">Legacy Lob Function</a> <code class="rule-key">silentscan/deprecated-syntax/legacy-lob-function</code><span class="snippet">TEXTPTR/TEXTVALID are legacy functions tied to the deprecated text/ntext/image large-object types, tracked by the engine&#x27;s own deprecated-features counters.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-legacy-lob-statement.html">Legacy Lob Statement</a> <code class="rule-key">silentscan/deprecated-syntax/legacy-lob-statement</code><span class="snippet">READTEXT/WRITETEXT/UPDATETEXT are legacy statements for the deprecated text/ntext/image large-object types, tracked by the engine&#x27;s own deprecated-features counters.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-legacy-system-compatibility-view.html">Legacy System Compatibility View</a> <code class="rule-key">silentscan/deprecated-syntax/legacy-system-compatibility-view</code><span class="snippet">A reference to a pre-SQL-Server-2005 system compatibility view, retained only for backward compatibility and missing columns/rows the real sys.* catalog view exposes.</span></li>
-      <li><a class="id" href="rules/deprecated-syntax-non-ansi-comparison-operator.html">Non ANSI Comparison Operator</a> <code class="rule-key">silentscan/deprecated-syntax/non-ansi-comparison-operator</code><span class="snippet">A non-ANSI comparison operator (!=, !&lt;, !&gt;) is used instead of the ANSI-standard spelling.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-not-equals-null-comparison.html">Not Equals Null Comparison</a> <code class="rule-key">silentscan/deprecated-syntax/not-equals-null-comparison</code><span class="snippet">&quot;&lt;&gt; NULL&quot;/&quot;!= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-numbered-procedure-definition.html">Numbered Procedure Definition</a> <code class="rule-key">silentscan/deprecated-syntax/numbered-procedure-definition</code><span class="snippet">A procedure is defined as a numbered-procedure-group member.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-numbered-procedure-execution.html">Numbered Procedure Execution</a> <code class="rule-key">silentscan/deprecated-syntax/numbered-procedure-execution</code><span class="snippet">A procedure is invoked by its numbered-procedure-group number.</span></li>
-      <li><a class="id" href="rules/deprecated-syntax-removed-security-stored-procedure.html">Removed Security Stored Procedure</a> <code class="rule-key">silentscan/deprecated-syntax/removed-security-stored-procedure</code><span class="snippet">A legacy security-administration system stored procedure is invoked, superseded by CREATE LOGIN/CREATE USER/ALTER ROLE.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-table-hint-without-with.html">Table Hint Without With</a> <code class="rule-key">silentscan/deprecated-syntax/table-hint-without-with</code><span class="snippet">A table hint is written without the WITH keyword.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-task-comment-fixme.html">Task Comment Fixme</a> <code class="rule-key">silentscan/deprecated-syntax/task-comment-fixme</code><span class="snippet">A comment contains an untracked &quot;FIXME&quot; marker.</span></li>
       <li><a class="id" href="rules/deprecated-syntax-task-comment-todo.html">Task Comment Todo</a> <code class="rule-key">silentscan/deprecated-syntax/task-comment-todo</code><span class="snippet">A comment contains an untracked &quot;TODO&quot; marker.</span></li>
@@ -290,13 +288,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   </section>
 
   <section class="family-section">
-    <h2>identity</h2>
-    <ul class="rule-list">
-      <li><a class="id" href="rules/identity-range-near-exhaustion.html">Range Near Exhaustion</a> <code class="rule-key">silentscan/identity/range-near-exhaustion</code><span class="snippet">An IDENTITY column has consumed most of its declared type&#x27;s representable range.</span></li>
-    </ul>
-  </section>
-
-  <section class="family-section">
     <h2>index</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/index-key-lookup-prone.html">Key Lookup Prone</a> <code class="rule-key">silentscan/index/key-lookup-prone</code><span class="snippet">A WHERE-equality seek against a table&#x27;s own single candidate nonclustered index does not cover every other column the statement references on that table.</span></li>
@@ -383,8 +374,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <h2>naming</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/naming-redundant-type-qualifier.html">Redundant Type Qualifier</a> <code class="rule-key">silentscan/naming/redundant-type-qualifier</code><span class="snippet">A data type reference carries a &quot;dbo.&quot; schema qualifier even though no other schema in the scanned database defines a same-named type, so the qualifier adds nothing and only couples the declaration to a schema it does not need to name.</span></li>
-      <li><a class="id" href="rules/naming-reserved-keyword-as-identifier.html">Reserved Keyword As Identifier</a> <code class="rule-key">silentscan/naming/reserved-keyword-as-identifier</code><span class="snippet">A declared identifier is spelled identically to a reserved T-SQL keyword, forcing every future reference to remember to bracket- or quote-delimit it.</span></li>
-      <li><a class="id" href="rules/naming-sp-prefix-on-user-routine.html">Sp Prefix On User Routine</a> <code class="rule-key">silentscan/naming/sp-prefix-on-user-routine</code><span class="snippet">A user-defined procedure or function is named with the &quot;sp_&quot; prefix, reserved by convention for system-shipped procedures.</span></li>
       <li><a class="id" href="rules/naming-unqualified-create.html">Unqualified Create</a> <code class="rule-key">silentscan/naming/unqualified-create</code><span class="snippet">A CREATE/ALTER for a schema-scoped procedure/function/view names it with no explicit schema qualifier.</span></li>
     </ul>
   </section>
@@ -403,7 +392,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/predicates-catch-all-parameter.html">Catch All Parameter</a> <code class="rule-key">silentscan/predicates/catch-all-parameter</code><span class="snippet">A predicate of the shape (Col = @p OR @p IS NULL).</span></li>
       <li><a class="id" href="rules/predicates-dynamic-data-masking-computed-expression-collapse.html">Dynamic Data Masking Computed Expression Collapse</a> <code class="rule-key">silentscan/predicates/dynamic-data-masking-computed-expression-collapse</code><span class="snippet">A Dynamic Data Masking column is used inside a non-trivial SELECT-list expression (arithmetic, CAST/CONVERT, string concatenation, a scalar function call, or an aggregate) rather than being selected directly.</span></li>
       <li><a class="id" href="rules/predicates-dynamic-data-masking-predicate-exposure.html">Dynamic Data Masking Predicate Exposure</a> <code class="rule-key">silentscan/predicates/dynamic-data-masking-predicate-exposure</code><span class="snippet">A Dynamic Data Masking column is used as a direct operand of a comparison, BETWEEN, LIKE, IN, GROUP BY, or ORDER BY.</span></li>
-      <li><a class="id" href="rules/predicates-execute-at-large-object-parameter-crashes-session.html">Execute At Large Object Parameter Crashes Session</a> <code class="rule-key">silentscan/predicates/execute-at-large-object-parameter-crashes-session</code><span class="snippet">An EXECUTE (&#x27;...&#x27;, @param, ...) AT linked_server/data_source call passes a VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX)-typed local variable or parameter as one of the remote call&#x27;s arguments.</span></li>
       <li><a class="id" href="rules/predicates-filtered-index-parameter-mismatch.html">Filtered Index Parameter Mismatch</a> <code class="rule-key">silentscan/predicates/filtered-index-parameter-mismatch</code><span class="snippet">A predicate compares a column against a parameter or local variable, but that same column carries a filtered index whose own filter is a literal-equality restatement of this exact comparison.</span></li>
       <li><a class="id" href="rules/predicates-float-equality.html">Float Equality</a> <code class="rule-key">silentscan/predicates/float-equality</code><span class="snippet">A WHERE/ON equality or inequality predicate (= or &lt;&gt;) compares a float/real (approximate, IEEE-754) column.</span></li>
       <li><a class="id" href="rules/predicates-float-order-dependent-aggregate.html">Float Order Dependent Aggregate</a> <code class="rule-key">silentscan/predicates/float-order-dependent-aggregate</code><span class="snippet">SUM/AVG/VAR/VARP/STDEV/STDEVP is applied to a float/real (approximate, IEEE-754) column, or to an arithmetic/CAST/CONVERT expression whose result type is float/real (including one built from a float literal constant).</span></li>
@@ -426,12 +414,10 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/query-multi-row-insert-ignore-dup-key-drop.html">Multi Row Insert Ignore Dup Key Drop</a> <code class="rule-key">silentscan/query/multi-row-insert-ignore-dup-key-drop</code><span class="snippet">A multi-row INSERT targets a table with a UNIQUE index built WITH (IGNORE_DUP_KEY = ON).</span></li>
       <li><a class="id" href="rules/query-non-aggregate-having-predicate.html">Non Aggregate HAVING Predicate</a> <code class="rule-key">silentscan/query/non-aggregate-having-predicate</code><span class="snippet">A HAVING condition references only GROUP BY key columns/literals and no aggregate result.</span></li>
       <li><a class="id" href="rules/query-rbar-single-row-loop-dml.html">Rbar Single Row Loop DML</a> <code class="rule-key">silentscan/query/rbar-single-row-loop-dml</code><span class="snippet">A WHILE loop issues a single-row UPDATE/DELETE keyed to a variable the same loop advances per iteration (row-by-row processing).</span></li>
-      <li><a class="id" href="rules/query-recursive-cte-missing-maxrecursion.html">Recursive CTE Missing Maxrecursion</a> <code class="rule-key">silentscan/query/recursive-cte-missing-maxrecursion</code><span class="snippet">A recursive CTE&#x27;s containing statement has no OPTION (MAXRECURSION n).</span></li>
       <li><a class="id" href="rules/query-table-variable-low-compat-estimate.html">Table Variable Low Compat Estimate</a> <code class="rule-key">silentscan/query/table-variable-low-compat-estimate</code><span class="snippet">A table variable is used as a query source while the connected database&#x27;s compatibility level is below 150.</span></li>
       <li><a class="id" href="rules/query-table-variable-psp-skip.html">Table Variable Psp Skip</a> <code class="rule-key">silentscan/query/table-variable-psp-skip</code><span class="snippet">A statement reads a table-valued parameter as a table source (directly, or joined) at compatibility level 170 or later.</span></li>
       <li><a class="id" href="rules/query-table-variable-stale-estimate-in-loop.html">Table Variable Stale Estimate In Loop</a> <code class="rule-key">silentscan/query/table-variable-stale-estimate-in-loop</code><span class="snippet">A table variable is read as a query source inside a WHILE loop that also writes to it.</span></li>
       <li><a class="id" href="rules/query-unbounded-table-write.html">Unbounded Table Write</a> <code class="rule-key">silentscan/query/unbounded-table-write</code><span class="snippet">An UPDATE/DELETE has no WHERE clause and no TOP.</span></li>
-      <li><a class="id" href="rules/query-union-of-provably-disjoint-branches.html">Union Of Provably Disjoint Branches</a> <code class="rule-key">silentscan/query/union-of-provably-disjoint-branches</code><span class="snippet">A UNION combines branches that each filter the same table/column to a distinct literal.</span></li>
       <li><a class="id" href="rules/query-unqualified-table-reference.html">Unqualified Table Reference</a> <code class="rule-key">silentscan/query/unqualified-table-reference</code><span class="snippet">A table reference at a real query site carries no explicit schema qualifier.</span></li>
     </ul>
   </section>
@@ -450,8 +436,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <h2>security</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/security-external-rest-endpoint-call.html">External Rest Endpoint Call</a> <code class="rule-key">silentscan/security/external-rest-endpoint-call</code><span class="snippet">A call to sp_invoke_external_rest_endpoint.</span></li>
-      <li><a class="id" href="rules/security-hard-coded-credential.html">Hard Coded Credential</a> <code class="rule-key">silentscan/security/hard-coded-credential</code><span class="snippet">A credential-suggestive-named variable/parameter is assigned a literal string value directly in source text.</span></li>
-      <li><a class="id" href="rules/security-hard-coded-ip-address.html">Hard Coded Ip Address</a> <code class="rule-key">silentscan/security/hard-coded-ip-address</code><span class="snippet">A string literal contains a hardcoded, non-benign IPv4 address.</span></li>
     </ul>
   </section>
 
@@ -548,17 +532,13 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <h2>tvf-fence</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/tvf-fence-correlated-apply.html">Correlated Apply</a> <code class="rule-key">silentscan/tvf-fence/correlated-apply</code><span class="snippet">A CROSS/OUTER APPLY calls a multi-statement or CLR table-valued function with an argument correlated to an outer row.</span></li>
-      <li><a class="id" href="rules/tvf-fence-from-or-join.html">From Or Join</a> <code class="rule-key">silentscan/tvf-fence/from-or-join</code><span class="snippet">A FROM/JOIN references a multi-statement/CLR table-valued function directly.</span></li>
-      <li><a class="id" href="rules/tvf-fence-insert-exec.html">Insert Exec</a> <code class="rule-key">silentscan/tvf-fence/insert-exec</code><span class="snippet">An INSERT .</span></li>
       <li><a class="id" href="rules/tvf-fence-nested-under-view-or-tvf.html">Nested Under View Or TVF</a> <code class="rule-key">silentscan/tvf-fence/nested-under-view-or-tvf</code><span class="snippet">A view or inline TVF referenced here is itself, transitively, built over a multi-statement/CLR TVF.</span></li>
-      <li><a class="id" href="rules/tvf-fence-standalone.html">Standalone</a> <code class="rule-key">silentscan/tvf-fence/standalone</code><span class="snippet">A standalone SELECT references a multi-statement/CLR table-valued function with nothing else in the FROM clause.</span></li>
     </ul>
   </section>
 
   <section class="family-section">
     <h2>verdict</h2>
     <ul class="rule-list">
-      <li><a class="id" href="rules/verdict-collation-conflict.html">Collation Conflict</a> <code class="rule-key">silentscan/verdict/collation-conflict</code><span class="snippet">Two columns with genuinely different, incompatible collations are compared directly.</span></li>
       <li><a class="id" href="rules/verdict-range-seek.html">Range Seek</a> <code class="rule-key">silentscan/verdict/range-seek</code><span class="snippet">An implicit type conversion on the column side permits only a dynamic range seek, not a direct seek.</span></li>
       <li><a class="id" href="rules/verdict-scan-forced.html">Scan Forced</a> <code class="rule-key">silentscan/verdict/scan-forced</code><span class="snippet">An implicit type conversion on the column side forces a full scan.</span></li>
       <li><a class="id" href="rules/verdict-seek-preserved.html">Seek Preserved</a> <code class="rule-key">silentscan/verdict/seek-preserved</code><span class="snippet">A predicate compares types where the seek is preserved (reported for completeness; not filtered into ScanReportBuilder&#x27;s actionable findings).</span></li>

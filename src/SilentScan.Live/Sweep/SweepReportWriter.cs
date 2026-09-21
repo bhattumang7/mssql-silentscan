@@ -21,6 +21,18 @@ public static class SweepReportWriter
         }),
         JsonOptions);
 
+    public static string WriteJson(IReadOnlyList<MetamorphicResult> results) => JsonSerializer.Serialize(
+        results.Select(r => new
+        {
+            r.BaseCase.RuleId,
+            r.BaseCase.ExampleIndex,
+            r.MutationName,
+            Outcome = r.Outcome.ToString(),
+            r.BaselineFiredRuleIds,
+            r.MutatedFiredRuleIds,
+        }),
+        JsonOptions);
+
     public static string WriteReadable(IReadOnlyList<SweepResult> results)
     {
         var sb = new StringBuilder();
@@ -56,18 +68,6 @@ public static class SweepReportWriter
 
         return sb.ToString();
     }
-
-    public static string WriteJson(IReadOnlyList<MetamorphicResult> results) => JsonSerializer.Serialize(
-        results.Select(r => new
-        {
-            r.BaseCase.RuleId,
-            r.BaseCase.ExampleIndex,
-            r.MutationName,
-            Outcome = r.Outcome.ToString(),
-            r.BaselineFiredRuleIds,
-            r.MutatedFiredRuleIds,
-        }),
-        JsonOptions);
 
     public static string WriteReadable(IReadOnlyList<MetamorphicResult> results)
     {

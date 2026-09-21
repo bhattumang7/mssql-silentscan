@@ -583,9 +583,6 @@ public sealed class SarifReportWriterCoverageTests
     [Theory]
     [InlineData(TvfFenceFindingKind.CorrelatedApply, "error", "re-executes once per outer row")]
     [InlineData(TvfFenceFindingKind.NestedUnderViewOrTvf, "error", "inherits an optimization fence")]
-    [InlineData(TvfFenceFindingKind.FromOrJoin, "warning", "the optimizer cannot see into its body")]
-    [InlineData(TvfFenceFindingKind.InsertExec, "warning", "forces the procedure's entire result set to be spooled")]
-    [InlineData(TvfFenceFindingKind.Standalone, "note", "nothing surrounds it")]
     public void Write_TvfFenceFinding_MapsKindToDistinctLevelAndMessage(TvfFenceFindingKind kind, string expectedLevel, string expectedSubstring)
     {
         var finding = new TvfFenceFinding(
@@ -700,7 +697,6 @@ public sealed class SarifReportWriterCoverageTests
     [InlineData(QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, "error")]
     [InlineData(QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, "error")]
     [InlineData(QueryAntiPatternFindingKind.NonAggregateHavingPredicate, "warning")]
-    [InlineData(QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion, "error")]
     [InlineData(QueryAntiPatternFindingKind.GlobalCursorDeclaration, "warning")]
     public void Write_QueryAntiPatternFinding_MapsKindToItsOwnLevelBucket(QueryAntiPatternFindingKind kind, string expectedLevel)
     {
@@ -926,21 +922,10 @@ public sealed class SarifReportWriterCoverageTests
         Assert.Equal(expectedLevel, FirstResult(report).GetProperty("level").GetString());
     }
 
-    [Theory]
-    [InlineData(SecurityFindingKind.HardCodedIpAddress, "error")]
-    [InlineData(SecurityFindingKind.HardCodedCredential, "warning")]
-    public void Write_SecurityFinding_OnlyIpAddressAndWeakHashAreError(SecurityFindingKind kind, string expectedLevel)
-    {
-        var finding = new SecurityFinding(kind, "test.sql", 1, 1, "detail", FindingConfidence.High);
-        var report = TestScanReports.Build(SecurityFindings: [finding]);
-
-        Assert.Equal(expectedLevel, FirstResult(report).GetProperty("level").GetString());
-    }
 
     [Theory]
     [InlineData(DeprecatedSyntaxFindingKind.TaskCommentTodo, "note")]
     [InlineData(DeprecatedSyntaxFindingKind.TaskCommentFixme, "note")]
-    [InlineData(DeprecatedSyntaxFindingKind.NonAnsiComparisonOperator, "warning")]
     public void Write_DeprecatedSyntaxFinding_OnlyTaskCommentsAreDowngradedToNote(DeprecatedSyntaxFindingKind kind, string expectedLevel)
     {
         var finding = new DeprecatedSyntaxFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);

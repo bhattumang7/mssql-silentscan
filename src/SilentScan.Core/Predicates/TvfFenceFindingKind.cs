@@ -6,9 +6,4 @@ public enum TvfFenceFindingKind
 
     NestedUnderViewOrTvf,
 
-    FromOrJoin,
-
-    InsertExec,
-
-    Standalone,
 }

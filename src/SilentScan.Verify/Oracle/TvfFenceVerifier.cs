@@ -7,29 +7,18 @@ namespace SilentScan.Verify.Oracle;
 
 public sealed class TvfFenceVerifier
 {
-    private const string InsertExecMarker = "StatementType=\"INSERT EXEC\"";
     private static readonly XNamespace ShowPlanNs = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
 
     private readonly PlanXmlCapture _planXmlCapture;
     private readonly FunctionParameterReader _functionParameterReader;
-    private readonly ProcedureParameterReader _procedureParameterReader;
-    private readonly ProcedureResultColumnReader _procedureResultColumnReader;
 
     public TvfFenceVerifier(SqlServerOptions options)
     {
         _planXmlCapture = new PlanXmlCapture(options);
         _functionParameterReader = new FunctionParameterReader(options);
-        _procedureParameterReader = new ProcedureParameterReader(options);
-        _procedureResultColumnReader = new ProcedureResultColumnReader(options);
     }
 
-    public async Task<TvfFenceResult> VerifyAsync(
-        string database, TvfFenceFinding finding, CancellationToken cancellationToken = default) =>
-        finding.Kind == TvfFenceFindingKind.InsertExec
-            ? await VerifyInsertExecAsync(database, finding, cancellationToken)
-            : await VerifyFunctionReferenceAsync(database, finding, cancellationToken);
-
-    private async Task<TvfFenceResult> VerifyFunctionReferenceAsync(string database, TvfFenceFinding finding, CancellationToken cancellationToken)
+    public async Task<TvfFenceResult> VerifyAsync(string database, TvfFenceFinding finding, CancellationToken cancellationToken = default)
     {
         if (finding.FunctionQualifiedName is not { } qualifiedName)
         {
@@ -86,50 +75,4 @@ public sealed class TvfFenceVerifier
     }
 
     private static string? TrimBrackets(string? bracketedIdentifier) => bracketedIdentifier?.Trim('[', ']');
-
-    private async Task<TvfFenceResult> VerifyInsertExecAsync(string database, TvfFenceFinding finding, CancellationToken cancellationToken)
-    {
-        if (finding.ReferencedObjectQualifiedName is not { } procedureQualifiedName)
-        {
-            return new TvfFenceResult(finding, TvfFenceOutcome.NotProbeable, "No procedure qualified name on the finding.");
-        }
-
-        var parameterTypes = await _procedureParameterReader.TryGetParameterTypesAsync(database, procedureQualifiedName, cancellationToken);
-        if (parameterTypes is null)
-        {
-            return new TvfFenceResult(
-                finding, TvfFenceOutcome.NotProbeable,
-                $"Could not resolve/render '{procedureQualifiedName}'s own parameter types into a dummy argument list (an OUTPUT or table-valued parameter, or an unrenderable type).");
-        }
-
-        var describeProbe = TvfFenceProbeBuilder.BuildExecDescribeProbe(procedureQualifiedName, parameterTypes);
-        if (describeProbe is null)
-        {
-            return new TvfFenceResult(finding, TvfFenceOutcome.NotProbeable, $"Could not render a dummy EXEC argument list for '{procedureQualifiedName}'.");
-        }
-
-        var resultColumns = await _procedureResultColumnReader.TryDescribeResultColumnsAsync(database, describeProbe, cancellationToken);
-        var probe = TvfFenceProbeBuilder.BuildInsertExecProbe(finding, resultColumns, parameterTypes);
-        if (probe is null)
-        {
-            return new TvfFenceResult(
-                finding, TvfFenceOutcome.NotProbeable,
-                $"The engine could not describe '{procedureQualifiedName}'s own first result set (no result set at all, or a shape that varies by branch), so no receiving table variable could be synthesized.");
-        }
-
-        string planXml;
-        try
-        {
-            planXml = await _planXmlCapture.CaptureAsync(database, probe, cancellationToken);
-        }
-        catch (Exception ex) when (ex is SqlException or InvalidOperationException)
-        {
-            return new TvfFenceResult(finding, TvfFenceOutcome.ProbeFailed, ex.Message);
-        }
-
-        var hasInsertExecStatement = planXml.Contains(InsertExecMarker, StringComparison.Ordinal);
-        return hasInsertExecStatement
-            ? new TvfFenceResult(finding, TvfFenceOutcome.Confirmed, null)
-            : new TvfFenceResult(finding, TvfFenceOutcome.NotConfirmed, "The plan's statement type was not INSERT EXEC - contradicts the finding's own claim.");
-    }
 }

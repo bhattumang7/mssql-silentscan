@@ -57,8 +57,6 @@ public static class QueryAntiPatternScanner
         private static string? AliasOf(TableReference reference) =>
             reference is NamedTableReference named ? named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value : null;
 
-        private readonly HashSet<BinaryQueryExpression> _consumedUnionChainNodes = [];
-
         public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) =>
             InspectTableValuedParameters(node.Parameters);
 
@@ -123,9 +121,6 @@ public static class QueryAntiPatternScanner
             InspectMergeHazards(node.MergeSpecification);
         }
 
-        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
-            InspectRecursiveCteMaxRecursion(node);
-
         public void OnEnterWhileStatement(WhileStatement node, ModuleWalker walker)
         {
             if (catalog.CompatibilityLevel is not { } knownLevel || knownLevel >= 150)
@@ -167,18 +162,6 @@ public static class QueryAntiPatternScanner
 
             InspectHaving(node, scopeChain, walker);
             InspectDistinctJoinFanout(node, byAlias, scopeChain, walker);
-        }
-
-        public void OnEnterBinaryQueryExpression(BinaryQueryExpression node, ModuleWalker walker)
-        {
-            if (node.BinaryQueryExpressionType == BinaryQueryExpressionType.Union && !node.All
-                && !_consumedUnionChainNodes.Contains(node))
-            {
-
-                MarkNestedUnionChain(node.FirstQueryExpression, _consumedUnionChainNodes);
-                MarkNestedUnionChain(node.SecondQueryExpression, _consumedUnionChainNodes);
-                InspectUnionDisjointness(node);
-            }
         }
 
         private void InspectTableValuedParameters(IList<ProcedureParameter> parameters)
@@ -389,34 +372,6 @@ public static class QueryAntiPatternScanner
                     clause.StartLine, clause.StartColumn,
                     $"{matchKindText} with no additional AND condition of its own - {(clause.Condition == MergeCondition.NotMatchedBySource ? "deletes every target row absent from the USING source's result set" : "deletes every row the join matched")}.",
                     FindingConfidence.Medium));
-            }
-        }
-
-        private void InspectRecursiveCteMaxRecursion(SelectStatement node)
-        {
-            if (node.WithCtesAndXmlNamespaces is not { CommonTableExpressions: { Count: > 0 } ctes })
-            {
-                return;
-            }
-
-            var hasMaxRecursion = node.OptimizerHints.Any(h => h.HintKind == OptimizerHintKind.MaxRecursion);
-            if (hasMaxRecursion)
-            {
-                return;
-            }
-
-            foreach (var cte in ctes)
-            {
-                if (!CteResolver.ReferencesSelf(cte.QueryExpression, cte.ExpressionName.Value, catalog.IdentifierComparer))
-                {
-                    continue;
-                }
-
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.RecursiveCteMissingMaxRecursion, sourcePath,
-                    cte.StartLine, cte.StartColumn,
-                    $"Recursive CTE '{cte.ExpressionName.Value}' has no OPTION (MAXRECURSION n) on its containing statement - the engine's own default limit of 100 levels fails the statement outright (Msg 530) once exceeded.",
-                    FindingConfidence.High));
             }
         }
 
@@ -847,125 +802,6 @@ public static class QueryAntiPatternScanner
                     FindingConfidence.Medium));
             }
         }
-
-        private static void MarkNestedUnionChain(QueryExpression expression, HashSet<BinaryQueryExpression> sink)
-        {
-            if (expression is BinaryQueryExpression { BinaryQueryExpressionType: BinaryQueryExpressionType.Union, All: false } inner)
-            {
-                sink.Add(inner);
-                MarkNestedUnionChain(inner.FirstQueryExpression, sink);
-                MarkNestedUnionChain(inner.SecondQueryExpression, sink);
-            }
-        }
-
-        private void InspectUnionDisjointness(BinaryQueryExpression topUnion)
-        {
-            var branches = FlattenUnionBranches(topUnion);
-            if (branches is null || branches.Count < 2)
-            {
-                return;
-            }
-
-            var equalities = new List<(string TableQualifiedName, string ColumnName, ScalarExpression Literal)>();
-            foreach (var branch in branches)
-            {
-                if (SingleTableSingleEqualityLiteral(branch) is not { } equality)
-                {
-                    return;
-                }
-
-                equalities.Add(equality);
-            }
-
-            var sameTableAndColumn = equalities
-                .Select(e => (e.TableQualifiedName, e.ColumnName))
-                .Distinct()
-                .Count() == 1;
-            if (!sameTableAndColumn)
-            {
-                return;
-            }
-
-            var literalTexts = equalities.Select(e => LiteralText(e.Literal)).ToList();
-            if (literalTexts.Any(t => t is null) || literalTexts.Distinct(StringComparer.OrdinalIgnoreCase).Count() != literalTexts.Count)
-            {
-
-                return;
-            }
-
-            Findings.Add(new QueryAntiPatternFinding(
-                QueryAntiPatternFindingKind.UnionOfProvablyDisjointBranches, sourcePath,
-                topUnion.StartLine, topUnion.StartColumn,
-                $"UNION of {branches.Count} branches, each filtering {equalities[0].TableQualifiedName}.{equalities[0].ColumnName} to a distinct literal - provably mutually exclusive, UNION ALL is equivalent",
-                FindingConfidence.Medium));
-        }
-
-        private static List<QuerySpecification>? FlattenUnionBranches(QueryExpression expression)
-        {
-            switch (expression)
-            {
-                case QuerySpecification spec:
-                    return [spec];
-
-                case BinaryQueryExpression { BinaryQueryExpressionType: BinaryQueryExpressionType.Union, All: false } union:
-                    var first = FlattenUnionBranches(union.FirstQueryExpression);
-                    var second = FlattenUnionBranches(union.SecondQueryExpression);
-                    if (first is null || second is null)
-                    {
-                        return null;
-                    }
-
-                    first.AddRange(second);
-                    return first;
-
-                default:
-                    return null;
-            }
-        }
-
-        private (string TableQualifiedName, string ColumnName, ScalarExpression Literal)? SingleTableSingleEqualityLiteral(QuerySpecification spec)
-        {
-            if (spec.FromClause is not { TableReferences.Count: 1 } from
-                || from.TableReferences[0] is not NamedTableReference named
-                || spec.WhereClause?.SearchCondition is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp)
-            {
-                return null;
-            }
-
-            var alias = named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value;
-            var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject));
-            if (catalog.Find(qualifiedName) is not { Kind: CatalogTableKind.Table })
-            {
-                return null;
-            }
-
-            var (columnExpr, literalExpr) = cmp.FirstExpression switch
-            {
-                ColumnReferenceExpression col when IsLiteral(cmp.SecondExpression) => (col, cmp.SecondExpression),
-                _ when IsLiteral(cmp.FirstExpression) && cmp.SecondExpression is ColumnReferenceExpression col => (col, cmp.FirstExpression),
-                _ => (null, null),
-            };
-
-            if (columnExpr is null || literalExpr is null)
-            {
-                return null;
-            }
-
-            var columnAlias = ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(columnExpr, alias, catalog.IdentifierComparer);
-            var columnName = columnAlias ?? (columnExpr.MultiPartIdentifier.Identifiers.Count == 1 ? columnExpr.MultiPartIdentifier.Identifiers[0].Value : null);
-            return columnName is null ? null : (qualifiedName, columnName, literalExpr);
-        }
-
-        private static bool IsLiteral(ScalarExpression expression) => expression is Literal;
-
-        private static string? LiteralText(ScalarExpression expression) => expression switch
-        {
-            StringLiteral s => s.Value,
-            IntegerLiteral i => i.Value,
-            NumericLiteral n => n.Value,
-            _ => null,
-        };
-
     }
 
 }

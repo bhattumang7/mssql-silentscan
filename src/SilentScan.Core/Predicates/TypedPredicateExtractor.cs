@@ -30,7 +30,7 @@ public static class TypedPredicateExtractor
 
         parseResult.Fragment.Accept(walker);
         return new PredicateExtractionResult(
-            rule.Findings, rule.ExpressionDerivedFindings, rule.CollationConflictFindings, rule.WriteLossFindings, ledger.Entries,
+            rule.Findings, rule.ExpressionDerivedFindings, rule.WriteLossFindings, ledger.Entries,
             rule.UnderLengthParameterFindings, rule.AnsiPaddingMismatchFindings,
             rule.LocalVariablePredicateFindings, rule.FilteredIndexParameterMismatchFindings);
     }
@@ -98,7 +98,6 @@ public static class TypedPredicateExtractor
 
         public List<ExpressionDerivedFinding> ExpressionDerivedFindings { get; } = [];
 
-        public List<CollationConflictFinding> CollationConflictFindings { get; } = [];
 
         public List<WriteLossFinding> WriteLossFindings { get; } = [];
 
@@ -669,35 +668,6 @@ public static class TypedPredicateExtractor
             TryAddFinding(node.FirstExpression, node.SecondExpression, "LIKE", node, walker);
         }
 
-        public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
-        {
-            if (node.CallTarget is not null || node.FunctionName?.Value is not { } functionName
-                || node.Parameters.Count < 2
-                || !(functionName.Equals("GREATEST", StringComparison.OrdinalIgnoreCase)
-                    || functionName.Equals("LEAST", StringComparison.OrdinalIgnoreCase)))
-            {
-                return;
-            }
-
-            var scopeChain = walker.CurrentScopeChain();
-            var columns = new List<PredicateOperand.Column>();
-            foreach (var parameter in node.Parameters)
-            {
-                if (ResolveOperand(parameter, scopeChain, walker) is PredicateOperand.Column column)
-                {
-                    columns.Add(column);
-                }
-            }
-
-            for (var i = 0; i < columns.Count; i++)
-            {
-                for (var j = i + 1; j < columns.Count; j++)
-                {
-                    TryRecordCollationConflict(columns[i], columns[j], functionName.ToUpperInvariant(), node);
-                }
-            }
-        }
-
         public void OnInPredicate(InPredicate node, ModuleWalker walker)
         {
             if (walker.IsDeadPredicate(node))
@@ -865,7 +835,7 @@ public static class TypedPredicateExtractor
             if (left is PredicateOperand.Column leftColumn && right is PredicateOperand.Column rightColumn)
             {
 
-                if (TryRecordCollationConflict(leftColumn, rightColumn, operatorText, node))
+                if (Rules.VerdictClassifier.HasGenuineCollationMismatch(leftColumn.Type, rightColumn.Type))
                 {
                     return;
                 }
@@ -1016,21 +986,6 @@ public static class TypedPredicateExtractor
 
             var content = literalText[(firstQuote + 1)..lastQuote];
             return content.Length > 0 && char.IsWhiteSpace(content[^1]);
-        }
-
-        private bool TryRecordCollationConflict(PredicateOperand.Column first, PredicateOperand.Column second, string operatorText, TSqlFragment node)
-        {
-            if (!Rules.VerdictClassifier.HasGenuineCollationMismatch(first.Type, second.Type)
-                || first.Type?.Collation is not { } firstCollation || second.Type?.Collation is not { } secondCollation)
-            {
-                return false;
-            }
-
-            CollationConflictFindings.Add(new CollationConflictFinding(
-                first.TableQualifiedName, first.ColumnName, firstCollation.Name,
-                second.TableQualifiedName, second.ColumnName, secondCollation.Name,
-                operatorText, sourcePath, node.StartLine, node.StartColumn));
-            return true;
         }
 
         private PredicateOperand ResolveOperand(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)

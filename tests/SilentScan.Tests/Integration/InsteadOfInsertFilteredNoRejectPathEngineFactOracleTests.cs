@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Integration;
@@ -19,20 +18,16 @@ public sealed class InsteadOfInsertFilteredNoRejectPathEngineFactOracleTests : O
         END;
         GO
         """;
-
     [Fact]
-    public async Task InsertOfThreeRows_WithOneFilteredOutByTheTrigger_CompletesWithNoErrorButWritesOnlyTwo()
+    public async Task InsertOfThreeRows_WithOneFilteredOutByTheTrigger_CompletesWithNoErrorButWritesOnlyTwo_UnfilteredControlWritesAllThree()
     {
-        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
-        await connection.OpenAsync();
+        await ExecuteAsync("INSERT INTO dbo.T1 (Id, Val) VALUES (1, 5), (2, -1), (3, 10);");
+        var filteredRowCount = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T1;");
 
-        await using var insertCommand = connection.CreateCommand();
-        insertCommand.CommandText = "INSERT INTO dbo.T1 (Id, Val) VALUES (1, 5), (2, -1), (3, 10);";
-        await insertCommand.ExecuteNonQueryAsync();
+        await ExecuteAsync("DELETE FROM dbo.T1; INSERT INTO dbo.T1 (Id, Val) VALUES (1, 5), (2, 7), (3, 10);");
+        var controlRowCount = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T1;");
 
-        await using var countCommand = connection.CreateCommand();
-        countCommand.CommandText = "SELECT COUNT(*) FROM dbo.T1;";
-        var actualRowCount = (int)(await countCommand.ExecuteScalarAsync())!;
-        Assert.Equal(2, actualRowCount);
+        Assert.Equal(2, filteredRowCount);
+        Assert.Equal(3, controlRowCount);
     }
 }

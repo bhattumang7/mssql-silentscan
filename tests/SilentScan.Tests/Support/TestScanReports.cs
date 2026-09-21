@@ -15,7 +15,6 @@ public static class TestScanReports
         IReadOnlyList<TypedPredicateFinding>? TypedFindings = null,
         IReadOnlyList<DynamicSqlFinding>? DynamicSqlFindings = null,
         IReadOnlyList<ExpressionDerivedFinding>? ExpressionDerivedFindings = null,
-        IReadOnlyList<CollationConflictFinding>? CollationConflictFindings = null,
         IReadOnlyList<WriteLossFinding>? WriteLossFindings = null,
         IReadOnlyList<TvfFenceFinding>? TvfFenceFindings = null,
         IReadOnlyList<ScalarUdfFinding>? ScalarUdfFindings = null,
@@ -73,7 +72,6 @@ public static class TestScanReports
         IReadOnlyList<ControlFlowRiskFinding>? ControlFlowRiskFindings = null,
         IReadOnlyList<SecurityFinding>? SecurityFindings = null,
         IReadOnlyList<IndexDesignFinding>? IndexDesignFindings = null,
-        IReadOnlyList<IdentityRangeFinding>? IdentityRangeFindings = null,
         IReadOnlyList<FloatEqualityFinding>? FloatEqualityFindings = null,
         IReadOnlyList<QueryAntiPatternFinding>? QueryAntiPatternFindings = null,
         IReadOnlyList<IndexCoverageFinding>? IndexCoverageFindings = null,
@@ -123,7 +121,6 @@ public static class TestScanReports
         Set("NonSargablePredicateScanner", TemporalBoundaryFindings);
         Set("TypedPredicateExtractor", TypedFindings);
         Set("TypedPredicateExtractor", ExpressionDerivedFindings);
-        Set("TypedPredicateExtractor", CollationConflictFindings);
         Set("TypedPredicateExtractor", WriteLossFindings);
         Set("TypedPredicateExtractor", UnderLengthParameterFindings);
         Set("TypedPredicateExtractor", AnsiPaddingMismatchFindings);
@@ -181,7 +178,6 @@ public static class TestScanReports
         Set("StatementShapeScanner", StatementShapeFindings);
         Set("ControlFlowRiskScanner", ControlFlowRiskFindings);
         Set("IndexDesignScanner", IndexDesignFindings);
-        Set("IdentityRangeScanner", IdentityRangeFindings);
         Set("FloatEqualityPredicateScanner", FloatEqualityFindings);
         Set("QueryAntiPatternScanner", QueryAntiPatternFindings);
         Set("IndexCoverageScanner", IndexCoverageFindings);

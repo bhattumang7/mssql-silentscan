@@ -116,13 +116,6 @@ public static class LiveScanRunner
                 parsedForPredicateScan, catalog: catalog, minimumConfidence: minimumConfidence, resolvedLineage: lineage, progress: progress);
         }
 
-        using (var catalogNamingStage = progress.Begin("checking catalog table/column names for reserved keywords"))
-        {
-            var catalogNamingFindings = NamingScanner.ScanCatalogNames(catalog).Where(f => f.Confidence <= minimumConfidence).ToList();
-            var combinedNamingFindings = report.Find<NamingFinding>("NamingScanner").Concat(catalogNamingFindings).ToList();
-            report = report.WithFindings("NamingScanner", combinedNamingFindings);
-            catalogNamingStage.Complete($"{catalogNamingFindings.Count:N0} findings");
-        }
 
         TempTableExecShapeReport tempTableExecShape;
         using (var tempTableStage = progress.Begin("checking INSERT...EXEC temp-table shapes"))
@@ -183,13 +176,6 @@ public static class LiveScanRunner
             var indexDesignFindings = IndexDesignScanner.Scan(catalog, indexDesignStage).Where(f => f.Confidence <= minimumConfidence).ToList();
             report = report.WithFindings("IndexDesignScanner", indexDesignFindings);
             indexDesignStage.Complete($"{indexDesignFindings.Count:N0} findings");
-        }
-
-        using (var identityRangeStage = progress.Begin("checking identity/sequence range", catalog.Tables.Count))
-        {
-            var identityRangeFindings = IdentityRangeScanner.Scan(catalog, identityRangeStage).Where(f => f.Confidence <= minimumConfidence).ToList();
-            report = report.WithFindings("IdentityRangeScanner", identityRangeFindings);
-            identityRangeStage.Complete($"{identityRangeFindings.Count:N0} findings");
         }
 
         using (var staleSelectStarViewStage = progress.Begin("checking SELECT * view staleness against base tables"))

@@ -148,21 +148,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/union-of-provably-disjoint-branches")]
-    public async Task UnionDeduplicatesWithExtraOperator_UnionAllDoesNot_RowCountsEqual()
-    {
-        var union = await PlanInSessionAsync(string.Empty, "SELECT V FROM dbo.U WHERE K = 0 UNION SELECT V FROM dbo.U WHERE K = 1;");
-        var unionAll = await PlanInSessionAsync(string.Empty, "SELECT V FROM dbo.U WHERE K = 0 UNION ALL SELECT V FROM dbo.U WHERE K = 1;");
-        var dedup = new[] { "Hash Match", "Sort", "Stream Aggregate" };
-
-        Assert.Contains(ShowPlan.PhysicalOps(union), dedup.Contains);
-        Assert.DoesNotContain(ShowPlan.PhysicalOps(unionAll), dedup.Contains);
-        Assert.Equal(
-            await ScalarAsync<int>("SELECT COUNT(*) FROM (SELECT V FROM dbo.U WHERE K = 0 UNION ALL SELECT V FROM dbo.U WHERE K = 1) q;"),
-            await ScalarAsync<int>("SELECT COUNT(*) FROM (SELECT V FROM dbo.U WHERE K = 0 UNION SELECT V FROM dbo.U WHERE K = 1) q;"));
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/index-design/hypothetical-index")]
     public async Task HypotheticalIndex_IsFlaggedAndCannotBeUsed_RealIndexControlCan()
     {

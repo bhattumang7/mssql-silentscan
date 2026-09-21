@@ -135,7 +135,6 @@ public static class ScanReportBuilder
         }
         var typedFindings = extractionResults.SelectMany(r => r.TypedFindings).ToList();
         var expressionDerivedFindings = extractionResults.SelectMany(r => r.ExpressionDerivedFindings).ToList();
-        var collationConflictFindings = extractionResults.SelectMany(r => r.CollationConflictFindings).ToList();
         var writeLossFindings = extractionResults.SelectMany(r => r.WriteLossFindings).ToList();
         var underLengthParameterFindings = extractionResults.SelectMany(r => r.UnderLengthParameterFindings)
             .OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column).ToList();
@@ -161,7 +160,6 @@ public static class ScanReportBuilder
         tier1Findings = [.. tier1Findings, .. dynamicSqlResult.Tier1Findings];
         typedFindings = [.. typedFindings, .. dynamicSqlResult.TypedFindings];
         expressionDerivedFindings = [.. expressionDerivedFindings, .. dynamicSqlResult.ExpressionDerivedFindings];
-        collationConflictFindings = [.. collationConflictFindings, .. dynamicSqlResult.CollationConflictFindings];
         writeLossFindings = [.. writeLossFindings, .. dynamicSqlResult.WriteLossFindings];
         tvfFenceFindings = [.. tvfFenceFindings, .. dynamicSqlResult.TvfFenceFindings];
         scalarUdfFindings = [.. scalarUdfFindings, .. dynamicSqlResult.ScalarUdfFindings];
@@ -182,7 +180,6 @@ public static class ScanReportBuilder
         typedFindings = [.. typedFindings.Where(f => f.Verdict != Verdict.SeekPreserved && f.Confidence <= minimumConfidence)];
         tier1Findings = [.. tier1Findings.Where(f => f.Confidence <= minimumConfidence)];
         expressionDerivedFindings = [.. expressionDerivedFindings.Where(f => f.Confidence <= minimumConfidence)];
-        collationConflictFindings = [.. collationConflictFindings.Where(f => f.Confidence <= minimumConfidence)];
         writeLossFindings = [.. writeLossFindings.Where(f => f.Confidence <= minimumConfidence)];
         tvfFenceFindings = [.. tvfFenceFindings.Where(f => f.Confidence <= minimumConfidence)];
         scalarUdfFindings = [.. scalarUdfFindings.Where(f => f.Confidence <= minimumConfidence)];
@@ -208,7 +205,6 @@ public static class ScanReportBuilder
             .ThenBy(f => f.Line)
             .ThenBy(f => f.ColumnPosition)];
         expressionDerivedFindings = [.. expressionDerivedFindings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.ColumnPosition)];
-        collationConflictFindings = [.. collationConflictFindings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.ColumnPosition)];
         writeLossFindings = [.. writeLossFindings.OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.ColumnPosition)];
 
         tvfFenceFindings = [.. tvfFenceFindings
@@ -243,7 +239,7 @@ public static class ScanReportBuilder
         {
             ["NonSargablePredicateScanner"] = [.. tier1Findings, .. temporalBoundaryFindings],
             ["TypedPredicateExtractor"] = [
-                .. typedFindings, .. expressionDerivedFindings, .. collationConflictFindings, .. writeLossFindings,
+                .. typedFindings, .. expressionDerivedFindings, .. writeLossFindings,
                 .. underLengthParameterFindings, .. ansiPaddingMismatchFindings,
                 .. localVariablePredicateFindings, .. filteredIndexParameterMismatchFindings,
             ],

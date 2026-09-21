@@ -178,17 +178,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/deprecated-syntax/non-ansi-comparison-operator")]
-    public async Task NonAnsiOperators_AreEquivalentToAnsiSpellings()
-    {
-        var ansi = await ScalarAsync<string>("SELECT CONCAT((SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x <> 2), '|', (SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x >= 2), '|', (SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x <= 2));");
-        var nonAnsi = await ScalarAsync<string>("SELECT CONCAT((SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x != 2), '|', (SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x !< 2), '|', (SELECT COUNT(*) FROM (VALUES (1),(2),(3)) v(x) WHERE x !> 2));");
-
-        Assert.Equal("2|2|2", ansi);
-        Assert.Equal(ansi, nonAnsi);
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/statement-shape/insert-without-column-list")]
     public async Task PositionalInsert_LandsInTheWrongColumnAfterTheTableIsRecreatedWithSwappedColumns()
     {
@@ -217,14 +206,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         Assert.Equal(1, ordinalYFirst[0][1]);
         Assert.Equal(2, namedXFirst[0][0]);
         Assert.Equal(2, namedYFirst[0][1]);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/naming/reserved-keyword-as-identifier")]
-    public async Task ReservedKeywordAlias_NeedsDelimiters()
-    {
-        Assert.Null(await SqlErrorNumberAsync("SELECT 1 AS [order];"));
-        Assert.Equal(156, await SqlErrorNumberAsync("SELECT 1 AS order;"));
     }
 
     [Fact]

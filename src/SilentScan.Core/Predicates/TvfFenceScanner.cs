@@ -31,46 +31,28 @@ public static class TvfFenceScanner
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
-            var isStandalone = node.TableReferences.Count == 1 && node.TableReferences[0] is SchemaObjectFunctionTableReference;
-
             foreach (var tableReference in node.TableReferences)
             {
-                Flatten(tableReference, isApplySecondSide: false, isStandalone);
+                Flatten(tableReference, isApplySecondSide: false);
             }
         }
 
-        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
-        {
-            if (node.InsertSpecification.InsertSource is ExecuteInsertSource { Execute.ExecutableEntity: ExecutableProcedureReference { ProcedureReference.ProcedureReference.Name: { } procedureName } })
-            {
-                Findings.Add(new TvfFenceFinding(
-                    TvfFenceFindingKind.InsertExec,
-                    FunctionQualifiedName: null,
-                    ReferencedObjectQualifiedName: catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(procedureName)),
-                    FunctionKind: null,
-                    SourcePath: sourcePath,
-                    Line: node.StartLine,
-                    Column: node.StartColumn,
-                    ReferenceFragmentText: FragmentTextRenderer.Render(node.InsertSpecification.InsertSource)));
-            }
-        }
-
-        private void Flatten(TableReference tableReference, bool isApplySecondSide, bool isStandalone)
+        private void Flatten(TableReference tableReference, bool isApplySecondSide)
         {
             switch (tableReference)
             {
                 case JoinTableReference join:
                     var isApply = join is UnqualifiedJoin { UnqualifiedJoinType: UnqualifiedJoinType.CrossApply or UnqualifiedJoinType.OuterApply };
-                    Flatten(join.FirstTableReference, isApplySecondSide: false, isStandalone: false);
-                    Flatten(join.SecondTableReference, isApplySecondSide: isApply, isStandalone: false);
+                    Flatten(join.FirstTableReference, isApplySecondSide: false);
+                    Flatten(join.SecondTableReference, isApplySecondSide: isApply);
                     break;
 
                 case JoinParenthesisTableReference parenthesis:
-                    Flatten(parenthesis.Join, isApplySecondSide, isStandalone: false);
+                    Flatten(parenthesis.Join, isApplySecondSide);
                     break;
 
                 case SchemaObjectFunctionTableReference function:
-                    VisitFunctionReference(function, isApplySecondSide, isStandalone);
+                    VisitFunctionReference(function, isApplySecondSide);
                     break;
 
                 case NamedTableReference named:
@@ -79,7 +61,7 @@ public static class TvfFenceScanner
             }
         }
 
-        private void VisitFunctionReference(SchemaObjectFunctionTableReference function, bool isApplySecondSide, bool isStandalone)
+        private void VisitFunctionReference(SchemaObjectFunctionTableReference function, bool isApplySecondSide)
         {
             var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(function.SchemaObject));
             if (!catalog.TryGetTableValuedFunctionKind(qualifiedName, out var kind))
@@ -93,27 +75,30 @@ public static class TvfFenceScanner
                 return;
             }
 
-            var argumentColumns = isApplySecondSide
-                ? function.Parameters.SelectMany(CollectColumnReferences)
-                    .Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)
-                    .Distinct(catalog.IdentifierComparer)
-                    .ToList()
-                : [];
+            if (!isApplySecondSide)
+            {
+                return;
+            }
 
-            var isCorrelated = argumentColumns.Count > 0;
-            var kindResult = TvfFenceClassifier.ClassifyDirectReference(isCorrelated, isStandalone);
+            var argumentColumns = function.Parameters.SelectMany(CollectColumnReferences)
+                .Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)
+                .Distinct(catalog.IdentifierComparer)
+                .ToList();
 
-            var correlatedColumns = isCorrelated ? argumentColumns : null;
+            if (argumentColumns.Count == 0)
+            {
+                return;
+            }
 
             Findings.Add(new TvfFenceFinding(
-                kindResult,
+                TvfFenceFindingKind.CorrelatedApply,
                 FunctionQualifiedName: qualifiedName,
                 ReferencedObjectQualifiedName: qualifiedName,
                 FunctionKind: kind,
                 SourcePath: sourcePath,
                 Line: function.StartLine,
                 Column: function.StartColumn,
-                CorrelatedOuterColumns: correlatedColumns,
+                CorrelatedOuterColumns: argumentColumns,
                 ReferenceFragmentText: FragmentTextRenderer.Render(function)));
         }
 

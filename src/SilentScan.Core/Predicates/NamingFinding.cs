@@ -5,9 +5,7 @@ namespace SilentScan.Core.Predicates;
 
 public enum NamingFindingKind
 {
-    ReservedKeywordAsIdentifier,
 
-    SpPrefixOnUserRoutine,
 
     UnqualifiedCreate,
 

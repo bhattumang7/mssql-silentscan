@@ -36,37 +36,6 @@ public sealed class DynamicSqlTvfFenceTests
     }
 
     [Fact]
-    public void DirectFenceReferenceInsideExec_RemapsToTrueSourceLine()
-    {
-        var (catalog, lineage, fenceMap) = BuildContext();
-
-        var appSql =
-            "CREATE PROCEDURE dbo.usp_Find\n" +
-            "AS\n" +
-            "BEGIN\n" +
-            "    EXEC('SELECT Id\n" +
-            "FROM dbo.fn_Fence()');\n" +
-            "END\n";
-        var parseResult = SqlScriptParser.ParseText("app.sql", appSql);
-        Assert.False(parseResult.HasErrors, string.Join("; ", parseResult.Errors.Select(e => e.Message)));
-
-        var extraction = DynamicSqlScannerV2.Scan(parseResult, callGraph: new ProcCallGraph([]));
-        Assert.Empty(extraction.Findings);
-        Assert.NotEmpty(extraction.AnalyzableScripts);
-
-        var pipeline = DynamicSqlPipeline.Analyze(extraction.AnalyzableScripts, catalog, lineage, fenceMap);
-
-        var finding = Assert.Single(pipeline.TvfFenceFindings);
-        Assert.Equal(TvfFenceFindingKind.Standalone, finding.Kind);
-        Assert.Equal("dbo.fn_Fence", finding.FunctionQualifiedName);
-        Assert.Equal("app.sql", finding.SourcePath);
-
-        Assert.Equal(5, finding.Line);
-        Assert.NotNull(finding.DynamicSqlCallSite);
-        Assert.Equal(4, finding.DynamicSqlCallSite!.Value.Line);
-    }
-
-    [Fact]
     public void NestedFenceThroughInlineTvf_RemapsCorrectlyInsideDynamicSql()
     {
         var (catalog, lineage, fenceMap) = BuildContext();
@@ -90,6 +59,47 @@ public sealed class DynamicSqlTvfFenceTests
         Assert.Equal("dbo.itvf_Wrapper", finding.ReferencedObjectQualifiedName);
         Assert.Equal("dbo.fn_Fence", finding.FunctionQualifiedName);
         Assert.Equal(1, finding.Depth);
+    }
+
+    [Fact]
+    public void CorrelatedApplyInsideDynamicSql_IsReportedAtTheOuterStatementLine()
+    {
+        var schema = SqlScriptParser.ParseText(
+            "schema.sql",
+            """
+            CREATE TABLE dbo.Src (Id INT NOT NULL);
+            GO
+            CREATE FUNCTION dbo.fn_ByKey(@Key INT)
+            RETURNS @T TABLE (Id INT)
+            AS
+            BEGIN
+                INSERT INTO @T (Id) SELECT @Key;
+                RETURN;
+            END;
+            """);
+        Assert.False(schema.HasErrors, string.Join("; ", schema.Errors.Select(e => e.Message)));
+        var catalog = CatalogBuilder.Build([schema]);
+        var lineage = LineageResolver.Resolve(catalog, [schema]);
+        var (views, _) = ViewDefinitionExtractor.Extract([schema], catalog.DefaultCollation, catalog.TypeAliases);
+        var fenceMap = TvfFenceMap.Build(views, catalog);
+
+        var appSql =
+            "CREATE PROCEDURE dbo.usp_Find\n" +
+            "AS\n" +
+            "BEGIN\n" +
+            "    EXEC('SELECT s.Id FROM dbo.Src s CROSS APPLY dbo.fn_ByKey(s.Id) f');\n" +
+            "END\n";
+        var parseResult = SqlScriptParser.ParseText("app.sql", appSql);
+        Assert.False(parseResult.HasErrors, string.Join("; ", parseResult.Errors.Select(e => e.Message)));
+
+        var extraction = DynamicSqlScannerV2.Scan(parseResult, callGraph: new ProcCallGraph([]));
+        var pipeline = DynamicSqlPipeline.Analyze(extraction.AnalyzableScripts, catalog, lineage, fenceMap);
+
+        var finding = Assert.Single(pipeline.TvfFenceFindings);
+        Assert.Equal(TvfFenceFindingKind.CorrelatedApply, finding.Kind);
+        Assert.Equal("dbo.fn_ByKey", finding.FunctionQualifiedName);
+        Assert.Equal("app.sql", finding.SourcePath);
+        Assert.Equal(4, finding.Line);
     }
 
     [Fact]

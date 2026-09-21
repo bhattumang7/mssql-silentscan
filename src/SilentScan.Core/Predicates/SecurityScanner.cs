@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
@@ -6,53 +5,8 @@ using SilentScan.Core.Parsing;
 
 namespace SilentScan.Core.Predicates;
 
-public static partial class SecurityScanner
+public static class SecurityScanner
 {
-
-    private static readonly string[] CredentialWords = ["password", "passwd", "secret"];
-
-    [GeneratedRegex(@"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")]
-    private static partial Regex WordTokenRegex();
-
-    private static IEnumerable<string> SplitIntoWords(string identifier) =>
-        WordTokenRegex().Matches(identifier).Select(m => m.Value);
-
-    private static bool IsBenignIpAddress(string ip)
-    {
-        if (ip.StartsWith("127.", StringComparison.Ordinal)
-            || ip is "0.0.0.0" or "255.255.255.255"
-            || ip.StartsWith("192.0.2.", StringComparison.Ordinal)
-            || ip.StartsWith("198.51.100.", StringComparison.Ordinal)
-            || ip.StartsWith("203.0.113.", StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    [GeneratedRegex(@"(?<!\d)(?:\d{1,3}\.){3}\d{1,3}(?!\d)")]
-    private static partial Regex IpAddressShapeRegex();
-
-    private static bool TryGetIpAddress(string text, out string ip)
-    {
-        var match = IpAddressShapeRegex().Match(text);
-        if (!match.Success)
-        {
-            ip = "";
-            return false;
-        }
-
-        ip = match.Value;
-        return ip.Split('.').All(octet => int.TryParse(octet, out var value) && value is >= 0 and <= 255);
-    }
-
-    private static bool IsCredentialSuggestiveName(string variableOrColumnName)
-    {
-        var bare = variableOrColumnName.TrimStart('@');
-        return SplitIntoWords(bare).Any(word => CredentialWords.Contains(word, StringComparer.OrdinalIgnoreCase));
-    }
-
     public static IReadOnlyList<SecurityFinding> Scan(SqlParseResult parseResult)
     {
         var rule = CreateRule(parseResult.SourcePath);
@@ -78,43 +32,6 @@ public static partial class SecurityScanner
     {
         public List<SecurityFinding> Findings { get; } = [];
 
-
-        public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
-        {
-            foreach (var name in node.Declarations.Where(e => e.Value is StringLiteral && IsCredentialSuggestiveName(e.VariableName.Value)).Select(e => e.VariableName))
-            {
-                AddCredential(name.Value, name);
-            }
-        }
-
-        public void OnEnterSetVariableStatement(SetVariableStatement node, ModuleWalker walker)
-        {
-            if (node.Expression is StringLiteral && node.Variable is { Name: { } name } && IsCredentialSuggestiveName(name))
-            {
-                AddCredential(name, node.Variable);
-            }
-        }
-
-        public void OnEnterSelectSetVariable(SelectSetVariable node, ModuleWalker walker)
-        {
-            if (node.Expression is StringLiteral && node.Variable is { Name: { } name } && IsCredentialSuggestiveName(name))
-            {
-                AddCredential(name, node.Variable);
-            }
-        }
-
-        public void OnEnterStringLiteral(StringLiteral node, ModuleWalker walker)
-        {
-            if (node.Value is { Length: > 0 } text && TryGetIpAddress(text, out var ip) && !IsBenignIpAddress(ip))
-            {
-                Findings.Add(new SecurityFinding(
-                    SecurityFindingKind.HardCodedIpAddress,
-                    sourcePath, node.StartLine, node.StartColumn,
-                    $"'{ip}' is a hardcoded IP address embedded in source text - an environment-specific detail that becomes stale, a deployment-coupling smell, and occasionally a genuine indicator of a hardcoded backdoor/debug endpoint. Make sure using it here is safe/intentional.",
-                    FindingConfidence.High));
-            }
-        }
-
         public void OnEnterExecutableProcedureReference(ExecutableProcedureReference node, ModuleWalker walker)
         {
             if (node.ProcedureReference?.ProcedureReference?.Name.BaseIdentifier.Value is { } routineName
@@ -123,16 +40,9 @@ public static partial class SecurityScanner
                 Findings.Add(new SecurityFinding(
                     SecurityFindingKind.ExternalRestEndpointCall,
                     sourcePath, node.StartLine, node.StartColumn,
-                    "\"sp_invoke_external_rest_endpoint\" makes an outbound HTTPS call to an endpoint this statement supplies - a real outbound-network call surface distinct from a hardcoded IP address literal. Make sure the endpoint and any data sent to it are safe/intentional.",
+                    "\"sp_invoke_external_rest_endpoint\" makes an outbound HTTPS call to an endpoint this statement supplies - a real outbound-network call surface. Make sure the endpoint and any data sent to it are safe/intentional.",
                     FindingConfidence.High));
             }
         }
-
-        private void AddCredential(string variableName, TSqlFragment site) =>
-            Findings.Add(new SecurityFinding(
-                SecurityFindingKind.HardCodedCredential,
-                sourcePath, site.StartLine, site.StartColumn,
-                $"'{variableName}' looks like it holds a credential and is assigned a literal string directly in source text - keep credentials in a secrets store or external configuration, never embedded in a script.",
-                FindingConfidence.Low));
     }
 }

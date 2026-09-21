@@ -86,20 +86,6 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/tvf-fence/standalone")]
-    public async Task MultiStatementTvf_HasFixedEstimateRegardlessOfRowsReturned_RealTableControlIsAccurate()
-    {
-        await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 130;");
-        var small = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.MsSmall();");
-        var big = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.MsBig();");
-        var control = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.Src;");
-
-        Assert.Equal(FenceEstimate(small), FenceEstimate(big));
-        Assert.Equal(100, FenceEstimate(big));
-        Assert.Equal(5000, ShowPlan.EstimatedRows(ShowPlan.Ops(control, "Clustered Index Scan").First()), 1);
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/tvf-fence/nested-under-view-or-tvf")]
     public async Task MultiStatementTvfBehindViews_KeepsTheSameFixedEstimate()
     {

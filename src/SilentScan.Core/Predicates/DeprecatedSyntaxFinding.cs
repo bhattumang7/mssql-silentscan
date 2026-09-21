@@ -9,7 +9,6 @@ public enum DeprecatedSyntaxFindingKind
 
     TaskCommentFixme,
 
-    NonAnsiComparisonOperator,
 
     EqualsNullComparison,
 
@@ -25,7 +24,6 @@ public enum DeprecatedSyntaxFindingKind
     NumberedProcedureExecution,
 
 
-    RemovedSecurityStoredProcedure,
 
     DeprecatedSetRowcount,
 

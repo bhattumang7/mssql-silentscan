@@ -228,11 +228,9 @@ statement — is uncontroversial syntax, not a claim needing verification).
   cross-table cascading from the very first hop — the scanner correctly
   gates on `nested triggers` only and excludes the same-table 1-hop
   self-loop that `RECURSIVE_TRIGGERS` actually governs.
-- `TvfFenceScanner` — `ClassifyDirectReference` correlated/standalone/
-  from-or-join partitioning, the APPLY-only correlation gate, `InsertExec`
-  matching, and inline-TVF resolution through the fence map all check out;
-  existing oracle tests already verify `FromOrJoin`/`CorrelatedApply`/
-  `InsertExec` outcomes against a real deployed engine.
+- `TvfFenceScanner` — the APPLY-only correlation gate and inline-TVF
+  resolution through the fence map check out; existing oracle tests verify
+  `CorrelatedApply` outcomes against a real deployed engine.
 - `UntrustedConstraintScanner` — `IsNotTrusted && !IsDisabled` filter
   matches live catalog semantics; confirmed disabling a trusted FK sets
   both `is_disabled` and `is_not_trusted`, so excluding disabled
