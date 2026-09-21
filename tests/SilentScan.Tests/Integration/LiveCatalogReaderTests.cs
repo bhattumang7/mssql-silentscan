@@ -178,17 +178,6 @@ public sealed class LiveCatalogReaderTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task ReadAsync_MatchingForeignKey_CrossTableTypeDriftScannerNeverFires()
-    {
-
-        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        var findings = CrossTableTypeDriftScanner.Scan(catalog);
-
-        Assert.Empty(findings);
-    }
-
-    [Fact]
     public async Task ReadAsync_CascadingForeignKey_ReadsRealActionsFromSysForeignKeys()
     {
         var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();

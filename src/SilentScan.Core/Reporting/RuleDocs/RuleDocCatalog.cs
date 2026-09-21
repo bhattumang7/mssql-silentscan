@@ -51,7 +51,6 @@ public static class RuleDocCatalog
 
         [Hint.HintedIndexNotSeekable.RuleId] = Hint.HintedIndexNotSeekable.Content,
 
-        [WindowFrame.ExplicitRangeFrame.RuleId] = WindowFrame.ExplicitRangeFrame.Content,
         [WindowFrame.ImplicitDefaultRangeFrame.RuleId] = WindowFrame.ImplicitDefaultRangeFrame.Content,
         [BoundedStringBuiltinTruncation.ReplicateResultTruncated.RuleId] = BoundedStringBuiltinTruncation.ReplicateResultTruncated.Content,
         [BoundedStringBuiltinTruncation.ReplaceResultTruncated.RuleId] = BoundedStringBuiltinTruncation.ReplaceResultTruncated.Content,
@@ -80,7 +79,6 @@ public static class RuleDocCatalog
         [QueryAntiPattern.MergeUnconditionalDelete.RuleId] = QueryAntiPattern.MergeUnconditionalDelete.Content,
         [QueryAntiPattern.RecursiveCteMissingMaxRecursion.RuleId] = QueryAntiPattern.RecursiveCteMissingMaxRecursion.Content,
         [QueryAntiPattern.UnboundedTableWrite.RuleId] = QueryAntiPattern.UnboundedTableWrite.Content,
-        [QueryAntiPattern.LinkedServerOrCrossDatabaseReference.RuleId] = QueryAntiPattern.LinkedServerOrCrossDatabaseReference.Content,
         [QueryAntiPattern.MultiRowInsertIgnoreDupKeyDrop.RuleId] = QueryAntiPattern.MultiRowInsertIgnoreDupKeyDrop.Content,
 
         [TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.RuleId] = TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.Content,
@@ -105,9 +103,7 @@ public static class RuleDocCatalog
         [ScalarUdf.NestedUnderViewOrTvf.RuleId] = ScalarUdf.NestedUnderViewOrTvf.Content,
         [ScalarUdf.SchemaDependency.RuleId] = ScalarUdf.SchemaDependency.Content,
         [ScalarUdf.ProjectionInvocation.RuleId] = ScalarUdf.ProjectionInvocation.Content,
-        [Catalog.ColumnCollationDrift.RuleId] = Catalog.ColumnCollationDrift.Content,
         [Catalog.AnsiPaddingOffColumn.RuleId] = Catalog.AnsiPaddingOffColumn.Content,
-        [Catalog.CrossTableFkTypeDrift.RuleId] = Catalog.CrossTableFkTypeDrift.Content,
         [CallGraph.ArgumentTypeMismatch.RuleId] = CallGraph.ArgumentTypeMismatch.Content,
         [CallGraph.TvfArgumentTypeMismatch.RuleId] = CallGraph.TvfArgumentTypeMismatch.Content,
         [CallGraph.TableValuedArgumentMismatch.RuleId] = CallGraph.TableValuedArgumentMismatch.Content,
@@ -130,7 +126,6 @@ public static class RuleDocCatalog
         [Predicates.LocalVariablePredicate.RuleId] = Predicates.LocalVariablePredicate.Content,
         [Predicates.FilteredIndexParameterMismatch.RuleId] = Predicates.FilteredIndexParameterMismatch.Content,
         [Predicates.ReassignedParameter.RuleId] = Predicates.ReassignedParameter.Content,
-        [Predicates.OversizedParameter.RuleId] = Predicates.OversizedParameter.Content,
         [Predicates.UnderLengthParameter.RuleId] = Predicates.UnderLengthParameter.Content,
         [Predicates.AnsiPaddingMismatch.RuleId] = Predicates.AnsiPaddingMismatch.Content,
 
@@ -146,14 +141,12 @@ public static class RuleDocCatalog
         [Security.HardCodedIpAddress.RuleId] = Security.HardCodedIpAddress.Content,
         [Security.WeakHashAlgorithm.RuleId] = Security.WeakHashAlgorithm.Content,
         [Security.WeakHashAlgorithmInSensitiveContext.RuleId] = Security.WeakHashAlgorithmInSensitiveContext.Content,
-        [Security.UnprovableDynamicSqlText.RuleId] = Security.UnprovableDynamicSqlText.Content,
         [Security.ExternalRestEndpointCall.RuleId] = Security.ExternalRestEndpointCall.Content,
 
         [ControlFlow.EmptyCatchBlock.RuleId] = ControlFlow.EmptyCatchBlock.Content,
         [ControlFlow.TriggerEmitsOutput.RuleId] = ControlFlow.TriggerEmitsOutput.Content,
         [ControlFlow.DirtyReadIsolationHint.RuleId] = ControlFlow.DirtyReadIsolationHint.Content,
         [ControlFlow.ReadCommittedLockRevertsRowVersioning.RuleId] = ControlFlow.ReadCommittedLockRevertsRowVersioning.Content,
-        [ControlFlow.DuplicatedCallArgument.RuleId] = ControlFlow.DuplicatedCallArgument.Content,
         [ControlFlow.LegacyIdentityIntrinsic.RuleId] = ControlFlow.LegacyIdentityIntrinsic.Content,
         [ControlFlow.GotoUsage.RuleId] = ControlFlow.GotoUsage.Content,
         [ControlFlow.CaseExpressionMissingElse.RuleId] = ControlFlow.CaseExpressionMissingElse.Content,
@@ -189,10 +182,6 @@ public static class RuleDocCatalog
         [Lineage.PostExpansionJoinWidth.RuleId] = Lineage.PostExpansionJoinWidth.Content,
         [Lineage.SelectStarView.RuleId] = Lineage.SelectStarView.Content,
 
-        [DynamicSql.Analyzed.RuleId] = DynamicSql.Analyzed.Content,
-        [DynamicSql.Unanalyzable.RuleId] = DynamicSql.Unanalyzable.Content,
-        [DynamicSql.InnerParseFailed.RuleId] = DynamicSql.InnerParseFailed.Content,
-        [DynamicSql.PartiallyAnalyzed.RuleId] = DynamicSql.PartiallyAnalyzed.Content,
         [DynamicSql.ConcatenatedValueInConstantSql.RuleId] = DynamicSql.ConcatenatedValueInConstantSql.Content,
         [DynamicSql.ExecStringConcatenatesParameterizableValue.RuleId] = DynamicSql.ExecStringConcatenatesParameterizableValue.Content,
         [DynamicSql.TempTableExecShapeColumnTypeMismatch.RuleId] = DynamicSql.TempTableExecShapeColumnTypeMismatch.Content,
@@ -203,8 +192,6 @@ public static class RuleDocCatalog
         [Catalog.TemporalTableHistoryIndexGap.RuleId] = Catalog.TemporalTableHistoryIndexGap.Content,
         [Catalog.StaleSelectStarView.RuleId] = Catalog.StaleSelectStarView.Content,
         [Catalog.SecurityPredicateIndex.RuleId] = Catalog.SecurityPredicateIndex.Content,
-        [Predicate.TryCastComputedColumn.RuleId] = Predicate.TryCastComputedColumn.Content,
-        [Predicate.AggregateDivisionColumnstore.RuleId] = Predicate.AggregateDivisionColumnstore.Content,
 
         [IndexDesign.HeapWithNonclusteredIndexes.RuleId] = IndexDesign.HeapWithNonclusteredIndexes.Content,
         [IndexDesign.HeapWithNonclusteredPrimaryKey.RuleId] = IndexDesign.HeapWithNonclusteredPrimaryKey.Content,
@@ -279,7 +266,6 @@ public static class RuleDocCatalog
         [DeprecatedSyntax.NonAnsiComparisonOperator.RuleId] = DeprecatedSyntax.NonAnsiComparisonOperator.Content,
         [DeprecatedSyntax.EqualsNullComparison.RuleId] = DeprecatedSyntax.EqualsNullComparison.Content,
         [DeprecatedSyntax.NotEqualsNullComparison.RuleId] = DeprecatedSyntax.NotEqualsNullComparison.Content,
-        [DeprecatedSyntax.LikeWithNoWildcard.RuleId] = DeprecatedSyntax.LikeWithNoWildcard.Content,
         [DeprecatedSyntax.LegacySystemCompatibilityView.RuleId] = DeprecatedSyntax.LegacySystemCompatibilityView.Content,
         [DeprecatedSyntax.TableHintWithoutWith.RuleId] = DeprecatedSyntax.TableHintWithoutWith.Content,
         [DeprecatedSyntax.NumberedProcedureDefinition.RuleId] = DeprecatedSyntax.NumberedProcedureDefinition.Content,

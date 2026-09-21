@@ -1477,76 +1477,6 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_ColumnComparedToLongerDeclaredVariable_FiresOversizedParameter()
-    {
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(200) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
-
-        var finding = Assert.Single(result.OversizedParameterFindings);
-        Assert.Equal("dbo.Customers", finding.TableQualifiedName);
-        Assert.Equal("Code", finding.ColumnName);
-        Assert.Equal(20, finding.ColumnLength);
-        Assert.Equal(200, finding.OtherOperandLength);
-    }
-
-    [Fact]
-    public void Extract_ProcedureParameterLongerThanColumn_FiresOversizedParameter()
-    {
-
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "CREATE PROCEDURE dbo.usp_FindCustomer @Code VARCHAR(4000) AS BEGIN SELECT 1 FROM dbo.Customers WHERE Code = @Code; END");
-
-        var finding = Assert.Single(result.OversizedParameterFindings);
-        Assert.Equal(20, finding.ColumnLength);
-        Assert.Equal(4000, finding.OtherOperandLength);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToShorterOrEqualDeclaredVariable_NeverFires()
-    {
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(20) = 'ABC'; DECLARE @q VARCHAR(5) = 'AB'; SELECT 1 FROM dbo.Customers WHERE Code = @p OR Code = @q;");
-
-        Assert.Empty(result.OversizedParameterFindings);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToLongerLiteral_NeverFires()
-    {
-
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(5) NOT NULL);",
-            "SELECT 1 FROM dbo.Customers WHERE Code = 'a much longer literal than the column';");
-
-        Assert.Empty(result.OversizedParameterFindings);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToLongerMaxTypedVariable_NeverFires()
-    {
-
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(MAX) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
-
-        Assert.Empty(result.OversizedParameterFindings);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToLongerVariableOfDifferentCategory_NeverFires()
-    {
-
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p NVARCHAR(200) = N'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
-
-        Assert.Empty(result.OversizedParameterFindings);
-    }
-
-    [Fact]
     public void Extract_ColumnComparedToShorterDeclaredVariable_FiresUnderLengthParameter()
     {
         var result = ExtractAll(
@@ -1699,19 +1629,6 @@ public sealed class TypedPredicateExtractorTests
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal(10, finding.OtherOperandLength);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToUnsizedConvertOfNarrowerColumn_FiresOversizedParameter()
-    {
-
-        var result = ExtractAll(
-            "CREATE TABLE dbo.Customers (Code VARCHAR(10) NOT NULL);",
-            "DECLARE @x VARCHAR(50) = 'ABCDE'; SELECT 1 FROM dbo.Customers WHERE Code = CONVERT(VARCHAR, @x);");
-
-        var finding = Assert.Single(result.OversizedParameterFindings);
-        Assert.Equal(10, finding.ColumnLength);
-        Assert.Equal(30, finding.OtherOperandLength);
     }
 
     private static IReadOnlyList<AnsiPaddingMismatchFinding> ExtractAnsiPaddingMismatch(bool isAnsiPadded, string sql)

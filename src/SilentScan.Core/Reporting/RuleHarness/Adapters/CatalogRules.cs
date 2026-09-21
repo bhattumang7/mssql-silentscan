@@ -2,22 +2,10 @@ using SilentScan.Core.Predicates;
 
 namespace SilentScan.Core.Reporting.RuleHarness.Adapters;
 
-internal sealed class ColumnCollationDriftRule : ICatalogRule
-{
-    public string Id => "ColumnCollationDriftScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => ColumnCollationDriftScanner.Scan(context.Catalog);
-}
-
 internal sealed class AnsiPaddingOffColumnRule : ICatalogRule
 {
     public string Id => "AnsiPaddingOffColumnScanner";
     public IReadOnlyList<IFinding> Scan(RuleContext context) => AnsiPaddingOffColumnScanner.Scan(context.Catalog);
-}
-
-internal sealed class CrossTableTypeDriftRule : ICatalogRule
-{
-    public string Id => "CrossTableTypeDriftScanner";
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => CrossTableTypeDriftScanner.Scan(context.Catalog);
 }
 
 internal sealed class TriggerOrderRule : ICatalogRule

@@ -34,7 +34,6 @@ public enum QueryAntiPatternFindingKind
 
     UnboundedTableWrite,
 
-    LinkedServerOrCrossDatabaseReference,
 
     MultiRowInsertIgnoreDupKeyDrop,
 }

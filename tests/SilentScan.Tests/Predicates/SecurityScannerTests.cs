@@ -261,48 +261,4 @@ public sealed class SecurityScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind is SecurityFindingKind.WeakHashAlgorithm or SecurityFindingKind.WeakHashAlgorithmInSensitiveContext);
     }
-
-    [Fact]
-    public void UnanalyzableDynamicSqlFinding_MapsToUnprovableDynamicSqlText()
-    {
-        var input = new[]
-        {
-            new DynamicSqlFinding("test.sql", 5, 1, DynamicSqlOutcome.Unanalyzable, "depends on a parameter"),
-            new DynamicSqlFinding("test.sql", 10, 1, DynamicSqlOutcome.AnalyzedLiteral, null),
-        };
-
-        var findings = SecurityScanner.FromDynamicSqlFindings(input);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(SecurityFindingKind.UnprovableDynamicSqlText, finding.Kind);
-        Assert.Equal(5, finding.Line);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void DuplicateUnanalyzableFindingsAtSameSite_CollapseToOne()
-    {
-        var input = new[]
-        {
-            new DynamicSqlFinding("test.sql", 5, 1, DynamicSqlOutcome.Unanalyzable, "round 1"),
-            new DynamicSqlFinding("test.sql", 5, 1, DynamicSqlOutcome.Unanalyzable, "round 2"),
-            new DynamicSqlFinding("test.sql", 5, 1, DynamicSqlOutcome.Unanalyzable, "round 3"),
-        };
-
-        var findings = SecurityScanner.FromDynamicSqlFindings(input);
-
-        Assert.Single(findings);
-    }
-
-    [Fact]
-    public void NoUnanalyzableDynamicSqlFindings_ProducesNothing()
-    {
-        var input = new[]
-        {
-            new DynamicSqlFinding("test.sql", 5, 1, DynamicSqlOutcome.AnalyzedLiteral, null),
-            new DynamicSqlFinding("test.sql", 6, 1, DynamicSqlOutcome.InnerParseFailed, "bad parse"),
-        };
-
-        Assert.Empty(SecurityScanner.FromDynamicSqlFindings(input));
-    }
 }

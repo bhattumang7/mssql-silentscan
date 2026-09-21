@@ -13,15 +13,13 @@ internal static class ImplicitDefaultRangeFrame
             no `ROWS`/`RANGE` keyword anywhere in the source text. T-SQL doesn't leave this
             undefined: it silently defaults to `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`,
             the exact same mechanism (and, oracle-confirmed, the exact same measured cost) as writing
-            that `RANGE` frame explicitly. The difference from this tool's separate explicit-RANGE
-            finding is entirely about visibility: here, nothing in the query text says RANGE at all -
-            a reader has to already know T-SQL's own default-frame rule to realize the more
-            expensive path is the one actually running.
+            that `RANGE` frame explicitly. Nothing in the query text says RANGE at all - a reader
+            has to already know T-SQL's own default-frame rule to realize the more expensive path
+            is the one actually running.
 
-            This makes the implicit case arguably the more important one to catch: an author who
-            never intended a RANGE frame, and never typed the word RANGE, still pays its cost simply
-            by omitting a frame clause after an ORDER BY - the exact opposite of what the source text
-            suggests happened.
+            An author who never intended a RANGE frame, and never typed the word RANGE, still pays
+            its cost simply by omitting a frame clause after an ORDER BY - the exact opposite of
+            what the source text suggests happened.
             """,
         HowToFixIt: """
             Add an explicit ROWS frame instead of relying on the implicit default RANGE BETWEEN

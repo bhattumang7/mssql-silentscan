@@ -292,17 +292,6 @@ public static class DeprecatedSyntaxScanner
             }
         }
 
-        public void OnLikePredicate(LikePredicate node, ModuleWalker walker)
-        {
-            if (node.SecondExpression is StringLiteral { Value: { } pattern }
-                && !pattern.Contains('%') && !pattern.Contains('_') && !pattern.Contains('[')
-                && !pattern.EndsWith(' '))
-            {
-                Add(DeprecatedSyntaxFindingKind.LikeWithNoWildcard, node,
-                    $"LIKE pattern \"{pattern}\" contains no wildcard - use \"=\" here instead, or add the intended wildcard.");
-            }
-        }
-
         public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker)
         {
             if (node.SchemaObject.SchemaIdentifier is null or { Value: "sys" or "dbo" }

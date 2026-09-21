@@ -47,11 +47,6 @@ public static class QueryAntiPatternScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    private static readonly HashSet<string> SystemDatabaseNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "master", "tempdb", "msdb", "model",
-    };
-
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, HashSet<string> cteNames) : IModuleRule
     {
         public List<QueryAntiPatternFinding> Findings { get; } = [];
@@ -100,7 +95,6 @@ public static class QueryAntiPatternScanner
                 foreach (var named in CollectNamedTableReferences(tableReference))
                 {
                     InspectUnqualifiedReference(named);
-                    InspectLinkedServerOrCrossDatabase(named);
                 }
             }
         }
@@ -217,7 +211,6 @@ public static class QueryAntiPatternScanner
             if (tableReference is NamedTableReference named)
             {
                 InspectUnqualifiedReference(named);
-                InspectLinkedServerOrCrossDatabase(named);
             }
         }
 
@@ -241,44 +234,6 @@ public static class QueryAntiPatternScanner
                 QueryAntiPatternFindingKind.UnqualifiedTableReference, sourcePath,
                 named.StartLine, named.StartColumn,
                 $"'{named.SchemaObject.BaseIdentifier.Value}' resolves to '{qualifiedName}' with no explicit schema qualifier at this reference.",
-                FindingConfidence.Medium));
-        }
-
-        private void InspectLinkedServerOrCrossDatabase(NamedTableReference named)
-        {
-            var schemaObject = named.SchemaObject;
-            if (schemaObject.ServerIdentifier is { Value.Length: > 0 } server)
-            {
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference, sourcePath,
-                    named.StartLine, named.StartColumn,
-                    $"'{server.Value}.{schemaObject.DatabaseIdentifier?.Value}.{schemaObject.SchemaIdentifier?.Value}.{schemaObject.BaseIdentifier.Value}' names a remote linked server - remote statistics are usually unavailable to the optimizer.",
-                    FindingConfidence.High));
-                return;
-            }
-
-            if (schemaObject.DatabaseIdentifier is not { Value.Length: > 0 } database)
-            {
-                return;
-            }
-
-            if (SystemDatabaseNames.Contains(database.Value))
-            {
-
-                return;
-            }
-
-            if (catalog.CurrentDatabaseName is not { Length: > 0 } currentDatabase
-                || string.Equals(database.Value, currentDatabase, StringComparison.OrdinalIgnoreCase))
-            {
-
-                return;
-            }
-
-            Findings.Add(new QueryAntiPatternFinding(
-                QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference, sourcePath,
-                named.StartLine, named.StartColumn,
-                $"'{database.Value}.{schemaObject.SchemaIdentifier?.Value}.{schemaObject.BaseIdentifier.Value}' references a different database than the one this scan connected to ('{currentDatabase}').",
                 FindingConfidence.Medium));
         }
 

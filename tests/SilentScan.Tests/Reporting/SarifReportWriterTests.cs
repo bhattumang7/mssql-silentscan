@@ -26,9 +26,9 @@ public sealed class SarifReportWriterTests
 
         Assert.Equal("2.1.0", document.RootElement.GetProperty("version").GetString());
         var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
-        var expectedCount = report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count + report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count + report.Find<DynamicSqlFinding>("DynamicSqlScanner").Count + report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count + report.Find<CollationConflictFinding>("TypedPredicateExtractor").Count + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count
-            + report.Find<TvfFenceFinding>("TvfFenceScanner").Count + report.Find<ScalarUdfFinding>("ScalarUdfScanner").Count + report.Find<ColumnCollationDriftFinding>("ColumnCollationDriftScanner").Count + report.Find<AnsiPaddingOffColumnFinding>("AnsiPaddingOffColumnScanner").Count + report.Find<CrossTableTypeDriftFinding>("CrossTableTypeDriftScanner").Count + report.Find<ProcCallArgumentMismatchFinding>("ProcCallArgumentMismatchScanner").Count + report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Count
-            + report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Count + report.Find<OversizedParameterFinding>("TypedPredicateExtractor").Count + report.Find<UnderLengthParameterFinding>("TypedPredicateExtractor").Count + report.Find<AnsiPaddingMismatchFinding>("TypedPredicateExtractor").Count + report.Find<PartialCompositeForeignKeyJoinFinding>("PartialCompositeForeignKeyJoinScanner").Count + report.Find<SetOptionFinding>("SetOptionScanner").Count
+        var expectedCount = report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count + report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count + report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count + report.Find<CollationConflictFinding>("TypedPredicateExtractor").Count + report.Find<WriteLossFinding>("TypedPredicateExtractor").Count
+            + report.Find<TvfFenceFinding>("TvfFenceScanner").Count + report.Find<ScalarUdfFinding>("ScalarUdfScanner").Count + report.Find<AnsiPaddingOffColumnFinding>("AnsiPaddingOffColumnScanner").Count + report.Find<ProcCallArgumentMismatchFinding>("ProcCallArgumentMismatchScanner").Count + report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Count
+            + report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Count + report.Find<UnderLengthParameterFinding>("TypedPredicateExtractor").Count + report.Find<AnsiPaddingMismatchFinding>("TypedPredicateExtractor").Count + report.Find<PartialCompositeForeignKeyJoinFinding>("PartialCompositeForeignKeyJoinScanner").Count + report.Find<SetOptionFinding>("SetOptionScanner").Count
             + report.Find<CatchAllPredicateFinding>("CatchAllPredicateScanner").Count + report.Find<LocalVariablePredicateFinding>("TypedPredicateExtractor").Count + report.Find<NotInNullableSubqueryFinding>("NotInNullableSubqueryScanner").Count + report.Find<NonUniqueUpdateSourceFinding>("NonUniqueUpdateSourceScanner").Count + report.Find<ForcedSerialFinding>("ForcedSerialScanner").Count
             + report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Count + report.Find<CascadingForeignKeyFinding>("CascadingForeignKeyScanner").Count + report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Count
             + report.Find<NestedViewDepthFinding>("NestedViewDepthScanner").Count + report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Count + report.Find<SelectStarViewFinding>("SelectStarViewScanner").Count
@@ -40,11 +40,11 @@ public sealed class SarifReportWriterTests
             + report.Find<SecurityFinding>("SecurityScanner").Count
             + report.Find<CheckConstraintFinding>("CheckConstraintScanner").Count
             + report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Count
-            + report.Find<TryCastComputedColumnPredicateFinding>("TryCastComputedColumnPredicateScanner").Count
+           
             + report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Count
             + report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Count
             + report.Find<StringConcatNullFinding>("StringConcatNullScanner").Count
-            + report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Count
+           
 
             + report.Find<DatabaseConfigurationFinding>("DatabaseConfigurationScanner").Count;
         Assert.Equal(expectedCount, results.GetArrayLength());
@@ -134,49 +134,6 @@ public sealed class SarifReportWriterTests
     }
 
     [Fact]
-    public void Write_DynamicSqlAnalyzedFinding_MapsToNoteLevel()
-    {
-        var report = TestScanReports.Build(DynamicSqlFindings: [new DynamicSqlFinding("test.sql", 3, 5, DynamicSqlOutcome.AnalyzedLiteral, Reason: null)]);
-
-        var sarif = SarifReportWriter.Write(report);
-        using var document = JsonDocument.Parse(sarif);
-
-        var result = document.RootElement.GetProperty("runs")[0].GetProperty("results")[0];
-        Assert.Equal("note", result.GetProperty("level").GetString());
-        Assert.Equal("silentscan/dynamic-sql/analyzed", result.GetProperty("ruleId").GetString());
-        Assert.Equal("Advisory", result.GetProperty("properties").GetProperty("tier").GetString());
-    }
-
-    [Fact]
-    public void Write_DynamicSqlUnanalyzableFinding_MapsToWarningLevelWithReasonInMessage()
-    {
-        var report = TestScanReports.Build(DynamicSqlFindings: [new DynamicSqlFinding("test.sql", 3, 5, DynamicSqlOutcome.Unanalyzable, "non-literal-argument")]);
-
-        var sarif = SarifReportWriter.Write(report);
-        using var document = JsonDocument.Parse(sarif);
-
-        var result = document.RootElement.GetProperty("runs")[0].GetProperty("results")[0];
-        Assert.Equal("warning", result.GetProperty("level").GetString());
-        Assert.Equal("silentscan/dynamic-sql/unanalyzable", result.GetProperty("ruleId").GetString());
-        Assert.Contains("non-literal-argument", result.GetProperty("message").GetProperty("text").GetString(), StringComparison.Ordinal);
-        Assert.Equal("Contextual", result.GetProperty("properties").GetProperty("tier").GetString());
-    }
-
-    [Fact]
-    public void Write_DynamicSqlInnerParseFailedFinding_MapsToWarningLevelWithDistinctRuleId()
-    {
-        var report = TestScanReports.Build(DynamicSqlFindings: [new DynamicSqlFinding("test.sql", 3, 5, DynamicSqlOutcome.InnerParseFailed, "Incorrect syntax near '$$$'.")]);
-
-        var sarif = SarifReportWriter.Write(report);
-        using var document = JsonDocument.Parse(sarif);
-
-        var result = document.RootElement.GetProperty("runs")[0].GetProperty("results")[0];
-        Assert.Equal("warning", result.GetProperty("level").GetString());
-        Assert.Equal("silentscan/dynamic-sql/inner-parse-failed", result.GetProperty("ruleId").GetString());
-        Assert.Equal("Contextual", result.GetProperty("properties").GetProperty("tier").GetString());
-    }
-
-    [Fact]
     public void Write_TypedFindingViaDynamicSql_IncludesCallSiteInMessage()
     {
         var report = TestScanReports.Build(TypedFindings: [new TypedPredicateFinding(
@@ -197,20 +154,6 @@ public sealed class SarifReportWriterTests
     }
 
     [Fact]
-    public void Write_RuleCatalog_CoversEveryDynamicSqlOutcome()
-    {
-        foreach (var outcome in Enum.GetValues<DynamicSqlOutcome>())
-        {
-            var ruleId = SarifRuleCatalog.DynamicSqlRuleId(outcome);
-            Assert.Contains(SarifRuleCatalog.AllRules, r => r.Id == ruleId);
-        }
-
-        Assert.Equal(
-            Enum.GetValues<DynamicSqlOutcome>().Length,
-            Enum.GetValues<DynamicSqlOutcome>().Select(SarifRuleCatalog.DynamicSqlRuleId).Distinct().Count());
-    }
-
-    [Fact]
     public void Write_RuleCatalog_CoversEveryTier1FindingKind()
     {
         foreach (var kind in Enum.GetValues<SargabilityFindingKind>())
@@ -224,18 +167,37 @@ public sealed class SarifReportWriterTests
             Enum.GetValues<SargabilityFindingKind>().Select(SarifRuleCatalog.Tier1RuleId).Distinct().Count());
     }
 
+    private static readonly Verdict[] PublishedVerdicts = [Verdict.ScanForced, Verdict.RangeSeek, Verdict.SeekPreserved];
+
+    [Fact]
+    public void Write_DynamicSqlOutcomesAndUnclassifiedVerdicts_EmitNoResults()
+    {
+        var column = new PredicateOperand.Column("dbo.T", "Col", new SqlType(SqlTypeCategory.VarChar), Indexed: true, Depth: 0, Provenance: null!);
+        var report = TestScanReports.Build(
+            DynamicSqlFindings: [new DynamicSqlFinding("test.sql", 3, 5, DynamicSqlOutcome.Unanalyzable, "non-literal-argument")],
+            TypedFindings:
+            [
+                new TypedPredicateFinding(Verdict.Unknown, column, new PredicateOperand.Value(null), "=", "test.sql", 1, 1),
+                new TypedPredicateFinding(Verdict.OperandClash, column, new PredicateOperand.Value(null), "=", "test.sql", 2, 1),
+            ]);
+
+        using var document = JsonDocument.Parse(SarifReportWriter.Write(report));
+
+        Assert.Equal(0, document.RootElement.GetProperty("runs")[0].GetProperty("results").GetArrayLength());
+    }
+
     [Fact]
     public void Write_RuleCatalog_CoversEveryVerdict()
     {
-        foreach (var verdict in Enum.GetValues<Verdict>())
+        foreach (var verdict in PublishedVerdicts)
         {
             var ruleId = SarifRuleCatalog.VerdictRuleId(verdict);
             Assert.Contains(SarifRuleCatalog.AllRules, r => r.Id == ruleId);
         }
 
         Assert.Equal(
-            Enum.GetValues<Verdict>().Length,
-            Enum.GetValues<Verdict>().Select(SarifRuleCatalog.VerdictRuleId).Distinct().Count());
+            PublishedVerdicts.Length,
+            PublishedVerdicts.Select(SarifRuleCatalog.VerdictRuleId).Distinct().Count());
     }
 
     [Fact]

@@ -422,26 +422,6 @@ public sealed class ReadableScanReportWriterTests
     }
 
     [Fact]
-    public void TypedSection_Brief_OmitsTableAndShowsPointerWithCount()
-    {
-        var column = new PredicateOperand.Column("dbo.T", "Col", new SqlType(SqlTypeCategory.Int), Indexed: true, Depth: 0, Provenance: null!);
-        var findings = new[]
-        {
-            new TypedPredicateFinding(Verdict.Unknown, column, new PredicateOperand.Value(new SqlType(SqlTypeCategory.Int)), "=", "a.sql", 1, 1),
-            new TypedPredicateFinding(Verdict.Unknown, column, new PredicateOperand.Value(new SqlType(SqlTypeCategory.Int)), "=", "a.sql", 2, 1),
-        };
-        var report = Blank().WithFindings("TypedPredicateExtractor", findings);
-
-        var blocks = BuildBlocks(report, verbosity: ReadableVerbosity.Brief);
-
-        Assert.False(HasBlockAfterHeadingBeforeNext(blocks, "Comparisons that could not be classified", b => b is ReadableBlock.Table));
-        Assert.True(HasBlockAfterHeadingBeforeNext(
-            blocks,
-            "Comparisons that could not be classified",
-            b => b is ReadableBlock.Paragraph p && p.Text == "2 comparisons - not listed individually here; re-run with --verbosity full to see each one."));
-    }
-
-    [Fact]
     public void TypedSection_ScanForcedIgnoresBriefVerbosity_AlwaysRendersFullTable()
     {
         var column = new PredicateOperand.Column("dbo.T", "Col", new SqlType(SqlTypeCategory.Int), Indexed: true, Depth: 0, Provenance: null!);
@@ -468,13 +448,13 @@ public sealed class ReadableScanReportWriterTests
 
         var findings = new[]
         {
-            new TypedPredicateFinding(Verdict.Unknown, indexedWithName, literalValue, "=", "a.sql", 1, 1, UnknownReason: "collation missing"),
-            new TypedPredicateFinding(Verdict.Unknown, notIndexed, plainValue, "=", "a.sql", 2, 1),
-            new TypedPredicateFinding(Verdict.Unknown, unresolved, plainValue, "=", "a.sql", 3, 1),
+            new TypedPredicateFinding(Verdict.ScanForced, indexedWithName, literalValue, "=", "a.sql", 1, 1, UnknownReason: "collation missing"),
+            new TypedPredicateFinding(Verdict.ScanForced, notIndexed, plainValue, "=", "a.sql", 2, 1),
+            new TypedPredicateFinding(Verdict.ScanForced, unresolved, plainValue, "=", "a.sql", 3, 1),
         };
         var report = Blank().WithFindings("TypedPredicateExtractor", findings);
 
-        var table = TableAfterHeading(BuildBlocks(report), "Comparisons that could not be classified");
+        var table = TableAfterHeading(BuildBlocks(report), "Implicit conversions that force a scan");
 
         Assert.Equal(3, table.Rows.Count);
         var byColumn = table.Rows.ToDictionary(r => r[1]);
@@ -491,11 +471,11 @@ public sealed class ReadableScanReportWriterTests
         var variableOperand = new PredicateOperand.Value(new SqlType(SqlTypeCategory.Int), IsLiteral: false, VariableName: "@p");
         var findings = new[]
         {
-            new TypedPredicateFinding(Verdict.Unknown, column, variableOperand, "=", "a.sql", 1, 1),
+            new TypedPredicateFinding(Verdict.ScanForced, column, variableOperand, "=", "a.sql", 1, 1),
         };
         var report = Blank().WithFindings("TypedPredicateExtractor", findings);
 
-        var table = TableAfterHeading(BuildBlocks(report), "Comparisons that could not be classified");
+        var table = TableAfterHeading(BuildBlocks(report), "Implicit conversions that force a scan");
 
         Assert.Equal("= Int", Assert.Single(table.Rows)[3]);
     }

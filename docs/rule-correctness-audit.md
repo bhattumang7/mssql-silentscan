@@ -38,9 +38,6 @@ correctness bugs found; 0 remain open below.
   `USER_NAME`, `APP_NAME`, `DB_NAME`, `HOST_NAME` = nvarchar(128);
   `ORIGINAL_LOGIN` = nvarchar(4000)) — confirmed via
   `sys.dm_exec_describe_first_result_set`.
-- `AggregateDivisionColumnstoreScanner` — message is explicitly framed as an
-  unproven structural heuristic (`FindingConfidence.Low`, no hard engine
-  claim to falsify); detection logic matches that deliberately loose scope.
 - `CartesianJoinScanner` — purely structural claim (no oracle-verifiable
   engine-error text to check); traced the connectivity/union-find logic
   through third-table transitivity, self-references, parenthesized/negated
@@ -52,22 +49,11 @@ correctness bugs found; 0 remain open below.
   hedge with "or nulls, or resets" rather than overclaiming "cascade" for
   the non-CASCADE actions. Purely catalog-derived, no session/DB-setting
   dependency to diverge on.
-- `ColumnCollationDriftScanner` — baseline resolution (database default vs.
-  tempdb-effective collation for temp objects/table variables) matches
-  existing scanner tests; message is already hedged ("risks a
-  collation-conflict compile error or a forced-scan implicit conversion")
-  and carries only `FindingConfidence.Medium`, consistent with its
-  heuristic scope.
 - `CompositeIndexLeadingColumnScanner` — the "cannot be seek-used at all
   without a bound leading column" claim holds on SQL Server 2025, including
   with an explicit `WITH (INDEX(...))` hint forcing the index; verified no
   newer "index skip scan" feature invalidates it (still a full `Index
   Scan`, never a seek, when only the non-leading column is bound).
-- `CrossTableTypeDriftScanner` — the differing-category-or-collation gate
-  matches SQL Server's documented data-type precedence table exactly; any
-  two differing in-model categories genuinely sit at different precedence,
-  so a join always converts the lower-precedence side, matching the rule's
-  "one side always loses seek" claim.
 - `DeadCodeScanner` — the `ReachabilityWalker` control-flow model correctly
   treats RETURN/THROW as terminal, requires every IF/TRY-CATCH branch to be
   terminal (a `THROW` inside `TRY` alone doesn't make the block terminal —

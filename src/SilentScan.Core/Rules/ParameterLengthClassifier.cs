@@ -5,19 +5,6 @@ namespace SilentScan.Core.Rules;
 
 public static class ParameterLengthClassifier
 {
-    public static (int ColumnLength, int OtherLength)? ClassifyOversized(SqlType? columnType, SqlType? otherType)
-    {
-        if (columnType is not { IsStringFamily: true, IsMax: false, Length: { } columnLength }
-            || otherType is not { IsStringFamily: true, IsMax: false, Length: { } otherLength }
-            || columnType.Category != otherType.Category
-            || otherLength <= columnLength)
-        {
-            return null;
-        }
-
-        return (columnLength, otherLength);
-    }
-
     public static (int ColumnLength, int? OtherLength, bool IsImplicitDefault)? ClassifyUnderLength(SqlType? columnType, SqlType? otherType)
     {
         if (columnType is not { IsStringFamily: true, IsMax: false, Length: { } columnLength }

@@ -13,7 +13,6 @@ public enum SecurityFindingKind
 
     WeakHashAlgorithmInSensitiveContext,
 
-    UnprovableDynamicSqlText,
 
     ExternalRestEndpointCall,
 }

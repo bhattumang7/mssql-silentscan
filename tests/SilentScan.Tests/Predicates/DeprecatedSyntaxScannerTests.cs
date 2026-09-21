@@ -265,30 +265,6 @@ public sealed class DeprecatedSyntaxScannerTests
     }
 
     [Fact]
-    public void LikePatternWithNoWildcard_Fires()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col LIKE 'ABC';");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.LikeWithNoWildcard);
-    }
-
-    [Fact]
-    public void LikePatternWithPercentWildcard_NeverFires()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col LIKE 'ABC%';");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.LikeWithNoWildcard);
-    }
-
-    [Fact]
-    public void LikePatternWithUnderscoreWildcard_NeverFires()
-    {
-        var findings = Scan("SELECT * FROM dbo.T WHERE Col LIKE 'A_C';");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.LikeWithNoWildcard);
-    }
-
-    [Fact]
     public void LegacyCompatibilityView_Fires()
     {
         var findings = Scan("SELECT * FROM sysobjects;");

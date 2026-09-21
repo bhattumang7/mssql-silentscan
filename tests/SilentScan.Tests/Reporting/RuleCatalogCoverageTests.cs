@@ -77,6 +77,11 @@ public sealed class RuleCatalogCoverageTests
             var enumType = method.GetParameters()[0].ParameterType;
             foreach (var value in Enum.GetValues(enumType))
             {
+                if (value is Verdict.Unknown or Verdict.OperandClash)
+                {
+                    continue;
+                }
+
                 var ruleId = (string)method.Invoke(null, [value])!;
                 if (!knownIds.Contains(ruleId))
                 {
@@ -99,18 +104,6 @@ public sealed class RuleCatalogCoverageTests
         [.. typeof(SarifRuleCatalog)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(m => m.ReturnType == typeof(string) && m.GetParameters() is [{ } p] && p.ParameterType.IsEnum)];
-
-    [Fact]
-    public void AllRules_DynamicSqlOutcomeBaseRule_HasNoConfidenceVariants()
-    {
-        foreach (var outcome in Enum.GetValues<DynamicSqlOutcome>())
-        {
-            var baseId = SarifRuleCatalog.DynamicSqlRuleId(outcome);
-
-            Assert.DoesNotContain(SarifRuleCatalog.AllRules, r => r.Id == SarifRuleCatalog.RuleId(baseId, FindingConfidence.Medium));
-            Assert.DoesNotContain(SarifRuleCatalog.AllRules, r => r.Id == SarifRuleCatalog.RuleId(baseId, FindingConfidence.Low));
-        }
-    }
 
     [Fact]
     public void AllRules_NonDynamicSqlBaseRule_HasMediumAndLowConfidenceVariants()

@@ -31,23 +31,19 @@ public static class SarifReportWriter
     {
         var results = new List<SarifResult>();
         results.AddRange(report.Find<SargabilityFinding>("NonSargablePredicateScanner").Select(ToResult));
-        results.AddRange(report.Find<TypedPredicateFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
-        results.AddRange(report.Find<DynamicSqlFinding>("DynamicSqlScanner").Select(ToResult));
+        results.AddRange(report.Find<TypedPredicateFinding>(nameof(TypedPredicateExtractor)).Where(f => f.Verdict is not (Verdict.Unknown or Verdict.OperandClash)).Select(ToResult));
         results.AddRange(report.Find<ExpressionDerivedFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<CollationConflictFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<WriteLossFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<TvfFenceFinding>("TvfFenceScanner").Select(ToResult));
         results.AddRange(report.Find<ScalarUdfFinding>("ScalarUdfScanner").Select(ToResult));
-        results.AddRange(report.Find<ColumnCollationDriftFinding>("ColumnCollationDriftScanner").Select(ToResult));
         results.AddRange(report.Find<AnsiPaddingOffColumnFinding>("AnsiPaddingOffColumnScanner").Select(ToResult));
-        results.AddRange(report.Find<CrossTableTypeDriftFinding>("CrossTableTypeDriftScanner").Select(ToResult));
         results.AddRange(report.Find<ProcCallArgumentMismatchFinding>("ProcCallArgumentMismatchScanner").Select(ToResult));
         results.AddRange(report.Find<TvfCallArgumentMismatchFinding>("TvfCallArgumentMismatchScanner").Select(ToResult));
         results.AddRange(report.Find<ProcCallTableValuedArgumentMismatchFinding>("ProcCallTableValuedArgumentMismatchScanner").Select(ToResult));
         results.AddRange(report.Find<SpExecuteSqlParameterMismatchFinding>("SpExecuteSqlParameterMismatchScanner").Select(ToResult));
         results.AddRange(report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Select(ToResult));
         results.AddRange(report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Select(ToResult));
-        results.AddRange(report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Select(ToResult));
         results.AddRange(report.Find<CatchAllPredicateFinding>("CatchAllPredicateScanner").Select(ToResult));
@@ -113,7 +109,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<CheckConstraintFinding>("CheckConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Select(ToResult));
         results.AddRange(report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Select(ToResult));
-        results.AddRange(report.Find<TryCastComputedColumnPredicateFinding>("TryCastComputedColumnPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
         results.AddRange(report.Find<StringAggMissingOrderFinding>("StringAggMissingOrderScanner").Select(ToResult));
@@ -122,7 +117,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<JsonObjectDuplicateKeyFinding>("JsonObjectDuplicateKeyScanner").Select(ToResult));
         results.AddRange(report.Find<UnistrUnpairedSurrogateFinding>("UnistrUnpairedSurrogateScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
-        results.AddRange(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
         results.AddRange(report.Find<MissingStatisticsFinding>("MissingStatisticsScanner").Select(ToResult));
@@ -292,33 +286,12 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.ColumnPosition);
     }
 
-    private static SarifResult ToResult(ColumnCollationDriftFinding finding)
-    {
-
-        var kindNote = finding.IsTempObject ? "tempdb's effective" : "the database's default";
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' (COLLATE {finding.ColumnCollationName}) differs from {kindNote} collation (COLLATE {finding.BaselineCollationName}) - a conversion seed for any future comparison against a column/literal carrying that collation.";
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ColumnCollationDriftRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
     private static SarifResult ToResult(AnsiPaddingOffColumnFinding finding)
     {
 
         var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' has ANSI_PADDING OFF in its own catalog state (sys.columns.is_ansi_padded = 0) - every write into it silently strips trailing blanks/zero bytes regardless of the writing session's own ANSI_PADDING setting.";
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ColumnAnsiPaddingOffRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
-    private static SarifResult ToResult(CrossTableTypeDriftFinding finding)
-    {
-
-        var message = $"FK '{finding.ConstraintName}': '{finding.ParentTableQualifiedName}.{finding.ParentColumnName}' ({finding.ParentTypeDisplay}) references '{finding.ReferencedTableQualifiedName}.{finding.ReferencedColumnName}' ({finding.ReferencedTypeDisplay}) - the types differ{(finding.CollationDiffers ? " (collation differs)" : string.Empty)}.";
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CrossTableTypeDriftRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
     }
@@ -399,16 +372,6 @@ public static class SarifReportWriter
         var message = $"Memory-optimized table '{finding.TableQualifiedName}' is declared WITH (DURABILITY = SCHEMA_ONLY) - only its schema is persisted, so every row is lost on a server restart, failover, or database restore/attach, with no error or warning.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
-
-    private static SarifResult ToResult(OversizedParameterFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.OversizedParameterRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' (length {finding.ColumnLength}) is compared against a parameter/variable/expression declared with length {finding.OtherOperandLength} - risks memory-grant inflation if the value feeds a sort/hash operator.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
     private static SarifResult ToResult(PartialCompositeForeignKeyJoinFinding finding)
@@ -817,15 +780,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
 
-    private static SarifResult ToResult(TryCastComputedColumnPredicateFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TryCastComputedColumnPredicateRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' (a non-persisted computed column defined as '{finding.DefinitionText}', {finding.DefinitionLocation.SourcePath}:{finding.DefinitionLocation.Line}) is referenced in a predicate here - TRY_CAST makes this column non-deterministic, so it can never be PERSISTED or indexed, and this predicate can never seek through it.";
-
-        return BuildResult(ruleId, level, message, finding.Location.SourcePath, finding.Location.Line, finding.Location.Column);
-    }
-
     private static SarifResult ToResult(StaleSelectStarViewFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.StaleSelectStarViewRuleId, finding.Confidence);
@@ -901,16 +855,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
-    private static SarifResult ToResult(AggregateDivisionColumnstoreFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.AggregateDivisionColumnstoreRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = $"{finding.AggregateFunctionName}(...) on '{finding.TableQualifiedName}' (backed by a columnstore index) contains a CASE-guarded division by a non-constant divisor - historically reported as unreliable under batch-mode/vectorized execution's own CASE-branch evaluation, unlike rowstore scalar evaluation.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
     private static SarifResult ToResult(SecurityPredicateIndexFinding finding)
     {
 
@@ -973,8 +917,6 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = finding.Kind switch
         {
-            WindowFrameFindingKind.ExplicitRangeFrame =>
-                "This window function uses an explicit RANGE frame - oracle-measured to cost materially more CPU at the Window Spool operator than the equivalent ROWS frame for the same logical boundary.",
             WindowFrameFindingKind.ImplicitDefaultRangeFrame =>
                 "This window function has an ORDER BY but no explicit frame clause - T-SQL silently defaults this to a RANGE frame, oracle-confirmed to carry the same measured cost as writing RANGE explicitly.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
@@ -1525,25 +1467,6 @@ public static class SarifReportWriter
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled ScalarUdfFindingKind."),
         };
         message += DynamicSqlOriginNote(finding.DynamicSqlCallSite);
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(DynamicSqlFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.DynamicSqlRuleId(finding.Outcome);
-        var level = finding.Outcome == DynamicSqlOutcome.AnalyzedLiteral ? LevelNote : LevelWarning;
-
-        var message = finding.Outcome switch
-        {
-            DynamicSqlOutcome.AnalyzedLiteral =>
-                "Dynamic SQL call with a provably-constant argument; its contents were reparsed and analyzed like static SQL.",
-            DynamicSqlOutcome.InnerParseFailed =>
-                $"Dynamic SQL call's argument was provably constant but did not parse as T-SQL ({finding.Reason}).",
-            DynamicSqlOutcome.PartiallyAnalyzed =>
-                "Dynamic SQL call's argument contained a whole optional clause/fragment of unknown content; the surrounding query structure was analyzed, but that fragment was not.",
-            _ => $"Dynamic SQL call's argument could not be statically analyzed ({finding.Reason}).",
-        };
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }

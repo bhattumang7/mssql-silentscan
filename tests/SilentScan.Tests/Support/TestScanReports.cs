@@ -19,15 +19,12 @@ public static class TestScanReports
         IReadOnlyList<WriteLossFinding>? WriteLossFindings = null,
         IReadOnlyList<TvfFenceFinding>? TvfFenceFindings = null,
         IReadOnlyList<ScalarUdfFinding>? ScalarUdfFindings = null,
-        IReadOnlyList<ColumnCollationDriftFinding>? ColumnCollationDriftFindings = null,
         IReadOnlyList<AnsiPaddingOffColumnFinding>? AnsiPaddingOffColumnFindings = null,
-        IReadOnlyList<CrossTableTypeDriftFinding>? CrossTableTypeDriftFindings = null,
         IReadOnlyList<ProcCallArgumentMismatchFinding>? ProcCallArgumentMismatchFindings = null,
         IReadOnlyList<TvfCallArgumentMismatchFinding>? TvfCallArgumentMismatchFindings = null,
         IReadOnlyList<ProcCallTableValuedArgumentMismatchFinding>? ProcCallTableValuedArgumentMismatchFindings = null,
         IReadOnlyList<TemporalBoundaryPrecisionFinding>? TemporalBoundaryFindings = null,
         IReadOnlyList<MaxTypedColumnFinding>? MaxTypedColumnFindings = null,
-        IReadOnlyList<OversizedParameterFinding>? OversizedParameterFindings = null,
         IReadOnlyList<UnderLengthParameterFinding>? UnderLengthParameterFindings = null,
         IReadOnlyList<AnsiPaddingMismatchFinding>? AnsiPaddingMismatchFindings = null,
         IReadOnlyList<PartialCompositeForeignKeyJoinFinding>? PartialCompositeForeignKeyJoinFindings = null,
@@ -86,7 +83,6 @@ public static class TestScanReports
         IReadOnlyList<CheckConstraintFinding>? CheckConstraintFindings = null,
         IReadOnlyList<CheckConstraintPredicateContradictionFinding>? CheckConstraintPredicateContradictionFindings = null,
         IReadOnlyList<DefaultNullableConstraintFinding>? DefaultNullableConstraintFindings = null,
-        IReadOnlyList<TryCastComputedColumnPredicateFinding>? TryCastComputedColumnPredicateFindings = null,
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
         IReadOnlyList<BareTopNoOrderByFinding>? BareTopNoOrderByFindings = null,
         IReadOnlyList<StringAggMissingOrderFinding>? StringAggMissingOrderFindings = null,
@@ -98,7 +94,6 @@ public static class TestScanReports
         IReadOnlyList<RegexpDefaultCaseSensitiveOnCiColumnFinding>? RegexpDefaultCaseSensitiveOnCiColumnFindings = null,
         IReadOnlyList<RegexpAccentInsensitiveColumnFinding>? RegexpAccentInsensitiveColumnFindings = null,
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
-        IReadOnlyList<AggregateDivisionColumnstoreFinding>? AggregateDivisionColumnstoreFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
         IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null,
         IReadOnlyList<TriggerOrderFinding>? TriggerOrderFindings = null,
@@ -130,7 +125,6 @@ public static class TestScanReports
         Set("TypedPredicateExtractor", ExpressionDerivedFindings);
         Set("TypedPredicateExtractor", CollationConflictFindings);
         Set("TypedPredicateExtractor", WriteLossFindings);
-        Set("TypedPredicateExtractor", OversizedParameterFindings);
         Set("TypedPredicateExtractor", UnderLengthParameterFindings);
         Set("TypedPredicateExtractor", AnsiPaddingMismatchFindings);
         Set("TypedPredicateExtractor", LocalVariablePredicateFindings);
@@ -140,9 +134,7 @@ public static class TestScanReports
         Set("TvfFenceScanner", TvfFenceFindings);
         Set("ScalarUdfScanner", ScalarUdfFindings);
         Set("SecurityScanner", SecurityFindings);
-        Set("ColumnCollationDriftScanner", ColumnCollationDriftFindings);
         Set("AnsiPaddingOffColumnScanner", AnsiPaddingOffColumnFindings);
-        Set("CrossTableTypeDriftScanner", CrossTableTypeDriftFindings);
         Set("ProcCallArgumentMismatchScanner", ProcCallArgumentMismatchFindings);
         Set("TvfCallArgumentMismatchScanner", TvfCallArgumentMismatchFindings);
         Set("ProcCallTableValuedArgumentMismatchScanner", ProcCallTableValuedArgumentMismatchFindings);
@@ -199,7 +191,6 @@ public static class TestScanReports
         Set("CheckConstraintScanner", CheckConstraintFindings);
         Set(nameof(CheckConstraintPredicateContradictionScanner), CheckConstraintPredicateContradictionFindings);
         Set("DefaultNullableConstraintScanner", DefaultNullableConstraintFindings);
-        Set("TryCastComputedColumnPredicateScanner", TryCastComputedColumnPredicateFindings);
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
         Set("BareTopNoOrderByScanner", BareTopNoOrderByFindings);
         Set("StringAggMissingOrderScanner", StringAggMissingOrderFindings);
@@ -211,7 +202,6 @@ public static class TestScanReports
         Set("RegexpDefaultCaseSensitiveOnCiColumnScanner", RegexpDefaultCaseSensitiveOnCiColumnFindings);
         Set("RegexpAccentInsensitiveColumnScanner", RegexpAccentInsensitiveColumnFindings);
         Set("StringConcatNullScanner", StringConcatNullFindings);
-        Set("AggregateDivisionColumnstoreScanner", AggregateDivisionColumnstoreFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
         Set("ForcedParameterizationScanner", ForcedParameterizationFindings);
         Set("TriggerOrderScanner", TriggerOrderFindings);

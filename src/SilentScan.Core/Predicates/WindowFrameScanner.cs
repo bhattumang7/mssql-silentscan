@@ -57,12 +57,6 @@ public static class WindowFrameScanner
                 Findings.Add(new WindowFrameFinding(
                     WindowFrameFindingKind.ImplicitDefaultRangeFrame, sourcePath, overClause.StartLine, overClause.StartColumn));
             }
-            else if (overClause.WindowFrameClause.WindowFrameType == WindowFrameType.Range)
-            {
-                Findings.Add(new WindowFrameFinding(
-                    WindowFrameFindingKind.ExplicitRangeFrame, sourcePath,
-                    overClause.WindowFrameClause.StartLine, overClause.WindowFrameClause.StartColumn));
-            }
         }
     }
 }

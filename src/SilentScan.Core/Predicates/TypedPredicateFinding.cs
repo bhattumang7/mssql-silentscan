@@ -19,7 +19,7 @@ public sealed record TypedPredicateFinding(
     string? Fingerprint = null,
     FindingConfidence Confidence = FindingConfidence.High) : IRelocatableFinding<TypedPredicateFinding>, IFinding
 {
-    public string RuleId { get; } = FindingRuleIds.VerdictRuleId(Verdict);
+    public string? RuleId { get; } = Verdict is Verdict.Unknown or Verdict.OperandClash ? null : FindingRuleIds.VerdictRuleId(Verdict);
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);
     int IRelocatableFinding<TypedPredicateFinding>.PositionColumn => ColumnPosition;
@@ -34,7 +34,6 @@ public sealed record PredicateExtractionResult(
     IReadOnlyList<CollationConflictFinding> CollationConflictFindings,
     IReadOnlyList<WriteLossFinding> WriteLossFindings,
     IReadOnlyList<SkippedConstruct> SkippedConstructs,
-    IReadOnlyList<OversizedParameterFinding> OversizedParameterFindings,
     IReadOnlyList<UnderLengthParameterFinding> UnderLengthParameterFindings,
     IReadOnlyList<AnsiPaddingMismatchFinding> AnsiPaddingMismatchFindings,
     IReadOnlyList<LocalVariablePredicateFinding> LocalVariablePredicateFindings,
