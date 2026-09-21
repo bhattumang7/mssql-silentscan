@@ -115,10 +115,11 @@ not slower, across every thread count tried in the 4-6 range. Re-measure before
 changing this if the dev/CI machine's core count differs.
 
 The Docker SQL Server above is a hard requirement for `dotnet test` overall,
-not just for `Integration/`: verdict-bearing tests across `Predicates/` also
-deploy their fixture DDL and confirm against a real SHOWPLAN_XML plan
+not just for `Integration/`: the oracle tests across `Predicates/` also
+deploy their fixture DDL and confirm the rule's claim against the real engine
 (`[Trait("Category", "Oracle")]` / `OracleTestFixture`), not just that the
-static pipeline agrees with itself. No mock/skip path.
+static pipeline agrees with itself. Every published rule outside the exempt
+style families has one, enforced by `RuleOracleCoverageTests`. No mock/skip path.
 
 ## Benchmark harness
 

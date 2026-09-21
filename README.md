@@ -70,8 +70,8 @@ docker compose up -d
 ```
 
 Connects on `localhost,14330`, user `sa`. Backs the test suite and the
-verification/benchmark tooling — every verdict-bearing rule is checked
-against this instance's real plan XML before it ships.
+verification/benchmark tooling — every published rule's claim is checked
+against this real instance before it ships.
 
 ## Layout
 
@@ -119,7 +119,7 @@ flowchart TD
     RULECAT --> RULEDOCS["rules-doc verb →<br/>docs/rules.html + docs/rules/*.html"]
 
     subgraph Verify["SilentScan.Verify (offline, Docker)"]
-        ORACLE["Oracle: real SQL Server<br/>plan XML per verdict-bearing rule"]
+        ORACLE["Oracle: real SQL Server<br/>engine check per published rule"]
     end
     ORACLE -.->|backs test suite,<br/>not the scan path| PRED
 
@@ -143,7 +143,7 @@ render as text, JSON, or SARIF — all keyed against the single
 `RuleCatalog` source of truth that also generates the published rule docs.
 
 `SilentScan.Verify` never runs during a scan — it's the offline oracle
-(Dockerized SQL Server) that every verdict-bearing rule's truth table is
+(Dockerized SQL Server) that every published rule's claim is
 checked against before it ships, and it backs the test suite.
 
 ## More detail

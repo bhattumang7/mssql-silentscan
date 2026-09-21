@@ -38,8 +38,8 @@ correctness bugs found; 0 remain open below.
   `USER_NAME`, `APP_NAME`, `DB_NAME`, `HOST_NAME` = nvarchar(128);
   `ORIGINAL_LOGIN` = nvarchar(4000)) — confirmed via
   `sys.dm_exec_describe_first_result_set`.
-- `CartesianJoinScanner` — purely structural claim (no oracle-verifiable
-  engine-error text to check); traced the connectivity/union-find logic
+- `CartesianJoinScanner` — oracle-tested for the no-predicate row-count claim;
+  traced the connectivity/union-find logic
   through third-table transitivity, self-references, parenthesized/negated
   predicates, `CROSS APPLY` exclusion, and the conservative bail-out on any
   unqualified column reference — all consistent with the existing test
@@ -117,7 +117,8 @@ correctness bugs found; 0 remain open below.
   exists since T-SQL doesn't allow a `WITH` clause nested inside a
   subquery.
 
-Skipped as pure style/structural, no real-engine claim to diverge from:
+Skipped as members of the style families exempt from the oracle-test gate
+(`RuleOracleCoverageTests`), whose findings make no result or plan claim:
 `CodeMetricScanner` (every finding kind's own text says "no query result or
 plan is affected") and `FormattingScanner` (same framing; the one
 underlying T-SQL fact — an unbraced `IF`/`WHILE` body is exactly one
