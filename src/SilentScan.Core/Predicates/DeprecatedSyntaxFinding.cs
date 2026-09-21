@@ -24,7 +24,6 @@ public enum DeprecatedSyntaxFindingKind
 
     NumberedProcedureExecution,
 
-    StringLiteralColumnAlias,
 
     RemovedSecurityStoredProcedure,
 

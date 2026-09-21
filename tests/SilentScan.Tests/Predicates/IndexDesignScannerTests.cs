@@ -821,57 +821,6 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
-    public void ColumnstoreIndex_OnDmlTargetTable_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        var columnstore = new CatalogIndex("CCI_Facts", CatalogIndexKind.Index, IsUnique: false, [], [], IsClustered: true, IsColumnstore: true);
-        catalog.AddOrReplace(Table("dbo", "Facts", [Column("Id", IntType)], [columnstore]));
-
-        var findings = IndexDesignScanner.Scan(catalog, dmlTargetTables: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dbo.Facts" });
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable, finding.Kind);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void ColumnstoreIndex_NotADmlTarget_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        var columnstore = new CatalogIndex("CCI_Facts", CatalogIndexKind.Index, IsUnique: false, [], [], IsClustered: true, IsColumnstore: true);
-        catalog.AddOrReplace(Table("dbo", "Facts", [Column("Id", IntType)], [columnstore]));
-
-        var findings = IndexDesignScanner.Scan(catalog, dmlTargetTables: new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable);
-    }
-
-    [Fact]
-    public void ColumnstoreIndex_NoDmlTargetSetProvided_NeverFires()
-    {
-
-        var catalog = new DatabaseCatalog();
-        var columnstore = new CatalogIndex("CCI_Facts", CatalogIndexKind.Index, IsUnique: false, [], [], IsClustered: true, IsColumnstore: true);
-        catalog.AddOrReplace(Table("dbo", "Facts", [Column("Id", IntType)], [columnstore]));
-
-        var findings = IndexDesignScanner.Scan(catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable);
-    }
-
-    [Fact]
-    public void RowstoreIndex_OnDmlTargetTable_NeverFiresColumnstore()
-    {
-        var catalog = new DatabaseCatalog();
-        var rowstore = new CatalogIndex("PK_Facts", CatalogIndexKind.PrimaryKey, IsUnique: true, ["Id"], [], IsClustered: true);
-        catalog.AddOrReplace(Table("dbo", "Facts", [Column("Id", IntType)], [rowstore]));
-
-        var findings = IndexDesignScanner.Scan(catalog, dmlTargetTables: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "dbo.Facts" });
-
-        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable);
-    }
-
-    [Fact]
     public void IdentityClusteredKey_NoSequentialKeyOptimization_Fires()
     {
         var catalog = new DatabaseCatalog();

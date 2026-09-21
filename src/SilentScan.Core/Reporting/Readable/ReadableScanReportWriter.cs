@@ -211,7 +211,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "sp_executesql call-site arguments risking silent data loss against their own declared parameter type", report.Find<SpExecuteSqlParameterMismatchFinding>(nameof(SpExecuteSqlParameterMismatchScanner)).Count);
         AddCount(counts, "BETWEEN predicates silently excluding rows at an imprecise end-of-period boundary", report.Find<TemporalBoundaryPrecisionFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
-        AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
         AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
         AddCount(counts, "Predicates comparing a column against an under-length parameter/variable", report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Count);
@@ -794,24 +793,6 @@ public static class ReadableScanReportWriter
             yield return new ReadableBlock.Table(
                 [WhereHeader, ColumnHeader, "Type"],
                 [.. maxLength.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                    $"{f.TableQualifiedName}.{f.ColumnName}",
-                    f.TypeDisplay,
-                })]);
-        }
-
-        var legacyLob = report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Where(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject).ToList();
-        if (legacyLob.Count > 0)
-        {
-            yield return new ReadableBlock.Heading(level, $"Legacy large-object columns ({legacyLob.Count})");
-            yield return new ReadableBlock.Paragraph(
-                "A structural catalog fact, not a comparison: TEXT/NTEXT/IMAGE columns can never appear in any index at all (SQL Server rejects them at CREATE INDEX time, even as a nonclustered index's INCLUDE column), so no predicate or join on them can ever seek and they can never be covered.");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.MaxTypedColumnRuleId(NonIndexableColumnFindingKind.LegacyLargeObject)));
-
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ColumnHeader, "Type"],
-                [.. legacyLob.Select(f => new List<string>
                 {
                     Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                     $"{f.TableQualifiedName}.{f.ColumnName}",

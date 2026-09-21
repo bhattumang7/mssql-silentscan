@@ -24,10 +24,6 @@ public static class MaxTypedColumnScanner
                 {
                     kind = NonIndexableColumnFindingKind.MaxLength;
                 }
-                else if (type.Category is SqlTypeCategory.Text or SqlTypeCategory.NText or SqlTypeCategory.Image)
-                {
-                    kind = NonIndexableColumnFindingKind.LegacyLargeObject;
-                }
                 else
                 {
                     continue;

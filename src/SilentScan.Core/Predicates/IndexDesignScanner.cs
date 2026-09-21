@@ -10,7 +10,7 @@ public static class IndexDesignScanner
 {
     private const string UnnamedIndexPlaceholder = "<unnamed>";
 
-    public static IReadOnlyList<IndexDesignFinding> Scan(DatabaseCatalog catalog, IReadOnlySet<string>? dmlTargetTables = null, IScanStage? stage = null)
+    public static IReadOnlyList<IndexDesignFinding> Scan(DatabaseCatalog catalog, IScanStage? stage = null)
     {
         var defaultTextByColumn = new Dictionary<string, string>(catalog.IdentifierComparer);
         foreach (var expression in catalog.SchemaExpressions)
@@ -45,7 +45,6 @@ public static class IndexDesignScanner
             ScanNoRecomputeStatistics(table, findings);
             ScanVariableLengthKeyColumnWidth(table, catalog.IdentifierComparer, findings);
             ScanMergeableIncludeOnlyIndexes(table, catalog.IdentifierComparer, findings);
-            ScanColumnstoreOnDmlTargetTable(table, dmlTargetTables, findings);
             ScanMonotonicClusteredKeyMissingSequentialOptimization(table, catalog.IdentifierComparer, findings);
             ScanNonAlignedPartitionedIndex(table, catalog.IdentifierComparer, findings);
             ScanRowOrPageLockingDisabled(table, findings);
@@ -566,29 +565,6 @@ public static class IndexDesignScanner
             $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}) and sort direction but carry different, non-overlapping INCLUDE columns ('{a.Name ?? UnnamedIndexPlaceholder}': {string.Join(", ", a.IncludedColumns)}; '{b.Name ?? UnnamedIndexPlaceholder}': {string.Join(", ", b.IncludedColumns)}) - mergeable into one index carrying the union ({union}) at no seek cost to either original query, for less write/storage overhead than carrying both.",
             table.SourcePath,
             table.SourceLine));
-    }
-
-    private static void ScanColumnstoreOnDmlTargetTable(CatalogTable table, IReadOnlySet<string>? dmlTargetTables, List<IndexDesignFinding> findings)
-    {
-        if (dmlTargetTables is null || !dmlTargetTables.Contains(table.QualifiedName))
-        {
-            return;
-        }
-
-        var columnstoreIndex = table.Indexes.FirstOrDefault(i => !i.IsDisabled && i.IsColumnstore);
-        if (columnstoreIndex is null)
-        {
-            return;
-        }
-
-        findings.Add(new IndexDesignFinding(
-            IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable,
-            table.QualifiedName,
-            columnstoreIndex.Name,
-            $"'{table.QualifiedName}' carries a columnstore index ('{columnstoreIndex.Name ?? UnnamedIndexPlaceholder}') and is also a direct INSERT/UPDATE/DELETE/MERGE target elsewhere in this codebase - lock escalation on a columnstore index happens at ROWGROUP granularity, not row granularity, so a single-row write inside an explicit transaction can block unrelated concurrent access to every other row sharing that rowgroup. Structural risk flag only: whether contention actually occurs is workload-dependent (concurrent access pattern, rowgroup size) and out of reach for this static pass.",
-            table.SourcePath,
-            table.SourceLine,
-            FindingConfidence.Medium));
     }
 
     private static void ScanMonotonicClusteredKeyMissingSequentialOptimization(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)

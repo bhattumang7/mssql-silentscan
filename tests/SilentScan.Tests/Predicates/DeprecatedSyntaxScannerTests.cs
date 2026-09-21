@@ -361,30 +361,6 @@ public sealed class DeprecatedSyntaxScannerTests
     }
 
     [Fact]
-    public void StringLiteralColumnAlias_Fires()
-    {
-        var findings = Scan("SELECT Col 'My Alias' FROM dbo.T;");
-
-        Assert.Contains(findings, f => f.Kind == DeprecatedSyntaxFindingKind.StringLiteralColumnAlias);
-    }
-
-    [Fact]
-    public void IdentifierColumnAlias_NeverFires()
-    {
-        var findings = Scan("SELECT Col AS MyAlias FROM dbo.T;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.StringLiteralColumnAlias);
-    }
-
-    [Fact]
-    public void BracketedColumnAlias_NeverFires()
-    {
-        var findings = Scan("SELECT Col AS [My Alias] FROM dbo.T;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == DeprecatedSyntaxFindingKind.StringLiteralColumnAlias);
-    }
-
-    [Fact]
     public void RemovedSecurityStoredProcedure_Fires()
     {
         var findings = Scan("EXEC sp_addlogin 'someuser';");

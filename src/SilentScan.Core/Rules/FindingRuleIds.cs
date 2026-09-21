@@ -30,7 +30,6 @@ public static class FindingRuleIds
     public static string MaxTypedColumnRuleId(NonIndexableColumnFindingKind kind) => kind switch
     {
         NonIndexableColumnFindingKind.MaxLength => "silentscan/catalog/max-typed-column",
-        NonIndexableColumnFindingKind.LegacyLargeObject => "silentscan/catalog/legacy-large-object-column",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled NonIndexableColumnFindingKind."),
     };
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => kind switch
@@ -129,7 +128,6 @@ public static class FindingRuleIds
     public const string DeprecatedSyntaxTableHintWithoutWithRuleId = "silentscan/deprecated-syntax/table-hint-without-with";
     public const string DeprecatedSyntaxNumberedProcedureDefinitionRuleId = "silentscan/deprecated-syntax/numbered-procedure-definition";
     public const string DeprecatedSyntaxNumberedProcedureExecutionRuleId = "silentscan/deprecated-syntax/numbered-procedure-execution";
-    public const string DeprecatedSyntaxStringLiteralColumnAliasRuleId = "silentscan/deprecated-syntax/string-literal-column-alias";
     public const string DeprecatedSyntaxRemovedSecurityStoredProcedureRuleId = "silentscan/deprecated-syntax/removed-security-stored-procedure";
     public const string DeprecatedSyntaxDeprecatedSetRowcountRuleId = "silentscan/deprecated-syntax/deprecated-set-rowcount";
     public const string DeprecatedSyntaxLegacyLobStatementRuleId = "silentscan/deprecated-syntax/legacy-lob-statement";
@@ -262,8 +260,6 @@ public static class FindingRuleIds
     {
         SecurityFindingKind.HardCodedCredential => "silentscan/security/hard-coded-credential",
         SecurityFindingKind.HardCodedIpAddress => "silentscan/security/hard-coded-ip-address",
-        SecurityFindingKind.WeakHashAlgorithm => "silentscan/security/weak-hash-algorithm",
-        SecurityFindingKind.WeakHashAlgorithmInSensitiveContext => "silentscan/security/weak-hash-algorithm-sensitive-context",
         SecurityFindingKind.ExternalRestEndpointCall => "silentscan/security/external-rest-endpoint-call",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
@@ -290,7 +286,6 @@ public static class FindingRuleIds
         IndexDesignFindingKind.NoRecomputeStatistics => "silentscan/index-design/no-recompute-statistics",
         IndexDesignFindingKind.VariableLengthKeyColumnExceedsKeyLimit => "silentscan/index-design/variable-length-key-column-exceeds-key-limit",
         IndexDesignFindingKind.MergeableIndexesDifferingIncludeOnly => "silentscan/index-design/mergeable-indexes-differing-include-only",
-        IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable => "silentscan/index-design/columnstore-index-on-dml-target-table",
         IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization => "silentscan/index-design/monotonic-clustered-key-missing-sequential-optimization",
         IndexDesignFindingKind.NonAlignedPartitionedIndex => "silentscan/index-design/non-aligned-partitioned-index",
         IndexDesignFindingKind.RowOrPageLockingDisabled => "silentscan/index-design/row-or-page-locking-disabled",
@@ -420,7 +415,6 @@ public static class FindingRuleIds
         DeprecatedSyntaxFindingKind.TableHintWithoutWith => DeprecatedSyntaxTableHintWithoutWithRuleId,
         DeprecatedSyntaxFindingKind.NumberedProcedureDefinition => DeprecatedSyntaxNumberedProcedureDefinitionRuleId,
         DeprecatedSyntaxFindingKind.NumberedProcedureExecution => DeprecatedSyntaxNumberedProcedureExecutionRuleId,
-        DeprecatedSyntaxFindingKind.StringLiteralColumnAlias => DeprecatedSyntaxStringLiteralColumnAliasRuleId,
         DeprecatedSyntaxFindingKind.RemovedSecurityStoredProcedure => DeprecatedSyntaxRemovedSecurityStoredProcedureRuleId,
         DeprecatedSyntaxFindingKind.DeprecatedSetRowcount => DeprecatedSyntaxDeprecatedSetRowcountRuleId,
         DeprecatedSyntaxFindingKind.LegacyLobStatement => DeprecatedSyntaxLegacyLobStatementRuleId,

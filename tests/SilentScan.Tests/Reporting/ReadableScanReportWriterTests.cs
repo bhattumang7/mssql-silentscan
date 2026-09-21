@@ -599,24 +599,6 @@ public sealed class ReadableScanReportWriterTests
     }
 
     [Fact]
-    public void MaxTypedColumn_SplitsMaxLengthAndLegacyLargeObjectIntoSeparateSections()
-    {
-        var findings = new[]
-        {
-            new MaxTypedColumnFinding("dbo.T", "BigVarchar", "VarChar(max)", "a.sql", 1, NonIndexableColumnFindingKind.MaxLength),
-            new MaxTypedColumnFinding("dbo.T", "OldText", "Text", "a.sql", 2, NonIndexableColumnFindingKind.LegacyLargeObject),
-        };
-        var report = Blank().WithFindings("MaxTypedColumnScanner", findings);
-
-        var blocks = BuildBlocks(report);
-        var maxLengthTable = TableAfterHeading(blocks, "MAX-typed/json columns");
-        var legacyTable = TableAfterHeading(blocks, "Legacy large-object columns");
-
-        Assert.Equal("dbo.T.BigVarchar", Assert.Single(maxLengthTable.Rows)[1]);
-        Assert.Equal("dbo.T.OldText", Assert.Single(legacyTable.Rows)[1]);
-    }
-
-    [Fact]
     public void TvfFence_CorrelatedApplyDetail_ShowsOuterColumnsInsteadOfFragmentText()
     {
         var correlated = new TvfFenceFinding(

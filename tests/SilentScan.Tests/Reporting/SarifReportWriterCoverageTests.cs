@@ -711,7 +711,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(IndexDesignFindingKind.ColumnstoreIndexOnDmlTargetTable, "warning")]
     [InlineData(IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization, "warning")]
     [InlineData(IndexDesignFindingKind.HeapWithNonclusteredIndexes, "error")]
     public void Write_IndexDesignFinding_MapsKindToItsOwnLevelBucket(IndexDesignFindingKind kind, string expectedLevel)
@@ -895,7 +894,6 @@ public sealed class SarifReportWriterCoverageTests
 
     [Theory]
     [InlineData(NonIndexableColumnFindingKind.MaxLength, "MAX-typed columns can never be an index key column")]
-    [InlineData(NonIndexableColumnFindingKind.LegacyLargeObject, "TEXT/NTEXT/IMAGE columns can never appear in any index")]
     public void Write_MaxTypedColumnFinding_MapsKindToDistinctMessage(NonIndexableColumnFindingKind kind, string expectedSubstring)
     {
         var finding = new MaxTypedColumnFinding("dbo.T", "Col", "varchar(max)", "test.sql", 1, kind);
@@ -930,7 +928,6 @@ public sealed class SarifReportWriterCoverageTests
 
     [Theory]
     [InlineData(SecurityFindingKind.HardCodedIpAddress, "error")]
-    [InlineData(SecurityFindingKind.WeakHashAlgorithm, "error")]
     [InlineData(SecurityFindingKind.HardCodedCredential, "warning")]
     public void Write_SecurityFinding_OnlyIpAddressAndWeakHashAreError(SecurityFindingKind kind, string expectedLevel)
     {

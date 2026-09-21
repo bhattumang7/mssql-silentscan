@@ -54,21 +54,6 @@ public sealed class MaxTypedColumnScannerTests
         Assert.Empty(findings);
     }
 
-    [Theory]
-    [InlineData("TEXT", "text")]
-    [InlineData("NTEXT", "ntext")]
-    [InlineData("IMAGE", "image")]
-    public void LegacyLargeObjectColumn_Fires(string declaredType, string expectedTypeDisplay)
-    {
-        var findings = Scan($"CREATE TABLE dbo.Documents (Body {declaredType} NULL);");
-
-        var finding = Assert.Single(findings);
-        Assert.Equal("dbo.Documents", finding.TableQualifiedName);
-        Assert.Equal("Body", finding.ColumnName);
-        Assert.Equal(expectedTypeDisplay, finding.TypeDisplay, ignoreCase: true);
-        Assert.Equal(NonIndexableColumnFindingKind.LegacyLargeObject, finding.Kind);
-    }
-
     [Fact]
     public void MultipleMaxTypedColumns_OrderedByTableThenColumn()
     {

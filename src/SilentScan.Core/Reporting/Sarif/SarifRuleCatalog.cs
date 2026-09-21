@@ -117,7 +117,6 @@ public static class SarifRuleCatalog
     public const string DeprecatedSyntaxTableHintWithoutWithRuleId = FindingRuleIds.DeprecatedSyntaxTableHintWithoutWithRuleId;
     public const string DeprecatedSyntaxNumberedProcedureDefinitionRuleId = FindingRuleIds.DeprecatedSyntaxNumberedProcedureDefinitionRuleId;
     public const string DeprecatedSyntaxNumberedProcedureExecutionRuleId = FindingRuleIds.DeprecatedSyntaxNumberedProcedureExecutionRuleId;
-    public const string DeprecatedSyntaxStringLiteralColumnAliasRuleId = FindingRuleIds.DeprecatedSyntaxStringLiteralColumnAliasRuleId;
     public const string DeprecatedSyntaxRemovedSecurityStoredProcedureRuleId = FindingRuleIds.DeprecatedSyntaxRemovedSecurityStoredProcedureRuleId;
     public const string DeprecatedSyntaxDeprecatedSetRowcountRuleId = FindingRuleIds.DeprecatedSyntaxDeprecatedSetRowcountRuleId;
     public const string DeprecatedSyntaxLegacyLobStatementRuleId = FindingRuleIds.DeprecatedSyntaxLegacyLobStatementRuleId;

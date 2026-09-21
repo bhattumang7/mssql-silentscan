@@ -9,9 +9,7 @@ public enum SecurityFindingKind
 
     HardCodedIpAddress,
 
-    WeakHashAlgorithm,
 
-    WeakHashAlgorithmInSensitiveContext,
 
 
     ExternalRestEndpointCall,
