@@ -2249,9 +2249,7 @@ rule for any of these shapes.
   remote statistics — an unfiltered remote scan estimated exactly 500 rows
   (the real row count), and a filtered scan estimated 22.36 rows (≈√500, the
   engine's standard unknown-selectivity guess formula applied to a real base
-  cardinality) — never a fixed 1. The existing "close to a guess" framing in
-  `QueryAntiPatternLinkedServerOrCrossDatabaseReferenceRuleId`'s rationale is
-  accurate and is left unchanged; a sharper "always exactly 1 row" claim
+  cardinality) — never a fixed 1. The linked-server/cross-database rule was removed as unbackable; a sharper "always exactly 1 row" claim
   would be wrong. Do not re-propose the fixed-1-row framing.
 
 * **Linked-server predicate losing remote pushdown over a collation

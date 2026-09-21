@@ -31,7 +31,7 @@ public static class TypedPredicateExtractor
         parseResult.Fragment.Accept(walker);
         return new PredicateExtractionResult(
             rule.Findings, rule.ExpressionDerivedFindings, rule.CollationConflictFindings, rule.WriteLossFindings, ledger.Entries,
-            rule.OversizedParameterFindings, rule.UnderLengthParameterFindings, rule.AnsiPaddingMismatchFindings,
+            rule.UnderLengthParameterFindings, rule.AnsiPaddingMismatchFindings,
             rule.LocalVariablePredicateFindings, rule.FilteredIndexParameterMismatchFindings);
     }
 
@@ -102,7 +102,6 @@ public static class TypedPredicateExtractor
 
         public List<WriteLossFinding> WriteLossFindings { get; } = [];
 
-        public List<OversizedParameterFinding> OversizedParameterFindings { get; } = [];
 
         public List<UnderLengthParameterFinding> UnderLengthParameterFindings { get; } = [];
 
@@ -936,7 +935,6 @@ public static class TypedPredicateExtractor
                 PredicateFragmentText: _currentPredicateFragment is { } fragment ? Common.FragmentTextRenderer.Render(fragment) : null,
                 Fingerprint: TypedPredicateFindingIdentity.ComputeFingerprint(column, other, operatorText)));
 
-            TryAddOversizedParameterFinding(column, other, otherIsLiteral, node);
             TryAddUnderLengthParameterFinding(column, other, otherIsLiteral, operatorText, node);
             TryAddAnsiPaddingMismatchFinding(column, other, operatorText, node, walker);
             TryAddLocalVariablePredicateFinding(column, other, operatorText, node);
@@ -969,18 +967,6 @@ public static class TypedPredicateExtractor
                     column.TableQualifiedName, column.ColumnName, indexName, literalText,
                     variableName, isFormalParameter, operatorText, sourcePath, node.StartLine, node.StartColumn));
             }
-        }
-
-        private void TryAddOversizedParameterFinding(PredicateOperand.Column column, PredicateOperand other, bool otherIsLiteral, TSqlFragment node)
-        {
-            if (otherIsLiteral || other is not PredicateOperand.Value { Type: { } otherType }
-                || Rules.ParameterLengthClassifier.ClassifyOversized(column.Type, otherType) is not { } result)
-            {
-                return;
-            }
-
-            OversizedParameterFindings.Add(new OversizedParameterFinding(
-                column.TableQualifiedName, column.ColumnName, result.ColumnLength, result.OtherLength, sourcePath, node.StartLine, node.StartColumn));
         }
 
         private void TryAddUnderLengthParameterFinding(

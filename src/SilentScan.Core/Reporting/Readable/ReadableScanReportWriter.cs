@@ -86,9 +86,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(Tier1(report, headingLevel, pathBase));
         blocks.AddRange(TvfFence(report, headingLevel, pathBase));
         blocks.AddRange(ScalarUdf(report, headingLevel, pathBase));
-        blocks.AddRange(ColumnCollationDrift(report, headingLevel, pathBase));
         blocks.AddRange(AnsiPaddingOffColumn(report, headingLevel, pathBase));
-        blocks.AddRange(CrossTableTypeDrift(report, headingLevel, pathBase));
         blocks.AddRange(TriggerOrder(report, headingLevel, pathBase));
         blocks.AddRange(ProcCallArgumentMismatch(report, headingLevel, pathBase));
         blocks.AddRange(TvfCallArgumentMismatch(report, headingLevel, pathBase));
@@ -98,7 +96,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
         blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
-        blocks.AddRange(OversizedParameter(report, headingLevel, pathBase));
         blocks.AddRange(UnderLengthParameter(report, headingLevel, pathBase));
         blocks.AddRange(AnsiPaddingMismatch(report, headingLevel, pathBase));
         blocks.AddRange(CatchAllPredicate(report, headingLevel, pathBase));
@@ -163,7 +160,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TriggerRecursionCycle(report, headingLevel, pathBase));
         blocks.AddRange(CheckConstraint(report, headingLevel, pathBase));
         blocks.AddRange(DefaultNullableConstraint(report, headingLevel, pathBase));
-        blocks.AddRange(TryCastComputedColumnPredicate(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
         blocks.AddRange(StringAggMissingOrder(report, headingLevel, pathBase));
@@ -175,17 +171,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(RegexpDefaultCaseSensitiveOnCiColumn(report, headingLevel, pathBase));
         blocks.AddRange(RegexpAccentInsensitiveColumn(report, headingLevel, pathBase));
         blocks.AddRange(StringConcatNull(report, headingLevel, pathBase));
-        blocks.AddRange(AggregateDivisionColumnstore(report, headingLevel, pathBase));
         blocks.AddRange(SecurityPredicateIndex(report, headingLevel, pathBase));
-        blocks.AddRange(TypedSection(
-            report, Verdict.Unknown, headingLevel, pathBase,
-            "Comparisons that could not be classified",
-            "Something the verdict rules need was missing or ambiguous - most often a collation that no DDL in the scan pinned down. These are neither clean nor flagged; they are unanswered, and they are listed rather than dropped so the counts above cannot be read as covering them.",
-            verbosity));
-        blocks.AddRange(TypedSection(
-            report, Verdict.OperandClash, headingLevel, pathBase,
-            "Comparisons between genuinely incompatible types",
-            "The oracle-probed type matrix confirms this exact type pair does not compile as a comparison at all (e.g. TIME vs a date-family type, or a GUID vs a string) - distinct from an unclassified comparison above: this one has a definitive answer, and the answer is that the comparison itself cannot run as written."));
         blocks.AddRange(DynamicSql(report, headingLevel, pathBase, verbosity));
         blocks.AddRange(ParseFailures(report, headingLevel, pathBase, verbosity));
         blocks.AddRange(UnanalyzedObjects(report, headingLevel, pathBase, verbosity));
@@ -217,9 +203,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Non-sargable predicate patterns", report.Find<SargabilityFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "Multi-statement/CLR TVF references acting as optimization fences", report.Find<TvfFenceFinding>(nameof(TvfFenceScanner)).Count);
         AddCount(counts, "Scalar UDF calls (per-row cost, non-sargable when predicate-context)", report.Find<ScalarUdfFinding>(nameof(ScalarUdfScanner)).Count);
-        AddCount(counts, "Columns whose collation drifts from the database/tempdb default", report.Find<ColumnCollationDriftFinding>(nameof(ColumnCollationDriftScanner)).Count);
         AddCount(counts, "Columns with ANSI_PADDING OFF in their own catalog state", report.Find<AnsiPaddingOffColumnFinding>(nameof(AnsiPaddingOffColumnScanner)).Count);
-        AddCount(counts, "Foreign-key column pairs whose types/collations drift", report.Find<CrossTableTypeDriftFinding>(nameof(CrossTableTypeDriftScanner)).Count);
         AddCount(counts, "Tables with undefined AFTER trigger firing order", report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Count);
         AddCount(counts, "EXEC call-site arguments risking silent data loss at the parameter boundary", report.Find<ProcCallArgumentMismatchFinding>(nameof(ProcCallArgumentMismatchScanner)).Count);
         AddCount(counts, "Inline TVF call-site arguments risking silent data loss at the parameter boundary", report.Find<TvfCallArgumentMismatchFinding>(nameof(TvfCallArgumentMismatchScanner)).Count);
@@ -230,7 +214,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Legacy large-object columns (can never appear in any index)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.LegacyLargeObject));
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
         AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
-        AddCount(counts, "Predicates comparing a column against an oversized parameter/variable", report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Predicates comparing a column against an under-length parameter/variable", report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "LIKE predicates that can never match a non-ANSI-padded column", report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Catch-all / kitchen-sink optional-filter predicates", report.Find<CatchAllPredicateFinding>(nameof(CatchAllPredicateScanner)).Count);
@@ -260,7 +243,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Multi-hop trigger recursion cycles", report.Find<TriggerRecursionCycleFinding>(nameof(TriggerRecursionCycleScanner)).Count);
         AddCount(counts, "CHECK constraint text correctness (NULL handling, IDENTITY-column placement)", report.Find<CheckConstraintFinding>(nameof(CheckConstraintScanner)).Count);
         AddCount(counts, "DEFAULT constraint on a still-nullable column", report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Count);
-        AddCount(counts, "TRY_CAST computed column referenced in a predicate", report.Find<TryCastComputedColumnPredicateFinding>(nameof(TryCastComputedColumnPredicateScanner)).Count);
         AddCount(counts, "SELECT * view stale against base table's current shape", report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count);
         AddCount(counts, "Bare TOP with no ORDER BY", report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Count);
         AddCount(counts, "STRING_AGG with no WITHIN GROUP (ORDER BY ...)", report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count);
@@ -272,7 +254,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "REGEXP_* call defaults to case-sensitive on a case-insensitive column", report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Count);
         AddCount(counts, "REGEXP_* call on an accent-insensitive column has no accent-insensitive match mode", report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Count);
         AddCount(counts, "+ concatenation of a nullable string column with no NULL guard", report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Count);
-        AddCount(counts, "CASE-guarded aggregate division on a columnstore-backed table", report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count);
         AddCount(counts, "RLS predicate with no supporting index", report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Count);
         AddCount(counts, "NOT IN predicates over a nullable subquery column (correctness trap)", report.Find<NotInNullableSubqueryFinding>(nameof(NotInNullableSubqueryScanner)).Count);
         AddCount(counts, "UPDATE...FROM joins whose source carries no uniqueness guarantee", report.Find<NonUniqueUpdateSourceFinding>(nameof(NonUniqueUpdateSourceScanner)).Count);
@@ -346,8 +327,7 @@ public static class ReadableScanReportWriter
     }
 
     private static IEnumerable<ReadableBlock> TypedSection(
-        ScanReport report, Verdict verdict, int level, string? pathBase, string title, string explanation,
-        ReadableVerbosity verbosity = ReadableVerbosity.Full)
+        ScanReport report, Verdict verdict, int level, string? pathBase, string title, string explanation)
     {
         var findings = report.Find<TypedPredicateFinding>(nameof(TypedPredicateExtractor)).Where(f => f.Verdict == verdict).ToList();
         if (findings.Count == 0)
@@ -357,12 +337,6 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"{title} ({findings.Count})");
         yield return new ReadableBlock.Paragraph(explanation);
-
-        if (verbosity == ReadableVerbosity.Brief)
-        {
-            yield return BriefPointer(findings.Count, "comparison");
-            yield break;
-        }
 
         yield return new ReadableBlock.Table(
             [WhereHeader, ColumnHeader, "Column type", "Compared with", IndexedHeader, "Introduced by"],
@@ -635,29 +609,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> ColumnCollationDrift(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<ColumnCollationDriftFinding>(nameof(ColumnCollationDriftScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Columns whose collation drifts from the default ({report.Find<ColumnCollationDriftFinding>(nameof(ColumnCollationDriftScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A conversion seed, not yet a comparison: this column's own collation differs from the database's default (or, for a temp table/table variable, from tempdb's own effective collation) - the classic setup for a future collation-conflict compile error or a forced-scan implicit conversion once a query actually compares it against something carrying the baseline collation.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ColumnCollationDriftRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Column collation", "Baseline collation", "Object kind"],
-            [.. report.Find<ColumnCollationDriftFinding>(nameof(ColumnCollationDriftScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ColumnCollationName,
-                f.BaselineCollationName,
-                f.IsTempObject ? "temp table/table variable" : "table",
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> AnsiPaddingOffColumn(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<AnsiPaddingOffColumnFinding>(nameof(AnsiPaddingOffColumnScanner)).Count == 0)
@@ -676,30 +627,6 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> CrossTableTypeDrift(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CrossTableTypeDriftFinding>(nameof(CrossTableTypeDriftScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Foreign-key column pairs whose types drift ({report.Find<CrossTableTypeDriftFinding>(nameof(CrossTableTypeDriftScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A conversion seed on a real foreign-key relationship: every JOIN that follows it risks the same column-side conversion the implicit-conversion stream classifies, whether or not any scanned query actually joins on it yet. Read live from sys.foreign_key_columns - always empty for a file-mode scan.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CrossTableTypeDriftRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ConstraintHeader, "Parent column", "Referenced column", "Collation differs"],
-            [.. report.Find<CrossTableTypeDriftFinding>(nameof(CrossTableTypeDriftScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.ConstraintName,
-                $"{f.ParentTableQualifiedName}.{f.ParentColumnName} ({f.ParentTypeDisplay})",
-                $"{f.ReferencedTableQualifiedName}.{f.ReferencedColumnName} ({f.ReferencedTypeDisplay})",
-                f.CollationDiffers.ToString(),
             })]);
     }
 
@@ -937,29 +864,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> OversizedParameter(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Predicates comparing a column against an oversized parameter ({report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Informational, not a plan-shape claim for this specific predicate - oracle-falsified that a bare equality predicate shows any memory-grant difference on its own. The risk is structural: the parameter/variable/expression on the other side is declared with a meaningfully longer length than the column, which risks memory-grant inflation once that value feeds a sort/hash operator elsewhere in the plan.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.OversizedParameterRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Column length", "Other operand length"],
-            [.. report.Find<OversizedParameterFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.ColumnLength.ToString(CultureInfo.InvariantCulture),
-                f.OtherOperandLength.ToString(CultureInfo.InvariantCulture),
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> UnderLengthParameter(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Count == 0)
@@ -969,7 +873,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Predicates comparing a column against an under-length parameter ({report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "The mirror of the oversized-parameter section above, but strictly worse: the parameter/variable/expression on the other side is declared SHORTER than the column - or with no explicit length at all (T-SQL defaults a length-less DECLARE/parameter to 1) - so the value is silently truncated before the predicate ever runs. Structural, not a per-instance proof (this pass never traces the variable's actual assigned value): it states the declared-length pairing risks truncation, the same honesty WriteLossFinding already applies to assignment-site truncation. Where the parameter feeds a LIKE pattern or a range bound, truncation changes what the comparison itself means, not just which exact value it excludes - marked in the Effect column.");
+            "The parameter/variable/expression on the other side is declared SHORTER than the column - or with no explicit length at all (T-SQL defaults a length-less DECLARE/parameter to 1) - so the value is silently truncated before the predicate ever runs. Structural, not a per-instance proof (this pass never traces the variable's actual assigned value): it states the declared-length pairing risks truncation, the same honesty WriteLossFinding already applies to assignment-site truncation. Where the parameter feeds a LIKE pattern or a range bound, truncation changes what the comparison itself means, not just which exact value it excludes - marked in the Effect column.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.UnderLengthParameterRuleId));
         yield return new ReadableBlock.Table(
@@ -1840,30 +1744,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> TryCastComputedColumnPredicate(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<TryCastComputedColumnPredicateFinding>(nameof(TryCastComputedColumnPredicateScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"TRY_CAST computed column referenced in a predicate ({report.Find<TryCastComputedColumnPredicateFinding>(nameof(TryCastComputedColumnPredicateScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A non-persisted computed column built on TRY_CAST is referenced inside a real filter-context predicate (WHERE/JOIN ON/HAVING) elsewhere in the corpus. TRY_CAST is session-DATEFORMAT-dependent and therefore classified non-deterministic by the engine, so this column can never be PERSISTED or indexed at all - the predicate can never seek through it no matter what index exists elsewhere on the table.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TryCastComputedColumnPredicateRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, ColumnHeader, "Definition", "Definition site"],
-            [.. report.Find<TryCastComputedColumnPredicateFinding>(nameof(TryCastComputedColumnPredicateScanner)).Select(f => new List<string>
-            {
-                Where(f.Location.SourcePath, f.Location.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ColumnName,
-                f.DefinitionText,
-                Where(f.DefinitionLocation.SourcePath, f.DefinitionLocation.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> StaleSelectStarView(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count == 0)
@@ -2094,28 +1974,6 @@ public static class ReadableScanReportWriter
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.ColumnName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> AggregateDivisionColumnstore(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"CASE-guarded aggregate division on a columnstore-backed table ({report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An aggregate argument contains a CASE-guarded division by a non-constant divisor, on a table backed by a columnstore index. Historically reported as a class of bug where batch-mode (vectorized) execution does not reliably preserve the same per-row CASE-branch short-circuit elision rowstore scalar execution provides. Shipped as a structural risk flag only, Low confidence, after a genuine but unsuccessful attempt to reproduce a live failure against this tool's own standing engine build - not a proven-current-behavior claim.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.AggregateDivisionColumnstoreRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Aggregate", TableHeader],
-            [.. report.Find<AggregateDivisionColumnstoreFinding>(nameof(AggregateDivisionColumnstoreScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                f.AggregateFunctionName,
-                f.TableQualifiedName,
             })]);
     }
 
@@ -2433,7 +2291,7 @@ public static class ReadableScanReportWriter
         foreach (var group in report.Find<WindowFrameFinding>(nameof(WindowFrameScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var title = group.Key == WindowFrameFindingKind.ExplicitRangeFrame ? "Explicit RANGE" : "Implicit default (RANGE)";
+            var title = "Implicit default (RANGE)";
             yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.WindowFrameRuleId(group.Key)));
             yield return new ReadableBlock.Table(
@@ -3015,7 +2873,6 @@ public static class ReadableScanReportWriter
         {
             var ordered = group.ToList();
             yield return new ReadableBlock.Heading(level + 1, $"{DynamicSqlOutcomeLabel(group.Key)} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DynamicSqlRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, "Reason"],
                 [.. ordered.Select(f => new List<string>

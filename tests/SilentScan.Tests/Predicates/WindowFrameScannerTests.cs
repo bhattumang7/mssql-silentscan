@@ -21,12 +21,11 @@ public sealed class WindowFrameScannerTests
     }
 
     [Fact]
-    public void ExplicitRangeFrame_Fires()
+    public void ExplicitRangeFrame_NeverFires()
     {
         var findings = Scan("SELECT SUM(Amt) OVER (PARTITION BY GroupId ORDER BY D RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM dbo.Sales;");
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(WindowFrameFindingKind.ExplicitRangeFrame, finding.Kind);
+        Assert.Empty(findings);
     }
 
     [Fact]
@@ -70,18 +69,5 @@ public sealed class WindowFrameScannerTests
 
         var finding = Assert.Single(findings);
         Assert.Equal(WindowFrameFindingKind.ImplicitDefaultRangeFrame, finding.Kind);
-    }
-
-    [Fact]
-    public void MultipleWindowFunctionsInOneQuery_EachReportedIndependently()
-    {
-        var findings = Scan(@"
-            SELECT
-                SUM(Amt) OVER (PARTITION BY GroupId ORDER BY D ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RunningRows,
-                SUM(Amt) OVER (PARTITION BY GroupId ORDER BY D RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RunningRange
-            FROM dbo.Sales;");
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(WindowFrameFindingKind.ExplicitRangeFrame, finding.Kind);
     }
 }

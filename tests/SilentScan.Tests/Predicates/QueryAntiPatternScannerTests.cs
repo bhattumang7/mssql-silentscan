@@ -602,65 +602,6 @@ public sealed class QueryAntiPatternScannerTests
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnboundedTableWrite);
     }
 
-    [Fact]
-    public void FourPartLinkedServerReference_Fires()
-    {
-        var findings = Scan("SELECT Id FROM RemoteServer.RemoteDb.dbo.RemoteTable;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void ThreePartReference_FileMode_NeverFires()
-    {
-
-        var findings = Scan("SELECT Id FROM OtherDb.dbo.T;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference);
-    }
-
-    [Fact]
-    public void ThreePartReference_LiveMode_DifferentDatabase_Fires()
-    {
-        var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\nSELECT Id FROM OtherDb.dbo.T;");
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var catalog = CatalogBuilder.Build([result]);
-        catalog.CurrentDatabaseName = "ThisDb";
-
-        var findings = QueryAntiPatternScanner.Scan(result, catalog);
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void ThreePartReference_LiveMode_SystemDatabase_NeverFires()
-    {
-
-        var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\nSELECT object_id FROM tempdb.sys.objects;");
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var catalog = CatalogBuilder.Build([result]);
-        catalog.CurrentDatabaseName = "ThisDb";
-
-        var findings = QueryAntiPatternScanner.Scan(result, catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference);
-    }
-
-    [Fact]
-    public void ThreePartReference_LiveMode_SameDatabase_NeverFires()
-    {
-        var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\nSELECT Id FROM ThisDb.dbo.Big;");
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var catalog = CatalogBuilder.Build([result]);
-        catalog.CurrentDatabaseName = "ThisDb";
-
-        var findings = QueryAntiPatternScanner.Scan(result, catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.LinkedServerOrCrossDatabaseReference);
-    }
-
     private static DatabaseCatalog CatalogWithCouponTable(bool ignoreDupKey)
     {
         var ddl = "CREATE TABLE dbo.Coupon (Code VARCHAR(20) NOT NULL, Pct INT NOT NULL);";

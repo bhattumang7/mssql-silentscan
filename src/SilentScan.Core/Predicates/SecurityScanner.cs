@@ -79,19 +79,6 @@ public static partial class SecurityScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    public static IReadOnlyList<SecurityFinding> FromDynamicSqlFindings(IReadOnlyList<DynamicSqlFinding> dynamicSqlFindings) =>
-    [
-        .. dynamicSqlFindings
-            .Where(f => f.Outcome == DynamicSqlOutcome.Unanalyzable)
-            .DistinctBy(f => (f.SourcePath, f.Line, f.Column))
-            .Select(f => new SecurityFinding(
-                SecurityFindingKind.UnprovableDynamicSqlText,
-                f.SourcePath, f.Line, f.Column,
-                "This dynamic SQL call site's assembled text depends on a variable, parameter, or expression whose value this tool cannot trace - it cannot be shown, from the code alone, to be free of runtime/external influence. Review for injection safety (parameterize via sp_executesql's own @params, or validate/allowlist the value before concatenation).",
-                FindingConfidence.Medium))
-            .OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column),
-    ];
-
     internal sealed class Rule(string sourcePath) : IModuleRule
     {
         public List<SecurityFinding> Findings { get; } = [];

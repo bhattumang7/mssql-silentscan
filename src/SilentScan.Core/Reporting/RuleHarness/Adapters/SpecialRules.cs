@@ -36,54 +36,6 @@ internal sealed class ProcCallTableValuedArgumentMismatchRule : IPerFileRule
         ProcCallTableValuedArgumentMismatchScanner.Harvest((ProcCallTableValuedArgumentMismatchScanner.Rule)moduleRule);
 }
 
-internal sealed class TryCastComputedColumnPredicateRule : IPerFileRule
-{
-    public string Id => "TryCastComputedColumnPredicateScanner";
-
-    public object? Prepare(RuleContext context) => TryCastComputedColumnPredicateScanner.BuildCandidates(context.Catalog);
-
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
-        TryCastComputedColumnPredicateScanner.Scan(
-            parseResult,
-            context.Catalog,
-            (IReadOnlyDictionary<(string TableQualifiedName, string ColumnName), TryCastComputedColumnPredicateScanner.Candidate>)state!);
-
-    public IModuleRule? CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state)
-    {
-        var candidates = (IReadOnlyDictionary<(string TableQualifiedName, string ColumnName), TryCastComputedColumnPredicateScanner.Candidate>)state!;
-        return candidates.Count == 0 ? null : TryCastComputedColumnPredicateScanner.CreateRule(parseResult.SourcePath, context.Catalog, candidates);
-    }
-
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) =>
-        TryCastComputedColumnPredicateScanner.Harvest((TryCastComputedColumnPredicateScanner.Rule)moduleRule);
-
-    public IComparer<IFinding>? Comparer => Comparer<IFinding>.Create((x, y) =>
-    {
-        var a = (TryCastComputedColumnPredicateFinding)x;
-        var b = (TryCastComputedColumnPredicateFinding)y;
-        var cmp = string.CompareOrdinal(a.TableQualifiedName, b.TableQualifiedName);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = string.CompareOrdinal(a.ColumnName, b.ColumnName);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = string.CompareOrdinal(a.Location.SourcePath, b.Location.SourcePath);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = a.Location.Line.CompareTo(b.Location.Line);
-        return cmp != 0 ? cmp : a.Location.Column.CompareTo(b.Location.Column);
-    });
-}
-
 internal sealed class StatementShapeRule : IPerFileRule
 {
     public string Id => "StatementShapeScanner";

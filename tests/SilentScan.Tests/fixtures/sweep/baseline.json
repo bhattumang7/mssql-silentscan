@@ -70,13 +70,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/catalog/cross-table-fk-type-drift",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Column 'dbo.Customers.CustomerId' is not the same data type as referencing column 'Orders.CustomerId' in foreign key 'FK__Orders__Customer__398D8EEE'."
-  },
-  {
     "ruleId": "silentscan/catalog/memory-optimized-schema-only-durability",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -155,20 +148,6 @@
   },
   {
     "ruleId": "silentscan/control-flow/dirty-read-isolation-hint",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/control-flow/duplicated-call-argument",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/control-flow/duplicated-call-argument",
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
@@ -483,20 +462,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/deprecated-syntax/like-with-no-wildcard",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/deprecated-syntax/like-with-no-wildcard",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/deprecated-syntax/non-ansi-comparison-operator",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -813,13 +778,6 @@
   },
   {
     "ruleId": "silentscan/duplication/single-iteration-loop",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/dynamic-sql/analyzed",
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
@@ -833,21 +791,7 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/dynamic-sql/inner-parse-failed",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/dynamic-sql/insert-exec-temp-table-column-type-mismatch",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/dynamic-sql/unanalyzable",
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
@@ -1400,13 +1344,6 @@
     "reason": "Column, parameter, or variable #1: Cannot find data type dbo.MyType."
   },
   {
-    "ruleId": "silentscan/predicate/try-cast-computed-column",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Computed column 'ParsedDate' in table 'Events' cannot be persisted because the column is non-deterministic."
-  },
-  {
     "ruleId": "silentscan/predicates/catch-all-parameter",
     "variant": "Noncompliant",
     "exampleIndex": 0,
@@ -1470,13 +1407,6 @@
     "reason": "example has no deployable object definition and no extractable prelude"
   },
   {
-    "ruleId": "silentscan/predicates/oversized-parameter",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
     "ruleId": "silentscan/predicates/reassigned-parameter",
     "variant": "Compliant",
     "exampleIndex": 0,
@@ -1510,13 +1440,6 @@
     "exampleIndex": 0,
     "outcome": "NotSelfContained",
     "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/query/linked-server-or-cross-database-reference",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "DeployFailed",
-    "reason": "Could not find server 'RemoteServer' in sys.servers. Verify that the correct server name was specified. If necessary, execute the stored procedure sp_addlinkedserver to add the server to sys.servers."
   },
   {
     "ruleId": "silentscan/query/table-variable-psp-skip",
@@ -2024,20 +1947,6 @@
   },
   {
     "ruleId": "silentscan/view/top-percent-order-by-no-op",
-    "variant": "Noncompliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/window-frame/explicit-range",
-    "variant": "Compliant",
-    "exampleIndex": 0,
-    "outcome": "NotSelfContained",
-    "reason": "example has no deployable object definition and no extractable prelude"
-  },
-  {
-    "ruleId": "silentscan/window-frame/explicit-range",
     "variant": "Noncompliant",
     "exampleIndex": 0,
     "outcome": "NotSelfContained",

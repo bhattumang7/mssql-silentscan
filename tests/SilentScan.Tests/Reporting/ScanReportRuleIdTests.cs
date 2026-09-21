@@ -38,12 +38,4 @@ public sealed class ScanReportRuleIdTests
         Assert.Equal(SarifRuleCatalog.Tier1RuleId(SargabilityFindingKind.CastOrConvertOnColumn), cast.RuleId);
         Assert.NotEqual(wrapped.RuleId, cast.RuleId);
     }
-
-    [Fact]
-    public void Finding_RuleId_MatchesSarifRuleCatalogForADiscriminatorNamedDifferentlyFromKind()
-    {
-        var finding = new DynamicSqlFinding("test.sql", 1, 1, DynamicSqlOutcome.PartiallyAnalyzed, "reason");
-
-        Assert.Equal(SarifRuleCatalog.DynamicSqlRuleId(DynamicSqlOutcome.PartiallyAnalyzed), finding.RuleId);
-    }
 }

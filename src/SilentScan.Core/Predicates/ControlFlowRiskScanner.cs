@@ -194,17 +194,6 @@ public static class ControlFlowRiskScanner
             }
         }
 
-        public void OnEnterExecutableProcedureReference(ExecutableProcedureReference node, ModuleWalker walker) =>
-            ReportDuplicatedArguments(node.Parameters?.Select(p => p.ParameterValue) ?? [], walker);
-
-        public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
-        {
-            if (!string.Equals(node.FunctionName?.Value, "FORMATMESSAGE", StringComparison.OrdinalIgnoreCase))
-            {
-                ReportDuplicatedArguments(node.Parameters ?? [], walker);
-            }
-        }
-
 
         private static string? ContainsNonDeterministicCall(ScalarExpression expression)
         {
@@ -227,32 +216,6 @@ public static class ControlFlowRiskScanner
                 }
 
                 base.ExplicitVisit(node);
-            }
-        }
-
-        private void ReportDuplicatedArguments(IEnumerable<ScalarExpression?> arguments, ModuleWalker walker)
-        {
-
-            var nonLiteral = arguments.Where(a => a is not null and not Literal).Cast<ScalarExpression>().ToList();
-
-            for (var i = 0; i < nonLiteral.Count; i++)
-            {
-                for (var j = i + 1; j < nonLiteral.Count; j++)
-                {
-                    if (string.Equals(
-                        FragmentTextRenderer.Render(nonLiteral[i]),
-                        FragmentTextRenderer.Render(nonLiteral[j]),
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        Findings.Add(new ControlFlowRiskFinding(
-                            ControlFlowRiskFindingKind.DuplicatedCallArgument,
-                            CurrentModule(walker), sourcePath, nonLiteral[j].StartLine, nonLiteral[j].StartColumn,
-                            "This argument is structurally identical to another argument in the same call - verify this isn't a copy-paste mistake naming the wrong parameter.",
-                            FindingConfidence.Medium));
-
-                        break;
-                    }
-                }
             }
         }
 

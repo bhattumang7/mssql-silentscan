@@ -27,7 +27,6 @@ public static class RuleRegistry
         new RegexpAccentInsensitiveColumnRule(),
         new StringConcatNullRule(),
         new TvfCallArgumentMismatchRule(),
-        new AggregateDivisionColumnstoreRule(),
         new ParameterReassignmentPredicateRule(),
         new NotInNullableSubqueryRule(),
         new NonUniqueUpdateSourceRule(),
@@ -58,7 +57,6 @@ public static class RuleRegistry
         new SetOptionRule(),
 
         new PartialCompositeForeignKeyJoinRule(),
-        new TryCastComputedColumnPredicateRule(),
         new StatementShapeRule(),
         new MultiReferencedCteRule(),
         new PostExpansionJoinWidthRule(),
@@ -66,9 +64,7 @@ public static class RuleRegistry
         new OutputParameterRule(),
         new UnindexedTempTableUsageRule(),
 
-        new ColumnCollationDriftRule(),
         new AnsiPaddingOffColumnRule(),
-        new CrossTableTypeDriftRule(),
         new TriggerOrderRule(),
         new ProcCallArgumentMismatchRule(),
         new ProcCallTableValuedArgumentMismatchRule(),

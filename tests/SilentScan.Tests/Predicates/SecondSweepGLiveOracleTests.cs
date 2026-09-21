@@ -173,42 +173,4 @@ public sealed class SecondSweepGLiveOracleTests
 
         Assert.Empty(report.Find<StringConcatNullFinding>("StringConcatNullScanner"));
     }
-
-    [Fact]
-    public async Task LiveDeployment_AggregateDivisionOnColumnstoreTable_Fires()
-    {
-        var report = await EngineAuthoritativeScan.ScanAsync(
-            """
-            CREATE TABLE dbo.RatioTarget (Id INT NOT NULL PRIMARY KEY, Num INT NOT NULL, Denom INT NOT NULL);
-            GO
-            CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_RatioTarget ON dbo.RatioTarget (Id, Num, Denom);
-            GO
-            CREATE PROCEDURE dbo.usp_RatioTarget_Find AS
-            BEGIN
-                SELECT SUM(CASE WHEN Denom <> 0 THEN Num / Denom ELSE 0 END) FROM dbo.RatioTarget;
-            END
-            """,
-            minimumConfidence: FindingConfidence.Low);
-
-        var finding = Assert.Single(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner"));
-        Assert.Equal("dbo.RatioTarget", finding.TableQualifiedName);
-        Assert.Equal(FindingConfidence.Low, finding.Confidence);
-    }
-
-    [Fact]
-    public async Task LiveDeployment_AggregateDivisionOnRowstoreTable_NoColumnstoreIndex_NeverFires()
-    {
-        var report = await EngineAuthoritativeScan.ScanAsync(
-            """
-            CREATE TABLE dbo.RatioClean (Id INT NOT NULL PRIMARY KEY, Num INT NOT NULL, Denom INT NOT NULL);
-            GO
-            CREATE PROCEDURE dbo.usp_RatioClean_Find AS
-            BEGIN
-                SELECT SUM(CASE WHEN Denom <> 0 THEN Num / Denom ELSE 0 END) FROM dbo.RatioClean;
-            END
-            """,
-            minimumConfidence: FindingConfidence.Low);
-
-        Assert.Empty(report.Find<AggregateDivisionColumnstoreFinding>("AggregateDivisionColumnstoreScanner"));
-    }
 }

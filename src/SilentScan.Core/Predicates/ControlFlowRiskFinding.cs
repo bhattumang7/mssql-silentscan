@@ -13,7 +13,6 @@ public enum ControlFlowRiskFindingKind
 
     ReadCommittedLockRevertsRowVersioning,
 
-    DuplicatedCallArgument,
 
     LegacyIdentityIntrinsic,
 

@@ -5,10 +5,6 @@ namespace SilentScan.Core.Reporting.Sarif;
 
 public static class SarifRuleCatalog
 {
-    public const string DynamicSqlAnalyzedRuleId = FindingRuleIds.DynamicSqlAnalyzedRuleId;
-    public const string DynamicSqlUnanalyzableRuleId = FindingRuleIds.DynamicSqlUnanalyzableRuleId;
-    public const string DynamicSqlInnerParseFailedRuleId = FindingRuleIds.DynamicSqlInnerParseFailedRuleId;
-    public const string DynamicSqlPartiallyAnalyzedRuleId = FindingRuleIds.DynamicSqlPartiallyAnalyzedRuleId;
     public const string ExpressionDerivedRuleId = FindingRuleIds.ExpressionDerivedRuleId;
     public const string CollationConflictRuleId = FindingRuleIds.CollationConflictRuleId;
     public const string WriteLossUnicodeReplacementRuleId = FindingRuleIds.WriteLossUnicodeReplacementRuleId;
@@ -27,9 +23,7 @@ public static class SarifRuleCatalog
     public const string ScalarUdfNestedUnderViewOrTvfRuleId = FindingRuleIds.ScalarUdfNestedUnderViewOrTvfRuleId;
     public const string ScalarUdfSchemaDependencyRuleId = FindingRuleIds.ScalarUdfSchemaDependencyRuleId;
     public const string ScalarUdfProjectionInvocationRuleId = FindingRuleIds.ScalarUdfProjectionInvocationRuleId;
-    public const string ColumnCollationDriftRuleId = FindingRuleIds.ColumnCollationDriftRuleId;
     public const string ColumnAnsiPaddingOffRuleId = FindingRuleIds.ColumnAnsiPaddingOffRuleId;
-    public const string CrossTableTypeDriftRuleId = FindingRuleIds.CrossTableTypeDriftRuleId;
     public const string ProcCallArgumentMismatchRuleId = FindingRuleIds.ProcCallArgumentMismatchRuleId;
     public const string TvfCallArgumentMismatchRuleId = FindingRuleIds.TvfCallArgumentMismatchRuleId;
     public const string ProcCallTableValuedArgumentMismatchRuleId = FindingRuleIds.ProcCallTableValuedArgumentMismatchRuleId;
@@ -56,7 +50,6 @@ public static class SarifRuleCatalog
     public const string QueryAntiPatternMergeUnconditionalDeleteRuleId = FindingRuleIds.QueryAntiPatternMergeUnconditionalDeleteRuleId;
     public const string QueryAntiPatternRecursiveCteMissingMaxRecursionRuleId = FindingRuleIds.QueryAntiPatternRecursiveCteMissingMaxRecursionRuleId;
     public const string QueryAntiPatternUnboundedTableWriteRuleId = FindingRuleIds.QueryAntiPatternUnboundedTableWriteRuleId;
-    public const string QueryAntiPatternLinkedServerOrCrossDatabaseReferenceRuleId = FindingRuleIds.QueryAntiPatternLinkedServerOrCrossDatabaseReferenceRuleId;
     public const string QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId = FindingRuleIds.QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId;
     public const string IndexCoverageKeyLookupProneIndexRuleId = FindingRuleIds.IndexCoverageKeyLookupProneIndexRuleId;
     public const string TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId = FindingRuleIds.TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId;
@@ -68,7 +61,6 @@ public static class SarifRuleCatalog
     public const string TriggerCorrectnessLogonTriggerHostNameGateRuleId = FindingRuleIds.TriggerCorrectnessLogonTriggerHostNameGateRuleId;
     public const string CrossModuleLockOrderRuleId = FindingRuleIds.CrossModuleLockOrderRuleId;
     public const string TriggerRecursionCycleRuleId = FindingRuleIds.TriggerRecursionCycleRuleId;
-    public const string OversizedParameterRuleId = FindingRuleIds.OversizedParameterRuleId;
     public const string UnderLengthParameterRuleId = FindingRuleIds.UnderLengthParameterRuleId;
     public const string AnsiPaddingMismatchRuleId = FindingRuleIds.AnsiPaddingMismatchRuleId;
     public const string CatchAllPredicateRuleId = FindingRuleIds.CatchAllPredicateRuleId;
@@ -121,7 +113,6 @@ public static class SarifRuleCatalog
     public const string DeprecatedSyntaxNonAnsiComparisonOperatorRuleId = FindingRuleIds.DeprecatedSyntaxNonAnsiComparisonOperatorRuleId;
     public const string DeprecatedSyntaxEqualsNullComparisonRuleId = FindingRuleIds.DeprecatedSyntaxEqualsNullComparisonRuleId;
     public const string DeprecatedSyntaxNotEqualsNullComparisonRuleId = FindingRuleIds.DeprecatedSyntaxNotEqualsNullComparisonRuleId;
-    public const string DeprecatedSyntaxLikeWithNoWildcardRuleId = FindingRuleIds.DeprecatedSyntaxLikeWithNoWildcardRuleId;
     public const string DeprecatedSyntaxLegacySystemCompatibilityViewRuleId = FindingRuleIds.DeprecatedSyntaxLegacySystemCompatibilityViewRuleId;
     public const string DeprecatedSyntaxTableHintWithoutWithRuleId = FindingRuleIds.DeprecatedSyntaxTableHintWithoutWithRuleId;
     public const string DeprecatedSyntaxNumberedProcedureDefinitionRuleId = FindingRuleIds.DeprecatedSyntaxNumberedProcedureDefinitionRuleId;
@@ -140,7 +131,6 @@ public static class SarifRuleCatalog
     public const string ControlFlowRiskTriggerEmitsOutputRuleId = FindingRuleIds.ControlFlowRiskTriggerEmitsOutputRuleId;
     public const string ControlFlowRiskDirtyReadIsolationHintRuleId = FindingRuleIds.ControlFlowRiskDirtyReadIsolationHintRuleId;
     public const string ControlFlowRiskReadCommittedLockRevertsRowVersioningRuleId = FindingRuleIds.ControlFlowRiskReadCommittedLockRevertsRowVersioningRuleId;
-    public const string ControlFlowRiskDuplicatedCallArgumentRuleId = FindingRuleIds.ControlFlowRiskDuplicatedCallArgumentRuleId;
     public const string ControlFlowRiskLegacyIdentityIntrinsicRuleId = FindingRuleIds.ControlFlowRiskLegacyIdentityIntrinsicRuleId;
     public const string ControlFlowRiskGotoUsageRuleId = FindingRuleIds.ControlFlowRiskGotoUsageRuleId;
     public const string ControlFlowRiskCaseExpressionMissingElseRuleId = FindingRuleIds.ControlFlowRiskCaseExpressionMissingElseRuleId;
@@ -171,7 +161,6 @@ public static class SarifRuleCatalog
     public const string CheckConstraintNullNotHandledRuleId = FindingRuleIds.CheckConstraintNullNotHandledRuleId;
     public const string CheckConstraintOnIdentityColumnRuleId = FindingRuleIds.CheckConstraintOnIdentityColumnRuleId;
     public const string DefaultNullableConstraintRuleId = FindingRuleIds.DefaultNullableConstraintRuleId;
-    public const string TryCastComputedColumnPredicateRuleId = FindingRuleIds.TryCastComputedColumnPredicateRuleId;
     public const string StaleSelectStarViewRuleId = FindingRuleIds.StaleSelectStarViewRuleId;
     public const string BareTopNoOrderByRuleId = FindingRuleIds.BareTopNoOrderByRuleId;
     public const string StringAggMissingOrderRuleId = FindingRuleIds.StringAggMissingOrderRuleId;
@@ -183,7 +172,6 @@ public static class SarifRuleCatalog
     public const string RegexpDefaultCaseSensitiveOnCiColumnRuleId = FindingRuleIds.RegexpDefaultCaseSensitiveOnCiColumnRuleId;
     public const string RegexpAccentInsensitiveColumnRuleId = FindingRuleIds.RegexpAccentInsensitiveColumnRuleId;
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
-    public const string AggregateDivisionColumnstoreRuleId = FindingRuleIds.AggregateDivisionColumnstoreRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;
     public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => FindingRuleIds.ModuleCompileFlagRuleId(kind);
     public static string WindowFrameRuleId(WindowFrameFindingKind kind) => FindingRuleIds.WindowFrameRuleId(kind);
@@ -227,17 +215,8 @@ public static class SarifRuleCatalog
     public static string TvfFenceRuleId(TvfFenceFindingKind kind) => FindingRuleIds.TvfFenceRuleId(kind);
     public static string ScalarUdfRuleId(ScalarUdfFindingKind kind) => FindingRuleIds.ScalarUdfRuleId(kind);
     public static string WriteLossRuleId(WriteLossKind kind) => FindingRuleIds.WriteLossRuleId(kind);
-    public static string DynamicSqlRuleId(DynamicSqlOutcome outcome) => FindingRuleIds.DynamicSqlRuleId(outcome);
     public static string Tier1RuleId(SargabilityFindingKind kind) => FindingRuleIds.Tier1RuleId(kind);
     public static string VerdictRuleId(Verdict verdict) => FindingRuleIds.VerdictRuleId(verdict);
-
-    private static readonly HashSet<string> DynamicSqlOutcomeRuleIds = new(StringComparer.Ordinal)
-    {
-        DynamicSqlAnalyzedRuleId,
-        DynamicSqlUnanalyzableRuleId,
-        DynamicSqlInnerParseFailedRuleId,
-        DynamicSqlPartiallyAnalyzedRuleId,
-    };
 
     public static string RuleId(string baseRuleId, FindingConfidence confidence) => confidence switch
     {
@@ -254,10 +233,8 @@ public static class SarifRuleCatalog
         var baseRules = RuleCatalog.BaseRules.Select(rule => Rule(rule.Id, rule.Rationale)).ToArray();
 
         var mediumVariants = baseRules
-            .Where(rule => !DynamicSqlOutcomeRuleIds.Contains(rule.Id))
             .Select(rule => Rule(RuleId(rule.Id, FindingConfidence.Medium), $"(Medium confidence) {rule.ShortDescription.Text}"));
         var lowVariants = baseRules
-            .Where(rule => !DynamicSqlOutcomeRuleIds.Contains(rule.Id))
             .Select(rule => Rule(RuleId(rule.Id, FindingConfidence.Low), $"(Low confidence) {rule.ShortDescription.Text}"));
 
         return [.. baseRules, .. mediumVariants, .. lowVariants];

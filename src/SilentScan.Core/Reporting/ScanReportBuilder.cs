@@ -137,8 +137,6 @@ public static class ScanReportBuilder
         var expressionDerivedFindings = extractionResults.SelectMany(r => r.ExpressionDerivedFindings).ToList();
         var collationConflictFindings = extractionResults.SelectMany(r => r.CollationConflictFindings).ToList();
         var writeLossFindings = extractionResults.SelectMany(r => r.WriteLossFindings).ToList();
-        var oversizedParameterFindings = extractionResults.SelectMany(r => r.OversizedParameterFindings)
-            .OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column).ToList();
         var underLengthParameterFindings = extractionResults.SelectMany(r => r.UnderLengthParameterFindings)
             .OrderBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column).ToList();
         var ansiPaddingMismatchFindings = extractionResults.SelectMany(r => r.AnsiPaddingMismatchFindings)
@@ -200,7 +198,6 @@ public static class ScanReportBuilder
             .ThenBy(f => f.Line)
             .ThenBy(f => f.Column)
             .ThenBy(f => f.Outcome)];
-        securityFindings = [.. securityFindings, .. SecurityScanner.FromDynamicSqlFindings(dynamicSqlFindings)];
         securityFindings = [.. securityFindings
             .OrderBy(f => f.Kind).ThenBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column)];
         typedFindings = [.. typedFindings
@@ -236,7 +233,6 @@ public static class ScanReportBuilder
             .ToList();
 
         temporalBoundaryFindings = [.. temporalBoundaryFindings.Where(f => f.Confidence <= minimumConfidence)];
-        oversizedParameterFindings = [.. oversizedParameterFindings.Where(f => f.Confidence <= minimumConfidence)];
         underLengthParameterFindings = [.. underLengthParameterFindings.Where(f => f.Confidence <= minimumConfidence)];
         ansiPaddingMismatchFindings = [.. ansiPaddingMismatchFindings.Where(f => f.Confidence <= minimumConfidence)];
         localVariablePredicateFindings = [.. localVariablePredicateFindings.Where(f => f.Confidence <= minimumConfidence)];
@@ -248,7 +244,7 @@ public static class ScanReportBuilder
             ["NonSargablePredicateScanner"] = [.. tier1Findings, .. temporalBoundaryFindings],
             ["TypedPredicateExtractor"] = [
                 .. typedFindings, .. expressionDerivedFindings, .. collationConflictFindings, .. writeLossFindings,
-                .. oversizedParameterFindings, .. underLengthParameterFindings, .. ansiPaddingMismatchFindings,
+                .. underLengthParameterFindings, .. ansiPaddingMismatchFindings,
                 .. localVariablePredicateFindings, .. filteredIndexParameterMismatchFindings,
             ],
             ["DynamicSqlScanner"] = [.. dynamicSqlFindings, .. unparameterizedDynamicSqlFindings],

@@ -192,59 +192,6 @@ public sealed class ControlFlowRiskScannerTests
     }
 
     [Fact]
-    public void ExecWithSameVariablePassedTwice_Fires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                DECLARE @x INT = 1;
-                EXEC dbo.Other @First = @x, @Second = @x;
-            END
-            """);
-
-        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.DuplicatedCallArgument);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void ExecWithDifferentArguments_NeverFires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                DECLARE @x INT = 1, @y INT = 2;
-                EXEC dbo.Other @First = @x, @Second = @y;
-            END
-            """);
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.DuplicatedCallArgument);
-    }
-
-    [Fact]
-    public void ExecWithRepeatedNullLiteral_NeverFires()
-    {
-        var findings = Scan("EXEC dbo.Other @First = NULL, @Second = NULL;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.DuplicatedCallArgument);
-    }
-
-    [Fact]
-    public void FunctionCallWithSameColumnTwice_Fires()
-    {
-        var findings = Scan("SELECT dbo.SomeFunc(A, A) FROM dbo.T;");
-
-        Assert.Contains(findings, f => f.Kind == ControlFlowRiskFindingKind.DuplicatedCallArgument);
-    }
-
-    [Fact]
-    public void FormatMessageWithRepeatedArgument_NeverFires()
-    {
-        var findings = Scan("SELECT FORMATMESSAGE('%s and %s', A, A) FROM dbo.T;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.DuplicatedCallArgument);
-    }
-
-    [Fact]
     public void AtAtIdentityReference_Fires()
     {
         var findings = Scan("""

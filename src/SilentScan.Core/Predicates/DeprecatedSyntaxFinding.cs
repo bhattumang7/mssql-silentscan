@@ -15,7 +15,6 @@ public enum DeprecatedSyntaxFindingKind
 
     NotEqualsNullComparison,
 
-    LikeWithNoWildcard,
 
     LegacySystemCompatibilityView,
 
