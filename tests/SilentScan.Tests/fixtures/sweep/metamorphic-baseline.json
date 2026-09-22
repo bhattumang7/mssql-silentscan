@@ -1,11 +1,5 @@
 [
     {
-        "RuleId": "silentscan/temp-table/unindexed-where-filter",
-        "ExampleIndex": 0,
-        "MutationName": "unrelated-join",
-        "Reason": "unrelated-join adds a real CROSS JOIN, so the temp table genuinely becomes a join operand; the scanner correctly reclassifies it as silentscan/temp-table/unindexed-join-operand instead of the WHERE-filter variant for the same missing-index root cause."
-    },
-    {
         "RuleId": "silentscan/catalog/stale-select-star-view",
         "ExampleIndex": 0,
         "MutationName": "unrelated-join",

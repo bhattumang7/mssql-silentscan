@@ -378,6 +378,20 @@ statement — is uncontroversial syntax, not a claim needing verification).
   TRACEON(11034)` false-positive risk already hedged in the rule's own
   rationale text; matches the documented compat-150 deferred-compilation
   change and has its own dedicated oracle test.
+- `UnindexedTempTableUsageScanner` — an uncorrelated `CROSS JOIN` onto a
+  `#temp` table that still carries its own WHERE-clause filter on that temp
+  table (no equality predicate correlating the two join sides) was falling
+  through both the join-operand and WHERE-filter branches and produced no
+  finding at all, a false negative introduced by the earlier CROSS-JOIN
+  correlating-predicate fix in this same family. Oracle-confirmed
+  (`WITH (FORCESEEK)`) that the seek is genuinely available on the indexed
+  temp table in this shape; the optimizer's own default plan choice (a
+  table scan, cost-driven, for a trivially small table) is not evidence the
+  seek is unavailable. Fixed by classifying this shape as
+  `unindexed-where-filter` instead, matching the same-root-cause WHERE-filter
+  case; the fix generalizes to unqualified column references in the WHERE
+  clause too, consistent with the scope boundary that ambiguous unqualified
+  references are assumed unreachable (hard-error out of scope).
 ---
 
 ## Not yet audited
