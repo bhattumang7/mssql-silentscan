@@ -66,6 +66,9 @@ public sealed class CartesianJoinAlwaysFalseInnerJoinPredicateOracleTests : Orac
             SELECT o.OrderId FROM dbo.Orders o INNER JOIN dbo.OrderDetails d ON @x = 1 AND @x = 2;
         END
         GO
+        INSERT INTO dbo.Orders (OrderId, Amount, Status) VALUES (1, 500, 'Open'), (2, 700, 'Open');
+        INSERT INTO dbo.OrderDetails (OrderId, Note) VALUES (1, 'a'), (2, 'b');
+        GO
         """;
 
     private async Task<IReadOnlyList<CartesianJoinFinding>> ScanAsync()
@@ -157,5 +160,15 @@ public sealed class CartesianJoinAlwaysFalseInnerJoinPredicateOracleTests : Orac
         var procedures = await ProcedureNamesWithFindingsAsync();
 
         Assert.DoesNotContain(procedures, p => p.Contains("P_ParameterComparison_NoFire", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task LiteralAlwaysFalsePredicate_RealExecutionReturnsZeroRows_RealJoinKeyControlReturnsMatchingRows()
+    {
+        var alwaysFalseRows = await RowsAsync("EXEC dbo.P_LiteralAlwaysFalse;");
+        var realJoinRows = await RowsAsync("EXEC dbo.P_RealJoinKey_NoFire;");
+
+        Assert.Empty(alwaysFalseRows);
+        Assert.Equal(2, realJoinRows.Count);
     }
 }

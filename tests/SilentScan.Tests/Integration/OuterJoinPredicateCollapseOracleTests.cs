@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
@@ -103,6 +104,9 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
             FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id
             WHERE c.Status = 'X';
         END
+        GO
+        INSERT INTO dbo.Parent (Id, Flag) VALUES (1, NULL), (2, NULL);
+        INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (1, 1, 'X', 5);
         GO
         """;
 
@@ -236,5 +240,33 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
         var findings = await FindingsForAsync("P_DeleteFromFires");
 
         Assert.Single(findings);
+    }
+
+    [Fact]
+    public async Task UnguardedPredicate_RealExecutionDropsTheUnmatchedParentRow_GuardedControlKeepsIt()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using var unguardedCommand = new SqlCommand("EXEC dbo.P_LeftJoinUnguardedFires;", connection);
+        await using var unguardedReader = await unguardedCommand.ExecuteReaderAsync();
+        var unguardedIds = new List<int>();
+        while (await unguardedReader.ReadAsync())
+        {
+            unguardedIds.Add(unguardedReader.GetInt32(0));
+        }
+
+        await unguardedReader.DisposeAsync();
+
+        await using var guardedCommand = new SqlCommand("EXEC dbo.P_LeftJoinGuardedOrIsNullNoFire;", connection);
+        await using var guardedReader = await guardedCommand.ExecuteReaderAsync();
+        var guardedIds = new List<int>();
+        while (await guardedReader.ReadAsync())
+        {
+            guardedIds.Add(guardedReader.GetInt32(0));
+        }
+
+        Assert.Equal([1], unguardedIds);
+        Assert.Equal([1, 2], guardedIds.OrderBy(id => id));
     }
 }

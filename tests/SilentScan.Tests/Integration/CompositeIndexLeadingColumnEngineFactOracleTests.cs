@@ -24,6 +24,26 @@ public sealed class CompositeIndexLeadingColumnEngineFactOracleTests : OracleTes
     [Fact]
     public async Task PredicateOnlyOnTheNonLeadingKeyColumn_CannotSeekTheCompositeIndex()
     {
+        var planXml = await CaptureShowPlanXmlAsync("SELECT OrderId FROM dbo.Orders WHERE OrderDate = '2020-06-01';");
+
+        Assert.NotEmpty(planXml);
+        Assert.Contains("IX_Orders_Customer_Date", planXml, StringComparison.Ordinal);
+        Assert.DoesNotContain("PhysicalOp=\"Index Seek\"", planXml, StringComparison.Ordinal);
+        Assert.Contains("PhysicalOp=\"Index Scan\"", planXml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PredicateOnTheLeadingKeyColumn_SeeksTheCompositeIndex()
+    {
+        var planXml = await CaptureShowPlanXmlAsync("SELECT OrderId FROM dbo.Orders WHERE CustomerId = 5;");
+
+        Assert.NotEmpty(planXml);
+        Assert.Contains("IX_Orders_Customer_Date", planXml, StringComparison.Ordinal);
+        Assert.Contains("PhysicalOp=\"Index Seek\"", planXml, StringComparison.Ordinal);
+    }
+
+    private async Task<string> CaptureShowPlanXmlAsync(string commandText)
+    {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();
 
@@ -33,8 +53,7 @@ public sealed class CompositeIndexLeadingColumnEngineFactOracleTests : OracleTes
         }
 
         var planXmlBuilder = new System.Text.StringBuilder();
-        await using (var probeCommand = new SqlCommand(
-            "SELECT OrderId FROM dbo.Orders WHERE OrderDate = '2020-06-01';", connection))
+        await using (var probeCommand = new SqlCommand(commandText, connection))
         await using (var reader = await probeCommand.ExecuteReaderAsync())
         {
             do
@@ -59,10 +78,6 @@ public sealed class CompositeIndexLeadingColumnEngineFactOracleTests : OracleTes
             await offCommand.ExecuteNonQueryAsync();
         }
 
-        var planXml = planXmlBuilder.ToString();
-        Assert.NotEmpty(planXml);
-        Assert.Contains("IX_Orders_Customer_Date", planXml, StringComparison.Ordinal);
-        Assert.DoesNotContain("PhysicalOp=\"Index Seek\"", planXml, StringComparison.Ordinal);
-        Assert.Contains("PhysicalOp=\"Index Scan\"", planXml, StringComparison.Ordinal);
+        return planXmlBuilder.ToString();
     }
 }

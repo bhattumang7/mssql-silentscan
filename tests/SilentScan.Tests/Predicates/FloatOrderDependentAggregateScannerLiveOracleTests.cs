@@ -1,7 +1,46 @@
+using Microsoft.Data.SqlClient;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
+
+[Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
+public sealed class FloatOrderDependentAggregateEngineFactOracleTests : OracleTestFixture
+{
+    protected override string DatabaseNameSeed => nameof(FloatOrderDependentAggregateEngineFactOracleTests);
+
+    protected override string Ddl => """
+        CREATE TABLE dbo.Measurements (Id INT IDENTITY PRIMARY KEY, Amount FLOAT NOT NULL);
+        GO
+        INSERT INTO dbo.Measurements (Amount)
+        SELECT 0.1 + (ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 7) * 1e-16
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+        GO
+        UPDATE STATISTICS dbo.Measurements WITH FULLSCAN;
+        GO
+        """;
+
+    [Fact]
+    public async Task SumOverFloatColumn_RealBitPatternDiffersBetweenSerialAndForcedParallelPlan()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        await using var serialCommand = new SqlCommand(
+            "SELECT CAST(SUM(Amount) AS VARBINARY(8)) FROM dbo.Measurements OPTION (MAXDOP 1);",
+            connection)
+        { CommandTimeout = 120 };
+        var serialBits = (byte[])(await serialCommand.ExecuteScalarAsync())!;
+
+        await using var parallelCommand = new SqlCommand(
+            "SELECT CAST(SUM(Amount) AS VARBINARY(8)) FROM dbo.Measurements OPTION (MAXDOP 4, QUERYTRACEON 8649);",
+            connection)
+        { CommandTimeout = 120 };
+        var parallelBits = (byte[])(await parallelCommand.ExecuteScalarAsync())!;
+
+        Assert.NotEqual(Convert.ToHexString(serialBits), Convert.ToHexString(parallelBits));
+    }
+}
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
