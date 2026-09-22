@@ -26,6 +26,42 @@ public sealed class CaseMergeMatrixGeneratorTests
         Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
     }
 
+    [Fact]
+    public async Task RunAsync_ExactNumericSpecs_PredictedMergeMatchesEngine()
+    {
+        var generator = new CaseMergeMatrixGenerator(Options);
+        var mismatches = await generator.RunAsync(CaseMergeSpecs.ExactNumericSpecs);
+
+        Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
+    }
+
+    [Fact]
+    public async Task RunAsync_DateTimeSpecs_PredictedMergeMatchesEngine()
+    {
+        var generator = new CaseMergeMatrixGenerator(Options);
+        var mismatches = await generator.RunAsync(CaseMergeSpecs.DateTimeSpecs);
+
+        Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
+    }
+
+    [Fact]
+    public async Task RunAsync_BinarySpecs_PredictedMergeMatchesEngine()
+    {
+        var generator = new CaseMergeMatrixGenerator(Options);
+        var mismatches = await generator.RunAsync(CaseMergeSpecs.BinarySpecs);
+
+        Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
+    }
+
+    [Fact]
+    public async Task RunAsync_AllTypeSpecs_PredictedMergeMatchesEngine()
+    {
+        var generator = new CaseMergeMatrixGenerator(Options);
+        var mismatches = await generator.RunAsync(CaseMergeSpecs.AllTypeSpecs);
+
+        Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
+    }
+
     private static string DescribeMismatches(IReadOnlyList<CaseMergeMismatch> mismatches) =>
         string.Join(
             Environment.NewLine,

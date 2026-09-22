@@ -180,6 +180,29 @@ public static class ExpressionTypeInferencer
         _ => null,
     };
 
+    private static SqlType? MergeTemporalScale(SqlTypeCategory winnerCategory, SqlType left, SqlType right)
+    {
+        if (winnerCategory is not (SqlTypeCategory.Time or SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset))
+        {
+            return null;
+        }
+
+        if (ImpliedFractionalScale(left) is not { } l || ImpliedFractionalScale(right) is not { } r)
+        {
+            return null;
+        }
+
+        return new SqlType(winnerCategory, Scale: Math.Max(l, r));
+    }
+
+    private static int? ImpliedFractionalScale(SqlType type) => type.Category switch
+    {
+        SqlTypeCategory.Date or SqlTypeCategory.SmallDateTime => 0,
+        SqlTypeCategory.DateTime => 3,
+        SqlTypeCategory.Time or SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset => type.Scale,
+        _ => null,
+    };
+
     private static SqlType? CombineStringConcat(SqlType left, SqlType right)
     {
         if (left.Category != right.Category)
@@ -251,9 +274,9 @@ public static class ExpressionTypeInferencer
 
         if (left.Category == right.Category)
         {
-            return left.IsStringFamily
+            return left.IsStringFamily || left.IsBinaryFamily
                 ? CombineSameCategoryStrings(left, right)
-                : MergeExactNumericPrecisionScale(left.Category, left, right) ?? left;
+                : MergeExactNumericPrecisionScale(left.Category, left, right) ?? MergeTemporalScale(left.Category, left, right) ?? left;
         }
 
         var winner = left.Category > right.Category ? left : right;
@@ -262,14 +285,23 @@ public static class ExpressionTypeInferencer
             ? VariableLengthCounterpart(winner.Category)
             : winner.Category;
 
+        if (winner.IsBinaryFamily && loser.IsBinaryFamily)
+        {
+            return MergeBinaryLength(winnerCategory, left, right);
+        }
+
         if (!winner.IsStringFamily)
         {
-            return MergeExactNumericPrecisionScale(winnerCategory, left, right) ?? new SqlType(winnerCategory);
+            return MergeExactNumericPrecisionScale(winnerCategory, left, right)
+                ?? MergeTemporalScale(winnerCategory, left, right)
+                ?? winner;
         }
 
         if (!loser.IsStringFamily)
         {
-            return new SqlType(winnerCategory, Collation: winner.Collation, LengthKnown: false);
+            return loser.IsMax
+                ? winner with { Category = winnerCategory, IsMax = true }
+                : winner with { Category = winnerCategory };
         }
 
         if (IsAmbiguousCollationConflict(left.Collation, right.Collation))
@@ -316,6 +348,17 @@ public static class ExpressionTypeInferencer
 
         var length = left.Length is { } l && right.Length is { } r ? Math.Max(l, r) : left.Length ?? right.Length;
         return new SqlType(left.Category, Length: length, Collation: collation);
+    }
+
+    private static SqlType MergeBinaryLength(SqlTypeCategory winnerCategory, SqlType left, SqlType right)
+    {
+        if (left.IsMax || right.IsMax)
+        {
+            return new SqlType(winnerCategory, IsMax: true);
+        }
+
+        var length = left.Length is { } l && right.Length is { } r ? Math.Max(l, r) : left.Length ?? right.Length;
+        return new SqlType(winnerCategory, Length: length);
     }
 
     private static bool IsAmbiguousCollationConflict(Collation? left, Collation? right) =>
