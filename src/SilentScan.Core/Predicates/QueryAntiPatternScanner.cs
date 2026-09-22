@@ -300,6 +300,19 @@ public static class QueryAntiPatternScanner
 
                     break;
 
+                case UnqualifiedJoin unqualified:
+                    foreach (var t in CollectNamedTableReferences(unqualified.FirstTableReference))
+                    {
+                        yield return t;
+                    }
+
+                    foreach (var t in CollectNamedTableReferences(unqualified.SecondTableReference))
+                    {
+                        yield return t;
+                    }
+
+                    break;
+
                 case JoinParenthesisTableReference parenthesis:
                     foreach (var t in CollectNamedTableReferences(parenthesis.Join))
                     {
@@ -414,6 +427,19 @@ public static class QueryAntiPatternScanner
 
                     break;
 
+                case UnqualifiedJoin unqualified:
+                    foreach (var v in CollectVariableTableReferences(unqualified.FirstTableReference))
+                    {
+                        yield return v;
+                    }
+
+                    foreach (var v in CollectVariableTableReferences(unqualified.SecondTableReference))
+                    {
+                        yield return v;
+                    }
+
+                    break;
+
                 case JoinParenthesisTableReference parenthesis:
                     foreach (var v in CollectVariableTableReferences(parenthesis.Join))
                     {
@@ -506,7 +532,13 @@ public static class QueryAntiPatternScanner
 
         private static string? SingleVariableEqualityColumn(WhereClause? where, HashSet<string> loopVariables)
         {
-            if (where?.SearchCondition is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp)
+            var condition = where?.SearchCondition;
+            while (condition is BooleanParenthesisExpression paren)
+            {
+                condition = paren.Expression;
+            }
+
+            if (condition is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp)
             {
                 return null;
             }

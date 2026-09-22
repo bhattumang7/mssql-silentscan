@@ -170,12 +170,19 @@ public static class TriggerCorrectnessScanner
             return null;
         }
 
-        private static bool IsSoleKeyEquality(BooleanExpression condition, string variableName) =>
-            condition is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp
+        private static bool IsSoleKeyEquality(BooleanExpression condition, string variableName)
+        {
+            while (condition is BooleanParenthesisExpression paren)
+            {
+                condition = paren.Expression;
+            }
+
+            return condition is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp
             && ((cmp.FirstExpression is ColumnReferenceExpression && cmp.SecondExpression is VariableReference v1
                     && string.Equals(v1.Name, variableName, StringComparison.OrdinalIgnoreCase))
                 || (cmp.SecondExpression is ColumnReferenceExpression && cmp.FirstExpression is VariableReference v2
                     && string.Equals(v2.Name, variableName, StringComparison.OrdinalIgnoreCase)));
+        }
 
         private void InspectMissingEarlyOut(string triggerQualifiedName, TriggerStatementBody node, IList<TSqlStatement> statements)
         {
@@ -275,7 +282,7 @@ public static class TriggerCorrectnessScanner
             }
 
             var referencesInserted = tableReferences.Any(ReferencesInsertedTable);
-            var isFiltered = spec.WhereClause is not null || tableReferences.Any(tr => tr is QualifiedJoin);
+            var isFiltered = spec.WhereClause is not null || tableReferences.Any(ContainsQualifiedJoin);
             return referencesInserted && isFiltered;
         }
 
@@ -284,6 +291,16 @@ public static class TriggerCorrectnessScanner
             NamedTableReference { SchemaObject.SchemaIdentifier: null } named
                 => string.Equals(named.SchemaObject.BaseIdentifier.Value, "inserted", StringComparison.OrdinalIgnoreCase),
             QualifiedJoin join => ReferencesInsertedTable(join.FirstTableReference) || ReferencesInsertedTable(join.SecondTableReference),
+            UnqualifiedJoin join => ReferencesInsertedTable(join.FirstTableReference) || ReferencesInsertedTable(join.SecondTableReference),
+            JoinParenthesisTableReference parenthesis => ReferencesInsertedTable(parenthesis.Join),
+            _ => false,
+        };
+
+        private static bool ContainsQualifiedJoin(TableReference reference) => reference switch
+        {
+            QualifiedJoin => true,
+            UnqualifiedJoin join => ContainsQualifiedJoin(join.FirstTableReference) || ContainsQualifiedJoin(join.SecondTableReference),
+            JoinParenthesisTableReference parenthesis => ContainsQualifiedJoin(parenthesis.Join),
             _ => false,
         };
 

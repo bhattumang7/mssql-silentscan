@@ -22,6 +22,19 @@ internal static class PredicateTreeWalker
                 yield return join;
                 break;
 
+            case UnqualifiedJoin unqualified:
+                foreach (var t in FlattenJoinNodes(unqualified.FirstTableReference))
+                {
+                    yield return t;
+                }
+
+                foreach (var t in FlattenJoinNodes(unqualified.SecondTableReference))
+                {
+                    yield return t;
+                }
+
+                break;
+
             case JoinParenthesisTableReference parenthesis:
                 foreach (var t in FlattenJoinNodes(parenthesis.Join))
                 {

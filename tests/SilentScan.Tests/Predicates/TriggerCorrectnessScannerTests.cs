@@ -83,6 +83,23 @@ public sealed class TriggerCorrectnessScannerTests
     }
 
     [Fact]
+    public void UnsafeAssignmentThenStraightLineKeyedUpdate_ParenthesizedWhere_Fires_SharperKind()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
+            + "BEGIN "
+            + "DECLARE @v INT; "
+            + "SELECT @v = Val FROM inserted; "
+            + "UPDATE dbo.Other SET Val = @v WHERE (Id = @v); "
+            + "END;");
+
+        var finding = Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml);
+        Assert.Equal(FindingConfidence.High, finding.Confidence);
+
+        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
+    }
+
+    [Fact]
     public void UnsafeAssignmentWithNoSubsequentKeyedUse_Fires_GeneralKindOnly()
     {
         var findings = Scan(
