@@ -88,7 +88,6 @@ public static class RuleDocCatalog
         [ForcedSerial.FastForwardCursor.RuleId] = ForcedSerial.FastForwardCursor.Content,
         [ForcedSerial.NonParallelizableIntrinsic.RuleId] = ForcedSerial.NonParallelizableIntrinsic.Content,
         [CrossModule.InconsistentLockOrder.RuleId] = CrossModule.InconsistentLockOrder.Content,
-        [Trigger.MultiHopRecursionCycle.RuleId] = Trigger.MultiHopRecursionCycle.Content,
 
         [TvfFence.CorrelatedApply.RuleId] = TvfFence.CorrelatedApply.Content,
         [TvfFence.NestedUnderViewOrTvf.RuleId] = TvfFence.NestedUnderViewOrTvf.Content,

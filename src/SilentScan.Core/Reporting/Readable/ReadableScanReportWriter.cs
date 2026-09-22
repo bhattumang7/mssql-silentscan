@@ -154,7 +154,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
         blocks.AddRange(TriggerCorrectness(report, headingLevel, pathBase));
         blocks.AddRange(CrossModuleLockOrder(report, headingLevel, pathBase));
-        blocks.AddRange(TriggerRecursionCycle(report, headingLevel, pathBase));
         blocks.AddRange(CheckConstraint(report, headingLevel, pathBase));
         blocks.AddRange(DefaultNullableConstraint(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
@@ -233,7 +232,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
         AddCount(counts, "Trigger correctness", report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).Count);
         AddCount(counts, "Cross-module lock ordering", report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Count);
-        AddCount(counts, "Multi-hop trigger recursion cycles", report.Find<TriggerRecursionCycleFinding>(nameof(TriggerRecursionCycleScanner)).Count);
         AddCount(counts, "CHECK constraint text correctness (NULL handling, IDENTITY-column placement)", report.Find<CheckConstraintFinding>(nameof(CheckConstraintScanner)).Count);
         AddCount(counts, "DEFAULT constraint on a still-nullable column", report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Count);
         AddCount(counts, "SELECT * view stale against base table's current shape", report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count);
@@ -1426,28 +1424,6 @@ public static class ReadableScanReportWriter
                 f.SecondTableQualifiedName,
                 $"{f.FirstTableFirstOrdering.ProcedureQualifiedName} ({Where(f.FirstTableFirstOrdering.SourcePath, f.FirstTableFirstOrdering.FirstWriteLine, dynamicSqlCallSite: null, pathBase, f.Confidence)})",
                 $"{f.SecondTableFirstOrdering.ProcedureQualifiedName} ({Where(f.SecondTableFirstOrdering.SourcePath, f.SecondTableFirstOrdering.SecondWriteLine, dynamicSqlCallSite: null, pathBase, f.Confidence)})",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> TriggerRecursionCycle(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<TriggerRecursionCycleFinding>(nameof(TriggerRecursionCycleScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Multi-hop trigger recursion cycles ({report.Find<TriggerRecursionCycleFinding>(nameof(TriggerRecursionCycleScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A directed cycle of triggers across two or more distinct tables (table A's trigger writes to table B, whose own trigger writes back toward A) - oracle-confirmed reachable while the server's own 'nested triggers' option is on (not RECURSIVE_TRIGGERS, which only governs a trigger recursing into itself), and confirmed to hit a real Msg 217 nesting-level-exceeded error once the cascade runs unbounded. V1 scope: only a direct INSERT/UPDATE/DELETE/MERGE target inside a trigger's own body counts as a hop, base tables only, cycle search capped at 8 hops - see the finding's own doc comment for the full precision story.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TriggerRecursionCycleRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Cycle", "Hops"],
-            [.. report.Find<TriggerRecursionCycleFinding>(nameof(TriggerRecursionCycleScanner)).Select(f => new List<string>
-            {
-                Where(f.Hops[0].SourcePath, f.Hops[0].TriggerLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
-                string.Join(" -> ", f.CycleTableQualifiedNames) + " -> " + f.CycleTableQualifiedNames[0],
-                string.Join("; ", f.Hops.Select(h => $"{h.TriggerQualifiedName}: {h.FromTableQualifiedName} -> {h.ToTableQualifiedName} ({h.SourcePath}:{h.WriteLine})")),
             })]);
     }
 

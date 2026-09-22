@@ -60,7 +60,6 @@ public static class FindingRuleIds
     public const string TriggerCorrectnessUpdateFunctionWithoutValueComparisonRuleId = "silentscan/trigger/update-function-without-value-comparison";
     public const string TriggerCorrectnessLogonTriggerHostNameGateRuleId = "silentscan/trigger/logon-trigger-host-name-gate";
     public const string CrossModuleLockOrderRuleId = "silentscan/cross-module/inconsistent-lock-order";
-    public const string TriggerRecursionCycleRuleId = "silentscan/trigger/multi-hop-recursion-cycle";
     public const string UnderLengthParameterRuleId = "silentscan/predicates/under-length-parameter";
     public const string AnsiPaddingMismatchRuleId = "silentscan/predicates/ansi-padding-mismatch";
     public const string CatchAllPredicateRuleId = "silentscan/predicates/catch-all-parameter";

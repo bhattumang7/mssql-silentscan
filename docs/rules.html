@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">239 rules. 170 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">238 rules. 170 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -520,7 +520,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/trigger-direct-recursive-trigger.html">Direct Recursive Trigger</a> <code class="rule-key">silentscan/trigger/direct-recursive-trigger</code><span class="snippet">A trigger writes directly back to its own target table while the connected database&#x27;s own RECURSIVE_TRIGGERS option is live-confirmed ON.</span></li>
       <li><a class="id" href="rules/trigger-instead-of-insert-filtered-no-reject-path.html">Instead Of Insert Filtered No Reject Path</a> <code class="rule-key">silentscan/trigger/instead-of-insert-filtered-no-reject-path</code><span class="snippet">An INSTEAD OF INSERT trigger re-inserts a WHERE/JOIN-filtered subset of inserted with no companion branch handling the excluded rows.</span></li>
       <li><a class="id" href="rules/trigger-logon-trigger-host-name-gate.html">Logon Trigger Host Name Gate</a> <code class="rule-key">silentscan/trigger/logon-trigger-host-name-gate</code><span class="snippet">A logon trigger gates an allow/deny decision on HOST_NAME().</span></li>
-      <li><a class="id" href="rules/trigger-multi-hop-recursion-cycle.html">Multi Hop Recursion Cycle</a> <code class="rule-key">silentscan/trigger/multi-hop-recursion-cycle</code><span class="snippet">A directed cycle of triggers across two or more distinct tables (table A&#x27;s trigger writes to table B, whose own trigger writes back toward A).</span></li>
       <li><a class="id" href="rules/trigger-multi-row-unsafe-keyed-dml.html">Multi Row Unsafe Keyed DML</a> <code class="rule-key">silentscan/trigger/multi-row-unsafe-keyed-dml</code><span class="snippet">The same unsafe single-row inserted/deleted assignment, where the resulting variable then drives a keyed UPDATE/DELETE straight-line in the same trigger body.</span></li>
       <li><a class="id" href="rules/trigger-multi-row-unsafe-single-row-assignment.html">Multi Row Unsafe Single Row Assignment</a> <code class="rule-key">silentscan/trigger/multi-row-unsafe-single-row-assignment</code><span class="snippet">A variable is assigned from a single, unspecified row of inserted/deleted with no WHERE/TOP/aggregate.</span></li>
       <li><a class="id" href="rules/trigger-no-early-out-for-empty-invocation.html">No Early Out For Empty Invocation</a> <code class="rule-key">silentscan/trigger/no-early-out-for-empty-invocation</code><span class="snippet">A trigger body has no IF NOT EXISTS(SELECT * FROM inserted/deleted)/IF @@ROWCOUNT = 0 RETURN-style guard.</span></li>
