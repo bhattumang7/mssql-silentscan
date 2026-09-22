@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
@@ -5,6 +6,108 @@ namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", "silentscan/query/bare-top-no-order-by")]
+public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
+{
+    protected override string DatabaseNameSeed => nameof(BareTopNoOrderByEngineFactOracleTests);
+
+    protected override string Ddl => """
+        CREATE TABLE dbo.Items (Id INT NOT NULL, Val INT NOT NULL);
+        GO
+        INSERT INTO dbo.Items (Id, Val)
+        SELECT TOP (2000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 100
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+        GO
+        """;
+
+    [Fact]
+    public async Task SameBareTopQueryText_ReturnsADifferentRowSetOnceASupportingIndexExists()
+    {
+        const string Query = "SELECT TOP (5) Id FROM dbo.Items WHERE Val = 3;";
+
+        var heapIds = await IdsAsync(Query);
+
+        await ExecuteAsync("""
+            CREATE INDEX IX_Items_Val_Id ON dbo.Items(Val, Id DESC);
+            UPDATE STATISTICS dbo.Items WITH FULLSCAN;
+            """);
+
+        var indexedIds = await IdsAsync(Query);
+
+        Assert.NotEqual(heapIds, indexedIds);
+    }
+
+    private async Task<List<int>> IdsAsync(string query)
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(query, connection) { CommandTimeout = 120 };
+        await using var reader = await command.ExecuteReaderAsync();
+
+        var ids = new List<int>();
+        while (await reader.ReadAsync())
+        {
+            ids.Add(reader.GetInt32(0));
+        }
+
+        return ids;
+    }
+}
+
+[Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
+public sealed class ViewOrderingNotGuaranteedToConsumerEngineFactOracleTests : OracleTestFixture
+{
+    protected override string DatabaseNameSeed => nameof(ViewOrderingNotGuaranteedToConsumerEngineFactOracleTests);
+
+    protected override string Ddl => """
+        CREATE TABLE dbo.BranchA (Id INT NOT NULL, Amt INT NOT NULL);
+        CREATE TABLE dbo.BranchB (Id INT NOT NULL, Amt INT NOT NULL);
+        GO
+        INSERT INTO dbo.BranchA VALUES (1,10),(2,10),(3,10);
+        INSERT INTO dbo.BranchB VALUES (4,10),(5,10),(6,10);
+        GO
+        CREATE VIEW dbo.V_UnionOrdered AS
+        SELECT Id, Amt FROM dbo.BranchA
+        UNION ALL
+        SELECT Id, Amt FROM dbo.BranchB
+        ORDER BY Amt DESC
+        OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY;
+        GO
+        """;
+
+    [Fact]
+    public async Task ConsumerSelectWithNoOwnOrderBy_GetsADifferentRowOrderFromTheSameView_OnceSupportingIndexesExist()
+    {
+        var beforeIds = await IdsAsync("SELECT Id FROM dbo.V_UnionOrdered;");
+
+        await ExecuteAsync("""
+            CREATE INDEX IX_BranchA_Amt ON dbo.BranchA(Amt DESC, Id DESC);
+            CREATE INDEX IX_BranchB_Amt ON dbo.BranchB(Amt DESC, Id DESC);
+            UPDATE STATISTICS dbo.BranchA WITH FULLSCAN;
+            UPDATE STATISTICS dbo.BranchB WITH FULLSCAN;
+            """);
+
+        var afterIds = await IdsAsync("SELECT Id FROM dbo.V_UnionOrdered;");
+
+        Assert.NotEqual(beforeIds, afterIds);
+    }
+
+    private async Task<List<int>> IdsAsync(string query)
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(query, connection) { CommandTimeout = 120 };
+        await using var reader = await command.ExecuteReaderAsync();
+
+        var ids = new List<int>();
+        while (await reader.ReadAsync())
+        {
+            ids.Add(reader.GetInt32(0));
+        }
+
+        return ids;
+    }
+}
+
+[Trait("Category", "Oracle")]
 [Trait("Rule", "silentscan/view/top-percent-order-by-no-op")]
 [Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
 public sealed class SecondSweepGLiveOracleTests

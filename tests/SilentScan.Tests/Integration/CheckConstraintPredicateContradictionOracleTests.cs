@@ -85,6 +85,9 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
             SELECT OrderId FROM dbo.Orders WHERE Amount > 2000 OR Amount < -100;
         END
         GO
+        INSERT INTO dbo.Orders (OrderId, Amount, Qty, Status) VALUES (1, 500, 200, 'Open'), (2, 700, 200, 'Open');
+        INSERT INTO dbo.Notes (NoteId, Body) VALUES (1, NULL), (2, 5);
+        GO
         """;
 
     private async Task<IReadOnlyList<CheckConstraintPredicateContradictionFinding>> ScanAsync()
@@ -192,6 +195,26 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
         var procedures = await ProcedureNamesWithFindingsAsync(CheckConstraintPredicateContradictionKind.CheckConstraintInterval);
 
         Assert.Contains(procedures, p => p.Contains("P_OrBothBranchesContradictFires", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task LiteralAboveTrustedCheckUpperBound_RealExecutionReturnsZeroRows_RealWithinRangeControlReturnsMatchingRows()
+    {
+        var contradictingRows = await RowsAsync("EXEC dbo.P_ContradictsAbove;");
+        var withinRangeRows = await RowsAsync("EXEC dbo.P_WithinRange;");
+
+        Assert.Empty(contradictingRows);
+        Assert.Single(withinRangeRows);
+    }
+
+    [Fact]
+    public async Task NotNullColumnQueriedForNull_RealExecutionReturnsZeroRows_RealNullableColumnControlReturnsMatchingRows()
+    {
+        var notNullQueryRows = await RowsAsync("EXEC dbo.P_NotNullColumnQueriedForNull;");
+        var nullableQueryRows = await RowsAsync("EXEC dbo.P_NullableColumnQueriedForNull;");
+
+        Assert.Empty(notNullQueryRows);
+        Assert.Single(nullableQueryRows);
     }
 
     [Fact]

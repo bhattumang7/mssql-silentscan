@@ -1,5 +1,7 @@
+using Microsoft.Data.SqlClient;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
+using SilentScan.Verify;
 
 namespace SilentScan.Tests.Predicates;
 
@@ -7,6 +9,26 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", "silentscan/security/external-rest-endpoint-call")]
 public sealed class SecurityExternalRestEndpointCallLiveOracleTests
 {
+    [Fact]
+    public async Task RealCatalog_SpInvokeExternalRestEndpoint_IsAGenuineReachableSystemProcedure_UnlikeAMadeUpName()
+    {
+        await using var connection = new SqlConnection(SqlServerOptions.LocalDocker.BuildConnectionString());
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT COUNT(*) FROM sys.all_objects WHERE name = 'sp_invoke_external_rest_endpoint';";
+        var realCount = (int)(await command.ExecuteScalarAsync())!;
+
+        await using var madeUpCommand = connection.CreateCommand();
+        madeUpCommand.CommandText =
+            "SELECT COUNT(*) FROM sys.all_objects WHERE name = 'sp_invoke_external_rest_endpoint_made_up';";
+        var madeUpCount = (int)(await madeUpCommand.ExecuteScalarAsync())!;
+
+        Assert.Equal(1, realCount);
+        Assert.Equal(0, madeUpCount);
+    }
+
     [Fact]
     public async Task LiveDeployment_CallToExternalRestEndpoint_Fires()
     {
