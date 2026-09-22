@@ -24,10 +24,15 @@ public sealed record StatementShapeFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     string DetailText,
-    FindingConfidence Confidence = FindingConfidence.Medium) : IFinding
+    FindingConfidence Confidence = FindingConfidence.Medium,
+    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<StatementShapeFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.StatementShapeRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
+    int IRelocatableFinding.PositionColumn => Column;
+
+    StatementShapeFinding IRelocatableFinding<StatementShapeFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
+        this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }
 

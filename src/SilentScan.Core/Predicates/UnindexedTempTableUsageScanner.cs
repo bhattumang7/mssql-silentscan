@@ -18,6 +18,88 @@ public static class UnindexedTempTableUsageScanner
 
     internal static Rule CreateRule(DatabaseCatalog catalog) => new(catalog);
 
+    public static Dictionary<string, List<Declaration>> CollectDeclarationsByScope(
+        IReadOnlyList<SqlParseResult> parseResults, DatabaseCatalog catalog)
+    {
+        var byScope = new Dictionary<string, List<Declaration>>(StringComparer.Ordinal);
+
+        foreach (var parseResult in parseResults)
+        {
+            var rule = CreateRule(catalog);
+            var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
+            parseResult.Fragment.Accept(walker);
+
+            foreach (var declaration in rule.Declarations)
+            {
+                if (declaration.Scope is not { } scope)
+                {
+                    continue;
+                }
+
+                if (!byScope.TryGetValue(scope, out var list))
+                {
+                    list = [];
+                    byScope[scope] = list;
+                }
+
+                list.Add(declaration);
+            }
+        }
+
+        return byScope;
+    }
+
+    internal static IReadOnlyList<UnindexedTempTableUsageFinding> HarvestCrossBoundary(
+        SqlParseResult parseResult, DatabaseCatalog catalog, Rule rule,
+        IReadOnlyDictionary<string, List<Declaration>> outerDeclarationsByScope)
+    {
+        var tempIdentifierComparer = TypeInference.Collation.IdentifierComparer(catalog.EffectiveTempdbCollation);
+        var findings = new List<UnindexedTempTableUsageFinding>();
+
+        foreach (var usage in rule.Usages)
+        {
+            if (usage.Scope is not { } scope)
+            {
+                continue;
+            }
+
+            var shadowedByInBatchDeclaration = rule.Declarations.Any(d =>
+                d.Scope == scope && tempIdentifierComparer.Equals(d.TempTableName, usage.TempTableName));
+
+            if (shadowedByInBatchDeclaration || !outerDeclarationsByScope.TryGetValue(scope, out var declarations))
+            {
+                continue;
+            }
+
+            var declaration = declarations.FirstOrDefault(d => tempIdentifierComparer.Equals(d.TempTableName, usage.TempTableName));
+            if (declaration is null)
+            {
+                continue;
+            }
+
+            var temp = catalog.Find(declaration.TempQualifiedName, declaration.Scope);
+            if (temp is null || temp.Indexes.Count != 0)
+            {
+                continue;
+            }
+
+            findings.Add(new UnindexedTempTableUsageFinding(
+                usage.Kind,
+                declaration.TempQualifiedName,
+                parseResult.SourcePath,
+                declaration.Line,
+                usage.Line,
+                usage.Column));
+        }
+
+        return
+        [
+            .. findings
+                .OrderBy(f => f.SourcePath, StringComparer.Ordinal)
+                .ThenBy(f => f.DeclarationLine),
+        ];
+    }
+
     internal static IReadOnlyList<UnindexedTempTableUsageFinding> Harvest(SqlParseResult parseResult, DatabaseCatalog catalog, Rule rule)
     {
         var tempIdentifierComparer = TypeInference.Collation.IdentifierComparer(catalog.EffectiveTempdbCollation);
@@ -57,7 +139,7 @@ public static class UnindexedTempTableUsageScanner
         ];
     }
 
-    internal sealed record Declaration(string TempTableName, string TempQualifiedName, string? Scope, int Line);
+    public sealed record Declaration(string TempTableName, string TempQualifiedName, string? Scope, int Line);
 
     internal sealed record Usage(string TempTableName, string? Scope, UnindexedTempTableUsageKind Kind, int Line, int Column);
 

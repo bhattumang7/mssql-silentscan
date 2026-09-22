@@ -22,7 +22,7 @@ public sealed record WriteLossFinding(
     public string RuleId { get; } = FindingRuleIds.WriteLossRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);
-    int IRelocatableFinding<WriteLossFinding>.PositionColumn => ColumnPosition;
+    int IRelocatableFinding.PositionColumn => ColumnPosition;
 
     WriteLossFinding IRelocatableFinding<WriteLossFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, ColumnPosition = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };

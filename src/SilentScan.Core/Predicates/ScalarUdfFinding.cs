@@ -30,7 +30,7 @@ public sealed record ScalarUdfFinding(
     public string RuleId { get; } = FindingRuleIds.ScalarUdfRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
-    int IRelocatableFinding<ScalarUdfFinding>.PositionColumn => Column;
+    int IRelocatableFinding.PositionColumn => Column;
 
     ScalarUdfFinding IRelocatableFinding<ScalarUdfFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };

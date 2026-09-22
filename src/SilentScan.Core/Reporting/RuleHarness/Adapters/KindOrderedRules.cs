@@ -21,6 +21,7 @@ internal sealed class KindThenLocationComparer<TFinding>(Func<TFinding, ICompara
 internal sealed class ModuleCompileFlagRule : IPerFileRule
 {
     public string Id => "ModuleCompileFlagScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ModuleCompileFlagScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ModuleCompileFlagFinding>(f => f.Kind);
 }
@@ -28,6 +29,7 @@ internal sealed class ModuleCompileFlagRule : IPerFileRule
 internal sealed class WindowFrameRule : IPerFileRule
 {
     public string Id => "WindowFrameScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => WindowFrameScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<WindowFrameFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => WindowFrameScanner.CreateRule(parseResult.SourcePath);
@@ -37,6 +39,7 @@ internal sealed class WindowFrameRule : IPerFileRule
 internal sealed class BoundedStringBuiltinTruncationRule : IPerFileRule
 {
     public string Id => "BoundedStringBuiltinTruncationScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<BoundedStringBuiltinTruncationFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.CreateRule(parseResult.SourcePath);
@@ -46,6 +49,7 @@ internal sealed class BoundedStringBuiltinTruncationRule : IPerFileRule
 internal sealed class ViewOrderingRule : IPerFileRule
 {
     public string Id => "ViewOrderingScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ViewOrderingScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ViewOrderingFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ViewOrderingScanner.CreateRule(parseResult.SourcePath);
@@ -55,6 +59,7 @@ internal sealed class ViewOrderingRule : IPerFileRule
 internal sealed class IndexHintRule : IPerFileRule
 {
     public string Id => "IndexHintScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => IndexHintScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<IndexHintFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => IndexHintScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -64,6 +69,7 @@ internal sealed class IndexHintRule : IPerFileRule
 internal sealed class CodeMetricRule : IPerFileRule
 {
     public string Id => "CodeMetricScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CodeMetricScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<CodeMetricFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CodeMetricScanner.CreateRule(parseResult.SourcePath, CodeMetricThresholds.Default);
@@ -73,6 +79,7 @@ internal sealed class CodeMetricRule : IPerFileRule
 internal sealed class FormattingRule : IPerFileRule
 {
     public string Id => "FormattingScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => FormattingScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<FormattingFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => FormattingScanner.CreateRule(parseResult.SourcePath);
@@ -82,6 +89,7 @@ internal sealed class FormattingRule : IPerFileRule
 internal sealed class NamingRule : IPerFileRule
 {
     public string Id => "NamingScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NamingScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<NamingFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NamingScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -91,6 +99,7 @@ internal sealed class NamingRule : IPerFileRule
 internal sealed class DeadCodeRule : IPerFileRule
 {
     public string Id => "DeadCodeScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DeadCodeScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<DeadCodeFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DeadCodeScanner.CreateRule(parseResult.SourcePath);
@@ -100,6 +109,7 @@ internal sealed class DeadCodeRule : IPerFileRule
 internal sealed class DuplicationRule : IPerFileRule
 {
     public string Id => "DuplicationScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DuplicationScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<DuplicationFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DuplicationScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -109,6 +119,7 @@ internal sealed class DuplicationRule : IPerFileRule
 internal sealed class DeprecatedSyntaxRule : IPerFileRule
 {
     public string Id => "DeprecatedSyntaxScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DeprecatedSyntaxScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<DeprecatedSyntaxFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DeprecatedSyntaxScanner.CreateRule(parseResult, context.Catalog);
@@ -118,6 +129,7 @@ internal sealed class DeprecatedSyntaxRule : IPerFileRule
 internal sealed class ControlFlowRiskRule : IPerFileRule
 {
     public string Id => "ControlFlowRiskScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ControlFlowRiskScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ControlFlowRiskFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ControlFlowRiskScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -127,6 +139,7 @@ internal sealed class ControlFlowRiskRule : IPerFileRule
 internal sealed class QueryAntiPatternRule : IPerFileRule
 {
     public string Id => "QueryAntiPatternScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => QueryAntiPatternScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<QueryAntiPatternFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => QueryAntiPatternScanner.CreateRule(parseResult, context.Catalog);
@@ -136,6 +149,7 @@ internal sealed class QueryAntiPatternRule : IPerFileRule
 internal sealed class TriggerCorrectnessRule : IPerFileRule
 {
     public string Id => "TriggerCorrectnessScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => TriggerCorrectnessScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<TriggerCorrectnessFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => TriggerCorrectnessScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -145,6 +159,7 @@ internal sealed class TriggerCorrectnessRule : IPerFileRule
 internal sealed class ForcedSerialRule : IPerFileRule
 {
     public string Id => "ForcedSerialScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.Scan(parseResult);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ForcedSerialFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.CreateRule(parseResult.SourcePath);
@@ -154,6 +169,7 @@ internal sealed class ForcedSerialRule : IPerFileRule
 internal sealed class SetOptionRule : IPerFileRule
 {
     public string Id => "SetOptionScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SetOptionScanner.Scan(parseResult, context.Catalog, context.Lineage);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<SetOptionFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SetOptionScanner.CreateRule();

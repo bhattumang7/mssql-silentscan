@@ -42,9 +42,14 @@ public sealed record QueryAntiPatternFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     string DetailText,
-    FindingConfidence Confidence = FindingConfidence.Medium) : IFinding
+    FindingConfidence Confidence = FindingConfidence.Medium,
+    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<QueryAntiPatternFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.QueryAntiPatternRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
+    int IRelocatableFinding.PositionColumn => Column;
+
+    QueryAntiPatternFinding IRelocatableFinding<QueryAntiPatternFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
+        this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }

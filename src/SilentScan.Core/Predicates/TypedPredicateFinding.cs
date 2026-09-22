@@ -22,7 +22,7 @@ public sealed record TypedPredicateFinding(
     public string? RuleId { get; } = Verdict is Verdict.Unknown or Verdict.OperandClash ? null : FindingRuleIds.VerdictRuleId(Verdict);
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);
-    int IRelocatableFinding<TypedPredicateFinding>.PositionColumn => ColumnPosition;
+    int IRelocatableFinding.PositionColumn => ColumnPosition;
 
     TypedPredicateFinding IRelocatableFinding<TypedPredicateFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, ColumnPosition = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };

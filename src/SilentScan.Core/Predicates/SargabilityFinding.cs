@@ -20,7 +20,7 @@ public sealed record SargabilityFinding(
     public string RuleId { get; } = FindingRuleIds.Tier1RuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
-    int IRelocatableFinding<SargabilityFinding>.PositionColumn => Column;
+    int IRelocatableFinding.PositionColumn => Column;
 
     SargabilityFinding IRelocatableFinding<SargabilityFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };

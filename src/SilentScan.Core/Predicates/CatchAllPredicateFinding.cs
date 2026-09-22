@@ -11,10 +11,15 @@ public sealed record CatchAllPredicateFinding(
     [property: JsonIgnore] string SourcePath,
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
-    FindingConfidence Confidence = FindingConfidence.High) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<CatchAllPredicateFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.CatchAllPredicateRuleId;
 
     public SourceSpan Location => new(SourcePath, Line, Column);
+    int IRelocatableFinding.PositionColumn => Column;
+
+    CatchAllPredicateFinding IRelocatableFinding<CatchAllPredicateFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
+        this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }
 

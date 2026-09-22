@@ -6,6 +6,7 @@ namespace SilentScan.Core.Reporting.RuleHarness.Adapters;
 internal sealed class CrossModuleLockOrderRule : ICrossModuleRule
 {
     public string Id => "CrossModuleLockOrderScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(IReadOnlyList<SqlParseResult> parseResults, RuleContext context) => CrossModuleLockOrderScanner.Scan(parseResults, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context) => CrossModuleLockOrderScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> Aggregate(RuleContext context, IReadOnlyList<IModuleRule> moduleRules) =>
