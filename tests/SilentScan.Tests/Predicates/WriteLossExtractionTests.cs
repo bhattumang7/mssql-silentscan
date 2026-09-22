@@ -136,6 +136,16 @@ public sealed class WriteLossExtractionTests
     }
 
     [Fact]
+    public void Extract_InsertValuesWithMidnightTimeLiteralIntoDate_ProvablySafe_NoFinding()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (DateCol DATE NULL);",
+            "INSERT INTO dbo.T (DateCol) VALUES ('2024-01-15T00:00:00');");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
     public void Extract_InsertValuesWithDateOnlyLiteralIntoDate_ProvablySafe_NoFinding()
     {
         var findings = Extract(
