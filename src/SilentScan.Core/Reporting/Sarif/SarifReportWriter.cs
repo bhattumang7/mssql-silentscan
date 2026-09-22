@@ -96,6 +96,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ForcedParameterizationFinding>("ForcedParameterizationScanner").Select(ToResult));
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
         results.AddRange(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner").Select(ToResult));
+        results.AddRange(report.Find<IsNullReplacementValueTruncationFinding>("IsNullReplacementValueTruncationScanner").Select(ToResult));
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
         results.AddRange(report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>("MemoryOptimizedSchemaOnlyDurabilityScanner").Select(ToResult));
         results.AddRange(report.Find<QueryAntiPatternFinding>("QueryAntiPatternScanner").Select(ToResult));
@@ -1254,6 +1255,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.FloatOrderDependentAggregateRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' ({finding.TypeDisplay}) is passed to {finding.AggregateFunctionName}() - this aggregate's running result accumulates in an order that depends on plan shape, so the identical aggregate over identical data can return a different bit pattern across runs.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
+    }
+
+    private static SarifResult ToResult(IsNullReplacementValueTruncationFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.IsNullReplacementValueTruncationRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"ISNULL('{finding.CheckExpressionDisplay}' ({finding.CheckExpressionTypeDisplay}), '{finding.ReplacementValueDisplay}' ({finding.ReplacementValueTypeDisplay})): the result always takes the check expression's exact type - {DescribeWriteLossKind(finding.Kind)}.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }

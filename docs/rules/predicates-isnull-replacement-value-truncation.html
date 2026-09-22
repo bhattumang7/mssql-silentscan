@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISNULL Replacement Value Truncation - SilentScan rules</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --accent: #0a5cff;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --fires-bg: #fff5f5;
+  --fires-border: #e0a0a0;
+  --clean-bg: #f2fbf3;
+  --clean-border: #9fcfa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4993ff;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --fires-bg: #1e1315;
+    --fires-border: #6e3b3b;
+    --clean-bg: #131e14;
+    --clean-border: #3b6e42;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-top: 0; margin-bottom: 2.5rem; }
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: 0.15em 0.4em; font-size: 0.9em; }
+pre { padding: 0.9rem 1rem; overflow-x: auto; font-size: 0.85em; margin: 0.5rem 0; }
+a { color: var(--accent); }
+.back-link { display: inline-block; margin-bottom: 1.5rem; }
+.rule { border-top: 1px solid var(--border); padding: 1.5rem 0; }
+.rule:first-of-type { border-top: none; }
+.rule-id { font-size: 1rem; margin: 0 0 0.5rem; }
+.rationale { margin: 0.5rem 0; }
+.fix { margin: 0.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); }
+.fix-label { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.example { margin: 0.5rem 0; font-size: 0.9em; color: var(--muted); }
+.example-path { font-size: 0.8em; color: var(--muted); margin: 0 0 0.3rem; }
+.example-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1rem 0 0.3rem; }
+.example-explanation { font-size: 0.9em; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+.fires-block pre { background: var(--fires-bg); border: 1px solid var(--fires-border); }
+.clean-block pre { background: var(--clean-bg); border: 1px solid var(--clean-border); }
+.fires-label { color: #c14040; }
+.clean-label { color: #2f8f42; }
+.family-section { margin-top: 2rem; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.rule-list li { padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.rule-list li:first-child { border-top: none; }
+.rule-list .id { font-weight: 600; }
+.rule-list .snippet { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.15rem; }
+.rule-key { color: var(--muted); font-size: 0.8em; margin: 0 0 1.5rem; }
+.rule-key code { padding: 0.1em 0.35em; }
+footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="../rules.html">&larr; All rules</a>
+  <h1>ISNULL Replacement Value Truncation</h1>
+  <p class="rule-key"><code>silentscan/predicates/isnull-replacement-value-truncation</code></p>
+  <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
+  <h2>Why is this an issue?</h2>
+  <p class="rationale">ISNULL(check_expression, replacement_value) is called where replacement_value&#x27;s own type would be narrowed/truncated to fit check_expression&#x27;s declared type - oracle-confirmed ISNULL&#x27;s result type is always check_expression&#x27;s exact type (unlike COALESCE, which merges the widest type across every argument), so replacement_value is silently rounded, truncated, or has its trailing characters cut when it&#x27;s substituted in, with no error - across numeric scale/precision, string/binary length, and Unicode-to-non-Unicode replacement.</p>
+  <p class="rationale">`ISNULL(check_expression, replacement_value)` always returns `check_expression`&#x27;s exact declared type - length, precision, scale, and collation included. This is different from `COALESCE`, which behaves like a `CASE` expression and merges the widest type across every argument it&#x27;s given. When `replacement_value`&#x27;s own type is wider than `check_expression`&#x27;s - a longer string, a `DECIMAL` with more digits after the point, a wider `VARBINARY` - the engine still accepts the call and silently coerces `replacement_value` down to `check_expression`&#x27;s type at the moment it&#x27;s substituted in: a numeric value is rounded, a string or binary value has its trailing content cut off, all without raising an error.</p>
+  <p class="rationale">This holds regardless of which branch actually gets evaluated at runtime - the type derivation, and therefore the narrowing, is a property of the call itself, not of whether `check_expression` turns out to be `NULL` for a given row. A caller who only ever sees rows where `check_expression` is `NULL` (so `replacement_value` is the value that ends up in the result) can be silently getting a rounded or truncated value indefinitely with nothing in the query text or a runtime message hinting at it.</p>
+  <h2>How can I fix it?</h2>
+  <p class="fix">Cast replacement_value to check_expression&#x27;s exact type explicitly before relying on its value, or use COALESCE instead of ISNULL when replacement_value may be wider than check_expression.</p>
+  <h3>A wider replacement string is silently truncated to the check expression&#x27;s length</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>DECLARE @ShortCode VARCHAR(5) = NULL;&#xA;DECLARE @FullDescription VARCHAR(50) = &#x27;A much longer fallback description&#x27;;&#xA;&#xA;SELECT ISNULL(@ShortCode, @FullDescription) AS Result;</code></pre></div>
+  <p class="example-explanation">ISNULL&#x27;s result type is @ShortCode&#x27;s VARCHAR(5), not the wider VARCHAR(50) that COALESCE would have picked - @FullDescription is silently cut down to 5 characters (&#x27;A muc&#x27;) with no error, even though @ShortCode is NULL and @FullDescription is the value actually being returned.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>DECLARE @ShortCode VARCHAR(5) = NULL;&#xA;DECLARE @FullDescription VARCHAR(50) = &#x27;A much longer fallback description&#x27;;&#xA;&#xA;SELECT COALESCE(@ShortCode, @FullDescription) AS Result;</code></pre></div>
+  <p class="example-explanation">COALESCE merges the widest type across all of its arguments, the same way a CASE expression does, so the result is typed VARCHAR(50) and @FullDescription comes through in full.</p>
+  <h3>A more precise replacement decimal is silently rounded to the check expression&#x27;s scale</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>DECLARE @CachedTotal DECIMAL(9, 2) = NULL;&#xA;DECLARE @ComputedTotal DECIMAL(18, 6) = 123.456789;&#xA;&#xA;SELECT ISNULL(@CachedTotal, @ComputedTotal) AS Result;</code></pre></div>
+  <p class="example-explanation">ISNULL&#x27;s result type is @CachedTotal&#x27;s DECIMAL(9, 2), so @ComputedTotal is silently rounded to 123.46 on the way in, losing four digits of precision, with no error.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>DECLARE @CachedTotal DECIMAL(18, 6) = NULL;&#xA;DECLARE @ComputedTotal DECIMAL(18, 6) = 123.456789;&#xA;&#xA;SELECT ISNULL(@CachedTotal, @ComputedTotal) AS Result;</code></pre></div>
+  <p class="example-explanation">With @CachedTotal declared at the same precision/scale as @ComputedTotal, ISNULL&#x27;s result type carries no less precision than @ComputedTotal already has, so nothing is rounded away.</p>
+  <footer>
+    Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
+  </footer>
+</main>
+</body>
+</html>

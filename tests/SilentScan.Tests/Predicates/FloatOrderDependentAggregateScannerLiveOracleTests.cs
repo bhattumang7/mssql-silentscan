@@ -44,6 +44,46 @@ public sealed class FloatOrderDependentAggregateEngineFactOracleTests : OracleTe
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
+public sealed class VarianceAggregateAlwaysFloatEngineFactOracleTests : OracleTestFixture
+{
+    protected override string DatabaseNameSeed => nameof(VarianceAggregateAlwaysFloatEngineFactOracleTests);
+
+    protected override string Ddl => """
+        CREATE TABLE dbo.Measurements (Id INT IDENTITY PRIMARY KEY, Quantity INT NOT NULL);
+        GO
+        INSERT INTO dbo.Measurements (Quantity)
+        SELECT CAST(ABS(CHECKSUM(NEWID())) % 2000000000 AS INT)
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+        GO
+        UPDATE STATISTICS dbo.Measurements WITH FULLSCAN;
+        GO
+        """;
+
+    [Theory]
+    [InlineData("VAR")]
+    [InlineData("STDEV")]
+    public async Task VarianceAggregateOverIntegerColumn_RealBitPatternDiffersBetweenSerialAndForcedParallelPlan(string aggregateFunction)
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        await using var serialCommand = new SqlCommand(
+            $"SELECT CAST({aggregateFunction}(Quantity) AS VARBINARY(8)) FROM dbo.Measurements OPTION (MAXDOP 1);",
+            connection)
+        { CommandTimeout = 120 };
+        var serialBits = (byte[])(await serialCommand.ExecuteScalarAsync())!;
+
+        await using var parallelCommand = new SqlCommand(
+            $"SELECT CAST({aggregateFunction}(Quantity) AS VARBINARY(8)) FROM dbo.Measurements OPTION (MAXDOP 4, QUERYTRACEON 8649);",
+            connection)
+        { CommandTimeout = 120 };
+        var parallelBits = (byte[])(await parallelCommand.ExecuteScalarAsync())!;
+
+        Assert.NotEqual(Convert.ToHexString(serialBits), Convert.ToHexString(parallelBits));
+    }
+}
+
+[Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
 public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
 {
     [Fact]
@@ -117,6 +157,29 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             minimumConfidence: FindingConfidence.Low);
 
         Assert.Empty(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
+    }
+
+    [Theory]
+    [InlineData("VAR")]
+    [InlineData("VARP")]
+    [InlineData("STDEV")]
+    [InlineData("STDEVP")]
+    public async Task LiveDeployment_VarianceAggregateOverIntegerColumn_StillFires(string aggregateFunction)
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync(
+            $"""
+            CREATE TABLE dbo.Measurements (Id INT NOT NULL PRIMARY KEY, Quantity INT NOT NULL);
+            GO
+            CREATE PROCEDURE dbo.usp_VarianceOverInteger AS
+            BEGIN
+                SELECT {aggregateFunction}(Quantity) FROM dbo.Measurements;
+            END
+            """,
+            minimumConfidence: FindingConfidence.Low);
+
+        var finding = Assert.Single(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
+        Assert.Equal("Quantity", finding.ColumnName);
+        Assert.Equal(aggregateFunction, finding.AggregateFunctionName);
     }
 
     [Fact]

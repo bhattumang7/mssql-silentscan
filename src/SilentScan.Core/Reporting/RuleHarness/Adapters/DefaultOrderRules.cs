@@ -220,6 +220,14 @@ internal sealed class FloatOrderDependentAggregateRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FloatOrderDependentAggregateScanner.Harvest((FloatOrderDependentAggregateScanner.Rule)moduleRule);
 }
 
+internal sealed class IsNullReplacementValueTruncationRule : IPerFileRule
+{
+    public string Id => "IsNullReplacementValueTruncationScanner";
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => IsNullReplacementValueTruncationScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => IsNullReplacementValueTruncationScanner.CreateRule(parseResult.SourcePath, context.Catalog);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => IsNullReplacementValueTruncationScanner.Harvest((IsNullReplacementValueTruncationScanner.Rule)moduleRule);
+}
+
 internal sealed class IndexCoverageRule : IPerFileRule
 {
     public string Id => "IndexCoverageScanner";
