@@ -33,6 +33,7 @@ public static class RuleRegistry
         new CheckConstraintPredicateContradictionRule(),
         new FloatEqualityPredicateRule(),
         new FloatOrderDependentAggregateRule(),
+        new IsNullReplacementValueTruncationRule(),
         new IndexCoverageRule(),
         new SelfReferencingDmlRule(),
         new TransactionHygieneRule(),

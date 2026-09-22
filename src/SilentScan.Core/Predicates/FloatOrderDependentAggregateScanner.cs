@@ -11,6 +11,16 @@ public static class FloatOrderDependentAggregateScanner
 {
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
+    private static readonly HashSet<string> FloatGatedAggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "SUM", "AVG",
+    };
+
+    private static readonly HashSet<string> AlwaysFloatAggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "VAR", "VARP", "STDEV", "STDEVP",
+    };
+
     private static readonly HashSet<string> OrderDependentAggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "SUM", "AVG", "VAR", "VARP", "STDEV", "STDEVP",
@@ -63,14 +73,17 @@ public static class FloatOrderDependentAggregateScanner
 
         private void InspectAggregateCall(FunctionCall call, ScopeChain scopeChain)
         {
+            var alwaysFloat = AlwaysFloatAggregateFunctionNames.Contains(call.FunctionName.Value);
+
             foreach (var parameter in call.Parameters)
             {
                 if (parameter is ColumnReferenceExpression)
                 {
                     if (BaseColumnResolver.ResolveBaseColumn(parameter, sourcePath, scopeChain, catalog) is { } directColumn
-                        && directColumn.Type?.Category is SqlTypeCategory.Real or SqlTypeCategory.Float)
+                        && directColumn.Type is { } directColumnType
+                        && (alwaysFloat || directColumnType.Category is SqlTypeCategory.Real or SqlTypeCategory.Float))
                     {
-                        AddFinding(directColumn.TableQualifiedName, directColumn.ColumnName, directColumn.Type, call);
+                        AddFinding(directColumn.TableQualifiedName, directColumn.ColumnName, directColumnType, call);
                     }
 
                     continue;
@@ -85,7 +98,7 @@ public static class FloatOrderDependentAggregateScanner
                     parameter, scopeChain, sourcePath,
                     new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog));
 
-                if (expressionType?.Category is not (SqlTypeCategory.Real or SqlTypeCategory.Float))
+                if (expressionType is null || (!alwaysFloat && expressionType.Category is not (SqlTypeCategory.Real or SqlTypeCategory.Float)))
                 {
                     continue;
                 }

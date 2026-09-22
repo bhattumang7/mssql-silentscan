@@ -53,6 +53,30 @@ public sealed class FloatOrderDependentAggregateScannerTests
     }
 
     [Theory]
+    [InlineData("VAR")]
+    [InlineData("VARP")]
+    [InlineData("STDEV")]
+    [InlineData("STDEVP")]
+    public void OtherOrderDependentAggregatesOfIntegerColumn_StillFire(string aggregateFunction)
+    {
+        var findings = Scan($"SELECT {aggregateFunction}(Quantity) FROM dbo.Measurements;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(aggregateFunction, finding.AggregateFunctionName);
+        Assert.Equal("Quantity", finding.ColumnName);
+    }
+
+    [Theory]
+    [InlineData("SUM")]
+    [InlineData("AVG")]
+    public void SumAndAvgOfIntegerColumn_StillGatedToFloatOrReal(string aggregateFunction)
+    {
+        var findings = Scan($"SELECT {aggregateFunction}(Quantity) FROM dbo.Measurements;");
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
     [InlineData("MIN")]
     [InlineData("MAX")]
     [InlineData("COUNT")]

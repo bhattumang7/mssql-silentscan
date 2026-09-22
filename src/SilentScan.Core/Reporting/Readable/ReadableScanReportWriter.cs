@@ -149,6 +149,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ForcedParameterization(report, headingLevel, pathBase));
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
         blocks.AddRange(FloatOrderDependentAggregate(report, headingLevel, pathBase));
+        blocks.AddRange(IsNullReplacementValueTruncation(report, headingLevel, pathBase));
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
         blocks.AddRange(QueryAntiPattern(report, headingLevel, pathBase));
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
@@ -227,6 +228,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Forced-parameterization-defeating query shapes", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
+        AddCount(counts, "ISNULL replacement value silently narrowed to check-expression type", report.Find<IsNullReplacementValueTruncationFinding>(nameof(IsNullReplacementValueTruncationScanner)).Count);
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
         AddCount(counts, "Query anti-patterns", report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count);
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
@@ -1299,6 +1301,32 @@ public static class ReadableScanReportWriter
                 f.TypeDisplay,
                 f.AggregateFunctionName,
                 $"Aggregated at line {f.Line}, column {f.Column}.",
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> IsNullReplacementValueTruncation(ScanReport report, int level, string? pathBase)
+    {
+        var findings = report.Find<IsNullReplacementValueTruncationFinding>(nameof(IsNullReplacementValueTruncationScanner));
+        if (findings.Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"ISNULL replacement value silently narrowed to check-expression type ({findings.Count})");
+        yield return new ReadableBlock.Paragraph(
+            "ISNULL(check_expression, replacement_value) always returns check_expression's exact type, unlike COALESCE, which merges the widest type across every argument - when replacement_value's own type is wider, it is silently rounded, truncated, or has its trailing characters cut on the way in, with no error.");
+
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.IsNullReplacementValueTruncationRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Check expression", "Check expression type", "Replacement value", "Replacement value type", "Risk"],
+            [.. findings.Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                f.CheckExpressionDisplay,
+                f.CheckExpressionTypeDisplay,
+                f.ReplacementValueDisplay,
+                f.ReplacementValueTypeDisplay,
+                DescribeWriteLossKind(f.Kind),
             })]);
     }
 

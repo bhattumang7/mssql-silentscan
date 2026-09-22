@@ -21,11 +21,17 @@ internal static class FloatOrderDependentAggregate
             because the optimizer chose a different plan shape or scheduled the parallel threads
             differently - with no error, no warning, and no code change to point at.
 
-            The same risk applies whenever the value actually fed to the aggregate is float/real, even
+            The same risk applies whenever the value actually fed to `SUM`/`AVG` is float/real, even
             when the underlying column is not: an arithmetic expression (`Amount * Rate`), a
             `CAST`/`CONVERT` to `FLOAT`/`REAL`, or an expression that only becomes float/real because a
             float literal constant (e.g. `1.5e0`) participates in it, are all summed/averaged in the
             same plan-shape-dependent order as a bare float column would be.
+
+            `VAR`, `VARP`, `STDEV`, and `STDEVP` are flagged unconditionally, regardless of the
+            argument's declared type: these four always compute internally in floating point and
+            always return `float`, even over an `INT` or `DECIMAL` column, so the same
+            plan-shape-dependent rounding applies whether or not the source column itself is
+            float/real.
 
             `MIN`, `MAX`, and `COUNT`/`COUNT_BIG` are not affected and are not flagged by this rule:
             `MIN`/`MAX` only ever compare values against each other rather than combining them

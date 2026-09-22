@@ -105,6 +105,7 @@ public static class RuleDocCatalog
         [Catalog.TableValuedFunctionReturnUsesDatabaseCollation.RuleId] = Catalog.TableValuedFunctionReturnUsesDatabaseCollation.Content,
         [Predicates.FloatEquality.RuleId] = Predicates.FloatEquality.Content,
         [Predicates.FloatOrderDependentAggregate.RuleId] = Predicates.FloatOrderDependentAggregate.Content,
+        [Predicates.IsNullReplacementValueTruncation.RuleId] = Predicates.IsNullReplacementValueTruncation.Content,
         [Predicates.DynamicDataMaskingPredicateExposure.RuleId] = Predicates.DynamicDataMaskingPredicateExposure.Content,
         [Predicates.DynamicDataMaskingComputedExpressionCollapse.RuleId] = Predicates.DynamicDataMaskingComputedExpressionCollapse.Content,
 

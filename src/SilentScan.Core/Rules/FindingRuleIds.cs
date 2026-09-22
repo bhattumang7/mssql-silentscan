@@ -36,6 +36,7 @@ public static class FindingRuleIds
     };
     public const string FloatEqualityRuleId = "silentscan/predicates/float-equality";
     public const string FloatOrderDependentAggregateRuleId = "silentscan/predicates/float-order-dependent-aggregate";
+    public const string IsNullReplacementValueTruncationRuleId = "silentscan/predicates/isnull-replacement-value-truncation";
     public const string TriggerOrderRuleId = "silentscan/catalog/trigger-firing-order-undefined";
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = "silentscan/catalog/memory-optimized-schema-only-durability";
     public const string QueryAntiPatternTableVariableLowCompatEstimateRuleId = "silentscan/query/table-variable-low-compat-estimate";
