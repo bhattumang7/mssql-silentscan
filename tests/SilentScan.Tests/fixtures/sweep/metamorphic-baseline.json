@@ -1,1 +1,38 @@
-[]
+[
+    {
+        "RuleId": "silentscan/temp-table/unindexed-where-filter",
+        "ExampleIndex": 0,
+        "MutationName": "unrelated-join",
+        "Reason": "unrelated-join adds a real CROSS JOIN, so the temp table genuinely becomes a join operand; the scanner correctly reclassifies it as silentscan/temp-table/unindexed-join-operand instead of the WHERE-filter variant for the same missing-index root cause."
+    },
+    {
+        "RuleId": "silentscan/catalog/stale-select-star-view",
+        "ExampleIndex": 0,
+        "MutationName": "unrelated-join",
+        "Reason": "unrelated-join adds a second table to the view FROM clause, so SELECT * now spans two tables and is no longer comparable 1:1 to a single base table - the scanner correctly stops firing rather than misapplying the single-base-table staleness check."
+    },
+    {
+        "RuleId": "silentscan/catalog/stale-select-star-view",
+        "ExampleIndex": 0,
+        "MutationName": "derived-table-wrap",
+        "Reason": "derived-table-wrap moves the SELECT * from the view's own single-base-table SELECT to an outer wrapper selecting from a derived table, so it's no longer a direct SELECT * against the view - the scanner correctly stops firing rather than misapplying the direct-reference staleness check."
+    },
+    {
+        "RuleId": "silentscan/trigger/multi-row-unsafe-keyed-dml",
+        "ExampleIndex": 0,
+        "MutationName": "unrelated-join",
+        "Reason": "unrelated-join appends a CROSS JOIN to a guaranteed-single-row derived table onto the inserted/deleted-only FROM clause the rule requires; the rule's single-table-reference check is a deliberate conservative guard against reasoning about arbitrary join shapes, so it correctly stops firing even though this specific join happens to be row-count-safe."
+    },
+    {
+        "RuleId": "silentscan/trigger/multi-row-unsafe-single-row-assignment",
+        "ExampleIndex": 0,
+        "MutationName": "unrelated-join",
+        "Reason": "unrelated-join appends a CROSS JOIN to a guaranteed-single-row derived table onto the inserted/deleted-only FROM clause the rule requires; the rule's single-table-reference check is a deliberate conservative guard against reasoning about arbitrary join shapes, so it correctly stops firing even though this specific join happens to be row-count-safe."
+    },
+    {
+        "RuleId": "silentscan/predicates/reassigned-parameter",
+        "ExampleIndex": 0,
+        "MutationName": "derived-table-wrap",
+        "Reason": "derived-table-wrap moves the WHERE predicate from the top-level statement into a nested derived table; the rule's predicate-location inspection is scoped to the statement's own top-level WHERE/HAVING/join-ON clauses and deliberately does not recurse into nested subqueries, so it correctly stops firing on a predicate that is no longer at that level."
+    }
+]

@@ -3,6 +3,31 @@ using SilentScan.Live.Sweep;
 
 namespace SilentScan.Tests.Sweep;
 
+public sealed class MetamorphicMutatorCorpusTests
+{
+    [Fact]
+    public void Mutate_EveryPublishedExample_EveryMutationStillParsesCleanly()
+    {
+        var cases = RuleExampleCorpus.Build()
+            .Where(c => c.Variant == RuleExampleVariant.Noncompliant && c.IsSelfContained);
+
+        var failures = new List<string>();
+        foreach (var c in cases)
+        {
+            foreach (var mutation in MetamorphicMutator.Mutate(c.DeployableSql))
+            {
+                var parseResult = SqlScriptParser.ParseText("mutation-corpus-check", mutation.MutatedSql);
+                if (parseResult.HasErrors)
+                {
+                    failures.Add($"{c.RuleId} #{c.ExampleIndex} x {mutation.Name}: {string.Join("; ", parseResult.Errors.Select(e => e.Message))}");
+                }
+            }
+        }
+
+        Assert.True(failures.Count == 0, string.Join('\n', failures));
+    }
+}
+
 public sealed class MetamorphicMutatorTests
 {
     private const string Sql = """
@@ -19,6 +44,64 @@ public sealed class MetamorphicMutatorTests
         Assert.Contains(mutations, m => m.Name == "identifier-bracket-quoting");
         Assert.Contains(mutations, m => m.Name == "comment-injection");
         Assert.Contains(mutations, m => m.Name == "blank-line-injection");
+        Assert.Contains(mutations, m => m.Name == "schema-qualification-remove");
+        Assert.Contains(mutations, m => m.Name == "redundant-parentheses");
+        Assert.Contains(mutations, m => m.Name == "operand-order-swap");
+        Assert.Contains(mutations, m => m.Name == "derived-table-wrap");
+        Assert.Contains(mutations, m => m.Name == "unrelated-join");
+    }
+
+    [Fact]
+    public void Mutate_SchemaQualificationAdd_PrefixesUnqualifiedTableName()
+    {
+        var sql = """
+            CREATE TABLE Orders (OrderId INT NOT NULL PRIMARY KEY);
+            SELECT OrderId FROM Orders;
+            """;
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(sql), m => m.Name == "schema-qualification-add");
+
+        Assert.Contains("dbo.Orders", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_SchemaQualificationRemove_StripsDboPrefix()
+    {
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(Sql), m => m.Name == "schema-qualification-remove");
+
+        Assert.DoesNotContain("dbo.Orders", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.Contains("FROM Orders", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_RedundantParentheses_WrapsWhereSearchCondition()
+    {
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(Sql), m => m.Name == "redundant-parentheses");
+
+        Assert.Contains("WHERE (Status <> 'Closed')", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_OperandOrderSwap_SwapsSidesOfEqualityComparison()
+    {
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(Sql), m => m.Name == "operand-order-swap");
+
+        Assert.Contains("'Closed' <> Status", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_DerivedTableWrap_WrapsTopLevelSelect()
+    {
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(Sql), m => m.Name == "derived-table-wrap");
+
+        Assert.Contains("SELECT * FROM (SELECT OrderId FROM dbo.Orders WHERE Status <> 'Closed') AS MetamorphicWrap", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_UnrelatedJoin_AppendsCrossJoinAfterFromClause()
+    {
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(Sql), m => m.Name == "unrelated-join");
+
+        Assert.Contains("FROM dbo.Orders CROSS JOIN (SELECT 1 AS MetamorphicJoinCol) AS MetamorphicJoin WHERE", mutation.MutatedSql, StringComparison.Ordinal);
     }
 
     [Fact]

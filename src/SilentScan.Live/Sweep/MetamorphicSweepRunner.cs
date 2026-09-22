@@ -61,11 +61,30 @@ public static class MetamorphicSweepRunner
                 continue;
             }
 
-            var outcome = baselineFiredRuleIds.SetEquals(mutatedFiredRuleIds) ? MetamorphicOutcome.Matched : MetamorphicOutcome.Mismatched;
+            var comparableBaseline = StripCollateralRuleIds(baselineFiredRuleIds, mutation.Name);
+            var comparableMutated = StripCollateralRuleIds(mutatedFiredRuleIds, mutation.Name);
+            var outcome = comparableBaseline.SetEquals(comparableMutated) ? MetamorphicOutcome.Matched : MetamorphicOutcome.Mismatched;
             results.Add(new MetamorphicResult(baseCase, mutation.Name, outcome, baselineFiredRuleIds, mutatedFiredRuleIds));
         }
 
         return results;
+    }
+
+    private static readonly Dictionary<string, string[]> CollateralRuleIdPrefixesByMutation = new()
+    {
+        ["schema-qualification-remove"] = ["silentscan/query/unqualified-table-reference", "silentscan/naming/unqualified-create"],
+        ["schema-qualification-add"] = ["silentscan/query/unqualified-table-reference", "silentscan/naming/unqualified-create"],
+        ["derived-table-wrap"] = ["silentscan/statement-shape/bare-select-star", "silentscan/lineage/select-star-view"],
+    };
+
+    private static IReadOnlySet<string> StripCollateralRuleIds(IReadOnlySet<string> ruleIds, string mutationName)
+    {
+        if (!CollateralRuleIdPrefixesByMutation.TryGetValue(mutationName, out var prefixes))
+        {
+            return ruleIds;
+        }
+
+        return ruleIds.Where(id => !prefixes.Any(p => id == p || id.StartsWith(p + "/", StringComparison.Ordinal))).ToHashSet();
     }
 
     private static async Task<(bool Deployed, IReadOnlySet<string> FiredRuleIds)> DeployAndScanAsync(string sql, SqlServerOptions options, CancellationToken cancellationToken)
