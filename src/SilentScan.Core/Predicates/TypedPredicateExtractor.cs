@@ -1199,6 +1199,12 @@ public static class TypedPredicateExtractor
         private void RecordExpressionDerivedFinding(
             string columnName, ColumnReferenceExpression columnRef, ColumnProvenance provenance, ScopeChain scopeChain, ModuleWalker walker)
         {
+            if (provenance is ColumnProvenance.Cast { ExplicitType: { } explicitType, Inner: ColumnProvenance.BaseColumn baseColumn }
+                && ComputedColumnMatcher.HasIndexedMatchingCastComputedColumn(catalog, baseColumn.TableQualifiedName, baseColumn.ColumnName, explicitType))
+            {
+                return;
+            }
+
             var underlyingBaseColumns = ColumnProvenanceAnalysis.FindUnderlyingBaseColumns(provenance)
                 .Select(bc => new UnderlyingBaseColumn(bc.TableQualifiedName, bc.ColumnName, catalog.Find(bc.TableQualifiedName, walker.CurrentProcScope)?.IsIndexedColumn(bc.ColumnName, catalog.IdentifierComparer) ?? false))
                 .ToList();
