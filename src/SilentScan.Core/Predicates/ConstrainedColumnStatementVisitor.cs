@@ -8,6 +8,7 @@ namespace SilentScan.Core.Predicates;
 internal sealed record ConstrainedStatement(
     IReadOnlyList<CatalogTable> BaseTables,
     HashSet<ColumnProvenance.BaseColumn> AndConstrainedColumns,
+    HashSet<ColumnProvenance.BaseColumn> AndEqualityConstrainedColumns,
     IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> ScopeChain,
     IReadOnlyList<QualifiedJoin> JoinNodes,
     BooleanExpression? WhereCondition,
@@ -83,14 +84,22 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
         var scopeChain = new List<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> { (byAlias, ordered) };
         var joinNodes = fromClause is null ? [] : fromClause.TableReferences.SelectMany(PredicateTreeWalker.FlattenJoinNodes).ToList();
 
-        var andConstrainedColumns = joinNodes
+        var andComparisons = joinNodes
             .SelectMany(j => PredicateTreeWalker.FlattenAnd(j.SearchCondition))
             .Concat(PredicateTreeWalker.FlattenAnd(whereCondition))
             .OfType<BooleanComparisonExpression>()
+            .ToList();
+
+        var andConstrainedColumns = andComparisons
+            .SelectMany(c => BaseColumnResolver.ResolveBothSides(c, SourcePath, scopeChain, Catalog))
+            .ToHashSet(TableColumnKeyComparer.For(Catalog));
+
+        var andEqualityConstrainedColumns = andComparisons
+            .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
             .SelectMany(c => BaseColumnResolver.ResolveBothSides(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
         InspectStatement(new ConstrainedStatement(
-            baseTables, andConstrainedColumns, scopeChain, joinNodes, whereCondition, node, walker));
+            baseTables, andConstrainedColumns, andEqualityConstrainedColumns, scopeChain, joinNodes, whereCondition, node, walker));
     }
 }
