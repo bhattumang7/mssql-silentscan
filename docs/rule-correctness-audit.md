@@ -23,6 +23,43 @@ correctness bugs found; 0 remain open below.
 
 ---
 
+## Fixed, tagged by root cause
+
+Entries here are closed fixes, kept only so a later bug can be checked
+against the same root-cause category before it's treated as new.
+
+- **Category: seek-preserving conversion claim didn't cover a truncating
+  target category.** `NonSargablePredicateScanner.IsSeekableThroughConvert`
+  treated any datetime-family-to-datetime-family `CAST`/`CONVERT` as
+  seek-preserving; truncating to `DATE`/`TIME` is a many-to-one mapping the
+  engine can't range-seek through, unlike numeric narrowing or decimal
+  scale-narrowing (both still one-to-one/range-expressible). Oracle-confirmed
+  and fixed.
+- **Category: predicate-acceptance criterion looser than the rule's own
+  claimed scope.** `IndexCoverageScanner` (key-lookup-prone) accepted any
+  comparison operator as a "constraining" predicate for candidate-index
+  selection, contradicting its own doc's equality-only claim; an unselective
+  range predicate matching ~100% of rows made the optimizer prefer a scan
+  over the seek+lookup the finding claims. Fixed by adding an equality-only
+  parallel field to the shared `ConstrainedColumnStatementVisitor`, scoped to
+  this one scanner (the visitor's other two consumers don't make an
+  equality-specific claim).
+- **Category: computed-column suppression check present on some wrap paths,
+  missing on sibling paths in the same scanner.** The case-fold and
+  date-function paths in `NonSargablePredicateScanner` already declined to
+  fire when an indexed computed column's definition structurally matched the
+  wrapped predicate expression. The generic function fallthrough, the
+  `COALESCE`/`NULLIF`/`IIF`/`CASE` path, and `InspectArithmetic` skipped this
+  same check, so a predicate matching an indexed computed column (e.g.
+  `REPLACE(Col, '-', '')` or `Price + Tax`) still fired even though the real
+  engine can seek through that column's index. Fixed by adding the same
+  `ComputedColumnMatcher.HasIndexedMatchingComputedColumn` check to all three
+  remaining call sites, and extending the matcher's structural comparison to
+  `BinaryExpression` so it recognizes arithmetic definitions too. Both
+  oracle-confirmed.
+
+---
+
 ## Audited, no bug found
 
 - `WriteLossClassifier` (`Rules/WriteLossClassifier.cs`) — variable-target-only
