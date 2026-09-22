@@ -112,14 +112,21 @@ public static class UnindexedTempTableUsageScanner
             {
                 foreach (var unqualified in PredicateTreeWalker.FlattenUnqualifiedJoins(reference))
                 {
-                    if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin
-                        || !HasCorrelatingWherePredicate(node.WhereClause, unqualified.FirstTableReference, unqualified.SecondTableReference))
+                    if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin)
                     {
                         continue;
                     }
 
-                    TryRecordJoinOperand(unqualified.FirstTableReference, unqualified, walker);
-                    TryRecordJoinOperand(unqualified.SecondTableReference, unqualified, walker);
+                    if (HasCorrelatingWherePredicate(node.WhereClause, unqualified.FirstTableReference, unqualified.SecondTableReference))
+                    {
+                        TryRecordJoinOperand(unqualified.FirstTableReference, unqualified, walker);
+                        TryRecordJoinOperand(unqualified.SecondTableReference, unqualified, walker);
+                    }
+                    else
+                    {
+                        TryRecordFilteredInWhere(unqualified.FirstTableReference, node.WhereClause, walker);
+                        TryRecordFilteredInWhere(unqualified.SecondTableReference, node.WhereClause, walker);
+                    }
                 }
             }
         }
@@ -173,5 +180,41 @@ public static class UnindexedTempTableUsageScanner
                 Usages.Add(new Usage(name, walker.CurrentProcScope, UnindexedTempTableUsageKind.JoinOperand, joinNode.StartLine, joinNode.StartColumn));
             }
         }
+
+        private void TryRecordFilteredInWhere(TableReference side, WhereClause? whereClause, ModuleWalker walker)
+        {
+            if (side is NamedTableReference { SchemaObject.BaseIdentifier.Value: var name } && name.StartsWith('#')
+                && HasOwnFilteringWherePredicate(whereClause, side))
+            {
+                Usages.Add(new Usage(name, walker.CurrentProcScope, UnindexedTempTableUsageKind.FilteredInWhere, whereClause!.StartLine, whereClause.StartColumn));
+            }
+        }
+
+        private static bool HasOwnFilteringWherePredicate(WhereClause? whereClause, TableReference side)
+        {
+            if (whereClause is null || GetReferenceKey(side) is not { } key)
+            {
+                return false;
+            }
+
+            foreach (var predicate in PredicateTreeWalker.FlattenAnd(whereClause.SearchCondition))
+            {
+                if (predicate is not BooleanComparisonExpression cmp)
+                {
+                    continue;
+                }
+
+                if (MatchesOwnSide(cmp.FirstExpression, key) || MatchesOwnSide(cmp.SecondExpression, key))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool MatchesOwnSide(ScalarExpression expression, string key) =>
+            expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers }
+                && (identifiers.Count == 1 || MatchesKey(identifiers[^2].Value, key));
     }
 }

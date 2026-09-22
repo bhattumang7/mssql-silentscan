@@ -143,6 +143,36 @@ public sealed class MetamorphicMutatorTests
     }
 
     [Fact]
+    public void Mutate_AliasDrop_RemovesUnreferencedAlias()
+    {
+        var sql = """
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status VARCHAR(20) NOT NULL);
+            SELECT OrderId FROM dbo.Orders AS o WHERE Status <> 'Closed';
+            """;
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(sql), m => m.Name == "alias-drop");
+
+        Assert.Contains("FROM dbo.Orders WHERE Status <> 'Closed'", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.DoesNotContain("AS o", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_AliasDrop_SkipsWhenAliasIsReferencedByQualifiedColumn()
+    {
+        var sql = """
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status VARCHAR(20) NOT NULL);
+            SELECT o.OrderId FROM dbo.Orders AS o WHERE o.Status <> 'Closed';
+            """;
+
+        Assert.DoesNotContain(MetamorphicMutator.Mutate(sql), m => m.Name == "alias-drop");
+    }
+
+    [Fact]
+    public void Mutate_AliasDrop_SkipsWhenNoTableAliasPresent()
+    {
+        Assert.DoesNotContain(MetamorphicMutator.Mutate(Sql), m => m.Name == "alias-drop");
+    }
+
+    [Fact]
     public void Mutate_EveryMutationStillParsesCleanly()
     {
         var mutations = MetamorphicMutator.Mutate(Sql);

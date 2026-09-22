@@ -37,6 +37,7 @@ public static class MetamorphicMutator
         TryAdd(mutations, "derived-table-wrap", ApplyEdits(sql, CollectDerivedTableWrapEdits(sql, parseResult.Fragment)));
         TryAdd(mutations, "unrelated-join", ApplyEdits(sql, CollectUnrelatedJoinEdits(parseResult.Fragment)));
         TryAdd(mutations, "alias-rename", ApplyEdits(sql, CollectAliasRenameEdits(parseResult.Fragment)));
+        TryAdd(mutations, "alias-drop", ApplyEdits(sql, CollectAliasDropEdits(parseResult.Fragment)));
 
         return mutations;
     }
@@ -269,6 +270,67 @@ public static class MetamorphicMutator
             if (node.Alias is { } alias)
             {
                 Aliases.Add(alias);
+            }
+
+            base.ExplicitVisit(node);
+        }
+    }
+
+    private static List<Edit> CollectAliasDropEdits(TSqlFragment fragment)
+    {
+        var aliasedTableVisitor = new AliasedTableReferenceVisitor();
+        fragment.Accept(aliasedTableVisitor);
+
+        var candidates = aliasedTableVisitor.References
+            .GroupBy(r => r.Alias.Value, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() == 1)
+            .Select(g => g.Single())
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return [];
+        }
+
+        var columnVisitor = new ColumnReferenceVisitor();
+        fragment.Accept(columnVisitor);
+
+        var dmlTargetVisitor = new DmlTargetAliasVisitor();
+        fragment.Accept(dmlTargetVisitor);
+
+        var edits = new List<Edit>();
+        foreach (var (named, alias) in candidates)
+        {
+            var isReferenced = columnVisitor.References
+                .Select(c => c.MultiPartIdentifier?.Identifiers is { Count: >= 2 } identifiers ? identifiers[^2] : null)
+                .Concat(dmlTargetVisitor.BareAliasTargets)
+                .Any(id => id is not null && string.Equals(id.Value, alias.Value, StringComparison.OrdinalIgnoreCase));
+
+            if (isReferenced)
+            {
+                continue;
+            }
+
+            var dropStart = named.SchemaObject.StartOffset + named.SchemaObject.FragmentLength;
+            var dropEnd = named.StartOffset + named.FragmentLength;
+            if (dropEnd > dropStart)
+            {
+                edits.Add(new Edit(dropStart, dropEnd - dropStart, string.Empty));
+            }
+        }
+
+        return edits;
+    }
+
+    private sealed class AliasedTableReferenceVisitor : TSqlFragmentVisitor
+    {
+        public List<(NamedTableReference Named, Identifier Alias)> References { get; } = [];
+
+        public override void ExplicitVisit(NamedTableReference node)
+        {
+            if (node.Alias is { } alias)
+            {
+                References.Add((node, alias));
             }
 
             base.ExplicitVisit(node);

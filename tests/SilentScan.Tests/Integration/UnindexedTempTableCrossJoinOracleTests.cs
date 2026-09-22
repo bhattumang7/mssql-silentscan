@@ -63,6 +63,34 @@ public sealed class UnindexedTempTableCrossJoinOracleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CrossJoinedTempTableWithOwnWhereFilter_SeeksWhenIndexed()
+    {
+        var planXml = await new PlanXmlCapture(_options).CaptureAsync(
+            DatabaseName,
+            "SELECT t.Id FROM #t AS t WITH (FORCESEEK) CROSS JOIN (SELECT 1 AS X) AS y WHERE t.Code = 'A';",
+            PopulateAndIndexTempTable);
+
+        Assert.True(IndexAccessDetector.HasIndexSeek(planXml, "IX_t_Code"));
+    }
+
+    [Fact]
+    public void Scanner_FiresFilteredInWhere_ForCrossJoinedTempTable_WithOwnWhereFilterAndNoCorrelatingPredicate()
+    {
+        const string sql = """
+            SELECT 1 AS Id, 'A' AS Code INTO #t;
+            SELECT t.Id FROM #t AS t CROSS JOIN (SELECT 1 AS X) AS y WHERE t.Code = 'A';
+            """;
+
+        var result = SqlScriptParser.ParseText("test.sql", sql);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+
+        var catalog = CatalogBuilder.Build([result]);
+        var findings = UnindexedTempTableUsageScanner.Scan(result, catalog);
+
+        Assert.Contains(findings, f => f.Kind == UnindexedTempTableUsageKind.FilteredInWhere);
+    }
+
+    [Fact]
     public void Scanner_DoesNotFireJoinOperand_ForCrossJoinedTempTable_WithNoCorrelatingPredicate()
     {
         const string sql = """
