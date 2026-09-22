@@ -17,7 +17,8 @@ public sealed class WriteLossOracleTests : OracleTestFixture
             IntCol INT NULL,
             DateCol DATE NULL,
             VarCol VARCHAR(20) NULL,
-            VarColLatin1 VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL
+            VarColLatin1 VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL,
+            RealCol REAL NULL
         );
         """;
 
@@ -74,6 +75,48 @@ public sealed class WriteLossOracleTests : OracleTestFixture
         Assert.True(await reader.ReadAsync());
         Assert.Equal("café", reader.GetString(0));
         Assert.Equal(4, reader.GetInt32(1));
+    }
+
+    [Fact]
+    public async Task Insert_CaseExpressionMergingDecimalBranchesOfDifferingScale_SilentlyRoundsToTargetScale_NoError()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var insertCommand = new SqlCommand(
+            "INSERT INTO dbo.T (DecCol) SELECT CASE WHEN 1 = 0 THEN CAST(1.10 AS DECIMAL(9,2)) ELSE CAST(1.2367 AS DECIMAL(9,4)) END",
+            connection))
+        {
+            await insertCommand.ExecuteNonQueryAsync();
+        }
+
+        await using var selectCommand = new SqlCommand("SELECT CAST(DecCol AS VARCHAR(20)) FROM dbo.T", connection);
+        var result = await selectCommand.ExecuteScalarAsync();
+        Assert.Equal("1.24", result?.ToString());
+    }
+
+    [Fact]
+    public async Task Assign_AvgOverRealColumn_SilentlyRoundsToSinglePrecision_NoError()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var insertCommand = new SqlCommand("INSERT INTO dbo.T (RealCol) VALUES (0), (0), (1)", connection))
+        {
+            await insertCommand.ExecuteNonQueryAsync();
+        }
+
+        await using var selectCommand = new SqlCommand(
+            """
+            DECLARE @r REAL = (SELECT AVG(RealCol) FROM dbo.T);
+            SELECT STR((SELECT AVG(RealCol) FROM dbo.T), 30, 16), STR(@r, 30, 16);
+            """,
+            connection);
+        await using var reader = await selectCommand.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        var doublePrecisionAverage = reader.GetString(0).Trim();
+        var singlePrecisionAssigned = reader.GetString(1).Trim();
+        Assert.NotEqual(doublePrecisionAverage, singlePrecisionAssigned);
     }
 
     [Fact]
