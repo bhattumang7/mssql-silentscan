@@ -466,4 +466,18 @@ public sealed class WriteLossExtractionTests
         Assert.Equal("@v", finding.ColumnName);
         Assert.Equal(SqlTypeCategory.Float, finding.SourceType.Category);
     }
+
+    [Fact]
+    public void Extract_SetVariableFromCaseMergingCrossCategoryStringBranches_FlagsLengthTruncation()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (A CHAR(20) NULL, B VARCHAR(3) NULL);",
+            "DECLARE @v VARCHAR(5); SET @v = (SELECT TOP 1 CASE WHEN A IS NULL THEN A ELSE B END FROM dbo.T);");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.LengthTruncation, finding.Kind);
+        Assert.Null(finding.TableQualifiedName);
+        Assert.Equal("@v", finding.ColumnName);
+        Assert.Equal(20, finding.SourceType.Length);
+    }
 }
