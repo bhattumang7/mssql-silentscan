@@ -19,11 +19,13 @@ public static class RuleExampleCorpus
             var exampleIndex = 0;
             foreach (var example in content.AllExamples)
             {
-                cases.Add(BuildNoncompliantCase(ruleId, exampleIndex, example));
+                var noncompliantSql = ModuleBatchNormalizer.Normalize(example.NoncompliantSql);
+                var noncompliantHasObjectDefinition = HasObjectDefinition(noncompliantSql);
+                cases.Add(BuildNoncompliantCase(ruleId, exampleIndex, example, noncompliantSql, noncompliantHasObjectDefinition));
 
                 if (example.CompliantSql is { } compliantSql)
                 {
-                    cases.Add(BuildCompliantCase(ruleId, exampleIndex, example, compliantSql));
+                    cases.Add(BuildCompliantCase(ruleId, exampleIndex, example, compliantSql, noncompliantHasObjectDefinition));
                 }
 
                 exampleIndex++;
@@ -33,26 +35,30 @@ public static class RuleExampleCorpus
         return cases;
     }
 
-    private static RuleExampleCase BuildNoncompliantCase(string ruleId, int exampleIndex, RuleDocExample example)
+    private static RuleExampleCase BuildNoncompliantCase(
+        string ruleId, int exampleIndex, RuleDocExample example, string noncompliantSql, bool noncompliantHasObjectDefinition)
     {
-        var noncompliantSql = ModuleBatchNormalizer.Normalize(example.NoncompliantSql);
         return new RuleExampleCase(
             ruleId,
             exampleIndex,
             example.Title,
             RuleExampleVariant.Noncompliant,
             noncompliantSql,
-            IsSelfContained: HasObjectDefinition(noncompliantSql),
+            IsSelfContained: noncompliantHasObjectDefinition,
             BehaviorProof: example.NoncompliantProof,
             RequiresLatestEngine: example.RequiresLatestEngine);
     }
 
-    private static RuleExampleCase BuildCompliantCase(string ruleId, int exampleIndex, RuleDocExample example, string rawCompliantSql)
+    private static RuleExampleCase BuildCompliantCase(
+        string ruleId, int exampleIndex, RuleDocExample example, string rawCompliantSql, bool noncompliantHasObjectDefinition)
     {
         var compliantSql = ModuleBatchNormalizer.Normalize(rawCompliantSql);
         if (HasObjectDefinition(compliantSql))
         {
-            return new RuleExampleCase(ruleId, exampleIndex, example.Title, RuleExampleVariant.Compliant, compliantSql, IsSelfContained: true, example.CompliantProof, example.RequiresLatestEngine);
+            return new RuleExampleCase(
+                ruleId, exampleIndex, example.Title, RuleExampleVariant.Compliant, compliantSql,
+                IsSelfContained: true, RequiresObjectDefinition: noncompliantHasObjectDefinition,
+                BehaviorProof: example.CompliantProof, RequiresLatestEngine: example.RequiresLatestEngine);
         }
 
         var (prelude, preludeHasObjectDefinition) = ExtractPrelude(
@@ -67,6 +73,7 @@ public static class RuleExampleCorpus
             RuleExampleVariant.Compliant,
             deployable,
             IsSelfContained: preludeHasObjectDefinition,
+            RequiresObjectDefinition: noncompliantHasObjectDefinition,
             BehaviorProof: example.CompliantProof,
             RequiresLatestEngine: example.RequiresLatestEngine);
     }
