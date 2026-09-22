@@ -19,6 +19,25 @@ Competitor tools are referred to generically; real identities are in
 
 ### Detections
 
+- Write-loss: DATETIME/DATETIME2/string-literal assignment into SMALLDATETIME
+  is unhandled — engine rounds to the nearest minute (seconds >= 30 round up),
+  confirmed via CAST probe, but WriteLossClassifier only checks
+  IsFractionalSecondsFamily targets (Time/DateTime2/DateTimeOffset) and
+  target == Date, never SmallDateTime. Needs a new WriteLossKind plus an
+  oracle test before shipping.
+- Write-loss: DECIMAL-to-DECIMAL narrowing only compares scale
+  (NumericFamilyNarrowing ranks Decimal by Scale alone), so a target with
+  fewer integer digits than the source at equal scale — e.g. DECIMAL(4,2)
+  vs. DECIMAL(5,2) — isn't flagged even though it risks an overflow on
+  assignment. Two now-orphaned helpers for this comparison
+  (IsDecimalPrecisionNarrowed, IsDecimalIntegerDigitCapacityNarrowed) were
+  removed from NumericFamilyNarrowing.cs as dead code; the underlying gap
+  is real and needs a proper Classify() rank that accounts for integer
+  digit capacity, plus an oracle test, before shipping.
+- CASE/COALESCE/IIF type-merge: nullability isn't modeled on SqlType at all
+  (the real engine merges a not-nullable flag across CASE branches into the
+  result type), but no current rule consumes SqlType nullability — revisit
+  only if a rule needs it, don't add speculatively.
 
 ---
 

@@ -151,8 +151,22 @@ public static class WriteLossClassifier
         return fractional.Length <= targetScale || fractional[targetScale..].All(c => c == '0');
     }
 
-    private static bool IsDateOnlyLiteral(Literal? literal) =>
-        literal is StringLiteral stringLiteral
-        && !stringLiteral.Value.Contains(':', StringComparison.Ordinal)
-        && !stringLiteral.Value.Contains('T', StringComparison.OrdinalIgnoreCase);
+    private static readonly System.Text.RegularExpressions.Regex MidnightTimeOfDay =
+        new(@"[T ]00:00(:00)?(\.0+)?$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static bool IsDateOnlyLiteral(Literal? literal)
+    {
+        if (literal is not StringLiteral stringLiteral)
+        {
+            return false;
+        }
+
+        var value = stringLiteral.Value;
+        if (!value.Contains(':', StringComparison.Ordinal) && !value.Contains('T', StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return MidnightTimeOfDay.IsMatch(value);
+    }
 }
