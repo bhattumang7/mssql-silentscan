@@ -173,6 +173,19 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void WhileLoopUpdateWithParenthesizedKeyEquality_Fires()
+    {
+        var findings = Scan(
+            "DECLARE @i INT = 0; "
+            + "WHILE @i < 100 BEGIN "
+            + "UPDATE dbo.Big SET Col = 'x' WHERE (Id = @i); "
+            + "SET @i = @i + 1; END;");
+
+        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.RbarSingleRowLoopDml);
+        Assert.Contains("Id", finding.DetailText);
+    }
+
+    [Fact]
     public void WhileLoopUpdateWithCompositePredicate_NeverFires()
     {
         var findings = Scan(
