@@ -102,7 +102,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<IndexCoverageFinding>("IndexCoverageScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerCorrectnessFinding>("TriggerCorrectnessScanner").Select(ToResult));
         results.AddRange(report.Find<CrossModuleLockOrderFinding>("CrossModuleLockOrderScanner").Select(ToResult));
-        results.AddRange(report.Find<TriggerRecursionCycleFinding>("TriggerRecursionCycleScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintFinding>("CheckConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Select(ToResult));
         results.AddRange(report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Select(ToResult));
@@ -1341,18 +1340,6 @@ public static class SarifReportWriter
             $"'{second.ProcedureQualifiedName}' ({second.SourcePath}:{second.SecondWriteLine}) writes them in the opposite order ('{finding.SecondTableQualifiedName}' at line {second.SecondWriteLine} then '{finding.FirstTableQualifiedName}' at line {second.FirstWriteLine}) - the textbook cross-session deadlock shape.";
 
         return BuildResult(ruleId, level, message, first.SourcePath, first.ProcedureLine, startColumn: null);
-    }
-
-    private static SarifResult ToResult(TriggerRecursionCycleFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TriggerRecursionCycleRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var firstHop = finding.Hops[0];
-        var cycle = string.Join(" -> ", finding.CycleTableQualifiedNames) + " -> " + finding.CycleTableQualifiedNames[0];
-        var message = $"Trigger recursion cycle across tables: {cycle} - '{firstHop.TriggerQualifiedName}' ({firstHop.SourcePath}:{firstHop.WriteLine}) writes '{firstHop.ToTableQualifiedName}', and the cycle closes back to '{firstHop.FromTableQualifiedName}' through {finding.Hops.Count} trigger hop(s), live-confirmed reachable while the server's own 'nested triggers' option is on.";
-
-        return BuildResult(ruleId, level, message, firstHop.SourcePath, firstHop.TriggerLine, startColumn: null);
     }
 
     private static SarifResult ToResult(TempTableExecShapeFinding finding)

@@ -77,7 +77,6 @@ public static class TestScanReports
         IReadOnlyList<IndexCoverageFinding>? IndexCoverageFindings = null,
         IReadOnlyList<TriggerCorrectnessFinding>? TriggerCorrectnessFindings = null,
         IReadOnlyList<CrossModuleLockOrderFinding>? CrossModuleLockOrderFindings = null,
-        IReadOnlyList<TriggerRecursionCycleFinding>? TriggerRecursionCycleFindings = null,
         IReadOnlyList<CheckConstraintFinding>? CheckConstraintFindings = null,
         IReadOnlyList<CheckConstraintPredicateContradictionFinding>? CheckConstraintPredicateContradictionFindings = null,
         IReadOnlyList<DefaultNullableConstraintFinding>? DefaultNullableConstraintFindings = null,
@@ -183,7 +182,6 @@ public static class TestScanReports
         Set("IndexCoverageScanner", IndexCoverageFindings);
         Set("TriggerCorrectnessScanner", TriggerCorrectnessFindings);
         Set("CrossModuleLockOrderScanner", CrossModuleLockOrderFindings);
-        Set("TriggerRecursionCycleScanner", TriggerRecursionCycleFindings);
         Set("CheckConstraintScanner", CheckConstraintFindings);
         Set(nameof(CheckConstraintPredicateContradictionScanner), CheckConstraintPredicateContradictionFindings);
         Set("DefaultNullableConstraintScanner", DefaultNullableConstraintFindings);

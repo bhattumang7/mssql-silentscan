@@ -80,7 +80,6 @@ public static class RuleRegistry
         new NestedViewDepthRule(),
 
         new CrossModuleLockOrderRule(),
-        new TriggerRecursionCycleRule(),
 
         new TvfFenceRule(),
         new ScalarUdfRule(),
