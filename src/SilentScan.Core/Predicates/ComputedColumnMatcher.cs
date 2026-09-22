@@ -85,6 +85,9 @@ internal static class ComputedColumnMatcher
             (ConvertCall converta, ConvertCall convertb) => TypeEqual(converta.DataType, convertb.DataType)
                 && StructurallyEqual(converta.Parameter, convertb.Parameter, identifierComparer)
                 && StructurallyEqual(converta.Style, convertb.Style, identifierComparer),
+            (BinaryExpression ba, BinaryExpression bb) => ba.BinaryExpressionType == bb.BinaryExpressionType
+                && StructurallyEqual(ba.FirstExpression, bb.FirstExpression, identifierComparer)
+                && StructurallyEqual(ba.SecondExpression, bb.SecondExpression, identifierComparer),
             (StringLiteral sa, StringLiteral sb) => string.Equals(sa.Value, sb.Value, StringComparison.Ordinal),
             (IntegerLiteral ia, IntegerLiteral ib) => string.Equals(ia.Value, ib.Value, StringComparison.Ordinal),
             (IdentifierLiteral da, IdentifierLiteral db) => string.Equals(NormalizeDatePartUnit(da.Value), NormalizeDatePartUnit(db.Value), StringComparison.OrdinalIgnoreCase),
