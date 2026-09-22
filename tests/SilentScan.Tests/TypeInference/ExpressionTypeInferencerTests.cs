@@ -379,7 +379,7 @@ public sealed class ExpressionTypeInferencerTests
     }
 
     [Fact]
-    public void Resolve_CrossCategoryStringMerge_LengthUnknownRatherThanImplicitlyNulled()
+    public void Resolve_SearchedCase_OracleVerified_CrossCategoryStringMerge_LengthIsMaxOfBranchLengths()
     {
 
         var typesByName = new Dictionary<string, SqlType?>
@@ -391,8 +391,25 @@ public sealed class ExpressionTypeInferencerTests
         var result = Resolve("CASE WHEN 1 = 1 THEN NvarcharCol ELSE CharCol END", typesByName);
 
         Assert.Equal(SqlTypeCategory.NVarChar, result!.Category);
-        Assert.Null(result.Length);
-        Assert.False(result.LengthKnown);
+        Assert.Equal(20, result.Length);
+        Assert.True(result.LengthKnown);
+    }
+
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_CrossCategoryStringMerge_LengthIsMaxEvenWhenFixedLengthBranchIsLonger()
+    {
+
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["CharCol"] = new SqlType(SqlTypeCategory.Char, Length: 20),
+            ["VarcharCol"] = new SqlType(SqlTypeCategory.VarChar, Length: 5),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN CharCol ELSE VarcharCol END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.VarChar, result!.Category);
+        Assert.Equal(20, result.Length);
+        Assert.True(result.LengthKnown);
     }
 
     [Fact]

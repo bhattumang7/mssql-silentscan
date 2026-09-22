@@ -267,13 +267,24 @@ public static class ExpressionTypeInferencer
             return MergeExactNumericPrecisionScale(winnerCategory, left, right) ?? new SqlType(winnerCategory);
         }
 
-        if (loser.IsStringFamily && IsAmbiguousCollationConflict(left.Collation, right.Collation))
+        if (!loser.IsStringFamily)
+        {
+            return new SqlType(winnerCategory, Collation: winner.Collation, LengthKnown: false);
+        }
+
+        if (IsAmbiguousCollationConflict(left.Collation, right.Collation))
         {
             return null;
         }
 
-        var collation = loser.IsStringFamily ? DominantCollation(left.Collation, right.Collation) : winner.Collation;
-        return new SqlType(winnerCategory, Collation: collation, LengthKnown: false);
+        var collation = DominantCollation(left.Collation, right.Collation);
+        if (left.IsMax || right.IsMax)
+        {
+            return new SqlType(winnerCategory, Collation: collation, IsMax: true);
+        }
+
+        var length = left.Length is { } l && right.Length is { } r ? Math.Max(l, r) : left.Length ?? right.Length;
+        return new SqlType(winnerCategory, Length: length, Collation: collation);
     }
 
     private static bool IsFixedLengthStringOrBinary(SqlTypeCategory category) =>

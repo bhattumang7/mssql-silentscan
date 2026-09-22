@@ -120,6 +120,22 @@ public sealed class WriteLossOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task Assign_CaseExpressionMergingCrossCategoryStringBranches_SilentlyTruncatesToMergedLength_NoError()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using var selectCommand = new SqlCommand(
+            """
+            DECLARE @v VARCHAR(5) = (SELECT CASE WHEN 1 = 0 THEN CAST('short' AS VARCHAR(3)) ELSE CAST('AAAAAAAAAAAAAAAAAAAA' AS CHAR(20)) END);
+            SELECT @v;
+            """,
+            connection);
+        var result = await selectCommand.ExecuteScalarAsync();
+        Assert.Equal("AAAAA", result?.ToString());
+    }
+
+    [Fact]
     public async Task Insert_TooLongString_RaisesHardError_NotSilent()
     {
 
