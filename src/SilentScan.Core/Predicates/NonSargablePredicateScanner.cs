@@ -213,7 +213,8 @@ public static class NonSargablePredicateScanner
         private static bool IsSeekableThroughConvert(SqlType targetType, SqlType sourceType) =>
             (targetType.IsNumericFamily && sourceType.IsNumericFamily)
             || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
-                && sourceType.Category != SqlTypeCategory.DateTimeOffset);
+                && sourceType.Category != SqlTypeCategory.DateTimeOffset
+                && targetType.Category is not (SqlTypeCategory.Date or SqlTypeCategory.Time));
 
         private void InspectSide(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
         {
