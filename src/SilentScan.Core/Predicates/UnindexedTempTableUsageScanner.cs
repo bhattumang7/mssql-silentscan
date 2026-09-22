@@ -175,12 +175,7 @@ public static class UnindexedTempTableUsageScanner
                 return;
             }
 
-            if (node.WhereClause is { } where
-                && tableReferences is [NamedTableReference { SchemaObject.BaseIdentifier.Value: var soloName }]
-                && soloName.StartsWith('#'))
-            {
-                Usages.Add(new Usage(soloName, walker.CurrentProcScope, UnindexedTempTableUsageKind.FilteredInWhere, where.StartLine, where.StartColumn));
-            }
+            RecordSoloFilteredTable(node.WhereClause, tableReferences, walker);
 
             if (tableReferences.Count >= 2)
             {
@@ -192,23 +187,38 @@ public static class UnindexedTempTableUsageScanner
 
             foreach (var reference in tableReferences)
             {
-                foreach (var unqualified in PredicateTreeWalker.FlattenUnqualifiedJoins(reference))
-                {
-                    if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin)
-                    {
-                        continue;
-                    }
+                RecordUnqualifiedCrossJoins(reference, node.WhereClause, walker);
+            }
+        }
 
-                    if (HasCorrelatingWherePredicate(node.WhereClause, unqualified.FirstTableReference, unqualified.SecondTableReference))
-                    {
-                        TryRecordJoinOperand(unqualified.FirstTableReference, unqualified, walker);
-                        TryRecordJoinOperand(unqualified.SecondTableReference, unqualified, walker);
-                    }
-                    else
-                    {
-                        TryRecordFilteredInWhere(unqualified.FirstTableReference, node.WhereClause, walker);
-                        TryRecordFilteredInWhere(unqualified.SecondTableReference, node.WhereClause, walker);
-                    }
+        private void RecordSoloFilteredTable(WhereClause? whereClause, IList<TableReference> tableReferences, ModuleWalker walker)
+        {
+            if (whereClause is { } where
+                && tableReferences is [NamedTableReference { SchemaObject.BaseIdentifier.Value: var soloName }]
+                && soloName.StartsWith('#'))
+            {
+                Usages.Add(new Usage(soloName, walker.CurrentProcScope, UnindexedTempTableUsageKind.FilteredInWhere, where.StartLine, where.StartColumn));
+            }
+        }
+
+        private void RecordUnqualifiedCrossJoins(TableReference reference, WhereClause? whereClause, ModuleWalker walker)
+        {
+            foreach (var unqualified in PredicateTreeWalker.FlattenUnqualifiedJoins(reference))
+            {
+                if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin)
+                {
+                    continue;
+                }
+
+                if (HasCorrelatingWherePredicate(whereClause, unqualified.FirstTableReference, unqualified.SecondTableReference))
+                {
+                    TryRecordJoinOperand(unqualified.FirstTableReference, unqualified, walker);
+                    TryRecordJoinOperand(unqualified.SecondTableReference, unqualified, walker);
+                }
+                else
+                {
+                    TryRecordFilteredInWhere(unqualified.FirstTableReference, whereClause, walker);
+                    TryRecordFilteredInWhere(unqualified.SecondTableReference, whereClause, walker);
                 }
             }
         }

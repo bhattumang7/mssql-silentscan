@@ -159,7 +159,8 @@ public static class ScanReportBuilder
             ? UnindexedTempTableUsageScanner.CollectDeclarationsByScope(usableParseResults, catalog)
             : null;
         var dynamicSqlResult = DynamicSqlPipeline.Analyze(
-            dynamicSqlScripts, catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope, ruleContext, outerTempTableDeclarationsByScope);
+            dynamicSqlScripts, catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope,
+            new DynamicSqlPipeline.DynamicSqlHarnessOptions(ruleContext, outerTempTableDeclarationsByScope));
         dynamicSqlFindings = [.. dynamicSqlFindings, .. dynamicSqlResult.Findings];
         tier1Findings = [.. tier1Findings, .. dynamicSqlResult.Tier1Findings];
         typedFindings = [.. typedFindings, .. dynamicSqlResult.TypedFindings];

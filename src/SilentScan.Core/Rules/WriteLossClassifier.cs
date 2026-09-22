@@ -4,7 +4,7 @@ using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Rules;
 
-public static class WriteLossClassifier
+public static partial class WriteLossClassifier
 {
     static WriteLossClassifier()
     {
@@ -151,8 +151,9 @@ public static class WriteLossClassifier
         return fractional.Length <= targetScale || fractional[targetScale..].All(c => c == '0');
     }
 
-    private static readonly System.Text.RegularExpressions.Regex MidnightTimeOfDay =
-        new(@"[T ]00:00(:00)?(\.0+)?$", System.Text.RegularExpressions.RegexOptions.Compiled);
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"[T ]00:00(:00)?(\.0+)?$", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]
+    private static partial System.Text.RegularExpressions.Regex MidnightTimeOfDayRegex();
 
     private static bool IsDateOnlyLiteral(Literal? literal)
     {
@@ -167,6 +168,6 @@ public static class WriteLossClassifier
             return true;
         }
 
-        return MidnightTimeOfDay.IsMatch(value);
+        return MidnightTimeOfDayRegex().IsMatch(value);
     }
 }

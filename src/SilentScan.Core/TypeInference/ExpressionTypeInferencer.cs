@@ -272,13 +272,18 @@ public static class ExpressionTypeInferencer
             return null;
         }
 
-        if (left.Category == right.Category)
-        {
-            return left.IsStringFamily || left.IsBinaryFamily
-                ? CombineSameCategoryStrings(left, right)
-                : MergeExactNumericPrecisionScale(left.Category, left, right) ?? MergeTemporalScale(left.Category, left, right) ?? left;
-        }
+        return left.Category == right.Category
+            ? CombineSameCategory(left, right)
+            : CombineDifferentCategory(left, right);
+    }
 
+    private static SqlType? CombineSameCategory(SqlType left, SqlType right) =>
+        left.IsStringFamily || left.IsBinaryFamily
+            ? CombineSameCategoryStrings(left, right)
+            : MergeExactNumericPrecisionScale(left.Category, left, right) ?? MergeTemporalScale(left.Category, left, right) ?? left;
+
+    private static SqlType? CombineDifferentCategory(SqlType left, SqlType right)
+    {
         var winner = left.Category > right.Category ? left : right;
         var loser = ReferenceEquals(winner, left) ? right : left;
         var winnerCategory = IsFixedLengthStringOrBinary(winner.Category) && IsVariableLengthStringOrBinary(loser.Category)

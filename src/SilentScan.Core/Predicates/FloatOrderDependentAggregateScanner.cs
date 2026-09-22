@@ -11,11 +11,6 @@ public static class FloatOrderDependentAggregateScanner
 {
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    private static readonly HashSet<string> FloatGatedAggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "SUM", "AVG",
-    };
-
     private static readonly HashSet<string> AlwaysFloatAggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "VAR", "VARP", "STDEV", "STDEVP",
@@ -79,39 +74,48 @@ public static class FloatOrderDependentAggregateScanner
             {
                 if (parameter is ColumnReferenceExpression)
                 {
-                    if (BaseColumnResolver.ResolveBaseColumn(parameter, sourcePath, scopeChain, catalog) is { } directColumn
-                        && directColumn.Type is { } directColumnType
-                        && (alwaysFloat || directColumnType.Category is SqlTypeCategory.Real or SqlTypeCategory.Float))
-                    {
-                        AddFinding(directColumn.TableQualifiedName, directColumn.ColumnName, directColumnType, call);
-                    }
-
+                    InspectDirectColumnParameter(parameter, alwaysFloat, call, scopeChain);
                     continue;
                 }
 
-                if (!AllReferencedColumnsResolveDirectly(parameter, scopeChain))
-                {
-                    continue;
-                }
-
-                var expressionType = ScalarExpressionResolver.ResolveScalarType(
-                    parameter, scopeChain, sourcePath,
-                    new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog));
-
-                if (expressionType is null || (!alwaysFloat && expressionType.Category is not (SqlTypeCategory.Real or SqlTypeCategory.Float)))
-                {
-                    continue;
-                }
-
-                var referencedColumns = new HashSet<(string Table, string Column)>();
-                parameter.Accept(new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, referencedColumns, catalog));
-
-                var (tableQualifiedName, columnName) = referencedColumns.Count == 1
-                    ? referencedColumns.Single()
-                    : ("?", FragmentTextRenderer.Render(parameter));
-
-                AddFinding(tableQualifiedName, columnName, expressionType, call);
+                InspectExpressionParameter(parameter, alwaysFloat, call, scopeChain);
             }
+        }
+
+        private void InspectDirectColumnParameter(ScalarExpression parameter, bool alwaysFloat, FunctionCall call, ScopeChain scopeChain)
+        {
+            if (BaseColumnResolver.ResolveBaseColumn(parameter, sourcePath, scopeChain, catalog) is { } directColumn
+                && directColumn.Type is { } directColumnType
+                && (alwaysFloat || directColumnType.Category is SqlTypeCategory.Real or SqlTypeCategory.Float))
+            {
+                AddFinding(directColumn.TableQualifiedName, directColumn.ColumnName, directColumnType, call);
+            }
+        }
+
+        private void InspectExpressionParameter(ScalarExpression parameter, bool alwaysFloat, FunctionCall call, ScopeChain scopeChain)
+        {
+            if (!AllReferencedColumnsResolveDirectly(parameter, scopeChain))
+            {
+                return;
+            }
+
+            var expressionType = ScalarExpressionResolver.ResolveScalarType(
+                parameter, scopeChain, sourcePath,
+                new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog));
+
+            if (expressionType is null || (!alwaysFloat && expressionType.Category is not (SqlTypeCategory.Real or SqlTypeCategory.Float)))
+            {
+                return;
+            }
+
+            var referencedColumns = new HashSet<(string Table, string Column)>();
+            parameter.Accept(new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, referencedColumns, catalog));
+
+            var (tableQualifiedName, columnName) = referencedColumns.Count == 1
+                ? referencedColumns.Single()
+                : ("?", FragmentTextRenderer.Render(parameter));
+
+            AddFinding(tableQualifiedName, columnName, expressionType, call);
         }
 
         private bool AllReferencedColumnsResolveDirectly(ScalarExpression parameter, ScopeChain scopeChain)

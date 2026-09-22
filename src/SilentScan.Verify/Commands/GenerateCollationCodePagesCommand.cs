@@ -47,7 +47,7 @@ public static class GenerateCollationCodePagesCommand
             while (await reader.ReadAsync(cancellationToken))
             {
                 var name = reader.GetString(0);
-                if (reader.IsDBNull(1))
+                if (await reader.IsDBNullAsync(1, cancellationToken))
                 {
                     continue;
                 }
