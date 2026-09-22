@@ -2,6 +2,7 @@ using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Tests.Predicates;
 
@@ -436,5 +437,33 @@ public sealed class WriteLossExtractionTests
             "UPDATE dbo.T SET DecCol += 1 WHERE DecCol IS NOT NULL;");
 
         Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extract_SetVariableFromCaseMergingDecimalBranchesOfDifferingScale_FlagsNumericScaleNarrowing()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (A DECIMAL(9,2) NULL, B DECIMAL(9,4) NULL);",
+            "DECLARE @v DECIMAL(9,2); SET @v = (SELECT TOP 1 CASE WHEN A IS NULL THEN A ELSE B END FROM dbo.T);");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.Null(finding.TableQualifiedName);
+        Assert.Equal("@v", finding.ColumnName);
+        Assert.Equal(4, finding.SourceType.Scale);
+    }
+
+    [Fact]
+    public void Extract_SetVariableFromAvgOverRealColumn_FlagsNumericScaleNarrowing()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (R REAL NULL);",
+            "DECLARE @v REAL; SET @v = (SELECT AVG(R) FROM dbo.T);");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.Null(finding.TableQualifiedName);
+        Assert.Equal("@v", finding.ColumnName);
+        Assert.Equal(SqlTypeCategory.Float, finding.SourceType.Category);
     }
 }
