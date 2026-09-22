@@ -12,6 +12,7 @@
     <EmbeddedResource Include="Rules/TypePairMatrix.json" />
     <!-- Checked-in top-down construct coverage matrix (Phase 0.1 of docs/coverage-remediation-plan.md). -->
     <EmbeddedResource Include="Diagnostics/ConstructCoverage.json" />
+    <EmbeddedResource Include="TypeInference/CollationCodePages.json" />
   </ItemGroup>
 
 </Project>
