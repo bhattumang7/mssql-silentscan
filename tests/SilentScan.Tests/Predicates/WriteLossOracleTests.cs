@@ -16,7 +16,8 @@ public sealed class WriteLossOracleTests : OracleTestFixture
             DecCol DECIMAL(10,2) NULL,
             IntCol INT NULL,
             DateCol DATE NULL,
-            VarCol VARCHAR(20) NULL
+            VarCol VARCHAR(20) NULL,
+            VarColLatin1 VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL
         );
         """;
 
@@ -55,6 +56,24 @@ public sealed class WriteLossOracleTests : OracleTestFixture
         Assert.True(await reader.ReadAsync());
         Assert.Equal("???", reader.GetString(0));
         Assert.Equal(3, reader.GetInt32(1));
+    }
+
+    [Fact]
+    public async Task Insert_UnicodeCharacterWithinTargetCodepage_RoundTripsExactly_NoReplacement()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var insertCommand = new SqlCommand("INSERT INTO dbo.T (VarColLatin1) VALUES (N'café')", connection))
+        {
+            await insertCommand.ExecuteNonQueryAsync();
+        }
+
+        await using var selectCommand = new SqlCommand("SELECT VarColLatin1, DATALENGTH(VarColLatin1) FROM dbo.T", connection);
+        await using var reader = await selectCommand.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal("café", reader.GetString(0));
+        Assert.Equal(4, reader.GetInt32(1));
     }
 
     [Fact]

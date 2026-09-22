@@ -92,10 +92,10 @@ internal static class UnicodeReplacement
                     );
 
                     UPDATE dbo.Products
-                    SET DisplayName = N'Café Noir — Deluxe'
+                    SET DisplayName = N'Café Noir 特製'
                     WHERE ProductId = 42;
                     """,
-                NoncompliantExplanation: "The N'...' literal is Unicode text containing an em dash and an accented character; writing it into the VARCHAR DisplayName column replaces whichever characters the default code page can't represent with '?'.",
+                NoncompliantExplanation: "The N'...' literal is Unicode text containing CJK characters outside the default code page; writing it into the VARCHAR DisplayName column replaces those characters with '?' (the accented 'é' alone would be fine - it's inside the default code page - but 特製 isn't).",
                 CompliantSql: """
                     CREATE TABLE dbo.Products
                     (
@@ -104,9 +104,9 @@ internal static class UnicodeReplacement
                     );
 
                     UPDATE dbo.Products
-                    SET DisplayName = N'Café Noir — Deluxe'
+                    SET DisplayName = N'Café Noir 特製'
                     WHERE ProductId = 42;
                     """,
-                CompliantExplanation: "DisplayName is Unicode, so the literal's full character set - accents, em dashes, anything else - is stored exactly as written."),
+                CompliantExplanation: "DisplayName is Unicode, so the literal's full character set - accents, CJK characters, anything else - is stored exactly as written."),
         ]);
 }

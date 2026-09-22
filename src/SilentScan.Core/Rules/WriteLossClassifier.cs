@@ -1,11 +1,16 @@
+using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using SilentScan.Core.Catalog;
 using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Rules;
 
 public static class WriteLossClassifier
 {
+    static WriteLossClassifier()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     public static Predicates.WriteLossKind? Classify(SqlType? target, SqlType? source, ScalarExpression? sourceExpression, bool isVariableTarget)
     {
         if (target is null || source is null)
@@ -49,7 +54,7 @@ public static class WriteLossClassifier
     }
 
     private static bool IsUnicodeReplacementRisk(SqlType target, SqlType source, Literal? literal) =>
-        source.IsUnicodeString && target.IsNonUnicodeString && target.Collation is not { IsUtf8: true } && !IsAsciiOnlyLiteral(literal);
+        source.IsUnicodeString && target.IsNonUnicodeString && target.Collation is not { IsUtf8: true } && !IsRepresentableInTargetCodePage(target, literal);
 
     private static Predicates.WriteLossKind? NumericNarrowingKind(SqlType target, SqlType source, Literal? literal)
     {
@@ -95,8 +100,27 @@ public static class WriteLossClassifier
     private static bool IsWiderTemporal(SqlTypeCategory category) =>
         category is SqlTypeCategory.DateTime or SqlTypeCategory.DateTime2 or SqlTypeCategory.SmallDateTime or SqlTypeCategory.DateTimeOffset;
 
-    private static bool IsAsciiOnlyLiteral(Literal? literal) =>
-        literal is StringLiteral stringLiteral && stringLiteral.Value.All(c => c <= 127);
+    private static bool IsRepresentableInTargetCodePage(SqlType target, Literal? literal)
+    {
+        if (literal is not StringLiteral stringLiteral)
+        {
+            return false;
+        }
+
+        if (stringLiteral.Value.All(c => c <= 127))
+        {
+            return true;
+        }
+
+        if (CollationCodePageCatalog.TryGetCodePage(target.Collation?.Name) is not { } codePage)
+        {
+            return false;
+        }
+
+        var encoding = Encoding.GetEncoding(codePage);
+        var value = stringLiteral.Value;
+        return encoding.GetString(encoding.GetBytes(value)) == value;
+    }
 
     private static bool IsWithinScaleLiteral(Literal? literal, int targetScale)
     {

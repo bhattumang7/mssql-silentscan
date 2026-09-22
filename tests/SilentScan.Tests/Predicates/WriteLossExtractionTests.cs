@@ -45,6 +45,17 @@ public sealed class WriteLossExtractionTests
     }
 
     [Fact]
+    public void Extract_InsertValuesWithNonAsciiLiteralWithinTargetCodePage_ProvablySafe_NoFinding()
+    {
+
+        var findings = Extract(
+            "CREATE TABLE dbo.T (VarCol VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL);",
+            "INSERT INTO dbo.T (VarCol) VALUES (N'café');");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
     public void Extract_InsertValuesWithUnicodeColumnIntoVarchar_NonLiteral_AlwaysFlagged()
     {
 
