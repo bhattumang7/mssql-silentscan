@@ -35,7 +35,7 @@ public sealed class DynamicSqlRuleParityTests
         return DynamicSqlPipeline.Analyze(
             extraction.AnalyzableScripts, catalog, lineage,
             new Dictionary<string, TvfFenceOrigin>(), new Dictionary<string, ScalarUdfOrigin>(),
-            null, ruleContext, outerTempTableDeclarationsByScope);
+            null, new DynamicSqlPipeline.DynamicSqlHarnessOptions(ruleContext, outerTempTableDeclarationsByScope));
     }
 
     [Fact]

@@ -228,38 +228,12 @@ public static class NonSargablePredicateScanner
                     break;
 
                 case CastCall castCall when FindAnyColumn(castCall.Parameter) is { } found:
-                {
-                    var (castTableQualifiedName, _, castSourceType) = ResolveIndexInfo(found.Ref, scopeChain, walker);
-                    if (castTableQualifiedName is { } castTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, castTable, castCall))
-                    {
-                        break;
-                    }
-
-                    if (AsDirectColumn(castCall.Parameter) is not null && PreservesSeekability(castCall.DataType, castSourceType))
-                    {
-                        break;
-                    }
-
-                    Add(SargabilityFindingKind.CastOrConvertOnColumn, found.Name, "CAST", castCall, found.Ref, scopeChain, walker);
+                    InspectCastOrConvert(castCall, castCall.Parameter, castCall.DataType, "CAST", found, scopeChain, walker);
                     break;
-                }
 
                 case ConvertCall convertCall when FindAnyColumn(convertCall.Parameter) is { } found:
-                {
-                    var (convertTableQualifiedName, _, convertSourceType) = ResolveIndexInfo(found.Ref, scopeChain, walker);
-                    if (convertTableQualifiedName is { } convertTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, convertTable, convertCall))
-                    {
-                        break;
-                    }
-
-                    if (AsDirectColumn(convertCall.Parameter) is not null && PreservesSeekability(convertCall.DataType, convertSourceType))
-                    {
-                        break;
-                    }
-
-                    Add(SargabilityFindingKind.CastOrConvertOnColumn, found.Name, "CONVERT", convertCall, found.Ref, scopeChain, walker);
+                    InspectCastOrConvert(convertCall, convertCall.Parameter, convertCall.DataType, "CONVERT", found, scopeChain, walker);
                     break;
-                }
 
                 case BinaryExpression binary:
                     InspectArithmetic(binary, scopeChain, walker);
@@ -267,17 +241,36 @@ public static class NonSargablePredicateScanner
 
                 case CoalesceExpression or NullIfExpression or IIfCall or SearchedCaseExpression or SimpleCaseExpression
                     when FindAnyColumn(expression) is { } wrapped:
-                {
-                    var (wrappedTableQualifiedName, _, _) = ResolveIndexInfo(wrapped.Ref, scopeChain, walker);
-                    if (wrappedTableQualifiedName is { } wrappedTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, wrappedTable, expression))
-                    {
-                        break;
-                    }
-
-                    Add(SargabilityFindingKind.FunctionWrappedColumn, wrapped.Name, WrapConstructName(expression), expression, wrapped.Ref, scopeChain, walker);
+                    InspectWrappedColumn(expression, wrapped, scopeChain, walker);
                     break;
-                }
             }
+        }
+
+        private void InspectCastOrConvert(ScalarExpression castOrConvert, ScalarExpression parameter, DataTypeReference dataType, string constructName, (ColumnReferenceExpression Ref, string Name) found, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            var (tableQualifiedName, _, sourceType) = ResolveIndexInfo(found.Ref, scopeChain, walker);
+            if (tableQualifiedName is { } table && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, table, castOrConvert))
+            {
+                return;
+            }
+
+            if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType))
+            {
+                return;
+            }
+
+            Add(SargabilityFindingKind.CastOrConvertOnColumn, found.Name, constructName, castOrConvert, found.Ref, scopeChain, walker);
+        }
+
+        private void InspectWrappedColumn(ScalarExpression expression, (ColumnReferenceExpression Ref, string Name) wrapped, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            var (wrappedTableQualifiedName, _, _) = ResolveIndexInfo(wrapped.Ref, scopeChain, walker);
+            if (wrappedTableQualifiedName is { } wrappedTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, wrappedTable, expression))
+            {
+                return;
+            }
+
+            Add(SargabilityFindingKind.FunctionWrappedColumn, wrapped.Name, WrapConstructName(expression), expression, wrapped.Ref, scopeChain, walker);
         }
 
         private void InspectFunctionCall(FunctionCall functionCall, (ColumnReferenceExpression Ref, string Name) named, ScopeChain scopeChain, ModuleWalker walker)

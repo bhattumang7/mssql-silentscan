@@ -105,15 +105,13 @@ public static class MetamorphicMutator
         var visitor = new WhereClauseVisitor();
         fragment.Accept(visitor);
 
-        var edits = new List<Edit>();
-        foreach (var clause in visitor.Clauses)
-        {
-            var condition = clause.SearchCondition;
-            edits.Add(new Edit(condition.StartOffset, 0, "("));
-            edits.Add(new Edit(condition.StartOffset + condition.FragmentLength, 0, ")"));
-        }
-
-        return edits;
+        return [.. visitor.Clauses
+            .Select(c => c.SearchCondition)
+            .SelectMany(condition => new[]
+            {
+                new Edit(condition.StartOffset, 0, "("),
+                new Edit(condition.StartOffset + condition.FragmentLength, 0, ")"),
+            })];
     }
 
     private static readonly HashSet<BooleanComparisonType> SymmetricComparisonTypes =
@@ -249,12 +247,9 @@ public static class MetamorphicMutator
                 }
             }
 
-            foreach (var target in dmlTargetVisitor.BareAliasTargets)
+            foreach (var target in dmlTargetVisitor.BareAliasTargets.Where(t => string.Equals(t.Value, alias.Value, StringComparison.OrdinalIgnoreCase)))
             {
-                if (string.Equals(target.Value, alias.Value, StringComparison.OrdinalIgnoreCase))
-                {
-                    edits.Add(new Edit(target.StartOffset, target.FragmentLength, newName));
-                }
+                edits.Add(new Edit(target.StartOffset, target.FragmentLength, newName));
             }
         }
 
@@ -391,14 +386,17 @@ public static class MetamorphicMutator
 
         public override void ExplicitVisit(SqlDataTypeReference node)
         {
+            _ = node;
         }
 
         public override void ExplicitVisit(UserDataTypeReference node)
         {
+            _ = node;
         }
 
         public override void ExplicitVisit(XmlDataTypeReference node)
         {
+            _ = node;
         }
     }
 

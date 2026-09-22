@@ -29,6 +29,10 @@ public static partial class DynamicSqlPipeline
 
     private static readonly HashSet<string> HandWiredHarnessRuleIds = new(StringComparer.Ordinal) { "TvfFenceScanner", "ScalarUdfScanner", "UnindexedTempTableUsageScanner" };
 
+    public readonly record struct DynamicSqlHarnessOptions(
+        RuleContext? RuleContext = null,
+        IReadOnlyDictionary<string, List<UnindexedTempTableUsageScanner.Declaration>>? OuterTempTableDeclarationsByScope = null);
+
     private readonly record struct PipelineContext(
         DatabaseCatalog Catalog,
         LineageCatalog Lineage,
@@ -47,9 +51,13 @@ public static partial class DynamicSqlPipeline
         Analyze(scripts, catalog, lineage, tvfFenceMap, NoScalarUdfMap, callerScopeByCalleeScope);
 
     public static DynamicSqlPipelineResult Analyze(
-        IReadOnlyList<DynamicSqlScript> scripts, DatabaseCatalog catalog, LineageCatalog lineage, IReadOnlyDictionary<string, TvfFenceOrigin> tvfFenceMap, IReadOnlyDictionary<string, ScalarUdfOrigin> scalarUdfMap, IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null, RuleContext? ruleContext = null,
-        IReadOnlyDictionary<string, List<UnindexedTempTableUsageScanner.Declaration>>? outerTempTableDeclarationsByScope = null) =>
-        Analyze(scripts, new PipelineContext(catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope, ruleContext, outerTempTableDeclarationsByScope), depth: 1, seeds: null);
+        IReadOnlyList<DynamicSqlScript> scripts, DatabaseCatalog catalog, LineageCatalog lineage, IReadOnlyDictionary<string, TvfFenceOrigin> tvfFenceMap, IReadOnlyDictionary<string, ScalarUdfOrigin> scalarUdfMap,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null, DynamicSqlHarnessOptions harnessOptions = default) =>
+        Analyze(
+            scripts,
+            new PipelineContext(catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope, harnessOptions.RuleContext, harnessOptions.OuterTempTableDeclarationsByScope),
+            depth: 1,
+            seeds: null);
 
     private static DynamicSqlPipelineResult Analyze(
         IReadOnlyList<DynamicSqlScript> scripts,
@@ -98,6 +106,30 @@ public static partial class DynamicSqlPipeline
             }
 
             existing.AddRange(findings.Distinct());
+        }
+    }
+
+    private static void MergeHarness(Dictionary<string, List<IFinding>> target, IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? source)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        foreach (var (ruleId, findings) in source)
+        {
+            if (findings.Count == 0)
+            {
+                continue;
+            }
+
+            if (!target.TryGetValue(ruleId, out var existing))
+            {
+                existing = [];
+                target[ruleId] = existing;
+            }
+
+            existing.AddRange(findings);
         }
     }
 
@@ -516,30 +548,6 @@ public static partial class DynamicSqlPipeline
         accumulator.Unparameterized.AddRange(nested.UnparameterizedFindings);
         accumulator.Skipped.AddRange(nested.SkippedConstructs);
         MergeHarness(accumulator.Harness, nested.HarnessFindings);
-    }
-
-    private static void MergeHarness(Dictionary<string, List<IFinding>> target, IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? source)
-    {
-        if (source is null)
-        {
-            return;
-        }
-
-        foreach (var (ruleId, findings) in source)
-        {
-            if (findings.Count == 0)
-            {
-                continue;
-            }
-
-            if (!target.TryGetValue(ruleId, out var existing))
-            {
-                existing = [];
-                target[ruleId] = existing;
-            }
-
-            existing.AddRange(findings);
-        }
     }
 
     private static void RunHarnessRules(

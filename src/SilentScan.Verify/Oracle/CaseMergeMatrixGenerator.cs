@@ -182,23 +182,23 @@ public sealed class CaseMergeMatrixGenerator
         command.Parameters.AddWithValue("@probeText", probeText);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        if (!await reader.ReadAsync(cancellationToken))
         {
-            if (!await reader.IsDBNullAsync(0, cancellationToken))
-            {
-                return (CompileFailed: true, Type: null);
-            }
-
-            var type = LiveTypeMapper.BuildType(
-                reader.GetString(1),
-                reader.GetInt16(2),
-                reader.GetByte(3),
-                reader.GetByte(4),
-                await reader.IsDBNullAsync(5, cancellationToken) ? null : reader.GetString(5));
-            return (CompileFailed: false, Type: type);
+            return (CompileFailed: false, Type: null);
         }
 
-        return (CompileFailed: false, Type: null);
+        if (!await reader.IsDBNullAsync(0, cancellationToken))
+        {
+            return (CompileFailed: true, Type: null);
+        }
+
+        var type = LiveTypeMapper.BuildType(
+            reader.GetString(1),
+            reader.GetInt16(2),
+            reader.GetByte(3),
+            reader.GetByte(4),
+            await reader.IsDBNullAsync(5, cancellationToken) ? null : reader.GetString(5));
+        return (CompileFailed: false, Type: type);
     }
 
     private static SqlType? PredictMerge(SqlType left, SqlType right)

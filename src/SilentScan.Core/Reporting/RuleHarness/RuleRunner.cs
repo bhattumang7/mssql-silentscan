@@ -97,6 +97,11 @@ public static class RuleRunner
         return [.. filtered.OrderBy(f => f, comparer)];
     }
 
+    private sealed record BatchState(
+        Dictionary<IPerFileRule, object?> StateByRule,
+        Dictionary<string, List<IFinding>> Results,
+        List<SkippedConstruct> Crashes);
+
     public static Dictionary<string, List<IFinding>> RunOnBatch(
         IReadOnlyList<IPerFileRule> rules,
         SqlParseResult innerParseResult,
@@ -110,8 +115,31 @@ public static class RuleRunner
             results[rule.Id] = [];
         }
 
+        var stateByRule = PrepareRules(rules, context, innerParseResult.SourcePath, crashes, out var preparedRules);
+        var state = new BatchState(stateByRule, results, crashes);
+
+        var moduleRuleOwner = new Dictionary<IModuleRule, IPerFileRule>();
+        var moduleRules = ResolveModuleRules(preparedRules, innerParseResult, context, state, moduleRuleOwner);
+
+        if (moduleRules.Count > 0)
+        {
+            RunModuleRules(moduleRules, moduleRuleOwner, innerParseResult, context, state, callerContext);
+        }
+
+        ScanCatalogOnceForAll(preparedRules, context, state, innerParseResult.SourcePath);
+
+        return results;
+    }
+
+    private static Dictionary<IPerFileRule, object?> PrepareRules(
+        IReadOnlyList<IPerFileRule> rules,
+        RuleContext context,
+        string sourcePath,
+        List<SkippedConstruct> crashes,
+        out List<IPerFileRule> preparedRules)
+    {
         var stateByRule = new Dictionary<IPerFileRule, object?>();
-        var preparedRules = new List<IPerFileRule>();
+        preparedRules = [];
         foreach (var rule in rules)
         {
             try
@@ -121,40 +149,37 @@ public static class RuleRunner
             }
             catch (Exception ex)
             {
-                RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
+                RecordCrash(crashes, rule.Id, sourcePath, ex);
             }
         }
 
-        var moduleRules = new List<IModuleRule>();
-        var moduleRuleOwner = new Dictionary<IModuleRule, IPerFileRule>();
+        return stateByRule;
+    }
 
+    private static List<IModuleRule> ResolveModuleRules(
+        List<IPerFileRule> preparedRules,
+        SqlParseResult innerParseResult,
+        RuleContext context,
+        BatchState state,
+        Dictionary<IModuleRule, IPerFileRule> moduleRuleOwner)
+    {
+        var moduleRules = new List<IModuleRule>();
         foreach (var rule in preparedRules)
         {
             IModuleRule? moduleRule;
             try
             {
-                moduleRule = rule.CreateModuleRule(innerParseResult, context, stateByRule[rule]);
+                moduleRule = rule.CreateModuleRule(innerParseResult, context, state.StateByRule[rule]);
             }
             catch (Exception ex)
             {
-                RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
+                RecordCrash(state.Crashes, rule.Id, innerParseResult.SourcePath, ex);
                 continue;
             }
 
             if (moduleRule is null)
             {
-                IReadOnlyList<IFinding> legacyFindings;
-                try
-                {
-                    legacyFindings = rule.Scan(innerParseResult, context, stateByRule[rule]);
-                }
-                catch (Exception ex)
-                {
-                    RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
-                    legacyFindings = [];
-                }
-
-                results[rule.Id].AddRange(legacyFindings);
+                state.Results[rule.Id].AddRange(ScanLegacy(rule, innerParseResult, context, state.StateByRule[rule], state.Crashes));
                 continue;
             }
 
@@ -162,49 +187,76 @@ public static class RuleRunner
             moduleRuleOwner[moduleRule] = rule;
         }
 
-        if (moduleRules.Count > 0)
+        return moduleRules;
+    }
+
+    private static IReadOnlyList<IFinding> ScanLegacy(
+        IPerFileRule rule, SqlParseResult innerParseResult, RuleContext context, object? state, List<SkippedConstruct> crashes)
+    {
+        try
         {
-            var walker = new ModuleWalker(
-                innerParseResult.SourcePath, context.Catalog, EmptyResolvedViews, rules: moduleRules, callerContext: callerContext);
-            innerParseResult.Fragment.Accept(walker);
-
-            foreach (var moduleRule in moduleRules)
-            {
-                var rule = moduleRuleOwner[moduleRule];
-                if (walker.CrashedRules.TryGetValue(moduleRule, out var crashException))
-                {
-                    RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, crashException);
-                    continue;
-                }
-
-                IReadOnlyList<IFinding> harvested;
-                try
-                {
-                    harvested = rule.HarvestFindings(innerParseResult, context, stateByRule[rule], moduleRule);
-                }
-                catch (Exception ex)
-                {
-                    RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
-                    harvested = [];
-                }
-
-                results[rule.Id].AddRange(harvested);
-            }
+            return rule.Scan(innerParseResult, context, state);
         }
+        catch (Exception ex)
+        {
+            RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
+            return [];
+        }
+    }
 
+    private static void RunModuleRules(
+        List<IModuleRule> moduleRules,
+        Dictionary<IModuleRule, IPerFileRule> moduleRuleOwner,
+        SqlParseResult innerParseResult,
+        RuleContext context,
+        BatchState state,
+        ModuleWalkerCallerContext callerContext)
+    {
+        var walker = new ModuleWalker(
+            innerParseResult.SourcePath, context.Catalog, EmptyResolvedViews, rules: moduleRules, callerContext: callerContext);
+        innerParseResult.Fragment.Accept(walker);
+
+        foreach (var moduleRule in moduleRules)
+        {
+            var rule = moduleRuleOwner[moduleRule];
+            if (walker.CrashedRules.TryGetValue(moduleRule, out var crashException))
+            {
+                RecordCrash(state.Crashes, rule.Id, innerParseResult.SourcePath, crashException);
+                continue;
+            }
+
+            IReadOnlyList<IFinding> harvested;
+            try
+            {
+                harvested = rule.HarvestFindings(innerParseResult, context, state.StateByRule[rule], moduleRule);
+            }
+            catch (Exception ex)
+            {
+                RecordCrash(state.Crashes, rule.Id, innerParseResult.SourcePath, ex);
+                harvested = [];
+            }
+
+            state.Results[rule.Id].AddRange(harvested);
+        }
+    }
+
+    private static void ScanCatalogOnceForAll(
+        List<IPerFileRule> preparedRules,
+        RuleContext context,
+        BatchState state,
+        string sourcePath)
+    {
         foreach (var rule in preparedRules)
         {
             try
             {
-                results[rule.Id].AddRange(rule.ScanCatalogOnce(context));
+                state.Results[rule.Id].AddRange(rule.ScanCatalogOnce(context));
             }
             catch (Exception ex)
             {
-                RecordCrash(crashes, rule.Id, innerParseResult.SourcePath, ex);
+                RecordCrash(state.Crashes, rule.Id, sourcePath, ex);
             }
         }
-
-        return results;
     }
 
     private static Dictionary<string, List<IFinding>> RunPerFileRules(
