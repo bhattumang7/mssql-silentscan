@@ -48,6 +48,7 @@ internal static class UnqualifiedTableReference
                 Title: "An unqualified table reference at a query site",
                 NoncompliantSql: """
                     CREATE SCHEMA sales;
+                    GO
                     CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
                     CREATE TABLE sales.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
 

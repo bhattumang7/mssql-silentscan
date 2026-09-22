@@ -34,12 +34,16 @@ internal static class RowOrPageLockingDisabled
             new RuleDocExample(
                 Title: "An index built with row-level locking disabled",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
                     CREATE INDEX IX_Orders_CustomerId
                         ON dbo.Orders (CustomerId)
                         WITH (ALLOW_ROW_LOCKS = OFF);
                     """,
                 NoncompliantExplanation: "Every UPDATE/DELETE that touches this index is forced onto a coarser locking granularity than row-level - invisible from the DML statement itself, which never mentions this index's own locking configuration.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
                     CREATE INDEX IX_Orders_CustomerId
                         ON dbo.Orders (CustomerId);
                     """,

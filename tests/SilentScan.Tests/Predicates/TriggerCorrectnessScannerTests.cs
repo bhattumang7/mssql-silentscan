@@ -187,6 +187,28 @@ public sealed class TriggerCorrectnessScannerTests
     }
 
     [Fact]
+    public void SelfUpdatingTriggerThroughAnAlias_RecursiveTriggersOn_Fires()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
+            + "BEGIN UPDATE t2 SET Val = t2.Val + 1 FROM dbo.T AS t2 JOIN inserted AS i ON i.Id = t2.Id; END;",
+            recursiveTriggersEnabled: true);
+
+        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
+    }
+
+    [Fact]
+    public void OtherTableUpdatedThroughAnAlias_RecursiveTriggersOn_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
+            + "BEGIN UPDATE o SET Val = i.Val FROM dbo.Other AS o JOIN inserted AS i ON i.Id = o.Id; END;",
+            recursiveTriggersEnabled: true);
+
+        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
+    }
+
+    [Fact]
     public void SelfDeletingTrigger_RecursiveTriggersOn_Fires()
     {
         var findings = Scan(
@@ -384,6 +406,19 @@ public sealed class TriggerCorrectnessScannerTests
             + "BEGIN "
             + "IF UPDATE(Val) AND EXISTS (SELECT 1 FROM inserted i INNER JOIN deleted d ON i.Id = d.Id WHERE i.Val <> d.Val) "
             + "UPDATE dbo.Other SET Val = 1 WHERE Id = 1; "
+            + "END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison);
+    }
+
+    [Fact]
+    public void UpdateFunctionGate_WithSameColumnComparisonFilteringTheGatedBranch_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
+            + "BEGIN "
+            + "IF UPDATE(Val) "
+            + "BEGIN INSERT INTO dbo.Other (Id, Val) SELECT i.Id, i.Val FROM inserted i INNER JOIN deleted d ON i.Id = d.Id WHERE i.Val <> d.Val; END; "
             + "END;");
 
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison);

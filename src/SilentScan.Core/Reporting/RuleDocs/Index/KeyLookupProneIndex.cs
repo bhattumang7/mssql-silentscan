@@ -53,7 +53,18 @@ internal static class KeyLookupProneIndex
                     """,
                 NoncompliantExplanation: "IX_Orders_Status only carries Status - Total and Notes aren't in the index at all, so every row the seek matches triggers a separate Key Lookup against the clustered index to fetch them.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders
+                    (
+                        Id     INT NOT NULL PRIMARY KEY,
+                        Status INT NOT NULL,
+                        Total  DECIMAL(10,2) NOT NULL,
+                        Notes  VARCHAR(200) NOT NULL
+                    );
                     CREATE NONCLUSTERED INDEX IX_Orders_Status ON dbo.Orders(Status) INCLUDE (Total, Notes);
+
+                    SELECT Id, Status, Total, Notes
+                    FROM dbo.Orders
+                    WHERE Status = 2;
                     """,
                 CompliantExplanation: "Total and Notes are now carried directly in the index as INCLUDE columns, so the seek alone satisfies the query - no Key Lookup remains in the plan."),
         ]);

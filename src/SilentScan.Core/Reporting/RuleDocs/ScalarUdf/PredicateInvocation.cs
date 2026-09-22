@@ -52,7 +52,7 @@ internal static class PredicateInvocation
                     BEGIN
                         RETURN @price * (1 - @discount);
                     END;
-
+                    GO
                     CREATE TABLE dbo.LineItem
                     (
                         LineItemId    INT           NOT NULL PRIMARY KEY,

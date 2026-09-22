@@ -43,16 +43,22 @@ internal static class SelectStarView
             new RuleDocExample(
                 Title: "A nested view's SELECT * forces a narrowing consumer to carry the full width",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.T (A INT NOT NULL, B INT NOT NULL, C INT NOT NULL);
+                    GO
                     CREATE VIEW dbo.vInner AS SELECT A, B, C FROM dbo.T;
+                    GO
                     CREATE VIEW dbo.vOuter AS SELECT * FROM dbo.vInner;
-
+                    GO
                     SELECT v.A FROM dbo.vOuter v;
                     """,
                 NoncompliantExplanation: "dbo.vOuter's SELECT * is nested one view layer deep over dbo.vInner, and its column list is frozen at CREATE time; the consumer only needs column A, but is forced to read through vOuter's own full, potentially stale width - a later ALTER TABLE on dbo.T adding or dropping columns leaves vOuter silently disagreeing with dbo.T until sp_refreshview runs.",
                 CompliantSql: """
+                    CREATE TABLE dbo.T (A INT NOT NULL, B INT NOT NULL, C INT NOT NULL);
+                    GO
                     CREATE VIEW dbo.vInner AS SELECT A, B, C FROM dbo.T;
+                    GO
                     CREATE VIEW dbo.vOuter AS SELECT A, B, C FROM dbo.vInner;
-
+                    GO
                     SELECT v.A FROM dbo.vOuter v;
                     """,
                 CompliantExplanation: "dbo.vOuter names its columns explicitly instead of using SELECT * - its column list can no longer silently drift out of sync with dbo.T's real current shape, and a covering index built for the consumer's own narrower needs stays effective."),

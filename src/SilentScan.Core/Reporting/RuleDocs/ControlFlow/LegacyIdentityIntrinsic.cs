@@ -33,11 +33,13 @@ internal static class LegacyIdentityIntrinsic
             new RuleDocExample(
                 Title: "@@IDENTITY after an INSERT into a table with an identity-inserting trigger",
                 NoncompliantSql: """
+                    DECLARE @CustomerId INT = 1;
                     INSERT INTO dbo.Orders (CustomerId) VALUES (@CustomerId);
                     SELECT @@IDENTITY;
                     """,
                 NoncompliantExplanation: "If dbo.Orders has an AFTER INSERT trigger that itself inserts into a different identity-bearing table (e.g. an audit log), @@IDENTITY silently returns that trigger's own inserted identity instead of the Orders row's Id - no error, just the wrong value.",
                 CompliantSql: """
+                    DECLARE @CustomerId INT = 1;
                     INSERT INTO dbo.Orders (CustomerId) VALUES (@CustomerId);
                     SELECT SCOPE_IDENTITY();
                     """,

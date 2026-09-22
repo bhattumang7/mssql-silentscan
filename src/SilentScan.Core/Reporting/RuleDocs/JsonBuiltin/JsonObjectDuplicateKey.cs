@@ -37,10 +37,12 @@ internal static class JsonObjectDuplicateKey
             new RuleDocExample(
                 Title: "JSON_OBJECT with a repeated literal key",
                 NoncompliantSql: """
+                    DECLARE @newStatus NVARCHAR(20) = N'shipped';
                     SELECT JSON_OBJECT('status': 'pending', 'status': @newStatus) AS Doc;
                     """,
                 NoncompliantExplanation: "Both 'status' pairs are accepted with no error and both appear in the JSON text, but JSON_VALUE(Doc, '$.status') always returns 'pending' - the value of @newStatus is silently discarded.",
                 CompliantSql: """
+                    DECLARE @newStatus NVARCHAR(20) = N'shipped';
                     SELECT JSON_OBJECT('status': @newStatus) AS Doc;
                     """,
                 CompliantExplanation: "A single 'status' key means there is nothing for a JSON reader to silently choose between."),

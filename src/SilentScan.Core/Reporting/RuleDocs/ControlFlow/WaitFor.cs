@@ -31,6 +31,7 @@ internal static class WaitFor
             new RuleDocExample(
                 Title: "WAITFOR DELAY inside an open transaction",
                 NoncompliantSql: """
+                    DECLARE @OrderId INT = 1;
                     BEGIN TRANSACTION;
                     UPDATE dbo.Orders SET Status = 'Processing' WHERE Id = @OrderId;
                     WAITFOR DELAY '00:00:05';

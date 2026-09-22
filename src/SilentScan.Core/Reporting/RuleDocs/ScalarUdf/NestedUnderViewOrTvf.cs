@@ -44,24 +44,31 @@ internal static class NestedUnderViewOrTvf
                     BEGIN
                         RETURN @price * (1 - @discount);
                     END;
-
+                    GO
                     CREATE TABLE dbo.LineItem
                     (
                         LineItemId    INT           NOT NULL PRIMARY KEY,
                         ExtendedPrice DECIMAL(12,2) NOT NULL,
                         Discount      DECIMAL(12,2) NOT NULL
                     );
-
+                    GO
                     CREATE VIEW dbo.vw_LineItemPricing AS
                     SELECT LineItemId, dbo.discount_price(ExtendedPrice, Discount) AS DiscountedPrice
                     FROM dbo.LineItem;
-
+                    GO
                     SELECT LineItemId
                     FROM dbo.vw_LineItemPricing
                     WHERE DiscountedPrice > 100.00;
                     """,
                 NoncompliantExplanation: "Nothing in the final query names discount_price, but vw_LineItemPricing's SELECT list does - the view's expansion carries the same per-row invocation cost (and, if not inlined, forced-serial plan) as calling the function directly in the WHERE clause.",
                 CompliantSql: """
+                    CREATE TABLE dbo.LineItem
+                    (
+                        LineItemId    INT           NOT NULL PRIMARY KEY,
+                        ExtendedPrice DECIMAL(12,2) NOT NULL,
+                        Discount      DECIMAL(12,2) NOT NULL
+                    );
+                    GO
                     CREATE VIEW dbo.vw_LineItemPricing AS
                     SELECT LineItemId, ExtendedPrice * (1 - Discount) AS DiscountedPrice
                     FROM dbo.LineItem;

@@ -37,6 +37,8 @@ internal static class JsonArrayAggMissingOrder
             new RuleDocExample(
                 Title: "JSON_ARRAYAGG with no ORDER BY",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Member (GroupId INT NOT NULL, Name NVARCHAR(100) NOT NULL);
+                    GO
                     SELECT GroupId, JSON_ARRAYAGG(Name) AS Names
                     FROM dbo.Member
                     GROUP BY GroupId;
@@ -47,6 +49,7 @@ internal static class JsonArrayAggMissingOrder
                     FROM dbo.Member
                     GROUP BY GroupId;
                     """,
-                CompliantExplanation: "The ORDER BY inside the call makes the array's element order an explicit, guaranteed contract of the query instead of an accident of plan choice."),
+                CompliantExplanation: "The ORDER BY inside the call makes the array's element order an explicit, guaranteed contract of the query instead of an accident of plan choice.",
+                RequiresLatestEngine: true),
         ]);
 }

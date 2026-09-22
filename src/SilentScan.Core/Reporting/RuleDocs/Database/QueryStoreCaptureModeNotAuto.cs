@@ -33,7 +33,7 @@ internal static class QueryStoreCaptureModeNotAuto
             new RuleDocExample(
                 Title: "Query Store running with capture mode set to ALL",
                 NoncompliantSql: """
-                    ALTER DATABASE CURRENT SET QUERY_STORE (QUERY_CAPTURE_MODE = ALL);
+                    ALTER DATABASE CURRENT SET QUERY_STORE = ON (OPERATION_MODE = READ_WRITE, QUERY_CAPTURE_MODE = ALL);
                     """,
                 NoncompliantExplanation: "ALL captures every query regardless of cost or frequency - a real, deliberate choice for active troubleshooting, but worth confirming it wasn't left on by accident once the troubleshooting is done, since it carries more storage and overhead than AUTO."),
         ]);

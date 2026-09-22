@@ -29,14 +29,17 @@ internal static class NestedViewDepth
             new RuleDocExample(
                 Title: "A view nested two layers deep before reaching a base table",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.OrdersRaw (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL, Amount DECIMAL(10,2) NOT NULL);
+                    CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, CustomerName VARCHAR(100) NOT NULL);
+                    GO
                     CREATE VIEW dbo.vw_Orders AS
                         SELECT OrderId, CustomerId, Amount FROM dbo.OrdersRaw;
-
+                    GO
                     CREATE VIEW dbo.vw_OrdersWithCustomer AS
                         SELECT o.OrderId, o.Amount, c.CustomerName
                         FROM dbo.vw_Orders o
                         JOIN dbo.Customers c ON c.CustomerId = o.CustomerId;
-
+                    GO
                     CREATE VIEW dbo.vw_RecentOrdersSummary AS
                         SELECT CustomerName, SUM(Amount) AS TotalAmount
                         FROM dbo.vw_OrdersWithCustomer

@@ -52,15 +52,37 @@ internal static class SecurityPredicateIndex
             new RuleDocExample(
                 Title: "An RLS filter predicate bound to a column with no supporting index",
                 NoncompliantSql: """
+                    CREATE SCHEMA Security;
+                    GO
                     CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, TenantId INT NOT NULL);
-
+                    GO
+                    CREATE FUNCTION Security.fn_TenantPredicate(@TenantId INT)
+                    RETURNS TABLE
+                    WITH SCHEMABINDING
+                    AS
+                    RETURN SELECT 1 AS Allowed WHERE @TenantId = CAST(SESSION_CONTEXT(N'TenantId') AS INT);
+                    GO
                     CREATE SECURITY POLICY Security.TenantFilter
                         ADD FILTER PREDICATE Security.fn_TenantPredicate(TenantId) ON dbo.T
                         WITH (STATE = ON);
                     """,
                 NoncompliantExplanation: "TenantId carries no index - the RLS predicate is silently applied to every access to dbo.T, and with no index to seek through, the engine evaluates it as a residual filter over a full table scan every time.",
                 CompliantSql: """
+                    CREATE SCHEMA Security;
+                    GO
+                    CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, TenantId INT NOT NULL);
+                    GO
                     CREATE INDEX IX_T_TenantId ON dbo.T (TenantId);
+                    GO
+                    CREATE FUNCTION Security.fn_TenantPredicate(@TenantId INT)
+                    RETURNS TABLE
+                    WITH SCHEMABINDING
+                    AS
+                    RETURN SELECT 1 AS Allowed WHERE @TenantId = CAST(SESSION_CONTEXT(N'TenantId') AS INT);
+                    GO
+                    CREATE SECURITY POLICY Security.TenantFilter
+                        ADD FILTER PREDICATE Security.fn_TenantPredicate(TenantId) ON dbo.T
+                        WITH (STATE = ON);
                     """,
                 CompliantExplanation: "With an index on TenantId, the same RLS-secured query plan switches from a Clustered Index Scan with a residual filter to a genuine Index Seek."),
         ]);

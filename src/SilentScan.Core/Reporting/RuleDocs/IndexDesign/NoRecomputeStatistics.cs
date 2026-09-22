@@ -31,6 +31,8 @@ internal static class NoRecomputeStatistics
             new RuleDocExample(
                 Title: "Statistics explicitly marked to never auto-recompute",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status INT NOT NULL);
+                    GO
                     CREATE STATISTICS Stats_Orders_Status
                         ON dbo.Orders (Status)
                         WITH NORECOMPUTE;

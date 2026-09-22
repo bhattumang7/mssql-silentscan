@@ -61,7 +61,7 @@ public static class SweepCommand
                 return;
             }
 
-            var results = await SweepRunner.RunAsync(cases, SqlServerOptions.LocalDocker);
+            var results = await SweepRunner.RunAsync(cases, SqlServerOptions.LocalDocker, latestEngineOptions: SqlServerOptions.LocalDockerLatest);
 
             var jsonPath = Path.Combine(outDirectory, "sweep-results.json");
             var textPath = Path.Combine(outDirectory, "sweep-results.txt");

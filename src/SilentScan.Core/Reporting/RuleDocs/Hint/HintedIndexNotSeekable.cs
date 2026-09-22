@@ -38,6 +38,9 @@ internal static class HintedIndexNotSeekable
             new RuleDocExample(
                 Title: "A hint forcing an index whose leading column is never bound",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status INT NOT NULL);
+                    CREATE INDEX IX_Orders_Status ON dbo.Orders (Status);
+                    GO
                     -- IX_Orders_Status's leading key column is Status
                     SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE OrderId = 1;
                     """,

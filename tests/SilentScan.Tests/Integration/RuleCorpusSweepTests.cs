@@ -21,7 +21,7 @@ public sealed class RuleCorpusSweepTests
         var baselineByKey = baseline.ToDictionary(e => (e.RuleId, e.Variant, e.ExampleIndex));
 
         var cases = RuleExampleCorpus.Build();
-        var results = await SweepRunner.RunAsync(cases, SqlServerOptions.LocalDocker);
+        var results = await SweepRunner.RunAsync(cases, SqlServerOptions.LocalDocker, latestEngineOptions: SqlServerOptions.LocalDockerLatest);
 
         var newFailures = new List<string>();
         var staleEntries = new List<string>();

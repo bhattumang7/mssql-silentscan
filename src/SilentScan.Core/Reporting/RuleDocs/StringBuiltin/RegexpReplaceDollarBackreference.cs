@@ -42,6 +42,7 @@ internal static class RegexpReplaceDollarBackreference
                 CompliantSql: """
                     SELECT REGEXP_REPLACE('abc123def', '([a-z]+)([0-9]+)', '\2-\1') AS Swapped;
                     """,
-                CompliantExplanation: "\\2 and \\1 are the engine's real backreference syntax, correctly producing '123-abcdef'."),
+                CompliantExplanation: "\\2 and \\1 are the engine's real backreference syntax, correctly producing '123-abcdef'.",
+                RequiresLatestEngine: true),
         ]);
 }

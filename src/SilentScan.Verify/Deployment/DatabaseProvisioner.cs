@@ -37,6 +37,33 @@ public sealed partial class DatabaseProvisioner
         await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
     }
 
+    public async Task SetCompatibilityLevelAsync(string databaseName, int compatibilityLevel, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenMasterConnectionAsync(databaseName, cancellationToken);
+        await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {compatibilityLevel};", cancellationToken);
+    }
+
+    public async Task SetParameterizationForcedAsync(string databaseName, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenMasterConnectionAsync(databaseName, cancellationToken);
+        await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET PARAMETERIZATION FORCED;", cancellationToken);
+    }
+
+    public async Task AddMemoryOptimizedFilegroupAsync(string databaseName, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenMasterConnectionAsync(databaseName, cancellationToken);
+
+        await ExecuteAsync(connection, $"""
+            DECLARE @dataDir NVARCHAR(260) = (
+                SELECT LEFT(physical_name, LEN(physical_name) - CHARINDEX('/', REVERSE(physical_name)) + 1)
+                FROM sys.master_files WHERE database_id = DB_ID(N'{databaseName}') AND file_id = 1);
+            DECLARE @sql NVARCHAR(MAX) = N'
+                ALTER DATABASE [{databaseName}] ADD FILEGROUP MemoryOptimizedFg CONTAINS MEMORY_OPTIMIZED_DATA;
+                ALTER DATABASE [{databaseName}] ADD FILE (name=''MemoryOptimizedFile'', filename=''' + @dataDir + N'{databaseName}_mo'') TO FILEGROUP MemoryOptimizedFg;';
+            EXEC sp_executesql @sql;
+            """, cancellationToken);
+    }
+
     public async Task DropIfExistsAsync(string databaseName, CancellationToken cancellationToken = default)
     {
 

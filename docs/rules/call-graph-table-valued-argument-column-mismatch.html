@@ -96,7 +96,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <h2>How can I fix it?</h2>
   <h3>A table variable&#x27;s row silently rounds a column&#x27;s declared scale before the call</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>CREATE TYPE dbo.AmountList AS TABLE (Amount DECIMAL(10,2) NOT NULL);&#xA;GO&#xA;CREATE PROCEDURE dbo.usp_ApplyAmounts @Amounts dbo.AmountList READONLY&#xA;AS&#xA;BEGIN&#xA;    SELECT Amount FROM @Amounts;&#xA;END;&#xA;GO&#xA;CREATE PROCEDURE dbo.usp_Caller&#xA;AS&#xA;BEGIN&#xA;    DECLARE @rows dbo.AmountList;&#xA;    INSERT INTO @rows VALUES (75.5678);&#xA;    EXEC dbo.usp_ApplyAmounts @Amounts = @rows;&#xA;END;</code></pre></div>
+  <div class="fires-block"><pre><code>CREATE TYPE dbo.AmountList AS TABLE (Amount DECIMAL(10,2) NOT NULL);&#xA;GO&#xA;CREATE PROCEDURE dbo.usp_ApplyAmounts @Amounts dbo.AmountList READONLY&#xA;AS&#xA;BEGIN&#xA;    SELECT Amount FROM @Amounts;&#xA;END;&#xA;GO&#xA;&#xA;DECLARE @rows dbo.AmountList;&#xA;INSERT INTO @rows VALUES (75.5678);&#xA;EXEC dbo.usp_ApplyAmounts @Amounts = @rows;</code></pre></div>
   <p class="example-explanation">75.5678 is silently rounded to 75.57 the moment it&#x27;s written into @rows&#x27;s DECIMAL(10,2) column - dbo.usp_ApplyAmounts never sees the original value, and no error is raised anywhere in the batch.</p>
   <p class="example-label clean-label">Compliant solution</p>
   <div class="clean-block"><pre><code>DECLARE @rows dbo.AmountList;&#xA;INSERT INTO @rows VALUES (CAST(75.5678 AS DECIMAL(10,2)));&#xA;EXEC dbo.usp_ApplyAmounts @Amounts = @rows;</code></pre></div>

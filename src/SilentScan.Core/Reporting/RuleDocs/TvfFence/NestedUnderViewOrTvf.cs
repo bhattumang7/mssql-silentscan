@@ -49,22 +49,24 @@ internal static class NestedUnderViewOrTvf
                         INSERT INTO @Tier (TierName) SELECT 'Gold';
                         RETURN;
                     END;
-
+                    GO
                     CREATE VIEW dbo.vw_CustomerTier AS
                     SELECT c.CustomerId, t.TierName
                     FROM dbo.Customers c
                     CROSS APPLY dbo.fn_CustomerTier(c.CustomerId) t;
-
+                    GO
                     SELECT CustomerId, TierName
                     FROM dbo.vw_CustomerTier;
                     """,
                 NoncompliantExplanation: "Nothing in the final query names fn_CustomerTier, but vw_CustomerTier's own definition does - the view's expansion carries the same fixed cardinality estimate and per-row re-execution as calling the function directly.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, Name VARCHAR(100) NOT NULL);
+                    GO
                     CREATE FUNCTION dbo.fn_CustomerTier(@CustomerId INT)
                     RETURNS TABLE
                     AS
                     RETURN (SELECT 'Gold' AS TierName);
-
+                    GO
                     CREATE VIEW dbo.vw_CustomerTier AS
                     SELECT c.CustomerId, t.TierName
                     FROM dbo.Customers c

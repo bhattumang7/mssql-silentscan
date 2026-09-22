@@ -38,6 +38,8 @@ internal static class NonDeterministicCaseInput
             new RuleDocExample(
                 Title: "NEWID() as a simple CASE expression's input",
                 NoncompliantSql: """
+                    DECLARE @KnownGuid1 UNIQUEIDENTIFIER = NEWID();
+                    DECLARE @KnownGuid2 UNIQUEIDENTIFIER = NEWID();
                     SELECT
                         CASE NEWID()
                             WHEN @KnownGuid1 THEN 'MatchedFirst'
@@ -47,6 +49,8 @@ internal static class NonDeterministicCaseInput
                     """,
                 NoncompliantExplanation: "The optimizer evaluates NEWID() separately for each WHEN comparison, not once - so this CASE effectively always falls through to ELSE 'NoMatch', since a freshly-generated GUID matching a fixed literal is astronomically unlikely on any given evaluation.",
                 CompliantSql: """
+                    DECLARE @KnownGuid1 UNIQUEIDENTIFIER = NEWID();
+                    DECLARE @KnownGuid2 UNIQUEIDENTIFIER = NEWID();
                     DECLARE @Id UNIQUEIDENTIFIER = NEWID();
                     SELECT
                         CASE @Id

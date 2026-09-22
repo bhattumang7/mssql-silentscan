@@ -97,7 +97,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">Add an ORDER BY inside the JSON_ARRAYAGG call&#x27;s own argument list, e.g. JSON_ARRAYAGG(col ORDER BY col), to make the array&#x27;s element order an explicit, guaranteed contract of the query instead of an accident of plan choice. Do not use WITHIN GROUP (ORDER BY ...) here - the engine accepts it without error but it has no effect on JSON_ARRAYAGG&#x27;s output order.</p>
   <h3>JSON_ARRAYAGG with no ORDER BY</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>SELECT GroupId, JSON_ARRAYAGG(Name) AS Names&#xA;FROM dbo.Member&#xA;GROUP BY GroupId;</code></pre></div>
+  <div class="fires-block"><pre><code>CREATE TABLE dbo.Member (GroupId INT NOT NULL, Name NVARCHAR(100) NOT NULL);&#xA;GO&#xA;SELECT GroupId, JSON_ARRAYAGG(Name) AS Names&#xA;FROM dbo.Member&#xA;GROUP BY GroupId;</code></pre></div>
   <p class="example-explanation">With no ORDER BY inside the call, the order Name values appear in the array is not guaranteed - it follows whatever order the plan happens to deliver rows in, and can change silently if an index is added, dropped, or the optimizer otherwise picks a different plan.</p>
   <p class="example-label clean-label">Compliant solution</p>
   <div class="clean-block"><pre><code>SELECT GroupId, JSON_ARRAYAGG(Name ORDER BY Name) AS Names&#xA;FROM dbo.Member&#xA;GROUP BY GroupId;</code></pre></div>

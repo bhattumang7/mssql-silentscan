@@ -8,6 +8,12 @@ public sealed record SqlServerOptions(string Host, int Port, string UserId, stri
         UserId: "sa",
         Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
 
+    public static SqlServerOptions LocalDockerLatest { get; } = new(
+        Host: "localhost",
+        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var latestPort) ? latestPort : 14331,
+        UserId: "sa",
+        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+
     public string BuildConnectionString(string? database = null) =>
         $"Server={Host},{Port};User Id={UserId};Password={Password};"
         + $"{(database is null ? string.Empty : $"Database={database};")}"

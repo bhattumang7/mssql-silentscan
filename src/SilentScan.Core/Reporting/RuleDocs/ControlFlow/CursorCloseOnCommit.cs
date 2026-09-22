@@ -30,6 +30,9 @@ internal static class CursorCloseOnCommit
             new RuleDocExample(
                 Title: "FETCH after a mid-flow COMMIT with CURSOR_CLOSE_ON_COMMIT ON",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (Id INT NOT NULL PRIMARY KEY);
+                    GO
+                    DECLARE @id INT;
                     SET CURSOR_CLOSE_ON_COMMIT ON;
                     DECLARE cur CURSOR FOR SELECT Id FROM dbo.Orders;
                     OPEN cur;

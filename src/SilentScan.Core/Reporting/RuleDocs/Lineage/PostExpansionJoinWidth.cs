@@ -36,13 +36,19 @@ internal static class PostExpansionJoinWidth
             new RuleDocExample(
                 Title: "A one-table query expanding to five real base tables through a view",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.T1 (Id INT NOT NULL PRIMARY KEY);
+                    CREATE TABLE dbo.T2 (Id INT NOT NULL PRIMARY KEY);
+                    CREATE TABLE dbo.T3 (Id INT NOT NULL PRIMARY KEY);
+                    CREATE TABLE dbo.T4 (Id INT NOT NULL PRIMARY KEY);
+                    CREATE TABLE dbo.T5 (Id INT NOT NULL PRIMARY KEY);
+                    GO
                     CREATE VIEW dbo.vWide AS
                         SELECT T1.Id FROM dbo.T1
                         JOIN dbo.T2 ON T1.Id = T2.Id
                         JOIN dbo.T3 ON T1.Id = T3.Id
                         JOIN dbo.T4 ON T1.Id = T4.Id
                         JOIN dbo.T5 ON T1.Id = T5.Id;
-
+                    GO
                     SELECT Id FROM dbo.vWide;
                     """,
                 NoncompliantExplanation: "The written FROM clause names exactly one table (dbo.vWide) - but that view's own definition joins five real base tables together, so this query's real expanded width is 5, a gap of 4 from what the written text shows."),

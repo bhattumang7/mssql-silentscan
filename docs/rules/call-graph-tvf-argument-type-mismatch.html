@@ -96,7 +96,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <h2>How can I fix it?</h2>
   <h3>A wider caller-side variable silently truncated at the call site</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>CREATE FUNCTION dbo.fn_OrdersByCode (@Code VARCHAR(3))&#xA;RETURNS TABLE&#xA;AS&#xA;RETURN (SELECT OrderId, Code FROM dbo.Orders WHERE Code = @Code);&#xA;&#xA;-- Caller:&#xA;DECLARE @code VARCHAR(10) = &#x27;ABCDEF&#x27;;&#xA;SELECT * FROM dbo.fn_OrdersByCode(@code);</code></pre></div>
+  <div class="fires-block"><pre><code>CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Code VARCHAR(3) NOT NULL);&#xA;GO&#xA;CREATE FUNCTION dbo.fn_OrdersByCode (@Code VARCHAR(3))&#xA;RETURNS TABLE&#xA;AS&#xA;RETURN (SELECT OrderId, Code FROM dbo.Orders WHERE Code = @Code);&#xA;GO&#xA;-- Caller:&#xA;DECLARE @code VARCHAR(10) = &#x27;ABCDEF&#x27;;&#xA;SELECT * FROM dbo.fn_OrdersByCode(@code);</code></pre></div>
   <p class="example-explanation">@code is VARCHAR(10), but the function&#x27;s own parameter is VARCHAR(3) - the value is silently truncated to &#x27;ABC&#x27; when SQL Server implicitly converts it at parameter marshalling, before the function body&#x27;s own RETURN clause ever runs, and the mismatch is invisible unless the two declarations are compared side by side.</p>
   <p class="example-label clean-label">Compliant solution</p>
   <div class="clean-block"><pre><code>-- Caller:&#xA;DECLARE @code VARCHAR(3) = &#x27;ABC&#x27;;&#xA;SELECT * FROM dbo.fn_OrdersByCode(@code);</code></pre></div>

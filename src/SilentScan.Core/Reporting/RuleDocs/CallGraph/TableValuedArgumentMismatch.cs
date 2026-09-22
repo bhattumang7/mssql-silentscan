@@ -39,13 +39,10 @@ internal static class TableValuedArgumentMismatch
                         SELECT Amount FROM @Amounts;
                     END;
                     GO
-                    CREATE PROCEDURE dbo.usp_Caller
-                    AS
-                    BEGIN
-                        DECLARE @rows dbo.AmountList;
-                        INSERT INTO @rows VALUES (75.5678);
-                        EXEC dbo.usp_ApplyAmounts @Amounts = @rows;
-                    END;
+
+                    DECLARE @rows dbo.AmountList;
+                    INSERT INTO @rows VALUES (75.5678);
+                    EXEC dbo.usp_ApplyAmounts @Amounts = @rows;
                     """,
                 NoncompliantExplanation: "75.5678 is silently rounded to 75.57 the moment it's written into @rows's DECIMAL(10,2) column - dbo.usp_ApplyAmounts never sees the original value, and no error is raised anywhere in the batch.",
                 CompliantSql: """

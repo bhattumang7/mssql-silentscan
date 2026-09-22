@@ -28,6 +28,10 @@ internal static class DisabledIndex
             new RuleDocExample(
                 Title: "An index left disabled",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status INT NOT NULL);
+                    GO
+                    CREATE INDEX IX_Orders_Status ON dbo.Orders (Status);
+                    GO
                     ALTER INDEX IX_Orders_Status ON dbo.Orders DISABLE;
                     """,
                 NoncompliantExplanation: "IX_Orders_Status is now unusable by the engine but still occupies catalog metadata and blocks a same-named CREATE INDEX - a real, if silent, source of confusion for anyone assuming this index provides seek coverage.",

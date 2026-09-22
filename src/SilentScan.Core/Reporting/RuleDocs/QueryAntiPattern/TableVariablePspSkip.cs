@@ -15,6 +15,8 @@ internal static class TableVariablePspSkip
             new RuleDocExample(
                 Title: "Reading a table-valued parameter as a table source loses PSP for that statement",
                 NoncompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;
+                    GO
                     CREATE TYPE dbo.IdList AS TABLE (Id int NOT NULL PRIMARY KEY);
                     GO
                     CREATE PROCEDURE dbo.FindOrders
@@ -25,6 +27,8 @@ internal static class TableVariablePspSkip
                     """,
                 NoncompliantExplanation: "This statement reads @Ids as a join source, so it cannot receive PSP plan variants even though its predicate on CustomerId would otherwise qualify.",
                 CompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;
+                    GO
                     CREATE TYPE dbo.IdList AS TABLE (Id int NOT NULL PRIMARY KEY);
                     GO
                     CREATE PROCEDURE dbo.FindOrders
@@ -33,6 +37,7 @@ internal static class TableVariablePspSkip
                     AS
                     SELECT * FROM dbo.Orders WHERE CustomerId = @CustomerId;
                     """,
-                CompliantExplanation: "This statement never reads @Ids as a table source, so PSP remains available for it even though the procedure still declares the table-valued parameter."),
+                CompliantExplanation: "This statement never reads @Ids as a table source, so PSP remains available for it even though the procedure still declares the table-valued parameter.",
+                RequiresLatestEngine: true),
         ]);
 }

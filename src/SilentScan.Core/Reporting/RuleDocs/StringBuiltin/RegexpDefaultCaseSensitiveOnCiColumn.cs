@@ -42,12 +42,15 @@ internal static class RegexpDefaultCaseSensitiveOnCiColumn
             new RuleDocExample(
                 Title: "REGEXP_LIKE against a case-insensitive column with no match_type",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Customer (Id INT NOT NULL PRIMARY KEY, Name NVARCHAR(100) COLLATE Latin1_General_CI_AS NOT NULL);
+                    GO
                     SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, '[Jj]ohn');
                     """,
                 NoncompliantExplanation: "Name uses the database's default case-insensitive collation, but REGEXP_LIKE still matches case-sensitively with no match_type argument, silently missing rows that = 'John' or LIKE '%John%' would find.",
                 CompliantSql: """
                     SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, '[Jj]ohn', 'i');
                     """,
-                CompliantExplanation: "The explicit 'i' match_type restores case-insensitive matching, consistent with the column's own collation."),
+                CompliantExplanation: "The explicit 'i' match_type restores case-insensitive matching, consistent with the column's own collation.",
+                RequiresLatestEngine: true),
         ]);
 }

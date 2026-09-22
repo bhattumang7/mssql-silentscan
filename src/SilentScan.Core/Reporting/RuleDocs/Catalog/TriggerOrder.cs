@@ -30,9 +30,12 @@ internal static class TriggerOrder
             new RuleDocExample(
                 Title: "Two AFTER INSERT triggers with no order pinned",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status VARCHAR(20) NULL);
+                    CREATE TABLE dbo.OrderAudit (OrderId INT NOT NULL);
+                    GO
                     CREATE TRIGGER dbo.trg_Orders_Audit ON dbo.Orders AFTER INSERT AS
                         INSERT INTO dbo.OrderAudit (OrderId) SELECT OrderId FROM inserted;
-
+                    GO
                     CREATE TRIGGER dbo.trg_Orders_Validate ON dbo.Orders AFTER INSERT AS
                         UPDATE dbo.Orders SET Status = 'Validated' WHERE OrderId IN (SELECT OrderId FROM inserted);
                     """,
