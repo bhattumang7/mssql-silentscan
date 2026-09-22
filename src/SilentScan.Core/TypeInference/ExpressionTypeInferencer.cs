@@ -139,6 +139,35 @@ public static class ExpressionTypeInferencer
         return new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: finalScale);
     }
 
+    private static SqlType? MergeExactNumericPrecisionScale(SqlTypeCategory winnerCategory, SqlType left, SqlType right)
+    {
+        if (winnerCategory != SqlTypeCategory.Decimal)
+        {
+            return null;
+        }
+
+        if (ExactNumericPrecisionScale(left) is not { } l || ExactNumericPrecisionScale(right) is not { } r)
+        {
+            return null;
+        }
+
+        var (p1, s1) = l;
+        var (p2, s2) = r;
+
+        var unboundedScale = Math.Max(s1, s2);
+        var unboundedPrecision = unboundedScale + Math.Max(p1 - s1, p2 - s2);
+
+        if (unboundedPrecision <= 38)
+        {
+            return new SqlType(SqlTypeCategory.Decimal, Precision: unboundedPrecision, Scale: unboundedScale);
+        }
+
+        var integralDigits = unboundedPrecision - unboundedScale;
+        var finalScale = Math.Min(unboundedScale, Math.Max(0, 38 - integralDigits));
+
+        return new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: finalScale);
+    }
+
     private static (int Precision, int Scale)? ExactNumericPrecisionScale(SqlType? type) => type?.Category switch
     {
         SqlTypeCategory.TinyInt => (3, 0),
@@ -222,7 +251,9 @@ public static class ExpressionTypeInferencer
 
         if (left.Category == right.Category)
         {
-            return left.IsStringFamily ? CombineSameCategoryStrings(left, right) : left;
+            return left.IsStringFamily
+                ? CombineSameCategoryStrings(left, right)
+                : MergeExactNumericPrecisionScale(left.Category, left, right) ?? left;
         }
 
         var winner = left.Category > right.Category ? left : right;
@@ -233,7 +264,7 @@ public static class ExpressionTypeInferencer
 
         if (!winner.IsStringFamily)
         {
-            return new SqlType(winnerCategory);
+            return MergeExactNumericPrecisionScale(winnerCategory, left, right) ?? new SqlType(winnerCategory);
         }
 
         if (loser.IsStringFamily && IsAmbiguousCollationConflict(left.Collation, right.Collation))
