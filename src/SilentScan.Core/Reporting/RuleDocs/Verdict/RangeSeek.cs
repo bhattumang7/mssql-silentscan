@@ -13,7 +13,7 @@ internal static class RangeSeek
             conversion is still happening on the column side, but for this particular pair of
             types the engine can still generate a dynamic range seek rather than degrading all the
             way to a full scan. This typically happens with numeric type mismatches - an INT
-            column compared against a DECIMAL or BIGINT value, for example - where the conversion
+            column compared against a REAL value, for example - where the conversion
             still preserves enough ordering information for the optimizer to bound a seek, just not
             as tightly or as cheaply as a same-type comparison would. It's real, measurable
             overhead, but it is not the same class of problem as a predicate that degrades to a
@@ -33,7 +33,7 @@ internal static class RangeSeek
         Examples:
         [
             new RuleDocExample(
-                Title: "An INT column compared against a DECIMAL parameter",
+                Title: "An INT column compared against a REAL parameter",
                 NoncompliantSql: """
                     CREATE TABLE dbo.Inventory
                     (
@@ -42,14 +42,21 @@ internal static class RangeSeek
                     );
                     CREATE INDEX IX_Inventory_Quantity ON dbo.Inventory(Quantity);
 
-                    CREATE PROCEDURE dbo.FindLowStock (@threshold DECIMAL(10,2))
+                    CREATE PROCEDURE dbo.FindLowStock (@threshold REAL)
                     AS
                     SELECT ItemId
                     FROM dbo.Inventory
                     WHERE Quantity < @threshold;
                     """,
-                NoncompliantExplanation: "DECIMAL outranks INT in type precedence, so Quantity is implicitly converted before comparison - the engine can still bound a dynamic range seek for this type pair, but at extra per-row conversion cost the same-type form wouldn't pay.",
+                NoncompliantExplanation: "REAL outranks INT in type precedence, so Quantity is implicitly converted before comparison - the engine can still bound a dynamic range seek for this type pair, but at extra per-row conversion cost the same-type form wouldn't pay.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Inventory
+                    (
+                        ItemId   INT NOT NULL PRIMARY KEY,
+                        Quantity INT NOT NULL
+                    );
+                    CREATE INDEX IX_Inventory_Quantity ON dbo.Inventory(Quantity);
+
                     CREATE PROCEDURE dbo.FindLowStock (@threshold INT)
                     AS
                     SELECT ItemId

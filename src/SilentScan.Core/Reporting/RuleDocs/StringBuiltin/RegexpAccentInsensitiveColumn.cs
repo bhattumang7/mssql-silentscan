@@ -37,12 +37,15 @@ internal static class RegexpAccentInsensitiveColumn
             new RuleDocExample(
                 Title: "REGEXP_LIKE against an accent-insensitive column",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Customer (Id INT NOT NULL PRIMARY KEY, Name NVARCHAR(100) COLLATE Latin1_General_CI_AI NOT NULL);
+                    GO
                     SELECT * FROM dbo.Customer WHERE REGEXP_LIKE(Name, 'cafe');
                     """,
                 NoncompliantExplanation: "Name uses an accent-insensitive collation, but REGEXP_LIKE never folds accents - a row storing 'café' is silently never matched, and no match_type flag can fix it.",
                 CompliantSql: """
                     SELECT * FROM dbo.Customer WHERE Name = 'cafe';
                     """,
-                CompliantExplanation: "= follows the column's own accent-insensitive collation, correctly matching 'café'."),
+                CompliantExplanation: "= follows the column's own accent-insensitive collation, correctly matching 'café'.",
+                RequiresLatestEngine: true),
         ]);
 }

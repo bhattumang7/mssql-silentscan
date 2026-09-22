@@ -97,10 +97,10 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">Rewrite the pattern so it reduces to a leading anchor followed only by literal characters (e.g. &#x27;^John&#x27; instead of &#x27;[Jj]ohn&#x27; or &#x27;^Jo.*hn&#x27;), if the intent really is a prefix match. If the pattern genuinely needs the richer regex construct, there is no seek-shaped alternative for that predicate - consider a computed/persisted column that captures just the prefix and indexing that instead.</p>
   <h3>A literal pattern with no anchored literal prefix forces a scan</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>CREATE TABLE dbo.Products&#xA;(&#xA;    ProductId INT           NOT NULL PRIMARY KEY,&#xA;    Sku       NVARCHAR(50)  NOT NULL&#xA;);&#xA;CREATE INDEX IX_Products_Sku ON dbo.Products(Sku);&#xA;&#xA;SELECT ProductId&#xA;FROM dbo.Products&#xA;WHERE REGEXP_LIKE(Sku, &#x27;[Ss]ku-1&#x27;);</code></pre></div>
+  <div class="fires-block"><pre><code>ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;&#xA;GO&#xA;CREATE TABLE dbo.Products&#xA;(&#xA;    ProductId INT           NOT NULL PRIMARY KEY,&#xA;    Sku       NVARCHAR(50)  NOT NULL&#xA;);&#xA;CREATE INDEX IX_Products_Sku ON dbo.Products(Sku);&#xA;&#xA;SELECT ProductId&#xA;FROM dbo.Products&#xA;WHERE REGEXP_LIKE(Sku, &#x27;[Ss]ku-1&#x27;);</code></pre></div>
   <p class="example-explanation">The pattern has no leading anchor, so the engine cannot derive any range of values it could match and scans every row.</p>
   <p class="example-label clean-label">Compliant solution</p>
-  <div class="clean-block"><pre><code>SELECT ProductId&#xA;FROM dbo.Products&#xA;WHERE REGEXP_LIKE(Sku, &#x27;^Sku-1&#x27;);</code></pre></div>
+  <div class="clean-block"><pre><code>ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;&#xA;GO&#xA;CREATE TABLE dbo.Products&#xA;(&#xA;    ProductId INT           NOT NULL PRIMARY KEY,&#xA;    Sku       NVARCHAR(50)  NOT NULL&#xA;);&#xA;CREATE INDEX IX_Products_Sku ON dbo.Products(Sku);&#xA;&#xA;SELECT ProductId&#xA;FROM dbo.Products&#xA;WHERE REGEXP_LIKE(Sku, &#x27;^Sku-1&#x27;);</code></pre></div>
   <p class="example-explanation">The pattern reduces to an anchor followed by pure literal characters, so the engine derives a seek range from it and produces an Index Seek.</p>
   <h2>Verified by an automated test</h2>
   <p class="example">This exact pattern also has a real, checked-in regression fixture in this tool's own test suite:</p>

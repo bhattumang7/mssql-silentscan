@@ -28,12 +28,22 @@ internal static class ReadCommittedLockRevertsRowVersioning
             new RuleDocExample(
                 Title: "A READCOMMITTEDLOCK hint on a database with row versioning on",
                 NoncompliantSql: """
+                    ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;
+                    GO
+                    CREATE TABLE dbo.Accounts (Id INT NOT NULL PRIMARY KEY, Balance DECIMAL(12,2) NOT NULL);
+                    GO
+                    DECLARE @AccountId INT = 1;
                     SELECT Balance
                     FROM dbo.Accounts WITH (READCOMMITTEDLOCK)
                     WHERE Id = @AccountId;
                     """,
                 NoncompliantExplanation: "On a database with READ_COMMITTED_SNAPSHOT ON, this reference alone reverts to blocking/locking reads while every other read in the batch stays row-versioned and non-blocking.",
                 CompliantSql: """
+                    ALTER DATABASE CURRENT SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;
+                    GO
+                    CREATE TABLE dbo.Accounts (Id INT NOT NULL PRIMARY KEY, Balance DECIMAL(12,2) NOT NULL);
+                    GO
+                    DECLARE @AccountId INT = 1;
                     SELECT Balance
                     FROM dbo.Accounts
                     WHERE Id = @AccountId;

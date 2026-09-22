@@ -26,12 +26,14 @@ internal static class DirtyReadIsolationHint
             new RuleDocExample(
                 Title: "A NOLOCK hint on a query whose correctness matters",
                 NoncompliantSql: """
+                    DECLARE @AccountId INT = 1;
                     SELECT Balance
                     FROM dbo.Accounts WITH (NOLOCK)
                     WHERE Id = @AccountId;
                     """,
                 NoncompliantExplanation: "This query can return an uncommitted, possibly-about-to-be-rolled-back balance, or (during a concurrent page split) silently miss or double-count rows - worth confirming this is deliberate if the result feeds anything where accuracy matters, like a financial balance check.",
                 CompliantSql: """
+                    DECLARE @AccountId INT = 1;
                     SELECT Balance
                     FROM dbo.Accounts
                     WHERE Id = @AccountId;

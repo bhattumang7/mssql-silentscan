@@ -9,16 +9,6 @@ public sealed class RuleOracleCoverageTests
     private const string OracleCategory = "Oracle";
     private const string RuleTrait = "Rule";
 
-    private static readonly string[] StyleRulePrefixes =
-    [
-        "silentscan/formatting/",
-        "silentscan/metrics/",
-        "silentscan/dead-code/",
-        "silentscan/duplication/",
-        "silentscan/deprecated-syntax/task-comment-",
-        "silentscan/control-flow/goto-usage",
-    ];
-
     private static IEnumerable<string> RuleIdsClaimedByOracleTests()
     {
         foreach (var type in typeof(RuleOracleCoverageTests).Assembly.GetTypes())
@@ -57,7 +47,7 @@ public sealed class RuleOracleCoverageTests
         var unbacked = RuleCatalog.BaseRules
             .Select(rule => rule.Id)
             .Where(id => !claimed.Contains(id))
-            .Where(id => !StyleRulePrefixes.Any(prefix => id.StartsWith(prefix, StringComparison.Ordinal)))
+            .Where(id => !StyleRuleFamilies.IsStyleRule(id))
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToList();
 

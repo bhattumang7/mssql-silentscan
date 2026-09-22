@@ -32,11 +32,15 @@ internal static class MergeableIndexesDifferingIncludeOnly
             new RuleDocExample(
                 Title: "Two indexes sharing a key but carrying different INCLUDE columns",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, Email VARCHAR(100) NULL, Phone VARCHAR(30) NULL);
+                    GO
                     CREATE NONCLUSTERED INDEX IX_A ON dbo.Customers (CustomerId) INCLUDE (Email);
                     CREATE NONCLUSTERED INDEX IX_B ON dbo.Customers (CustomerId) INCLUDE (Phone);
                     """,
                 NoncompliantExplanation: "Both indexes share the identical key (CustomerId), same sort direction, but IX_A includes only Email and IX_B only Phone - neither is a subset of the other, so both are maintained separately at full write/storage cost even though they could be one index.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, Email VARCHAR(100) NULL, Phone VARCHAR(30) NULL);
+                    GO
                     CREATE NONCLUSTERED INDEX IX_Customers_CustomerId ON dbo.Customers (CustomerId) INCLUDE (Email, Phone);
                     """,
                 CompliantExplanation: "One index carrying the union of both INCLUDE lists serves both original queries at the same seek cost, for less write/storage overhead than maintaining two separate indexes."),

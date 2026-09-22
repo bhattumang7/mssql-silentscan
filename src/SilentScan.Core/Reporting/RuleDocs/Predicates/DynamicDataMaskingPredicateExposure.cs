@@ -37,6 +37,7 @@ internal static class DynamicDataMaskingPredicateExposure
                         Ssn        VARCHAR(11) MASKED WITH (FUNCTION = 'default()') NOT NULL
                     );
 
+                    DECLARE @candidateSsn VARCHAR(11) = '123-45-6789';
                     SELECT CustomerId FROM dbo.Customers WHERE Ssn = @candidateSsn;
                     """,
                 NoncompliantExplanation: "A caller without UNMASK sees only the default() sentinel from any SELECT Ssn, but this predicate is evaluated against the real stored value - repeating the query with different @candidateSsn values lets that caller recover the real SSN one guess at a time, entirely through which rows come back.",
@@ -47,6 +48,7 @@ internal static class DynamicDataMaskingPredicateExposure
                         Ssn        VARCHAR(11) MASKED WITH (FUNCTION = 'default()') NOT NULL
                     );
 
+                    DECLARE @customerId INT = 1;
                     SELECT CustomerId FROM dbo.Customers WHERE CustomerId = @customerId;
                     """,
                 CompliantExplanation: "The predicate no longer touches the masked column at all, so a caller without UNMASK cannot use this query to probe the real Ssn value."),

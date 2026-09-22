@@ -41,6 +41,36 @@ public sealed class TriggerRecursionCycleScannerTests
     }
 
     [Fact]
+    public void TwoTableCycle_WritesThroughAliasedFromClauseTargets_Fires()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_TA ON dbo.TA AFTER UPDATE AS "
+            + "BEGIN UPDATE b SET b.Id = i.Id FROM dbo.TB AS b JOIN inserted AS i ON i.Id = b.Id; END;"
+            + "\nGO\n"
+            + "CREATE TRIGGER dbo.trg_TB ON dbo.TB AFTER UPDATE AS "
+            + "BEGIN UPDATE a SET a.Id = i.Id FROM dbo.TA AS a JOIN inserted AS i ON i.Id = a.Id; END;",
+            nestedTriggersEnabled: true);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(2, finding.Hops.Count);
+    }
+
+    [Fact]
+    public void AliasNamedLikeAnotherTable_WritesToTheAliasedTableOnly()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_TA ON dbo.TA AFTER UPDATE AS "
+            + "BEGIN UPDATE TC SET TC.Id = i.Id FROM dbo.TB AS TC JOIN inserted AS i ON i.Id = TC.Id; END;"
+            + "\nGO\n"
+            + "CREATE TRIGGER dbo.trg_TB ON dbo.TB AFTER UPDATE AS "
+            + "BEGIN UPDATE dbo.TA SET Id = Id WHERE Id = 1; END;",
+            nestedTriggersEnabled: true);
+
+        var finding = Assert.Single(findings);
+        Assert.DoesNotContain("dbo.TC", finding.CycleTableQualifiedNames);
+    }
+
+    [Fact]
     public void TwoTableCycle_NestedTriggersOff_NeverFires()
     {
         var findings = Scan(

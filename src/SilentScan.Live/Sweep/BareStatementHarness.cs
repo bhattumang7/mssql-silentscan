@@ -27,13 +27,13 @@ public static class BareStatementHarness
         {
             var leadingStart = LeadingCommentStart(tokens, statement);
             var statementText = sql.Substring(leadingStart, statement.StartOffset + statement.FragmentLength - leadingStart);
-            if (IsNonDdlStatement(statement))
+            if (IsNonDdlStatement(statement) || (statement is PredicateSetStatement && writer.PendingRunDeclaresVariables))
             {
-                writer.AddRunStatement(statementText);
+                writer.AddRunStatement(statementText, statement is DeclareVariableStatement);
             }
             else
             {
-                writer.AddDdlStatement(statementText, MustBeFirstStatementInBatch(statement));
+                writer.AddDdlStatement(statementText, RequiresItsOwnBatch(statement));
             }
         }
 
@@ -47,21 +47,28 @@ public static class BareStatementHarness
         private readonly List<string> _pendingDdl = [];
         private int _harnessCounter;
 
-        public void AddRunStatement(string statementText)
+        public bool PendingRunDeclaresVariables { get; private set; }
+
+        public void AddRunStatement(string statementText, bool declaresVariable = false)
         {
             FlushDdl();
             _pendingRun.Add(statementText);
+            PendingRunDeclaresVariables |= declaresVariable;
         }
 
-        public void AddDdlStatement(string statementText, bool mustBeFirstInBatch)
+        public void AddDdlStatement(string statementText, bool requiresOwnBatch)
         {
             FlushRun();
-            if (mustBeFirstInBatch)
+            if (requiresOwnBatch)
             {
                 FlushDdl();
             }
 
             _pendingDdl.Add(statementText);
+            if (requiresOwnBatch)
+            {
+                FlushDdl();
+            }
         }
 
         public string Finish()
@@ -89,6 +96,7 @@ public static class BareStatementHarness
             _rewritten.AppendLine("END");
             _rewritten.AppendLine("GO");
             _pendingRun.Clear();
+            PendingRunDeclaresVariables = false;
         }
 
         private void FlushDdl()
@@ -154,7 +162,7 @@ public static class BareStatementHarness
 
     private static bool IsNonDdlStatement(TSqlStatement statement)
     {
-        if (statement is PredicateSetStatement)
+        if (statement is PredicateSetStatement || MetadataProcedureCalls.IsMetadataCall(statement))
         {
             return false;
         }
@@ -165,9 +173,10 @@ public static class BareStatementHarness
             && !name.StartsWith("Drop", StringComparison.Ordinal);
     }
 
-    private static bool MustBeFirstStatementInBatch(TSqlStatement statement) => statement is
+    private static bool RequiresItsOwnBatch(TSqlStatement statement) => statement is
         CreateProcedureStatement or AlterProcedureStatement or CreateOrAlterProcedureStatement
         or CreateViewStatement or AlterViewStatement or CreateOrAlterViewStatement
         or CreateFunctionStatement or AlterFunctionStatement or CreateOrAlterFunctionStatement
-        or CreateTriggerStatement or AlterTriggerStatement or CreateOrAlterTriggerStatement;
+        or CreateTriggerStatement or AlterTriggerStatement or CreateOrAlterTriggerStatement
+        or CreateSchemaStatement;
 }

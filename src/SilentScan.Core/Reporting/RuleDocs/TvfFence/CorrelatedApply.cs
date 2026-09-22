@@ -56,18 +56,20 @@ internal static class CorrelatedApply
                         INSERT INTO @Tier (TierName) SELECT 'Gold';
                         RETURN;
                     END;
-
+                    GO
                     SELECT o.OrderId, t.TierName
                     FROM dbo.Orders o
                     CROSS APPLY dbo.fn_CustomerTier(o.CustomerId) t;
                     """,
                 NoncompliantExplanation: "The optimizer estimates a fixed row count for fn_CustomerTier's output and cannot see inside its body - and because it's driven by CROSS APPLY, the function body re-runs once per row of Orders, not once for the whole query.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
                     CREATE FUNCTION dbo.fn_CustomerTier(@CustomerId INT)
                     RETURNS TABLE
                     AS
                     RETURN (SELECT 'Gold' AS TierName);
-
+                    GO
                     SELECT o.OrderId, t.TierName
                     FROM dbo.Orders o
                     CROSS APPLY dbo.fn_CustomerTier(o.CustomerId) t;

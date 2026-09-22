@@ -32,6 +32,8 @@ internal static class RegexpPatternNoLiteralPrefix
             new RuleDocExample(
                 Title: "A literal pattern with no anchored literal prefix forces a scan",
                 NoncompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;
+                    GO
                     CREATE TABLE dbo.Products
                     (
                         ProductId INT           NOT NULL PRIMARY KEY,
@@ -45,10 +47,20 @@ internal static class RegexpPatternNoLiteralPrefix
                     """,
                 NoncompliantExplanation: "The pattern has no leading anchor, so the engine cannot derive any range of values it could match and scans every row.",
                 CompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;
+                    GO
+                    CREATE TABLE dbo.Products
+                    (
+                        ProductId INT           NOT NULL PRIMARY KEY,
+                        Sku       NVARCHAR(50)  NOT NULL
+                    );
+                    CREATE INDEX IX_Products_Sku ON dbo.Products(Sku);
+
                     SELECT ProductId
                     FROM dbo.Products
                     WHERE REGEXP_LIKE(Sku, '^Sku-1');
                     """,
-                CompliantExplanation: "The pattern reduces to an anchor followed by pure literal characters, so the engine derives a seek range from it and produces an Index Seek."),
+                CompliantExplanation: "The pattern reduces to an anchor followed by pure literal characters, so the engine derives a seek range from it and produces an Index Seek.",
+                RequiresLatestEngine: true),
         ]);
 }

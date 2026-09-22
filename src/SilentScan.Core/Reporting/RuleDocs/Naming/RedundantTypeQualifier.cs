@@ -35,9 +35,17 @@ internal static class RedundantTypeQualifier
         [
             new RuleDocExample(
                 Title: "A redundant dbo. qualifier on a parameter's type",
-                NoncompliantSql: "CREATE PROCEDURE dbo.P (@p dbo.MyType READONLY) AS BEGIN SELECT 1; END",
+                NoncompliantSql: """
+                    CREATE TYPE dbo.MyType AS TABLE (Id INT NOT NULL);
+                    GO
+                    CREATE PROCEDURE dbo.P (@p dbo.MyType READONLY) AS BEGIN SELECT 1; END
+                    """,
                 NoncompliantExplanation: "dbo.MyType resolves to exactly the same type as MyType alone would - the qualifier adds nothing but noise.",
-                CompliantSql: "CREATE PROCEDURE dbo.P (@p MyType READONLY) AS BEGIN SELECT 1; END",
+                CompliantSql: """
+                    CREATE TYPE dbo.MyType AS TABLE (Id INT NOT NULL);
+                    GO
+                    CREATE PROCEDURE dbo.P (@p MyType READONLY) AS BEGIN SELECT 1; END
+                    """,
                 CompliantExplanation: "MyType resolves the same way without the redundant qualifier."),
         ]);
 }

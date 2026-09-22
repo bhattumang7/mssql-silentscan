@@ -97,7 +97,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">Bind the hinted index&#x27;s own leading key column somewhere in the statement (a predicate, a join condition), or hint a different index whose leading column is actually usable given what the statement references.</p>
   <h3>A hint forcing an index whose leading column is never bound</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
-  <div class="fires-block"><pre><code>-- IX_Orders_Status&#x27;s leading key column is Status&#xA;SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE OrderId = 1;</code></pre></div>
+  <div class="fires-block"><pre><code>CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status INT NOT NULL);&#xA;CREATE INDEX IX_Orders_Status ON dbo.Orders (Status);&#xA;GO&#xA;-- IX_Orders_Status&#x27;s leading key column is Status&#xA;SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE OrderId = 1;</code></pre></div>
   <p class="example-explanation">The predicate filters on OrderId, never Status - the engine is forced to use IX_Orders_Status but can&#x27;t seek into it, degrading to a full Index Scan plus a lookup back to find OrderId = 1.</p>
   <p class="example-label clean-label">Compliant solution</p>
   <div class="clean-block"><pre><code>SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status = 5;</code></pre></div>

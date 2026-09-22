@@ -46,6 +46,7 @@ internal static class UnistrUnpairedSurrogate
                 CompliantSql: """
                     SELECT UNISTR(N'\D800\DC00') AS FixedChar;
                     """,
-                CompliantExplanation: "The high surrogate \\D800 is immediately followed by a valid low surrogate \\DC00, forming a well-formed pair that represents a single character outside the Basic Multilingual Plane."),
+                CompliantExplanation: "The high surrogate \\D800 is immediately followed by a valid low surrogate \\DC00, forming a well-formed pair that represents a single character outside the Basic Multilingual Plane.",
+                RequiresLatestEngine: true),
         ]);
 }

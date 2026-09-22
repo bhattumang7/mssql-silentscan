@@ -59,6 +59,16 @@ internal static class FilteredIndexParameterMismatch
                     """,
                 NoncompliantExplanation: "IX_Orders_Open's own filter (Status = 'Open') can only be matched against a query that restates it with the literal 'Open' - comparing Status against @status can never satisfy that match at compile time, so this query can never use the index, even on a call where @status happens to be 'Open'. Adding OPTION (RECOMPILE) would not change this outcome.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders
+                    (
+                        OrderId    INT         NOT NULL PRIMARY KEY,
+                        CustomerId INT         NOT NULL,
+                        Status     VARCHAR(10) NOT NULL
+                    );
+                    CREATE INDEX IX_Orders_Open ON dbo.Orders(CustomerId) WHERE Status = 'Open';
+
+                    CREATE PROCEDURE dbo.FindOpenOrders
+                    AS
                     SELECT OrderId
                     FROM dbo.Orders
                     WHERE CustomerId = 42 AND Status = 'Open';

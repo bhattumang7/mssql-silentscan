@@ -40,17 +40,25 @@ internal static class OrderByNotGuaranteedToConsumer
             new RuleDocExample(
                 Title: "A view's TOP (N) ORDER BY looks reliable but isn't guaranteed to a consumer",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
+                    GO
                     CREATE VIEW dbo.vTopOrders AS
                         SELECT TOP (10) OrderId, Amount
                         FROM dbo.Orders
                         ORDER BY Amount DESC;
-
+                    GO
                     -- Consumer:
                     SELECT * FROM dbo.vTopOrders;
                     """,
                 NoncompliantExplanation: "The view's ORDER BY correctly picks the 10 highest-amount orders, but nothing guarantees the consumer sees them back in descending order - today's plan may happen to preserve it, but a different plan shape (a new index, an updated statistics-driven plan choice) can silently change the order the consumer sees with no change to either query's text.",
                 CompliantSql: """
-                    SELECT * FROM dbo.vTopOrders ORDER BY Amount DESC;
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
+                    GO
+                    CREATE VIEW dbo.vTopOrders AS
+                        SELECT OrderId, Amount
+                        FROM dbo.Orders;
+                    GO
+                    SELECT TOP (10) * FROM dbo.vTopOrders ORDER BY Amount DESC;
                     """,
                 CompliantExplanation: "The consumer applies its own explicit ORDER BY, which is the only place T-SQL actually guarantees row order to a result set - the view's own internal ORDER BY still correctly selects which 10 rows survive."),
         ]);

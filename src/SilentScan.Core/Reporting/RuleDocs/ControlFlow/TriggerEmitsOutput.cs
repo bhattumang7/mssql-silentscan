@@ -41,6 +41,8 @@ internal static class TriggerEmitsOutput
             new RuleDocExample(
                 Title: "A trigger body with a real SELECT result set",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (Id INT NOT NULL PRIMARY KEY);
+                    GO
                     CREATE TRIGGER trg_Orders_AfterInsert ON dbo.Orders
                     AFTER INSERT
                     AS
@@ -50,6 +52,10 @@ internal static class TriggerEmitsOutput
                     """,
                 NoncompliantExplanation: "This SELECT sends a full result set back to whatever connection issued the INSERT that fired this trigger - not to any application code expecting it, since the caller never asked for trigger output at all.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (Id INT NOT NULL PRIMARY KEY);
+                    GO
+                    CREATE TABLE dbo.OrderAuditLog (OrderId INT NOT NULL, LoggedAt DATETIME2 NOT NULL);
+                    GO
                     CREATE TRIGGER trg_Orders_AfterInsert ON dbo.Orders
                     AFTER INSERT
                     AS

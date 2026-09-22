@@ -33,11 +33,13 @@ internal static class TvfArgumentTypeMismatch
             new RuleDocExample(
                 Title: "A wider caller-side variable silently truncated at the call site",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Code VARCHAR(3) NOT NULL);
+                    GO
                     CREATE FUNCTION dbo.fn_OrdersByCode (@Code VARCHAR(3))
                     RETURNS TABLE
                     AS
                     RETURN (SELECT OrderId, Code FROM dbo.Orders WHERE Code = @Code);
-
+                    GO
                     -- Caller:
                     DECLARE @code VARCHAR(10) = 'ABCDEF';
                     SELECT * FROM dbo.fn_OrdersByCode(@code);

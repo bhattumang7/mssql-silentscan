@@ -32,14 +32,16 @@ internal static class ExpressionDerivedColumn
             new RuleDocExample(
                 Title: "A CAST baked into an upstream view, round-tripped through a second view",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
                     CREATE VIEW dbo.vw_OrdersStr AS
                         SELECT OrderId, CAST(CustomerId AS VARCHAR(20)) AS CustomerIdStr
                         FROM dbo.Orders;
-
+                    GO
                     CREATE VIEW dbo.vw_OrdersRoundTrip AS
                         SELECT OrderId, CAST(CustomerIdStr AS INT) AS CustomerIdAgain
                         FROM dbo.vw_OrdersStr;
-
+                    GO
                     SELECT OrderId FROM dbo.vw_OrdersRoundTrip WHERE CustomerIdAgain = 5;
                     """,
                 NoncompliantExplanation: "CustomerIdAgain looks like an ordinary INT column to this query, but it's actually the result of two CASTs baked into two upstream views - oracle-confirmed directly: the equivalent query against the real base column (WHERE CustomerId = 5 on dbo.Orders) uses an index seek, while this one does not, purely because of the view-layer CAST chain."),

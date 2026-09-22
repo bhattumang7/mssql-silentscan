@@ -954,4 +954,37 @@ public sealed class SarifReportWriterCoverageTests
         Assert.Contains("ON DELETE Cascade", message, StringComparison.Ordinal);
         Assert.DoesNotContain("ON UPDATE", message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Write_RegexpReplaceDollarBackreferenceFinding_EmitsItsOwnRule()
+    {
+        var report = TestScanReports.Build(RegexpReplaceDollarBackreferenceFindings:
+            [new RegexpReplaceDollarBackreferenceFinding("$1", "test.sql", 1, 1)]);
+
+        var result = FirstResult(report);
+        Assert.Equal(SarifRuleCatalog.RegexpReplaceDollarBackreferenceRuleId, result.GetProperty("ruleId").GetString());
+        Assert.Contains("$1", result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Write_RegexpDefaultCaseSensitiveOnCiColumnFinding_EmitsItsOwnRule()
+    {
+        var report = TestScanReports.Build(RegexpDefaultCaseSensitiveOnCiColumnFindings:
+            [new RegexpDefaultCaseSensitiveOnCiColumnFinding("REGEXP_LIKE", "dbo.T", "Name", "test.sql", 1, 1)]);
+
+        var result = FirstResult(report);
+        Assert.Equal(SarifRuleCatalog.RegexpDefaultCaseSensitiveOnCiColumnRuleId, result.GetProperty("ruleId").GetString());
+        Assert.Contains("dbo.T.Name", result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Write_RegexpAccentInsensitiveColumnFinding_EmitsItsOwnRule()
+    {
+        var report = TestScanReports.Build(RegexpAccentInsensitiveColumnFindings:
+            [new RegexpAccentInsensitiveColumnFinding("REGEXP_LIKE", "dbo.T", "Name", "test.sql", 1, 1)]);
+
+        var result = FirstResult(report);
+        Assert.Equal(SarifRuleCatalog.RegexpAccentInsensitiveColumnRuleId, result.GetProperty("ruleId").GetString());
+        Assert.Contains("dbo.T.Name", result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
+    }
 }

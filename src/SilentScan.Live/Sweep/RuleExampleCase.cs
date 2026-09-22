@@ -15,4 +15,5 @@ public sealed record RuleExampleCase(
     RuleExampleVariant Variant,
     string DeployableSql,
     bool IsSelfContained,
-    RuleDocBehaviorProof? BehaviorProof = null);
+    RuleDocBehaviorProof? BehaviorProof = null,
+    bool RequiresLatestEngine = false);

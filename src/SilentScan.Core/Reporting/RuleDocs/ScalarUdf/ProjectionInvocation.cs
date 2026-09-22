@@ -49,7 +49,7 @@ internal static class ProjectionInvocation
                         SET @Output = @DisplayName + N' from ' + COALESCE(@Location, N'Earth, probably');
                         RETURN @Output;
                     END;
-
+                    GO
                     SELECT TOP 100 dbo.FormatUsername(DisplayName, Location), Reputation
                     FROM dbo.Users
                     ORDER BY Reputation DESC;

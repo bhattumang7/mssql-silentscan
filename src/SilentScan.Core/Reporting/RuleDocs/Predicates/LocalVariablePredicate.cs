@@ -67,6 +67,17 @@ internal static class LocalVariablePredicate
                     """,
                 NoncompliantExplanation: "The optimizer compiles the SELECT's plan without knowing what the earlier SET assigns to @customerId, so the seek against IX_Orders_CustomerId is real, but its estimated row count comes from the column's average density rather than from how many rows actually belong to the busiest customer - which is likely to be well above average.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders
+                    (
+                        OrderId    INT NOT NULL PRIMARY KEY,
+                        CustomerId INT NOT NULL
+                    );
+                    CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
+
+                    CREATE PROCEDURE dbo.FindOrdersForTopCustomer
+                    AS
+                    DECLARE @customerId INT = (SELECT TOP (1) CustomerId FROM dbo.Orders GROUP BY CustomerId ORDER BY COUNT(*) DESC);
+
                     SELECT OrderId
                     FROM dbo.Orders
                     WHERE CustomerId = @customerId

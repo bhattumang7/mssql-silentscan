@@ -66,7 +66,7 @@ public sealed class LiveCatalogReader
             catalog.AddPartitionFilegroup(schemeName, partitionNumber, filegroupName);
         }
 
-        foreach (var (objectId, schemaName, tableName, isMemoryOptimized) in tables)
+        foreach (var (objectId, schemaName, tableName, isMemoryOptimized, isSchemaOnlyDurability) in tables)
         {
             var qualifiedName = $"{schemaName}.{tableName}";
             var (filegroupName, filegroupIsReadOnly) = filegroupByTable.GetValueOrDefault(objectId);
@@ -79,6 +79,7 @@ public sealed class LiveCatalogReader
                 SourcePath: qualifiedName,
                 SourceLine: 0,
                 IsMemoryOptimized: isMemoryOptimized,
+                IsSchemaOnlyDurability: isSchemaOnlyDurability,
                 Statistics: statisticsByTable.GetValueOrDefault(objectId, []),
                 FilegroupName: filegroupName,
                 FilegroupIsReadOnly: filegroupIsReadOnly,
@@ -862,11 +863,12 @@ public sealed class LiveCatalogReader
         return SchemaObjectNameHelper.Qualify(namedTable.SchemaObject);
     }
 
-    private static async Task<List<(int ObjectId, string SchemaName, string TableName, bool IsMemoryOptimized)>> ReadTablesAsync(
+    private static async Task<List<(int ObjectId, string SchemaName, string TableName, bool IsMemoryOptimized, bool IsSchemaOnlyDurability)>> ReadTablesAsync(
         SqlConnection connection, CancellationToken cancellationToken)
     {
         const string sql = """
-            SELECT t.object_id, s.name AS schema_name, t.name AS table_name, t.is_memory_optimized
+            SELECT t.object_id, s.name AS schema_name, t.name AS table_name, t.is_memory_optimized,
+                   CAST(CASE WHEN t.is_memory_optimized = 1 AND t.durability = 1 THEN 1 ELSE 0 END AS bit)
             FROM sys.tables t
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             WHERE t.is_ms_shipped = 0
@@ -875,11 +877,11 @@ public sealed class LiveCatalogReader
 
         await using var command = connection.CreateReadOnlyCommand(sql);
 
-        var tables = new List<(int, string, string, bool)>();
+        var tables = new List<(int, string, string, bool, bool)>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            tables.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3)));
+            tables.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3), reader.GetBoolean(4)));
         }
 
         return tables;

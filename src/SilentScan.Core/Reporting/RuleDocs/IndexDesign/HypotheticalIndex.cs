@@ -26,12 +26,16 @@ internal static class HypotheticalIndex
             new RuleDocExample(
                 Title: "A hypothetical index left behind from a tuning session",
                 NoncompliantSql: """
-                    -- Left behind by a Database Engine Tuning Advisor session:
-                    -- an index that exists only in metadata (sys.indexes.is_hypothetical = 1),
-                    -- with no real underlying data.
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
+                    CREATE INDEX IX_HypotheticalArtifact ON dbo.Orders (CustomerId) WITH STATISTICS_ONLY = -1;
                     """,
                 NoncompliantExplanation: "A hypothetical index provides no query benefit whatsoever - it's a what-if artifact from a tuning session, not a real, usable index, and its presence is pure clutter in the schema's own index list.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+                    GO
+                    CREATE INDEX IX_HypotheticalArtifact ON dbo.Orders (CustomerId) WITH STATISTICS_ONLY = -1;
+                    GO
                     DROP INDEX IX_HypotheticalArtifact ON dbo.Orders;
                     """,
                 CompliantExplanation: "Dropping the hypothetical index removes the clutter entirely - nothing real was ever served by it."),

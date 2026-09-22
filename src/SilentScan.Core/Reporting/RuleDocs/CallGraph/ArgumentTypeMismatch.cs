@@ -47,6 +47,7 @@ internal static class ArgumentTypeMismatch
                     BEGIN
                         UPDATE dbo.Products SET Price = Price * (1 - @DiscountRate);
                     END;
+                    GO
 
                     -- Caller:
                     DECLARE @rate DECIMAL(9,4) = 0.1567;
@@ -68,6 +69,7 @@ internal static class ArgumentTypeMismatch
                     BEGIN
                         SET @Tax = 12.3456;
                     END;
+                    GO
 
                     -- Caller:
                     DECLARE @tax DECIMAL(4,1);

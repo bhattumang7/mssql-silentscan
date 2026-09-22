@@ -68,6 +68,17 @@ internal static class ReassignedParameter
                     """,
                 NoncompliantExplanation: "The optimizer sniffs @customerId's original caller-supplied value to build the estimate, but the predicate actually runs against the value produced by the SET above it - on every call the sniffed estimate reflects a value the predicate never compares against.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders
+                    (
+                        OrderId    INT NOT NULL PRIMARY KEY,
+                        CustomerId INT NOT NULL
+                    );
+                    CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
+
+                    CREATE PROCEDURE dbo.FindOrders (@customerId INT)
+                    AS
+                    SET @customerId = @customerId + 0;
+
                     SELECT OrderId
                     FROM dbo.Orders
                     WHERE CustomerId = @customerId

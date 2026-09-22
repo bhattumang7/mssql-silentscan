@@ -44,7 +44,9 @@ internal static class StaleSelectStarView
                 Title: "A dropped-then-added column shifts identity under an unchanged view label",
                 NoncompliantSql: """
                     CREATE TABLE dbo.Base (Id INT, A INT, B INT);
+                    GO
                     CREATE VIEW dbo.V AS SELECT * FROM dbo.Base;
+                    GO
                     -- View's own compiled columns, frozen at CREATE VIEW time: Id, A, B
 
                     ALTER TABLE dbo.Base ADD C INT;

@@ -360,18 +360,19 @@ public static class TriggerCorrectnessScanner
 
         private void InspectUpdateFunctionWithoutValueComparison(string triggerQualifiedName, StatementList statementList)
         {
-            var collector = new IfPredicateCollector();
+            var collector = new IfStatementCollector();
             statementList.Accept(collector);
 
-            foreach (var predicate in collector.Predicates)
+            foreach (var ifStatement in collector.Statements)
             {
                 var updateCalls = new UpdateCallCollector();
-                predicate.Accept(updateCalls);
+                ifStatement.Predicate.Accept(updateCalls);
 
                 foreach (var updateCall in updateCalls.Calls)
                 {
                     var columnName = updateCall.Identifier.Value;
-                    if (HasSameColumnValueComparison(predicate, columnName, catalog.IdentifierComparer))
+                    if (HasSameColumnValueComparison(ifStatement.Predicate, columnName, catalog.IdentifierComparer)
+                        || HasSameColumnValueComparison(ifStatement.ThenStatement, columnName, catalog.IdentifierComparer))
                     {
                         continue;
                     }
@@ -379,26 +380,26 @@ public static class TriggerCorrectnessScanner
                     Findings.Add(new TriggerCorrectnessFinding(
                         TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison, triggerQualifiedName, sourcePath,
                         updateCall.StartLine, updateCall.StartColumn,
-                        $"IF UPDATE({columnName}) gates this branch with no comparison between inserted.{columnName}/deleted.{columnName} in the same predicate - UPDATE() reports whether the column was NAMED in the SET list, not whether its value changed, so a full-column UPDATE (an ORM's generated statement, e.g.) fires this branch on a genuine no-op save.",
+                        $"IF UPDATE({columnName}) gates this branch with no comparison between inserted.{columnName}/deleted.{columnName} in the same predicate or the gated branch - UPDATE() reports whether the column was NAMED in the SET list, not whether its value changed, so a full-column UPDATE (an ORM's generated statement, e.g.) fires this branch on a genuine no-op save.",
                         FindingConfidence.High));
                 }
             }
         }
 
-        private static bool HasSameColumnValueComparison(BooleanExpression predicate, string columnName, StringComparer identifierComparer)
+        private static bool HasSameColumnValueComparison(TSqlFragment fragment, string columnName, StringComparer identifierComparer)
         {
             var collector = new SameColumnComparisonCollector(columnName, identifierComparer);
-            predicate.Accept(collector);
+            fragment.Accept(collector);
             return collector.Found;
         }
 
-        private sealed class IfPredicateCollector : TSqlFragmentVisitor
+        private sealed class IfStatementCollector : TSqlFragmentVisitor
         {
-            public List<BooleanExpression> Predicates { get; } = [];
+            public List<IfStatement> Statements { get; } = [];
 
             public override void ExplicitVisit(IfStatement node)
             {
-                Predicates.Add(node.Predicate);
+                Statements.Add(node);
                 base.ExplicitVisit(node);
             }
         }
@@ -523,9 +524,11 @@ public static class TriggerCorrectnessScanner
 
             public override void ExplicitVisit(InsertStatement node) => Check(node.InsertSpecification.Target, node.StartLine);
 
-            public override void ExplicitVisit(UpdateStatement node) => Check(node.UpdateSpecification.Target, node.StartLine);
+            public override void ExplicitVisit(UpdateStatement node) =>
+                Check(DmlWriteTargetResolver.ResolveFromClauseAlias(node.UpdateSpecification.Target, node.UpdateSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
 
-            public override void ExplicitVisit(DeleteStatement node) => Check(node.DeleteSpecification.Target, node.StartLine);
+            public override void ExplicitVisit(DeleteStatement node) =>
+                Check(DmlWriteTargetResolver.ResolveFromClauseAlias(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
 
             public override void ExplicitVisit(MergeStatement node) => Check(node.MergeSpecification.Target, node.StartLine);
 

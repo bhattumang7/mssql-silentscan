@@ -9,7 +9,8 @@ public sealed record RuleDocExample(
     string? CompliantSql = null,
     string? CompliantExplanation = null,
     RuleDocBehaviorProof? NoncompliantProof = null,
-    RuleDocBehaviorProof? CompliantProof = null);
+    RuleDocBehaviorProof? CompliantProof = null,
+    bool RequiresLatestEngine = false);
 
 public sealed record RuleDocContent(string WhyItMatters, string? HowToFixIt = null, IReadOnlyList<RuleDocExample>? Examples = null)
 {

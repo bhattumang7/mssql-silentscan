@@ -7,9 +7,12 @@ namespace SilentScan.Live.Sweep;
 
 public static class SweepRunner
 {
+    private const int LatestEngineCompatibilityLevel = 170;
+
     public static async Task<IReadOnlyList<SweepResult>> RunAsync(
         IReadOnlyList<RuleExampleCase> cases,
         SqlServerOptions options,
+        SqlServerOptions? latestEngineOptions = null,
         int maxParallelism = 6,
         CancellationToken cancellationToken = default)
     {
@@ -21,7 +24,8 @@ public static class SweepRunner
             await throttle.WaitAsync(cancellationToken);
             try
             {
-                results[index] = await RunOneAsync(@case, options, cancellationToken);
+                var target = @case.RequiresLatestEngine && latestEngineOptions is not null ? latestEngineOptions : options;
+                results[index] = await RunOneAsync(@case, target, cancellationToken);
             }
             catch (Exception ex) when (ex is SqlException or InvalidOperationException)
             {
@@ -39,11 +43,6 @@ public static class SweepRunner
 
     private static async Task<SweepResult> RunOneAsync(RuleExampleCase @case, SqlServerOptions options, CancellationToken cancellationToken)
     {
-        if (!@case.IsSelfContained)
-        {
-            return new SweepResult(@case, SweepOutcome.NotSelfContained, "example has no deployable object definition and no extractable prelude", []);
-        }
-
         if (ServerScopedStatementGuard.ContainsServerScopedDdl(@case.DeployableSql))
         {
             return new SweepResult(@case, SweepOutcome.ServerScopedSkipped, "example deploys server-scoped DDL (e.g. ON ALL SERVER trigger, login, audit) that would outlive the disposable sweep database; not deployed", []);
@@ -54,6 +53,21 @@ public static class SweepRunner
         await provisioner.CreateFreshAsync(databaseName, cancellationToken: cancellationToken);
         try
         {
+            if (@case.DeployableSql.Contains("MEMORY_OPTIMIZED", StringComparison.OrdinalIgnoreCase))
+            {
+                await provisioner.AddMemoryOptimizedFilegroupAsync(databaseName, cancellationToken);
+            }
+
+            if (@case.RequiresLatestEngine)
+            {
+                await provisioner.SetCompatibilityLevelAsync(databaseName, LatestEngineCompatibilityLevel, cancellationToken);
+            }
+
+            if (@case.RuleId.StartsWith("silentscan/forced-parameterization/", StringComparison.Ordinal))
+            {
+                await provisioner.SetParameterizationForcedAsync(databaseName, cancellationToken);
+            }
+
             var wrapped = BareStatementHarness.WrapBareStatementsInProcedures(@case.DeployableSql);
             try
             {

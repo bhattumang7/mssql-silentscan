@@ -162,9 +162,11 @@ public static class TriggerRecursionCycleScanner
 
         public override void ExplicitVisit(InsertStatement node) => Record(node.InsertSpecification.Target, node.StartLine);
 
-        public override void ExplicitVisit(UpdateStatement node) => Record(node.UpdateSpecification.Target, node.StartLine);
+        public override void ExplicitVisit(UpdateStatement node) =>
+            Record(DmlWriteTargetResolver.ResolveFromClauseAlias(node.UpdateSpecification.Target, node.UpdateSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
 
-        public override void ExplicitVisit(DeleteStatement node) => Record(node.DeleteSpecification.Target, node.StartLine);
+        public override void ExplicitVisit(DeleteStatement node) =>
+            Record(DmlWriteTargetResolver.ResolveFromClauseAlias(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
 
         public override void ExplicitVisit(MergeStatement node) => Record(node.MergeSpecification.Target, node.StartLine);
 

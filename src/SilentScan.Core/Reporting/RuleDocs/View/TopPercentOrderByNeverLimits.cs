@@ -38,20 +38,24 @@ internal static class TopPercentOrderByNeverLimits
             new RuleDocExample(
                 Title: "A view's TOP (100) PERCENT ORDER BY is silently ignored by a consumer",
                 NoncompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
+                    GO
                     CREATE VIEW dbo.vRecentOrders AS
                         SELECT TOP (100) PERCENT OrderId, Amount
                         FROM dbo.Orders
                         ORDER BY Amount DESC;
-
+                    GO
                     -- Consumer:
                     SELECT TOP 5 * FROM dbo.vRecentOrders;
                     """,
                 NoncompliantExplanation: "TOP (100) PERCENT excludes zero rows, so the ORDER BY inside the view decides nothing and is not carried through - the consumer's TOP 5 returns whichever 5 rows the engine's own storage order happens to produce, not the 5 highest-amount orders.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
+                    GO
                     CREATE VIEW dbo.vRecentOrders AS
                         SELECT OrderId, Amount
                         FROM dbo.Orders;
-
+                    GO
                     -- Consumer:
                     SELECT TOP 5 * FROM dbo.vRecentOrders ORDER BY Amount DESC;
                     """,

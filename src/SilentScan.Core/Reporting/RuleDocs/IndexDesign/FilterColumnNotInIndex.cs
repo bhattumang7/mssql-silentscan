@@ -36,6 +36,7 @@ internal static class FilterColumnNotInIndex
                     """,
                 NoncompliantExplanation: "The filter references IsActive, but the index only carries CustomerId - IsActive is neither a key column nor an INCLUDE column, so the optimizer can't cheaply confirm the filter still holds for a query that doesn't already carry IsActive itself.",
                 CompliantSql: """
+                    CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, IsActive BIT NOT NULL);
                     CREATE NONCLUSTERED INDEX IX_Orders_Active
                         ON dbo.Orders (CustomerId)
                         INCLUDE (IsActive)

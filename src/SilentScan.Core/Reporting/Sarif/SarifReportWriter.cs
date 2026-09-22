@@ -113,6 +113,9 @@ public static class SarifReportWriter
         results.AddRange(report.Find<JsonArrayAggMissingOrderFinding>("JsonArrayAggMissingOrderScanner").Select(ToResult));
         results.AddRange(report.Find<JsonObjectDuplicateKeyFinding>("JsonObjectDuplicateKeyScanner").Select(ToResult));
         results.AddRange(report.Find<UnistrUnpairedSurrogateFinding>("UnistrUnpairedSurrogateScanner").Select(ToResult));
+        results.AddRange(report.Find<RegexpReplaceDollarBackreferenceFinding>("RegexpReplaceDollarBackreferenceScanner").Select(ToResult));
+        results.AddRange(report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>("RegexpDefaultCaseSensitiveOnCiColumnScanner").Select(ToResult));
+        results.AddRange(report.Find<RegexpAccentInsensitiveColumnFinding>("RegexpAccentInsensitiveColumnScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
@@ -825,6 +828,33 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.UnistrUnpairedSurrogateRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = $"UNISTR() escape sequence '{finding.EscapeSequence}' encodes an unpaired UTF-16 surrogate code point - the engine accepts this with no error and returns a value containing an ill-formed surrogate, silently, at evaluation, UTF-8 conversion, and JSON serialization alike.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(RegexpReplaceDollarBackreferenceFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RegexpReplaceDollarBackreferenceRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"REGEXP_REPLACE replacement string references a captured group with '{finding.DollarToken}' - $ has no special meaning in a replacement string, so the token is accepted with no error and passed through into the output unchanged; only \\N substitutes a captured group.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(RegexpDefaultCaseSensitiveOnCiColumnFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RegexpDefaultCaseSensitiveOnCiColumnRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"{finding.FunctionName} on '{finding.TableQualifiedName}.{finding.ColumnName}' matches case-sensitively by default even though the column's collation is case-insensitive, silently missing rows that = or LIKE would match - only an explicit 'i' match_type flag restores case-insensitive matching.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
+    }
+
+    private static SarifResult ToResult(RegexpAccentInsensitiveColumnFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.RegexpAccentInsensitiveColumnRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
+        var message = $"{finding.FunctionName} on '{finding.TableQualifiedName}.{finding.ColumnName}' loses the column's accent-insensitive collation folding - no REGEXP_* match_type flag restores it, and no error is raised.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }

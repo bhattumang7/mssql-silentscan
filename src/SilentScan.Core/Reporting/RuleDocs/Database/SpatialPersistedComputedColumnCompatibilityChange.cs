@@ -21,6 +21,8 @@ internal static class SpatialPersistedComputedColumnCompatibilityChange
             new RuleDocExample(
                 Title: "An indexed persisted spatial computation reported by SQL Server",
                 NoncompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 100;
+                    GO
                     CREATE TABLE dbo.Areas
                     (
                         Id INT NOT NULL CONSTRAINT PK_Areas PRIMARY KEY,
