@@ -831,6 +831,18 @@ public sealed class ExpressionTypeInferencerTests
         Assert.Equal(2, result.Scale);
     }
 
+    [Theory]
+    [InlineData("SUM")]
+    [InlineData("AVG")]
+    public void Resolve_SumAndAvg_OracleVerified_WidenRealArgumentToFloat(string aggregate)
+    {
+        var typesByName = new Dictionary<string, SqlType?> { ["A"] = new SqlType(SqlTypeCategory.Real) };
+
+        var result = Resolve($"{aggregate}(A)", typesByName);
+
+        Assert.Equal(SqlTypeCategory.Float, result!.Category);
+    }
+
     [Fact]
     public void Resolve_Arithmetic_OracleVerified_IntPlusMoney_CategoryPrecedenceWinnerIsMoney()
     {

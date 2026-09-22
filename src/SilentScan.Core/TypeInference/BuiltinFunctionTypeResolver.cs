@@ -177,6 +177,7 @@ public static class BuiltinFunctionTypeResolver
     {
         SqlTypeCategory.TinyInt or SqlTypeCategory.SmallInt => new SqlType(SqlTypeCategory.Int),
         SqlTypeCategory.Decimal => argumentType with { Precision = 38 },
+        SqlTypeCategory.Real => new SqlType(SqlTypeCategory.Float),
         _ => argumentType,
     };
 
