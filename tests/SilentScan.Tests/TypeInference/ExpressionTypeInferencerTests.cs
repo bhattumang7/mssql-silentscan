@@ -72,6 +72,8 @@ public sealed class ExpressionTypeInferencerTests
         var result = Resolve("CASE WHEN 1 = 1 THEN IntCol ELSE DecCol END", typesByName);
 
         Assert.Equal(SqlTypeCategory.Decimal, result!.Category);
+        Assert.Equal(12, result.Precision);
+        Assert.Equal(2, result.Scale);
     }
 
     [Fact]
@@ -82,6 +84,24 @@ public sealed class ExpressionTypeInferencerTests
         var result = Resolve("CASE IntCol WHEN 1 THEN IntCol ELSE DecCol END", typesByName);
 
         Assert.Equal(SqlTypeCategory.Decimal, result!.Category);
+        Assert.Equal(12, result.Precision);
+        Assert.Equal(2, result.Scale);
+    }
+
+    [Fact]
+    public void Resolve_SearchedCase_OracleVerified_MergeClampsPrecisionToThirtyEight_ScaleReducedByIntegralDigitsNotArithmeticPlusOneRule()
+    {
+        var typesByName = new Dictionary<string, SqlType?>
+        {
+            ["A"] = Decimal(9, 2),
+            ["B"] = Decimal(37, 37),
+        };
+
+        var result = Resolve("CASE WHEN 1 = 1 THEN A ELSE B END", typesByName);
+
+        Assert.Equal(SqlTypeCategory.Decimal, result!.Category);
+        Assert.Equal(38, result.Precision);
+        Assert.Equal(31, result.Scale);
     }
 
     [Fact]
