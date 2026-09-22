@@ -179,7 +179,7 @@ public sealed class NonSargablePredicateScannerTests
     }
 
     [Fact]
-    public void CastOnColumn_DateTime2TruncatedToDate_DoesNotFire()
+    public void CastOnColumn_DateTime2TruncatedToDate_Fires()
     {
         var sql = """
             CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CreatedAt DATETIME2(3) NOT NULL);
@@ -190,7 +190,9 @@ public sealed class NonSargablePredicateScannerTests
             """;
         var findings = ScanSqlWithCatalog(sql);
 
-        Assert.Empty(findings);
+        var finding = Assert.Single(findings);
+        Assert.Equal(SargabilityFindingKind.CastOrConvertOnColumn, finding.Kind);
+        Assert.Equal("CreatedAt", finding.ColumnName);
     }
 
     [Fact]
