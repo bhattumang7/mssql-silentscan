@@ -337,6 +337,12 @@ public static class NonSargablePredicateScanner
             var found = FindAnyColumn(binary.FirstExpression) ?? FindAnyColumn(binary.SecondExpression);
             if (found is { } column)
             {
+                var (arithmeticTableQualifiedName, _, _) = ResolveIndexInfo(column.Ref, scopeChain, walker);
+                if (arithmeticTableQualifiedName is { } arithmeticTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, arithmeticTable, binary))
+                {
+                    return;
+                }
+
                 Add(SargabilityFindingKind.ColumnArithmetic, column.Name, binary.BinaryExpressionType.ToString(), binary, column.Ref, scopeChain, walker);
             }
         }
