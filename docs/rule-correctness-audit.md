@@ -57,6 +57,21 @@ against the same root-cause category before it's treated as new.
   remaining call sites, and extending the matcher's structural comparison to
   `BinaryExpression` so it recognizes arithmetic definitions too. Both
   oracle-confirmed.
+- **Category: same computed-column-suppression gap, reached through
+  view-layer lineage instead of a direct predicate.** The rule's doc for
+  `silentscan/lineage/expression-derived-column` claims a computed expression
+  can never be seeked through regardless of type - true in general, but not
+  when a base table has an indexed computed column whose definition matches
+  a `CAST` baked into an upstream view's `SELECT` list; the engine inlines
+  the view and seeks through that index. `ColumnProvenance.Cast` doesn't
+  carry the original expression tree, so the fix is scoped to the reachable,
+  common single-hop case (`CAST` directly over a base column, not a
+  multi-step or cross-view chain): added
+  `ComputedColumnMatcher.HasIndexedMatchingCastComputedColumn`, which
+  reconstructs the comparison from the base column name and the cast's
+  target type rather than needing the original AST. Oracle-confirmed; this
+  rule has the most real-code findings of any rule in the catalog, so this
+  was worth prioritizing over further step-2 sampling of smaller rules.
 
 ---
 
