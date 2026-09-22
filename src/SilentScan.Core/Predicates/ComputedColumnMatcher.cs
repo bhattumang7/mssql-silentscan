@@ -1,6 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -9,10 +10,49 @@ internal static class ComputedColumnMatcher
     public static bool HasIndexedMatchingComputedColumn(
         DatabaseCatalog catalog, string tableQualifiedName, ScalarExpression predicateExpression)
     {
+        foreach (var (_, definitionExpression) in IndexedComputedColumnDefinitions(catalog, tableQualifiedName))
+        {
+            if (StructurallyEqual(definitionExpression, predicateExpression, catalog.IdentifierComparer))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool HasIndexedMatchingCastComputedColumn(
+        DatabaseCatalog catalog, string tableQualifiedName, string baseColumnName, SqlType explicitType)
+    {
+        foreach (var (_, definitionExpression) in IndexedComputedColumnDefinitions(catalog, tableQualifiedName))
+        {
+            var (parameter, dataType) = definitionExpression switch
+            {
+                CastCall cast => (cast.Parameter, cast.DataType),
+                ConvertCall { Style: null } convert => (convert.Parameter, convert.DataType),
+                _ => (null, null),
+            };
+
+            if (parameter is not null && Unwrap(parameter) is ColumnReferenceExpression columnRef
+                && catalog.IdentifierComparer.Equals(LastIdentifier(columnRef), baseColumnName)
+                && dataType is not null
+                && SqlTypeReferenceResolver.Resolve(dataType, columnCollation: null) is { } resolvedType
+                && resolvedType == explicitType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<(string ColumnName, ScalarExpression Definition)> IndexedComputedColumnDefinitions(
+        DatabaseCatalog catalog, string tableQualifiedName)
+    {
         var table = catalog.Find(tableQualifiedName);
         if (table is null)
         {
-            return false;
+            yield break;
         }
 
         foreach (var expression in catalog.SchemaExpressions)
@@ -25,14 +65,11 @@ internal static class ComputedColumnMatcher
                 continue;
             }
 
-            var definitionExpression = TryParseTopLevelExpression(expression.DefinitionText, catalog.CompatibilityLevel);
-            if (definitionExpression is not null && StructurallyEqual(definitionExpression, predicateExpression, catalog.IdentifierComparer))
+            if (TryParseTopLevelExpression(expression.DefinitionText, catalog.CompatibilityLevel) is { } definitionExpression)
             {
-                return true;
+                yield return (computedColumnName, definitionExpression);
             }
         }
-
-        return false;
     }
 
     private static ScalarExpression? TryParseTopLevelExpression(string definitionText, int? compatibilityLevel)
