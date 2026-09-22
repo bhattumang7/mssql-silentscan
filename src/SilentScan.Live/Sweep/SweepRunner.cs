@@ -43,6 +43,11 @@ public static class SweepRunner
 
     private static async Task<SweepResult> RunOneAsync(RuleExampleCase @case, SqlServerOptions options, CancellationToken cancellationToken)
     {
+        if (@case is { Variant: RuleExampleVariant.Compliant, RequiresObjectDefinition: true, IsSelfContained: false })
+        {
+            return new SweepResult(@case, SweepOutcome.NotSelfContained, "the noncompliant example needs a deployed object for this rule to evaluate, but the compliant example (and its extracted prelude) deploys none - a silent scan here proves nothing", []);
+        }
+
         if (ServerScopedStatementGuard.ContainsServerScopedDdl(@case.DeployableSql))
         {
             return new SweepResult(@case, SweepOutcome.ServerScopedSkipped, "example deploys server-scoped DDL (e.g. ON ALL SERVER trigger, login, audit) that would outlive the disposable sweep database; not deployed", []);
