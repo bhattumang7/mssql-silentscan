@@ -112,7 +112,8 @@ public static class UnindexedTempTableUsageScanner
             {
                 foreach (var unqualified in PredicateTreeWalker.FlattenUnqualifiedJoins(reference))
                 {
-                    if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin)
+                    if (unqualified.UnqualifiedJoinType != UnqualifiedJoinType.CrossJoin
+                        || !HasCorrelatingWherePredicate(node.WhereClause, unqualified.FirstTableReference, unqualified.SecondTableReference))
                     {
                         continue;
                     }
@@ -122,6 +123,48 @@ public static class UnindexedTempTableUsageScanner
                 }
             }
         }
+
+        private static bool HasCorrelatingWherePredicate(WhereClause? whereClause, TableReference first, TableReference second)
+        {
+            if (whereClause is null || GetReferenceKey(first) is not { } firstKey || GetReferenceKey(second) is not { } secondKey)
+            {
+                return false;
+            }
+
+            foreach (var predicate in PredicateTreeWalker.FlattenAnd(whereClause.SearchCondition))
+            {
+                if (predicate is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp)
+                {
+                    continue;
+                }
+
+                var leftKey = GetColumnQualifier(cmp.FirstExpression);
+                var rightKey = GetColumnQualifier(cmp.SecondExpression);
+
+                if ((MatchesKey(leftKey, firstKey) && MatchesKey(rightKey, secondKey))
+                    || (MatchesKey(leftKey, secondKey) && MatchesKey(rightKey, firstKey)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string? GetReferenceKey(TableReference reference) => reference switch
+        {
+            NamedTableReference { Alias.Value: var alias } => alias,
+            NamedTableReference { SchemaObject.BaseIdentifier.Value: var name } => name,
+            _ => null,
+        };
+
+        private static string? GetColumnQualifier(ScalarExpression expression) =>
+            expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., var qualifier, _] }
+                ? qualifier.Value
+                : null;
+
+        private static bool MatchesKey(string? candidate, string key) =>
+            candidate is not null && string.Equals(candidate, key, StringComparison.OrdinalIgnoreCase);
 
         private void TryRecordJoinOperand(TableReference side, TSqlFragment joinNode, ModuleWalker walker)
         {

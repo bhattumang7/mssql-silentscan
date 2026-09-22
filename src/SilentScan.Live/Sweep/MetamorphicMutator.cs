@@ -36,6 +36,7 @@ public static class MetamorphicMutator
         TryAdd(mutations, "operand-order-swap", ApplyEdits(sql, CollectOperandSwapEdits(sql, parseResult.Fragment)));
         TryAdd(mutations, "derived-table-wrap", ApplyEdits(sql, CollectDerivedTableWrapEdits(sql, parseResult.Fragment)));
         TryAdd(mutations, "unrelated-join", ApplyEdits(sql, CollectUnrelatedJoinEdits(parseResult.Fragment)));
+        TryAdd(mutations, "alias-rename", ApplyEdits(sql, CollectAliasRenameEdits(parseResult.Fragment)));
 
         return mutations;
     }
@@ -202,6 +203,118 @@ public static class MetamorphicMutator
 
         return [.. visitor.Clauses
             .Select(c => new Edit(c.StartOffset + c.FragmentLength, 0, " CROSS JOIN (SELECT 1 AS MetamorphicJoinCol) AS MetamorphicJoin"))];
+    }
+
+    private static List<Edit> CollectAliasRenameEdits(TSqlFragment fragment)
+    {
+        var aliasVisitor = new TableAliasVisitor();
+        fragment.Accept(aliasVisitor);
+
+        var renames = aliasVisitor.Aliases
+            .GroupBy(a => a.Value, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() == 1)
+            .Select(g => g.Single())
+            .ToList();
+
+        if (renames.Count == 0)
+        {
+            return [];
+        }
+
+        var columnVisitor = new ColumnReferenceVisitor();
+        fragment.Accept(columnVisitor);
+
+        var dmlTargetVisitor = new DmlTargetAliasVisitor();
+        fragment.Accept(dmlTargetVisitor);
+
+        var edits = new List<Edit>();
+        foreach (var alias in renames)
+        {
+            var newName = alias.Value + "Mm";
+            edits.Add(new Edit(alias.StartOffset, alias.FragmentLength, newName));
+
+            foreach (var columnRef in columnVisitor.References)
+            {
+                var identifiers = columnRef.MultiPartIdentifier?.Identifiers;
+                if (identifiers is not { Count: >= 2 })
+                {
+                    continue;
+                }
+
+                var qualifier = identifiers[^2];
+                if (string.Equals(qualifier.Value, alias.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    edits.Add(new Edit(qualifier.StartOffset, qualifier.FragmentLength, newName));
+                }
+            }
+
+            foreach (var target in dmlTargetVisitor.BareAliasTargets)
+            {
+                if (string.Equals(target.Value, alias.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    edits.Add(new Edit(target.StartOffset, target.FragmentLength, newName));
+                }
+            }
+        }
+
+        return edits;
+    }
+
+    private sealed class TableAliasVisitor : TSqlFragmentVisitor
+    {
+        public List<Identifier> Aliases { get; } = [];
+
+        public override void ExplicitVisit(NamedTableReference node)
+        {
+            if (node.Alias is { } alias)
+            {
+                Aliases.Add(alias);
+            }
+
+            base.ExplicitVisit(node);
+        }
+    }
+
+    private sealed class ColumnReferenceVisitor : TSqlFragmentVisitor
+    {
+        public List<ColumnReferenceExpression> References { get; } = [];
+
+        public override void ExplicitVisit(ColumnReferenceExpression node)
+        {
+            References.Add(node);
+            base.ExplicitVisit(node);
+        }
+    }
+
+    private sealed class DmlTargetAliasVisitor : TSqlFragmentVisitor
+    {
+        public List<Identifier> BareAliasTargets { get; } = [];
+
+        public override void ExplicitVisit(UpdateStatement node)
+        {
+            Record(node.UpdateSpecification.Target);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(DeleteStatement node)
+        {
+            Record(node.DeleteSpecification.Target);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(MergeStatement node)
+        {
+            Record(node.MergeSpecification.Target);
+            base.ExplicitVisit(node);
+        }
+
+        private void Record(TableReference target)
+        {
+            if (target is NamedTableReference { Alias: null, SchemaObject.SchemaIdentifier: null } named)
+            {
+                BareAliasTargets.Add(named.SchemaObject.BaseIdentifier);
+            }
+        }
     }
 
     private sealed class SchemaObjectNameVisitor : TSqlFragmentVisitor

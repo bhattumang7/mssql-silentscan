@@ -28,11 +28,5 @@
         "ExampleIndex": 0,
         "MutationName": "unrelated-join",
         "Reason": "unrelated-join appends a CROSS JOIN to a guaranteed-single-row derived table onto the inserted/deleted-only FROM clause the rule requires; the rule's single-table-reference check is a deliberate conservative guard against reasoning about arbitrary join shapes, so it correctly stops firing even though this specific join happens to be row-count-safe."
-    },
-    {
-        "RuleId": "silentscan/predicates/reassigned-parameter",
-        "ExampleIndex": 0,
-        "MutationName": "derived-table-wrap",
-        "Reason": "derived-table-wrap moves the WHERE predicate from the top-level statement into a nested derived table; the rule's predicate-location inspection is scoped to the statement's own top-level WHERE/HAVING/join-ON clauses and deliberately does not recurse into nested subqueries, so it correctly stops firing on a predicate that is no longer at that level."
     }
 ]

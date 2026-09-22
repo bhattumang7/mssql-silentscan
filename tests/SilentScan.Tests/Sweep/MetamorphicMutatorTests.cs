@@ -105,6 +105,44 @@ public sealed class MetamorphicMutatorTests
     }
 
     [Fact]
+    public void Mutate_AliasRename_RenamesAliasAndItsQualifiedColumnReferences()
+    {
+        var sql = """
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Status VARCHAR(20) NOT NULL);
+            SELECT o.OrderId FROM dbo.Orders AS o WHERE o.Status <> 'Closed';
+            """;
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(sql), m => m.Name == "alias-rename");
+
+        Assert.Contains("AS oMm", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.Contains("SELECT oMm.OrderId", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.Contains("WHERE oMm.Status <> 'Closed'", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.DoesNotContain("o.OrderId", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mutate_AliasRename_SkipsWhenNoTableAliasPresent()
+    {
+        Assert.DoesNotContain(MetamorphicMutator.Mutate(Sql), m => m.Name == "alias-rename");
+    }
+
+    [Fact]
+    public void Mutate_AliasRename_RenamesBareDeleteTargetAliasToo()
+    {
+        var sql = """
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+            DELETE o
+            FROM dbo.Orders AS o
+            WHERE o.OrderId NOT IN (SELECT TOP (1) o2.OrderId FROM dbo.Orders AS o2 WHERE o2.CustomerId = o.CustomerId);
+            """;
+        var mutation = Assert.Single(MetamorphicMutator.Mutate(sql), m => m.Name == "alias-rename");
+
+        Assert.Contains("DELETE oMm", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.Contains("AS oMm", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.Contains("AS o2Mm", mutation.MutatedSql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE o\n", mutation.MutatedSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mutate_EveryMutationStillParsesCleanly()
     {
         var mutations = MetamorphicMutator.Mutate(Sql);

@@ -72,6 +72,35 @@ against the same root-cause category before it's treated as new.
   target type rather than needing the original AST. Oracle-confirmed; this
   rule has the most real-code findings of any rule in the catalog, so this
   was worth prioritizing over further step-2 sampling of smaller rules.
+- **Category: join-shape check treated as a syntax rule when the real cutoff
+  is predicate-shape.** `UnindexedTempTableUsageScanner`'s `JoinOperand`
+  detection keyed purely off `CROSS JOIN` vs. other join syntax, but the
+  engine's actual seek availability turns on whether a `WHERE`-clause
+  equality predicate correlates the two sides, not on which join keyword was
+  written. A bare `CROSS JOIN` with no correlating predicate anywhere is a
+  true cartesian product — no seek is possible even when the temp table is
+  indexed, forced-plan oracle-confirmed (`Index Scan` + `Row Count Spool`,
+  no seek under `OPTION (LOOP JOIN, FORCE ORDER)`). `CROSS JOIN` combined
+  with a `WHERE` predicate equating a column on each side is logically an
+  inner join and does get a real seek path once indexed, identically to
+  `INNER JOIN ... ON`, also forced-plan oracle-confirmed. Fixed by gating
+  `CROSS JOIN` detection on the presence of a correlating `WHERE` equality
+  predicate (matching aliases, not raw table names) instead of dropping
+  `CROSS JOIN` detection outright.
+- **Category: flow-tracking scanner only inspected the outermost query
+  specification, missing predicates nested one level deeper.**
+  `ParameterReassignmentPredicateScanner` tracks reassignment state per
+  top-level statement (needed for its control-flow analysis), so unlike its
+  sibling predicate scanners it doesn't go through `ModuleWalker`'s generic
+  per-`QuerySpecification` dispatch, which is what makes those siblings
+  transparently reach predicates nested inside a derived table. A predicate
+  sitting inside a derived table in the `FROM` clause of a `SELECT`,
+  `UPDATE ... FROM`, or `DELETE ... FROM` was silently skipped even though it
+  compares a reassigned parameter against a base column exactly like the
+  top-level case. Fixed by recursively descending into `QueryDerivedTable`
+  nodes reachable through the statement's `FROM` clause (including through
+  joins), inspecting each nested query specification's own predicate
+  locations with a freshly resolved scope chain.
 
 ---
 
@@ -106,6 +135,47 @@ against the same root-cause category before it's treated as new.
   with an explicit `WITH (INDEX(...))` hint forcing the index; verified no
   newer "index skip scan" feature invalidates it (still a full `Index
   Scan`, never a seek, when only the non-leading column is bound).
+- `ScalarUdfScanner` family (`in-select-or-expression`,
+  `nested-under-view-or-tvf`, `in-predicate`, `in-computed-column-or-
+  constraint`) — `ScalarUdfMap.Build` correctly excludes multi-statement
+  TVFs from the "transparent, nested-under" claim (an MSTVF is genuinely not
+  optimizer-transparent, unlike a view or inline TVF); `ScalarUdfContext
+  Regions.Resolve`'s smallest-enclosing-region matching and `IsPredicate()`'s
+  WHERE/JOIN-ON/HAVING/MERGE-ON classification both check out against the
+  rule docs' own scoping claims.
+- `IndexDesignScanner.ScanUnindexedForeignKeys` — checks the referencing
+  (child) table's own leading index against its FK columns, not the
+  referenced table's; matches the rule's own claim (an FK lookup scans the
+  child side without a supporting index).
+- `silentscan/query/unqualified-table-reference` — real-code precision
+  sample (25 random findings against the local test database) reviewed
+  end-to-end; all 25 confirmed true positives. One case initially looked
+  ambiguous (a flagged column pointing mid-identifier inside what appeared
+  to be a bracket-qualified `[schema].[table]` reference) but traced back to
+  a different, genuinely unqualified reference to the same table name
+  earlier in the same object — the finding's line/column was correct
+  throughout; the ambiguity was in how the source text was sampled for
+  review, not in the scanner.
+- `ScalarUdfInlineabilityClassifier` / `silentscan/scalar-udf/in-select-or-
+  expression` — real-code sampling showed 100% of findings against the
+  local test database classified `NotInlineable`, which first looked like a
+  possible over-broad heuristic; oracle-confirmed instead that the database
+  itself runs at compatibility level 140, below the classifier's correct
+  150 FROID floor (`MinInliningCompatibilityLevel`), so every scalar UDF is
+  genuinely non-inlineable regardless of body shape — matches
+  `sys.sql_modules.is_inlineable` reporting the functions as
+  inlineable-in-principle at a higher compat level. Compat-level cutoff
+  already covered by `ScalarUdfInlineabilityClassifierTests` plus the
+  real-engine `is_inlineable` cases in `LiveCatalogReaderScalarUdfTests`.
+- `silentscan/predicates/local-variable-predicate` — `IsFormalParameter`
+  gating correctly excludes formal parameters (including ones later
+  reassigned, which `silentscan/predicates/reassigned-parameter` covers
+  instead), so the two rules partition DECLARE'd-local vs.
+  reassigned-parameter cases without overlap or gap.
+- `silentscan/forced-serial/table-variable-modification` — fires only on
+  the write target (INSERT/UPDATE/DELETE/MERGE/OUTPUT INTO), not a
+  read-only reference; already backed by a real executed-plan
+  `NonParallelPlanReason` oracle test.
 - `DeadCodeScanner` — the `ReachabilityWalker` control-flow model correctly
   treats RETURN/THROW as terminal, requires every IF/TRY-CATCH branch to be
   terminal (a `THROW` inside `TRY` alone doesn't make the block terminal —
@@ -290,6 +360,24 @@ statement — is uncontroversial syntax, not a claim needing verification).
   the FK `DistinctBy(ConstraintName)` (absent for check constraints) is
   correct given `sys.foreign_key_columns`' per-column-pair row shape versus
   check constraints' non-duplicated one.
+- `VerdictClassifier` (`silentscan/verdict/scan-forced`, `range-seek`) —
+  reviewed all branches (SqlVariant handling, out-of-model gating, collation
+  mismatch, same-category and cross-category paths). The one asymmetry that
+  looked suspicious — same-category `IsMax` mismatch classified as
+  `RangeSeek` regardless of which side is the MAX type — is not reachable
+  the way it first appeared: a `VARCHAR(MAX)`/`NVARCHAR(MAX)` column can't be
+  an index key column at all (hard DDL error), so the only reachable
+  direction is column-non-MAX vs other-MAX, oracle-confirmed via plan XML to
+  produce exactly the `GetRangeWithMismatchedTypes` seek-with-filter shape
+  `RangeSeek` claims. The cross-category matrix itself is continuously
+  oracle-verified by `TypePairMatrixLiveRegenerationTests` against every
+  probed cell, so this rule's remaining risk surface is narrow.
+- `QueryAntiPatternScanner` — `table-variable-low-compat-estimate` (the
+  dominant volume driver in this family) gates on `catalog.CompatibilityLevel
+  < 150`, null-safe when the level is unresolved, with the `DBCC
+  TRACEON(11034)` false-positive risk already hedged in the rule's own
+  rationale text; matches the documented compat-150 deferred-compilation
+  change and has its own dedicated oracle test.
 ---
 
 ## Not yet audited

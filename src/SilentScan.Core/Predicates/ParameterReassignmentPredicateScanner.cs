@@ -130,18 +130,91 @@ public static class ParameterReassignmentPredicateScanner
             switch (statement)
             {
                 case SelectStatement { QueryExpression: QuerySpecification spec } select when !HasOptionRecompile(select.OptimizerHints):
-                    ModuleWalker.InspectAllPredicateLocations(
-                        spec, BuildScopeChain(spec.FromClause, select.WithCtesAndXmlNamespaces), (condition, chain) => InspectSearchConditionCore(condition, chain, state));
+                    InspectQuerySpecificationTree(spec, BuildScopeChain(spec.FromClause, select.WithCtesAndXmlNamespaces), state);
                     break;
 
                 case UpdateStatement { UpdateSpecification: { } upd } update when !HasOptionRecompile(update.OptimizerHints):
                     ModuleWalker.InspectAllPredicateLocations(
                         update, BuildDataModificationScopeChain(upd.Target, upd.FromClause, update.WithCtesAndXmlNamespaces), (condition, chain) => InspectSearchConditionCore(condition, chain, state));
+                    InspectDerivedTablesInFromClause(upd.FromClause, state);
                     break;
 
                 case DeleteStatement { DeleteSpecification: { } del } delete when !HasOptionRecompile(delete.OptimizerHints):
                     ModuleWalker.InspectAllPredicateLocations(
                         delete, BuildDataModificationScopeChain(del.Target, del.FromClause, delete.WithCtesAndXmlNamespaces), (condition, chain) => InspectSearchConditionCore(condition, chain, state));
+                    InspectDerivedTablesInFromClause(del.FromClause, state);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        private void InspectQuerySpecificationTree(QuerySpecification spec, ScopeChain scopeChain, FlowState state)
+        {
+            ModuleWalker.InspectAllPredicateLocations(spec, scopeChain, (condition, chain) => InspectSearchConditionCore(condition, chain, state));
+            InspectDerivedTablesInFromClause(spec.FromClause, state);
+        }
+
+        private void InspectDerivedTablesInFromClause(FromClause? fromClause, FlowState state)
+        {
+            if (fromClause is null)
+            {
+                return;
+            }
+
+            foreach (var reference in fromClause.TableReferences)
+            {
+                foreach (var derived in FindDerivedTables(reference))
+                {
+                    if (derived.QueryExpression is QuerySpecification innerSpec)
+                    {
+                        InspectQuerySpecificationTree(innerSpec, BuildScopeChain(innerSpec.FromClause, withClause: null), state);
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<QueryDerivedTable> FindDerivedTables(TableReference reference)
+        {
+            switch (reference)
+            {
+                case QueryDerivedTable derived:
+                    yield return derived;
+                    break;
+
+                case QualifiedJoin qualified:
+                    foreach (var d in FindDerivedTables(qualified.FirstTableReference))
+                    {
+                        yield return d;
+                    }
+
+                    foreach (var d in FindDerivedTables(qualified.SecondTableReference))
+                    {
+                        yield return d;
+                    }
+
+                    break;
+
+                case UnqualifiedJoin unqualified:
+                    foreach (var d in FindDerivedTables(unqualified.FirstTableReference))
+                    {
+                        yield return d;
+                    }
+
+                    foreach (var d in FindDerivedTables(unqualified.SecondTableReference))
+                    {
+                        yield return d;
+                    }
+
+                    break;
+
+                case JoinParenthesisTableReference parenthesis:
+                    foreach (var d in FindDerivedTables(parenthesis.Join))
+                    {
+                        yield return d;
+                    }
+
                     break;
 
                 default:
