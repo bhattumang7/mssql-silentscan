@@ -523,6 +523,19 @@ public sealed class ReadableScanReportWriterTests
     }
 
     [Fact]
+    public void Where_CatchAllPredicateFindingWithDynamicSqlCallSite_AnnotatesRunSite()
+    {
+        var throughDynamicSql = new CatchAllPredicateFinding(
+            "dbo.T", "Col", Indexed: true, "@p",
+            "inner.sql", 3, 1, DynamicSqlCallSite: new SourceSpan("caller.sql", 40, 1));
+        var report = Blank().WithFindings("CatchAllPredicateScanner", [throughDynamicSql]);
+
+        var table = TableAfterHeading(BuildBlocks(report), "Catch-all");
+
+        Assert.Equal("inner.sql:3 (in dynamic SQL run at caller.sql:40)", Assert.Single(table.Rows)[0]);
+    }
+
+    [Fact]
     public void Tier1_GroupsByKindAndListsIndexedRowsFirstWithinEachGroup()
     {
         var findings = new[]

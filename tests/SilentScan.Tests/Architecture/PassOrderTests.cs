@@ -18,6 +18,7 @@ public sealed partial class PassOrderTests
     [
         (Path.Combine("Catalog", "DynamicSqlTempTableDiscovery.cs"), "Predicates"),
         (Path.Combine("Lineage", "SelectIntoLineagePass.cs"), "Predicates"),
+        (Path.Combine("Predicates", "DynamicSqlPipeline.cs"), "Reporting"),
     ];
 
     [GeneratedRegex(@"/\*.*?\*/", RegexOptions.Singleline)]

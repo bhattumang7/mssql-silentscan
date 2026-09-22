@@ -155,7 +155,11 @@ public static class ScanReportBuilder
         skippedConstructs.AddRange(ruleContext.Ledger.Entries);
         skippedConstructs.AddRange(ruleCrashes);
 
-        var dynamicSqlResult = DynamicSqlPipeline.Analyze(dynamicSqlScripts, catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope);
+        var outerTempTableDeclarationsByScope = dynamicSqlScripts.Count > 0
+            ? UnindexedTempTableUsageScanner.CollectDeclarationsByScope(usableParseResults, catalog)
+            : null;
+        var dynamicSqlResult = DynamicSqlPipeline.Analyze(
+            dynamicSqlScripts, catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope, ruleContext, outerTempTableDeclarationsByScope);
         dynamicSqlFindings = [.. dynamicSqlFindings, .. dynamicSqlResult.Findings];
         tier1Findings = [.. tier1Findings, .. dynamicSqlResult.Tier1Findings];
         typedFindings = [.. typedFindings, .. dynamicSqlResult.TypedFindings];
@@ -248,6 +252,23 @@ public static class ScanReportBuilder
             ["ScalarUdfScanner"] = scalarUdfFindings,
             ["SecurityScanner"] = securityFindings,
         };
+
+        if (dynamicSqlResult.HarnessFindings is { Count: > 0 } harnessFindings)
+        {
+            var rulesById = RuleHarness.RuleRegistry.All.ToDictionary(r => r.Id, StringComparer.Ordinal);
+            foreach (var (ruleId, findings) in harnessFindings)
+            {
+                if (!rulesById.TryGetValue(ruleId, out var rule))
+                {
+                    continue;
+                }
+
+                var combined = findingsByRuleId.TryGetValue(ruleId, out var existing)
+                    ? existing.Concat(findings)
+                    : findings;
+                findingsByRuleId[ruleId] = RuleHarness.RuleRunner.FinalizeRule(rule, combined, minimumConfidence);
+            }
+        }
 
         return new ScanReport(
             new ParseHealthReport(fileHealth), findingsByRuleId,

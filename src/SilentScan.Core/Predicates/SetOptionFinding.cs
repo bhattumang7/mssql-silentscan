@@ -28,10 +28,15 @@ public sealed record SetOptionFinding(
     string? TouchedObjectQualifiedName = null,
     string? TouchedIndexName = null,
     bool TouchedIsIndexedView = false,
-    FindingConfidence Confidence = FindingConfidence.High) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<SetOptionFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.SetOptionRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
+    int IRelocatableFinding.PositionColumn => Column;
+
+    SetOptionFinding IRelocatableFinding<SetOptionFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
+        this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }
 

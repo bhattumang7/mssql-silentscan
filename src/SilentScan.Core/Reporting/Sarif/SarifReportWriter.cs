@@ -121,6 +121,8 @@ public static class SarifReportWriter
         results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
         results.AddRange(report.Find<MissingStatisticsFinding>("MissingStatisticsScanner").Select(ToResult));
 
+        results = AnnotateDynamicSqlOrigins(results, report);
+
         var notifications = BuildParseHealthNotifications(report.ParseHealth);
         notifications.AddRange(BuildSkippedConstructNotifications(report.SkippedConstructSummary));
         notifications.AddRange(BuildDynamicSqlNotifications(report.DynamicSqlSummary));
@@ -1503,6 +1505,38 @@ public static class SarifReportWriter
 
     private static string DynamicSqlOriginNote(SourceSpan? callSite) =>
         callSite is { } span ? $" (via dynamic SQL executed at {span.SourcePath}:{span.Line})" : string.Empty;
+
+    private static List<SarifResult> AnnotateDynamicSqlOrigins(List<SarifResult> results, ScanReport report)
+    {
+        var callSitesByLocation = new Dictionary<(string Uri, int Line, int Column), SourceSpan>();
+        foreach (var finding in report.FindingsByRuleId.Values.SelectMany(findings => findings))
+        {
+            if (finding is IRelocatableFinding { DynamicSqlCallSite: { } callSite } relocatable)
+            {
+                callSitesByLocation[(ToUri(relocatable.SourcePath), relocatable.Line, relocatable.PositionColumn)] = callSite;
+            }
+        }
+
+        if (callSitesByLocation.Count == 0)
+        {
+            return results;
+        }
+
+        return results.ConvertAll(result =>
+        {
+            var region = result.Locations.Count > 0 ? result.Locations[0].PhysicalLocation : null;
+            if (region is null || !callSitesByLocation.TryGetValue(
+                    (region.ArtifactLocation.Uri, region.Region.StartLine, region.Region.StartColumn ?? 0), out var callSite))
+            {
+                return result;
+            }
+
+            var note = DynamicSqlOriginNote(callSite);
+            return result.Message.Text.Contains(note, StringComparison.Ordinal)
+                ? result
+                : result with { Message = result.Message with { Text = result.Message.Text + note } };
+        });
+    }
 
     private static string DescribeTransformationSite(TransformationSite site) =>
         site.SourcePath is null ? site.Description : $"{site.Description} at {site.SourcePath}:{site.Line}";

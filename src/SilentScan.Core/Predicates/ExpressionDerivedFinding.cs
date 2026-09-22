@@ -21,7 +21,7 @@ public sealed record ExpressionDerivedFinding(
     public string RuleId { get; } = FindingRuleIds.ExpressionDerivedRuleId;
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);
-    int IRelocatableFinding<ExpressionDerivedFinding>.PositionColumn => ColumnPosition;
+    int IRelocatableFinding.PositionColumn => ColumnPosition;
 
     ExpressionDerivedFinding IRelocatableFinding<ExpressionDerivedFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, ColumnPosition = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };

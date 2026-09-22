@@ -15,6 +15,8 @@ public sealed class RuleRunnerContainmentTests
     {
         public string Id => "ThrowingTestRule";
 
+        public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
+
         public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
             throw new InvalidOperationException("boom");
     }
@@ -22,6 +24,8 @@ public sealed class RuleRunnerContainmentTests
     private sealed class BenignRule : IPerFileRule
     {
         public string Id => "BenignTestRule";
+
+        public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
 
         public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
             [new FakeFinding(new SourceSpan(parseResult.SourcePath, 1, 1), FindingConfidence.High)];

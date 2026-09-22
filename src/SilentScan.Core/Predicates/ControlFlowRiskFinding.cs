@@ -30,10 +30,15 @@ public sealed record ControlFlowRiskFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     string DetailText,
-    FindingConfidence Confidence = FindingConfidence.Medium) : IFinding
+    FindingConfidence Confidence = FindingConfidence.Medium,
+    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<ControlFlowRiskFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.ControlFlowRiskRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, Column);
+    int IRelocatableFinding.PositionColumn => Column;
+
+    ControlFlowRiskFinding IRelocatableFinding<ControlFlowRiskFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
+        this with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }
 

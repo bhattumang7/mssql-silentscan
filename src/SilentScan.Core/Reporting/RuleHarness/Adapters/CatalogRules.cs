@@ -5,36 +5,42 @@ namespace SilentScan.Core.Reporting.RuleHarness.Adapters;
 internal sealed class AnsiPaddingOffColumnRule : ICatalogRule
 {
     public string Id => "AnsiPaddingOffColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => AnsiPaddingOffColumnScanner.Scan(context.Catalog);
 }
 
 internal sealed class TriggerOrderRule : ICatalogRule
 {
     public string Id => "TriggerOrderScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => TriggerOrderScanner.Scan(context.Catalog);
 }
 
 internal sealed class ProcCallArgumentMismatchRule : ICatalogRule
 {
     public string Id => "ProcCallArgumentMismatchScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => ProcCallArgumentMismatchScanner.Scan(context.ProcCallGraph);
 }
 
 internal sealed class SpExecuteSqlParameterMismatchRule : ICatalogRule
 {
     public string Id => "SpExecuteSqlParameterMismatchScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => SpExecuteSqlParameterMismatchScanner.Scan(context.ProcCallGraph);
 }
 
 internal sealed class MaxTypedColumnRule : ICatalogRule
 {
     public string Id => "MaxTypedColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MaxTypedColumnScanner.Scan(context.Catalog);
 }
 
 internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
 {
     public string Id => "MemoryOptimizedSchemaOnlyDurabilityScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public bool ApplyConfidenceFilter => false;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedSchemaOnlyDurabilityScanner.Scan(context.Catalog);
 }
@@ -42,24 +48,28 @@ internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
 internal sealed class NonPersistedComputedColumnRule : ICatalogRule
 {
     public string Id => "NonPersistedComputedColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => NonPersistedComputedColumnScanner.Scan(context.Catalog);
 }
 
 internal sealed class UntrustedConstraintRule : ICatalogRule
 {
     public string Id => "UntrustedConstraintScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => UntrustedConstraintScanner.Scan(context.Catalog);
 }
 
 internal sealed class CheckConstraintRule : ICatalogRule
 {
     public string Id => "CheckConstraintScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => CheckConstraintScanner.Scan(context.Catalog);
 }
 
 internal sealed class SecurityPredicateIndexRule : ICatalogRule
 {
     public string Id => "SecurityPredicateIndexScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public bool ApplyConfidenceFilter => false;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => SecurityPredicateIndexScanner.Scan(context.Catalog);
 }
@@ -67,23 +77,27 @@ internal sealed class SecurityPredicateIndexRule : ICatalogRule
 internal sealed class DefaultNullableConstraintRule : ICatalogRule
 {
     public string Id => "DefaultNullableConstraintScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => DefaultNullableConstraintScanner.Scan(context.Catalog);
 }
 
 internal sealed class CascadingForeignKeyRule : ICatalogRule
 {
     public string Id => "CascadingForeignKeyScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => CascadingForeignKeyScanner.Scan(context.Catalog);
 }
 
 internal sealed class TemporalTableHistoryIndexGapRule : ICatalogRule
 {
     public string Id => "TemporalTableHistoryIndexGapScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => TemporalTableHistoryIndexGapScanner.Scan(context.Catalog);
 }
 
 internal sealed class NestedViewDepthRule : ICatalogRule
 {
     public string Id => "NestedViewDepthScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => NestedViewDepthScanner.Scan(context.ViewExpansionMap, context.ViewDefinitions, context.Catalog);
 }

@@ -6,6 +6,7 @@ namespace SilentScan.Core.Reporting.RuleHarness.Adapters;
 internal sealed class WaitForRule : IPerFileRule
 {
     public string Id => "WaitForScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => WaitForScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => WaitForScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => WaitForScanner.Harvest((WaitForScanner.Rule)moduleRule);
@@ -14,6 +15,7 @@ internal sealed class WaitForRule : IPerFileRule
 internal sealed class CursorCloseOnCommitRule : IPerFileRule
 {
     public string Id => "CursorCloseOnCommitScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CursorCloseOnCommitScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CursorCloseOnCommitScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CursorCloseOnCommitScanner.Harvest((CursorCloseOnCommitScanner.Rule)moduleRule);
@@ -22,6 +24,7 @@ internal sealed class CursorCloseOnCommitRule : IPerFileRule
 internal sealed class CompositeIndexLeadingColumnRule : IPerFileRule
 {
     public string Id => "CompositeIndexLeadingColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CompositeIndexLeadingColumnScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CompositeIndexLeadingColumnScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CompositeIndexLeadingColumnScanner.Harvest((CompositeIndexLeadingColumnScanner.Visitor)moduleRule);
@@ -30,6 +33,7 @@ internal sealed class CompositeIndexLeadingColumnRule : IPerFileRule
 internal sealed class MissingStatisticsRule : IPerFileRule
 {
     public string Id => "MissingStatisticsScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => MissingStatisticsScanner.Scan(parseResult, context.Catalog);
     public IModuleRule? CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) =>
         context.Catalog.IsAutoCreateStatsOn != false ? null : MissingStatisticsScanner.CreateRule(parseResult.SourcePath, context.Catalog);
@@ -39,6 +43,7 @@ internal sealed class MissingStatisticsRule : IPerFileRule
 internal sealed class SessionDateSettingRule : IPerFileRule
 {
     public string Id => "SessionDateSettingScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SessionDateSettingScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SessionDateSettingScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SessionDateSettingScanner.Harvest((SessionDateSettingScanner.Rule)moduleRule);
@@ -47,6 +52,7 @@ internal sealed class SessionDateSettingRule : IPerFileRule
 internal sealed class AmbiguousDateLiteralConversionRule : IPerFileRule
 {
     public string Id => "AmbiguousDateLiteralConversionScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => AmbiguousDateLiteralConversionScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => AmbiguousDateLiteralConversionScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => AmbiguousDateLiteralConversionScanner.Harvest((AmbiguousDateLiteralConversionScanner.Rule)moduleRule);
@@ -55,6 +61,7 @@ internal sealed class AmbiguousDateLiteralConversionRule : IPerFileRule
 internal sealed class CartesianJoinRule : IPerFileRule
 {
     public string Id => "CartesianJoinScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CartesianJoinScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CartesianJoinScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CartesianJoinScanner.Harvest((CartesianJoinScanner.Rule)moduleRule);
@@ -63,6 +70,7 @@ internal sealed class CartesianJoinRule : IPerFileRule
 internal sealed class OuterJoinPredicateCollapseRule : IPerFileRule
 {
     public string Id => "OuterJoinPredicateCollapseScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => OuterJoinPredicateCollapseScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => OuterJoinPredicateCollapseScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => OuterJoinPredicateCollapseScanner.Harvest((OuterJoinPredicateCollapseScanner.Rule)moduleRule);
@@ -71,6 +79,7 @@ internal sealed class OuterJoinPredicateCollapseRule : IPerFileRule
 internal sealed class TruncateSwallowedRule : IPerFileRule
 {
     public string Id => "TruncateSwallowedScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => TruncateSwallowedScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => TruncateSwallowedScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => TruncateSwallowedScanner.Harvest((TruncateSwallowedScanner.Rule)moduleRule);
@@ -79,6 +88,7 @@ internal sealed class TruncateSwallowedRule : IPerFileRule
 internal sealed class CatchAllPredicateRule : IPerFileRule
 {
     public string Id => "CatchAllPredicateScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CatchAllPredicateScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CatchAllPredicateScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CatchAllPredicateScanner.Harvest((CatchAllPredicateScanner.Rule)moduleRule);
@@ -87,6 +97,7 @@ internal sealed class CatchAllPredicateRule : IPerFileRule
 internal sealed class BareTopNoOrderByRule : IPerFileRule
 {
     public string Id => "BareTopNoOrderByScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => BareTopNoOrderByScanner.Harvest((BareTopNoOrderByScanner.Rule)moduleRule);
@@ -95,6 +106,7 @@ internal sealed class BareTopNoOrderByRule : IPerFileRule
 internal sealed class StringAggMissingOrderRule : IPerFileRule
 {
     public string Id => "StringAggMissingOrderScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringAggMissingOrderScanner.Harvest((StringAggMissingOrderScanner.Rule)moduleRule);
@@ -103,6 +115,7 @@ internal sealed class StringAggMissingOrderRule : IPerFileRule
 internal sealed class ForXmlPathMissingOrderRule : IPerFileRule
 {
     public string Id => "ForXmlPathMissingOrderScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ForXmlPathMissingOrderScanner.Harvest((ForXmlPathMissingOrderScanner.Rule)moduleRule);
@@ -111,6 +124,7 @@ internal sealed class ForXmlPathMissingOrderRule : IPerFileRule
 internal sealed class JsonArrayAggMissingOrderRule : IPerFileRule
 {
     public string Id => "JsonArrayAggMissingOrderScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonArrayAggMissingOrderScanner.Harvest((JsonArrayAggMissingOrderScanner.Rule)moduleRule);
@@ -119,6 +133,7 @@ internal sealed class JsonArrayAggMissingOrderRule : IPerFileRule
 internal sealed class JsonObjectDuplicateKeyRule : IPerFileRule
 {
     public string Id => "JsonObjectDuplicateKeyScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonObjectDuplicateKeyScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonObjectDuplicateKeyScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonObjectDuplicateKeyScanner.Harvest((JsonObjectDuplicateKeyScanner.Rule)moduleRule);
@@ -127,6 +142,7 @@ internal sealed class JsonObjectDuplicateKeyRule : IPerFileRule
 internal sealed class UnistrUnpairedSurrogateRule : IPerFileRule
 {
     public string Id => "UnistrUnpairedSurrogateScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => UnistrUnpairedSurrogateScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => UnistrUnpairedSurrogateScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => UnistrUnpairedSurrogateScanner.Harvest((UnistrUnpairedSurrogateScanner.Rule)moduleRule);
@@ -135,6 +151,7 @@ internal sealed class UnistrUnpairedSurrogateRule : IPerFileRule
 internal sealed class RegexpReplaceDollarBackreferenceRule : IPerFileRule
 {
     public string Id => "RegexpReplaceDollarBackreferenceScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpReplaceDollarBackreferenceScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpReplaceDollarBackreferenceScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpReplaceDollarBackreferenceScanner.Harvest((RegexpReplaceDollarBackreferenceScanner.Rule)moduleRule);
@@ -143,6 +160,7 @@ internal sealed class RegexpReplaceDollarBackreferenceRule : IPerFileRule
 internal sealed class RegexpDefaultCaseSensitiveOnCiColumnRule : IPerFileRule
 {
     public string Id => "RegexpDefaultCaseSensitiveOnCiColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpDefaultCaseSensitiveOnCiColumnScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpDefaultCaseSensitiveOnCiColumnScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpDefaultCaseSensitiveOnCiColumnScanner.Harvest((RegexpDefaultCaseSensitiveOnCiColumnScanner.Rule)moduleRule);
@@ -151,6 +169,7 @@ internal sealed class RegexpDefaultCaseSensitiveOnCiColumnRule : IPerFileRule
 internal sealed class RegexpAccentInsensitiveColumnRule : IPerFileRule
 {
     public string Id => "RegexpAccentInsensitiveColumnScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => RegexpAccentInsensitiveColumnScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => RegexpAccentInsensitiveColumnScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => RegexpAccentInsensitiveColumnScanner.Harvest((RegexpAccentInsensitiveColumnScanner.Rule)moduleRule);
@@ -159,6 +178,7 @@ internal sealed class RegexpAccentInsensitiveColumnRule : IPerFileRule
 internal sealed class StringConcatNullRule : IPerFileRule
 {
     public string Id => "StringConcatNullScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringConcatNullScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringConcatNullScanner.CreateRule(parseResult.SourcePath, context.Catalog, parseResult.Fragment);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringConcatNullScanner.Harvest((StringConcatNullScanner.Rule)moduleRule);
@@ -167,6 +187,7 @@ internal sealed class StringConcatNullRule : IPerFileRule
 internal sealed class TvfCallArgumentMismatchRule : IPerFileRule
 {
     public string Id => "TvfCallArgumentMismatchScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => TvfCallArgumentMismatchScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => TvfCallArgumentMismatchScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => TvfCallArgumentMismatchScanner.Harvest((TvfCallArgumentMismatchScanner.Rule)moduleRule);
@@ -175,6 +196,7 @@ internal sealed class TvfCallArgumentMismatchRule : IPerFileRule
 internal sealed class ParameterReassignmentPredicateRule : IPerFileRule
 {
     public string Id => "ParameterReassignmentPredicateScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ParameterReassignmentPredicateScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ParameterReassignmentPredicateScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ParameterReassignmentPredicateScanner.Harvest((ParameterReassignmentPredicateScanner.Rule)moduleRule);
@@ -183,6 +205,7 @@ internal sealed class ParameterReassignmentPredicateRule : IPerFileRule
 internal sealed class NotInNullableSubqueryRule : IPerFileRule
 {
     public string Id => "NotInNullableSubqueryScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NotInNullableSubqueryScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NotInNullableSubqueryScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NotInNullableSubqueryScanner.Harvest((NotInNullableSubqueryScanner.Rule)moduleRule);
@@ -191,6 +214,7 @@ internal sealed class NotInNullableSubqueryRule : IPerFileRule
 internal sealed class NonUniqueUpdateSourceRule : IPerFileRule
 {
     public string Id => "NonUniqueUpdateSourceScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NonUniqueUpdateSourceScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NonUniqueUpdateSourceScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NonUniqueUpdateSourceScanner.Harvest((NonUniqueUpdateSourceScanner.Rule)moduleRule);
@@ -199,6 +223,7 @@ internal sealed class NonUniqueUpdateSourceRule : IPerFileRule
 internal sealed class CheckConstraintPredicateContradictionRule : IPerFileRule
 {
     public string Id => "CheckConstraintPredicateContradictionScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CheckConstraintPredicateContradictionScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CheckConstraintPredicateContradictionScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CheckConstraintPredicateContradictionScanner.Harvest((CheckConstraintPredicateContradictionScanner.Rule)moduleRule);
@@ -207,6 +232,7 @@ internal sealed class CheckConstraintPredicateContradictionRule : IPerFileRule
 internal sealed class FloatEqualityPredicateRule : IPerFileRule
 {
     public string Id => "FloatEqualityPredicateScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => FloatEqualityPredicateScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => FloatEqualityPredicateScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FloatEqualityPredicateScanner.Harvest((FloatEqualityPredicateScanner.Rule)moduleRule);
@@ -215,6 +241,7 @@ internal sealed class FloatEqualityPredicateRule : IPerFileRule
 internal sealed class FloatOrderDependentAggregateRule : IPerFileRule
 {
     public string Id => "FloatOrderDependentAggregateScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => FloatOrderDependentAggregateScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => FloatOrderDependentAggregateScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FloatOrderDependentAggregateScanner.Harvest((FloatOrderDependentAggregateScanner.Rule)moduleRule);
@@ -223,6 +250,7 @@ internal sealed class FloatOrderDependentAggregateRule : IPerFileRule
 internal sealed class IsNullReplacementValueTruncationRule : IPerFileRule
 {
     public string Id => "IsNullReplacementValueTruncationScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => IsNullReplacementValueTruncationScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => IsNullReplacementValueTruncationScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => IsNullReplacementValueTruncationScanner.Harvest((IsNullReplacementValueTruncationScanner.Rule)moduleRule);
@@ -231,6 +259,7 @@ internal sealed class IsNullReplacementValueTruncationRule : IPerFileRule
 internal sealed class IndexCoverageRule : IPerFileRule
 {
     public string Id => "IndexCoverageScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => IndexCoverageScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => IndexCoverageScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => IndexCoverageScanner.Harvest((IndexCoverageScanner.Visitor)moduleRule);
@@ -239,6 +268,7 @@ internal sealed class IndexCoverageRule : IPerFileRule
 internal sealed class SelfReferencingDmlRule : IPerFileRule
 {
     public string Id => "SelfReferencingDmlScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SelfReferencingDmlScanner.Scan(parseResult, context.Catalog, context.ViewExpansionMap);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SelfReferencingDmlScanner.CreateRule(parseResult.SourcePath, context.Catalog, context.ViewExpansionMap);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SelfReferencingDmlScanner.Harvest((SelfReferencingDmlScanner.Rule)moduleRule);
@@ -247,6 +277,7 @@ internal sealed class SelfReferencingDmlRule : IPerFileRule
 internal sealed class TransactionHygieneRule : IPerFileRule
 {
     public string Id => "TransactionHygieneScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => TransactionHygieneScanner.Scan(parseResult);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => TransactionHygieneScanner.CreateRule(parseResult.SourcePath);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => TransactionHygieneScanner.Harvest((TransactionHygieneScanner.Rule)moduleRule);
@@ -255,6 +286,7 @@ internal sealed class TransactionHygieneRule : IPerFileRule
 internal sealed class DynamicDataMaskingRule : IPerFileRule
 {
     public string Id => "DynamicDataMaskingScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DynamicDataMaskingScanner.Scan(parseResult, context.Catalog);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DynamicDataMaskingScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => DynamicDataMaskingScanner.Harvest((DynamicDataMaskingScanner.Rule)moduleRule);

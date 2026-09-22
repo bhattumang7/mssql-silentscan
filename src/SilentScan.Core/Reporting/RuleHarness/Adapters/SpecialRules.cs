@@ -7,6 +7,8 @@ internal sealed class PartialCompositeForeignKeyJoinRule : IPerFileRule
 {
     public string Id => "PartialCompositeForeignKeyJoinScanner";
 
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
+
     public object? Prepare(RuleContext context) => PartialCompositeForeignKeyJoinScanner.BuildCompositeForeignKeys(context.Catalog);
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
@@ -26,6 +28,8 @@ internal sealed class ProcCallTableValuedArgumentMismatchRule : IPerFileRule
 {
     public string Id => "ProcCallTableValuedArgumentMismatchScanner";
 
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
+
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
         ProcCallTableValuedArgumentMismatchScanner.Scan(parseResult, context.ProcCallGraph, context.Catalog, context.Ledger);
 
@@ -39,6 +43,8 @@ internal sealed class ProcCallTableValuedArgumentMismatchRule : IPerFileRule
 internal sealed class StatementShapeRule : IPerFileRule
 {
     public string Id => "StatementShapeScanner";
+
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StatementShapeScanner.Scan(parseResult);
 
@@ -54,6 +60,8 @@ internal sealed class StatementShapeRule : IPerFileRule
 internal sealed class MultiReferencedCteRule : IPerFileRule
 {
     public string Id => "MultiReferencedCteScanner";
+
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => MultiReferencedCteScanner.Scan(parseResult, context.Catalog);
 
@@ -79,6 +87,8 @@ internal sealed class MultiReferencedCteRule : IPerFileRule
 internal sealed class PostExpansionJoinWidthRule : IPerFileRule
 {
     public string Id => "PostExpansionJoinWidthScanner";
+
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
         PostExpansionJoinWidthScanner.Scan(parseResult, context.Catalog, context.ViewExpansionMap);
@@ -107,6 +117,8 @@ internal sealed class PostExpansionJoinWidthRule : IPerFileRule
 internal sealed class SelectStarViewRule : IPerFileRule
 {
     public string Id => "SelectStarViewScanner";
+
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
         SelectStarViewScanner.Scan(parseResult, context.Catalog, context.Lineage, context.SelectStarViewCandidates);
@@ -162,6 +174,8 @@ internal sealed class OutputParameterRule : IPerFileRule
 {
     public string Id => "OutputParameterScanner";
 
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
+
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => OutputParameterScanner.Scan(parseResult);
 
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => OutputParameterScanner.CreateRule(parseResult.SourcePath);
@@ -186,6 +200,8 @@ internal sealed class OutputParameterRule : IPerFileRule
 internal sealed class UnindexedTempTableUsageRule : IPerFileRule
 {
     public string Id => "UnindexedTempTableUsageScanner";
+
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
 
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => UnindexedTempTableUsageScanner.Scan(parseResult, context.Catalog);
 

@@ -7,6 +7,7 @@ using SilentScan.Core.Diagnostics;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates.DynamicSqlValue;
+using SilentScan.Core.Reporting.RuleHarness;
 using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
@@ -24,12 +25,18 @@ public static partial class DynamicSqlPipeline
 
     private static readonly IReadOnlyDictionary<string, ScalarUdfOrigin> NoScalarUdfMap = new Dictionary<string, ScalarUdfOrigin>();
 
+    private static readonly IReadOnlyDictionary<string, ResolvedRelation> NoResolvedViews = new Dictionary<string, ResolvedRelation>();
+
+    private static readonly HashSet<string> HandWiredHarnessRuleIds = new(StringComparer.Ordinal) { "TvfFenceScanner", "ScalarUdfScanner", "UnindexedTempTableUsageScanner" };
+
     private readonly record struct PipelineContext(
         DatabaseCatalog Catalog,
         LineageCatalog Lineage,
         IReadOnlyDictionary<string, TvfFenceOrigin> TvfFenceMap,
         IReadOnlyDictionary<string, ScalarUdfOrigin> ScalarUdfMap,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? CallerScopeByCalleeScope);
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? CallerScopeByCalleeScope,
+        RuleContext? RuleContext = null,
+        IReadOnlyDictionary<string, List<UnindexedTempTableUsageScanner.Declaration>>? OuterTempTableDeclarationsByScope = null);
 
     public static DynamicSqlPipelineResult Analyze(
         IReadOnlyList<DynamicSqlScript> scripts, DatabaseCatalog catalog, LineageCatalog lineage, IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null) =>
@@ -40,8 +47,9 @@ public static partial class DynamicSqlPipeline
         Analyze(scripts, catalog, lineage, tvfFenceMap, NoScalarUdfMap, callerScopeByCalleeScope);
 
     public static DynamicSqlPipelineResult Analyze(
-        IReadOnlyList<DynamicSqlScript> scripts, DatabaseCatalog catalog, LineageCatalog lineage, IReadOnlyDictionary<string, TvfFenceOrigin> tvfFenceMap, IReadOnlyDictionary<string, ScalarUdfOrigin> scalarUdfMap, IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null) =>
-        Analyze(scripts, new PipelineContext(catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope), depth: 1, seeds: null);
+        IReadOnlyList<DynamicSqlScript> scripts, DatabaseCatalog catalog, LineageCatalog lineage, IReadOnlyDictionary<string, TvfFenceOrigin> tvfFenceMap, IReadOnlyDictionary<string, ScalarUdfOrigin> scalarUdfMap, IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null, RuleContext? ruleContext = null,
+        IReadOnlyDictionary<string, List<UnindexedTempTableUsageScanner.Declaration>>? outerTempTableDeclarationsByScope = null) =>
+        Analyze(scripts, new PipelineContext(catalog, lineage, tvfFenceMap, scalarUdfMap, callerScopeByCalleeScope, ruleContext, outerTempTableDeclarationsByScope), depth: 1, seeds: null);
 
     private static DynamicSqlPipelineResult Analyze(
         IReadOnlyList<DynamicSqlScript> scripts,
@@ -68,9 +76,29 @@ public static partial class DynamicSqlPipeline
             accumulator.WriteLoss.AddRange(DedupeWriteLoss(PreferBestConfidencePerKey(perCallSite.WriteLoss, WriteLossKey, f => f.Confidence)));
             accumulator.TvfFence.AddRange(DedupeTvfFence(PreferBestConfidencePerKey(perCallSite.TvfFence, TvfFenceKey, f => f.Confidence)));
             accumulator.ScalarUdf.AddRange(DedupeScalarUdf(PreferBestConfidencePerKey(perCallSite.ScalarUdf, ScalarUdfKey, f => f.Confidence)));
+            MergeHarness(accumulator.Harness, perCallSite.Harness);
         }
 
         return accumulator.ToResult();
+    }
+
+    private static void MergeHarness(Dictionary<string, List<IFinding>> target, Dictionary<string, List<IFinding>> source)
+    {
+        foreach (var (ruleId, findings) in source)
+        {
+            if (findings.Count == 0)
+            {
+                continue;
+            }
+
+            if (!target.TryGetValue(ruleId, out var existing))
+            {
+                existing = [];
+                target[ruleId] = existing;
+            }
+
+            existing.AddRange(findings.Distinct());
+        }
     }
 
     private static List<SargabilityFinding> DedupeTier1(List<SargabilityFinding> findings)
@@ -158,8 +186,12 @@ public static partial class DynamicSqlPipeline
 
         public List<SkippedConstruct> Skipped { get; } = [];
 
+        public Dictionary<string, List<IFinding>> Harness { get; } = new(StringComparer.Ordinal);
+
         public DynamicSqlPipelineResult ToResult() =>
-            new(Findings, Tier1, Typed, ExpressionDerived, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped);
+            new(
+                Findings, Tier1, Typed, ExpressionDerived, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped,
+                Harness.Count == 0 ? null : Harness.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<IFinding>)kv.Value, StringComparer.Ordinal));
     }
 
     private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel);
@@ -440,6 +472,10 @@ public static partial class DynamicSqlPipeline
 
         FoldFenceAndScalarUdfFindings(innerParseResult, context, script, map, accumulator);
 
+        FoldUnindexedTempTableUsageFindings(innerParseResult, context, script, map, accumulator);
+
+        RunHarnessRules(innerParseResult, context, script, outcome, map, accumulator);
+
         var ownDeclaredParameters = script.ParameterDeclarationText is { } declarationText
             ? DynamicSqlParameterDeclarations.TryParse(declarationText, context.Catalog.TypeAliases, context.Catalog.CompatibilityLevel, context.Catalog.IdentifierComparer) ?? NoDeclaredParameters
             : NoDeclaredParameters;
@@ -479,6 +515,93 @@ public static partial class DynamicSqlPipeline
         accumulator.ScalarUdf.AddRange(nested.ScalarUdfFindings);
         accumulator.Unparameterized.AddRange(nested.UnparameterizedFindings);
         accumulator.Skipped.AddRange(nested.SkippedConstructs);
+        MergeHarness(accumulator.Harness, nested.HarnessFindings);
+    }
+
+    private static void MergeHarness(Dictionary<string, List<IFinding>> target, IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? source)
+    {
+        if (source is null)
+        {
+            return;
+        }
+
+        foreach (var (ruleId, findings) in source)
+        {
+            if (findings.Count == 0)
+            {
+                continue;
+            }
+
+            if (!target.TryGetValue(ruleId, out var existing))
+            {
+                existing = [];
+                target[ruleId] = existing;
+            }
+
+            existing.AddRange(findings);
+        }
+    }
+
+    private static void RunHarnessRules(
+        SqlParseResult innerParseResult, PipelineContext context, DynamicSqlScript script, DynamicSqlOutcome outcome,
+        Func<int, int, SourceSpan> map, ResultAccumulator accumulator)
+    {
+        if (context.RuleContext is not { } ruleContext)
+        {
+            return;
+        }
+
+        var applicableRules = RuleRegistry.All
+            .OfType<IPerFileRule>()
+            .Where(rule => !HandWiredHarnessRuleIds.Contains(rule.Id))
+            .Where(rule => rule.DynamicSql == DynamicSqlApplicability.Always
+                || (rule.DynamicSql == DynamicSqlApplicability.LiteralOnly && outcome == DynamicSqlOutcome.AnalyzedLiteral))
+            .ToList();
+
+        if (applicableRules.Count == 0)
+        {
+            return;
+        }
+
+        var callerContext = new ModuleWalkerCallerContext(ruleContext.Ledger, script.Scope.ProcScope, context.CallerScopeByCalleeScope);
+        var harnessCrashes = new List<SkippedConstruct>();
+        var harnessResults = RuleRunner.RunOnBatch(applicableRules, innerParseResult, ruleContext, callerContext, harnessCrashes);
+
+        foreach (var (ruleId, findings) in harnessResults)
+        {
+            if (findings.Count == 0)
+            {
+                continue;
+            }
+
+            var relocated = new List<IFinding>(findings.Count);
+            foreach (var finding in findings)
+            {
+                if (finding is not IRelocatableFinding relocatable)
+                {
+                    continue;
+                }
+
+                var span = map(relocatable.Line, relocatable.PositionColumn);
+                relocated.Add(relocatable.RelocatedAny(span, script.CallSite, script.Confidence));
+            }
+
+            if (relocated.Count > 0)
+            {
+                if (!accumulator.Harness.TryGetValue(ruleId, out var existing))
+                {
+                    existing = [];
+                    accumulator.Harness[ruleId] = existing;
+                }
+
+                existing.AddRange(relocated);
+            }
+        }
+
+        foreach (var crash in harnessCrashes)
+        {
+            accumulator.Skipped.Add(Remap(crash, map));
+        }
     }
 
     private static void DetectUnparameterizedConcatenation(DynamicSqlScript script, SqlParseResult innerParseResult, ResultAccumulator accumulator)
@@ -523,6 +646,38 @@ public static partial class DynamicSqlPipeline
         }
     }
 
+    private static void FoldUnindexedTempTableUsageFindings(
+        SqlParseResult innerParseResult, PipelineContext context, DynamicSqlScript script, Func<int, int, SourceSpan> map, ResultAccumulator accumulator)
+    {
+        if (context.OuterTempTableDeclarationsByScope is not { } outerDeclarationsByScope || outerDeclarationsByScope.Count == 0)
+        {
+            return;
+        }
+
+        var rule = UnindexedTempTableUsageScanner.CreateRule(context.Catalog);
+        var callerContext = new ModuleWalkerCallerContext(context.RuleContext?.Ledger, script.Scope.ProcScope, context.CallerScopeByCalleeScope);
+        var walker = new ModuleWalker(innerParseResult.SourcePath, context.Catalog, NoResolvedViews, rules: [rule], callerContext: callerContext);
+        innerParseResult.Fragment.Accept(walker);
+
+        var crossBoundaryFindings = UnindexedTempTableUsageScanner.HarvestCrossBoundary(innerParseResult, context.Catalog, rule, outerDeclarationsByScope);
+        if (crossBoundaryFindings.Count == 0)
+        {
+            return;
+        }
+
+        if (!accumulator.Harness.TryGetValue("UnindexedTempTableUsageScanner", out var existing))
+        {
+            existing = [];
+            accumulator.Harness["UnindexedTempTableUsageScanner"] = existing;
+        }
+
+        foreach (var finding in crossBoundaryFindings)
+        {
+            var span = map(finding.UsageLine, finding.UsageColumn);
+            existing.Add(((IRelocatableFinding<UnindexedTempTableUsageFinding>)finding).Relocated(span, script.CallSite, script.Confidence));
+        }
+    }
+
     private static DynamicSqlPipelineResult AnalyzeNested(
         SqlParseResult innerParseResult,
         DynamicSqlScript script,
@@ -562,7 +717,8 @@ public static partial class DynamicSqlPipeline
             [.. nestedResult.TvfFenceFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.ScalarUdfFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.UnparameterizedFindings.Select(f => RemapNested(f, script))],
-            [.. nestedResult.SkippedConstructs.Select(s => Remap(s, script))]);
+            [.. nestedResult.SkippedConstructs.Select(s => Remap(s, script))],
+            RemapHarnessFindings(nestedResult.HarnessFindings, script));
     }
 
     private static DynamicSqlPipelineResult RefuseNestedCandidates(SqlParseResult innerParseResult, DynamicSqlScript script, Func<int, int, SourceSpan> map)
@@ -648,7 +804,7 @@ public static partial class DynamicSqlPipeline
     private static FindingConfidence Worse(FindingConfidence a, FindingConfidence b) => (FindingConfidence)Math.Max((int)a, (int)b);
 
     private static TFinding Remap<TFinding>(TFinding finding, DynamicSqlScript script, Func<int, int, SourceSpan> map)
-        where TFinding : IRelocatableFinding<TFinding>
+        where TFinding : IFinding, IRelocatableFinding<TFinding>
     {
         var span = map(finding.Line, finding.PositionColumn);
         return finding.Relocated(span, script.CallSite, script.Confidence);
@@ -664,7 +820,7 @@ public static partial class DynamicSqlPipeline
     }
 
     private static TFinding RemapNested<TFinding>(TFinding finding, DynamicSqlScript outerScript)
-        where TFinding : IRelocatableFinding<TFinding>
+        where TFinding : IFinding, IRelocatableFinding<TFinding>
     {
         var span = outerScript.SegmentMap.Map(finding.Line, finding.PositionColumn);
         return finding.Relocated(span, RemapCallSite(finding.DynamicSqlCallSite, outerScript), Worse(finding.Confidence, outerScript.Confidence));
@@ -674,6 +830,43 @@ public static partial class DynamicSqlPipeline
     {
         var span = outerScript.SegmentMap.Map(finding.Line, finding.Column);
         return finding with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column };
+    }
+
+    private static IFinding? RemapHarnessFinding(IFinding finding, DynamicSqlScript outerScript)
+    {
+        if (finding is not IRelocatableFinding relocatable)
+        {
+            return null;
+        }
+
+        var span = outerScript.SegmentMap.Map(relocatable.Line, relocatable.PositionColumn);
+        return relocatable.RelocatedAny(span, RemapCallSite(relocatable.DynamicSqlCallSite, outerScript), Worse(finding.Confidence, outerScript.Confidence));
+    }
+
+    private static Dictionary<string, IReadOnlyList<IFinding>>? RemapHarnessFindings(
+        IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? findingsByRuleId, DynamicSqlScript outerScript)
+    {
+        if (findingsByRuleId is null || findingsByRuleId.Count == 0)
+        {
+            return null;
+        }
+
+        var remapped = new Dictionary<string, IReadOnlyList<IFinding>>(StringComparer.Ordinal);
+        foreach (var (ruleId, findings) in findingsByRuleId)
+        {
+            var mapped = findings
+                .Select(f => RemapHarnessFinding(f, outerScript))
+                .Where(f => f is not null)
+                .Select(f => f!)
+                .ToList();
+
+            if (mapped.Count > 0)
+            {
+                remapped[ruleId] = mapped;
+            }
+        }
+
+        return remapped.Count == 0 ? null : remapped;
     }
 }
 
@@ -686,4 +879,5 @@ public sealed record DynamicSqlPipelineResult(
     IReadOnlyList<TvfFenceFinding> TvfFenceFindings,
     IReadOnlyList<ScalarUdfFinding> ScalarUdfFindings,
     IReadOnlyList<UnparameterizedDynamicSqlFinding> UnparameterizedFindings,
-    IReadOnlyList<SkippedConstruct> SkippedConstructs);
+    IReadOnlyList<SkippedConstruct> SkippedConstructs,
+    IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? HarnessFindings = null);

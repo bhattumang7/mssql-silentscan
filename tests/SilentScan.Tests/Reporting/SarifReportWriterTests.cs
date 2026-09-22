@@ -307,6 +307,35 @@ public sealed class SarifReportWriterTests
     }
 
     [Fact]
+    public void Write_RelocatedFindingWithDynamicSqlCallSite_AnnotatesMessageWithOrigin()
+    {
+        var callSite = new SourceSpan("test.sql", 4, 5);
+        var report = TestScanReports.Build(WaitForFindings: [new WaitForFinding(
+            "test.sql", 10, 5, IsInsideTransaction: false, DynamicSqlCallSite: callSite)]);
+
+        var sarif = SarifReportWriter.Write(report);
+        using var document = JsonDocument.Parse(sarif);
+
+        var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
+        var result = Assert.Single(results.EnumerateArray());
+        Assert.Contains("via dynamic SQL executed at test.sql:4", result.GetProperty("message").GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public void Write_FindingWithoutDynamicSqlCallSite_MessageHasNoOriginNote()
+    {
+        var report = TestScanReports.Build(WaitForFindings: [new WaitForFinding(
+            "test.sql", 10, 5, IsInsideTransaction: false)]);
+
+        var sarif = SarifReportWriter.Write(report);
+        using var document = JsonDocument.Parse(sarif);
+
+        var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
+        var result = Assert.Single(results.EnumerateArray());
+        Assert.DoesNotContain("via dynamic SQL executed at", result.GetProperty("message").GetProperty("text").GetString());
+    }
+
+    [Fact]
     public void Write_NoParseErrors_StillEmitsInvocationWithEmptyNotifications()
     {
         var report = ScanReportBuilder.BuildFromParseResults([], new DatabaseCatalog());

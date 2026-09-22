@@ -593,7 +593,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader],
             [.. report.Find<AnsiPaddingOffColumnFinding>(nameof(AnsiPaddingOffColumnScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
             })]);
     }
@@ -614,7 +614,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Event", "Unordered triggers"],
             [.. report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.EventTypeDescription,
                 string.Join(", ", f.UnorderedTriggerNames),
             })]);
@@ -636,7 +636,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, CalleeHeader, ParameterHeader, "Direction", CallerSideExpressionHeader, CallerTypeHeader, "Parameter type", "Risk"],
             [.. report.Find<ProcCallArgumentMismatchFinding>(nameof(ProcCallArgumentMismatchScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CalleeQualifiedName,
                 f.FormalParameterName,
                 f.IsOutputWriteback ? "OUTPUT writeback (callee -> caller)" : "input (caller -> callee)",
@@ -663,7 +663,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, CalleeHeader, ParameterHeader, CallerSideExpressionHeader, CallerTypeHeader, "Parameter type", "Risk"],
             [.. report.Find<TvfCallArgumentMismatchFinding>(nameof(TvfCallArgumentMismatchScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CalleeQualifiedName,
                 f.FormalParameterName,
                 f.CallerExpressionDisplay,
@@ -689,7 +689,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, CalleeHeader, ParameterHeader, ColumnHeader, CallerSideExpressionHeader, CallerTypeHeader, "Column type", "Risk"],
             [.. report.Find<ProcCallTableValuedArgumentMismatchFinding>(nameof(ProcCallTableValuedArgumentMismatchScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CalleeQualifiedName,
                 f.FormalParameterName,
                 f.ColumnName,
@@ -716,7 +716,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ParameterHeader, "Direction", CallerSideExpressionHeader, CallerTypeHeader, "Declared parameter type", "Risk"],
             [.. report.Find<SpExecuteSqlParameterMismatchFinding>(nameof(SpExecuteSqlParameterMismatchScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ParameterName,
                 f.IsOutputWriteback ? "OUTPUT writeback (callee -> caller)" : "input (caller -> callee)",
                 f.CallerExpressionDisplay,
@@ -741,7 +741,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Column scale", "Boundary literal", "Literal fractional digits"],
             [.. report.Find<TemporalBoundaryPrecisionFinding>(nameof(NonSargablePredicateScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.ColumnScale.ToString(CultureInfo.InvariantCulture),
                 f.BoundaryLiteralText,
@@ -763,7 +763,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ColumnHeader, "Type"],
                 [.. maxLength.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     $"{f.TableQualifiedName}.{f.ColumnName}",
                     f.TypeDisplay,
                 })]);
@@ -786,7 +786,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader],
             [.. report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
             })]);
     }
@@ -807,7 +807,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Definition", "Covered by an index"],
             [.. report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.DefinitionText,
                 f.IsCoveredByIndex ? "Yes" : "No",
@@ -830,7 +830,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Column length", "Other operand length", OperatorHeader, "Effect"],
             [.. report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.ColumnLength.ToString(CultureInfo.InvariantCulture),
                 f.IsImplicitDefault ? "none (defaults to 1)" : f.OtherOperandLength!.Value.ToString(CultureInfo.InvariantCulture),
@@ -855,7 +855,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Pattern"],
             [.. report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.PatternLiteralText,
             })]);
@@ -881,7 +881,7 @@ public static class ReadableScanReportWriter
                 .ThenBy(f => f.Line)
                 .Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.ParameterName,
                 f.Indexed ? "yes" : "no",
@@ -904,7 +904,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Variable", OperatorHeader, IndexedHeader],
             [.. report.Find<LocalVariablePredicateFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.VariableName,
                 f.Operator,
@@ -928,7 +928,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Filtered index", "Filter literal", "Variable", OperatorHeader],
             [.. report.Find<FilteredIndexParameterMismatchFinding>(nameof(TypedPredicateExtractor)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.IndexName ?? "<unnamed>",
                 f.FilterLiteralText,
@@ -953,7 +953,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, ParameterHeader, OperatorHeader, IndexedHeader, "Reassigned at"],
             [.. report.Find<ParameterReassignmentPredicateFinding>(nameof(ParameterReassignmentPredicateScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.ParameterName,
                 f.Operator,
@@ -982,7 +982,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, "Measured", "Threshold", DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.MeasuredValue.ToString(CultureInfo.InvariantCulture),
                     f.Threshold.ToString(CultureInfo.InvariantCulture),
                     f.DetailText ?? f.ModuleQualifiedName,
@@ -1010,7 +1010,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText ?? f.ModuleQualifiedName,
                 })]);
         }
@@ -1036,7 +1036,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1062,7 +1062,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1088,7 +1088,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText ?? f.ModuleQualifiedName,
                 })]);
         }
@@ -1114,7 +1114,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText ?? f.ModuleQualifiedName,
                 })]);
         }
@@ -1140,7 +1140,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1166,7 +1166,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1192,7 +1192,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1218,7 +1218,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1244,7 +1244,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, IndexHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.IndexName ?? (IsTableLevelIndexDesignKind(f.Kind) ? "(table-level)" : "<unnamed>"),
                     f.DetailText,
                 })]);
@@ -1273,7 +1273,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Type", DetailHeader],
             [.. report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.TypeDisplay,
                 $"Compared with = at line {f.Line}, column {f.Column}.",
@@ -1296,7 +1296,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Type", "Aggregate", DetailHeader],
             [.. report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.TypeDisplay,
                 f.AggregateFunctionName,
@@ -1321,7 +1321,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Check expression", "Check expression type", "Replacement value", "Replacement value type", "Risk"],
             [.. findings.Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CheckExpressionDisplay,
                 f.CheckExpressionTypeDisplay,
                 f.ReplacementValueDisplay,
@@ -1347,7 +1347,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ColumnHeader, "Masking function", "Kind", "Context", DetailHeader],
             [.. findings.Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.MaskingFunctionName,
                 f.Kind == DynamicDataMaskingFindingKind.PredicateExposure ? "Real-value exposure" : "Sentinel collapse",
@@ -1376,7 +1376,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.DetailText,
                 })]);
         }
@@ -1398,7 +1398,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, IndexHeader, "Uncovered columns"],
             [.. report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.IndexName ?? "<unnamed>",
                 string.Join(", ", f.UncoveredColumns),
@@ -1425,7 +1425,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, "Trigger", DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.TriggerQualifiedName,
                     f.DetailText,
                 })]);
@@ -1450,8 +1450,8 @@ public static class ReadableScanReportWriter
             {
                 f.FirstTableQualifiedName,
                 f.SecondTableQualifiedName,
-                $"{f.FirstTableFirstOrdering.ProcedureQualifiedName} ({Where(f.FirstTableFirstOrdering.SourcePath, f.FirstTableFirstOrdering.FirstWriteLine, dynamicSqlCallSite: null, pathBase, f.Confidence)})",
-                $"{f.SecondTableFirstOrdering.ProcedureQualifiedName} ({Where(f.SecondTableFirstOrdering.SourcePath, f.SecondTableFirstOrdering.SecondWriteLine, dynamicSqlCallSite: null, pathBase, f.Confidence)})",
+                $"{f.FirstTableFirstOrdering.ProcedureQualifiedName} ({Where(f.FirstTableFirstOrdering.SourcePath, f.FirstTableFirstOrdering.FirstWriteLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence)})",
+                $"{f.SecondTableFirstOrdering.ProcedureQualifiedName} ({Where(f.SecondTableFirstOrdering.SourcePath, f.SecondTableFirstOrdering.SecondWriteLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence)})",
             })]);
     }
 
@@ -1471,7 +1471,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Outer column", "Subquery column", IndexedHeader],
             [.. report.Find<NotInNullableSubqueryFinding>(nameof(NotInNullableSubqueryScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.OuterColumnName ?? "<expression>",
                 $"{f.SubqueryTableQualifiedName}.{f.SubqueryColumnName}",
                 f.SubqueryColumnIndexed ? "yes" : "no",
@@ -1494,7 +1494,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TargetHeader, SourceHeader, "Join columns", "SET columns"],
             [.. report.Find<NonUniqueUpdateSourceFinding>(nameof(NonUniqueUpdateSourceScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TargetTableQualifiedName,
                 f.SourceTableQualifiedName,
                 string.Join(", ", f.JoinColumnNames),
@@ -1523,7 +1523,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, TableHeader, ColumnHeader, ConstraintHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.TableQualifiedName,
                     f.ColumnName,
                     f.ConstraintName ?? "-",
@@ -1554,7 +1554,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ModuleHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ModuleQualifiedName,
                     f.DetailText ?? UnknownDisplay,
                 })]);
@@ -1589,7 +1589,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ConstraintHeader, TableHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ConstraintName,
                     f.TableQualifiedName,
                 })]);
@@ -1617,7 +1617,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ConstraintHeader, TableHeader, ColumnHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ConstraintName,
                     f.TableQualifiedName,
                     f.ColumnName,
@@ -1641,7 +1641,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, ColumnHeader, "Default"],
             [.. report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.ColumnName,
                 f.DefaultDefinitionText,
@@ -1664,7 +1664,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "View", "Base table", "View's columns", "Table's current columns"],
             [.. report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ViewQualifiedName,
                 f.BaseTableQualifiedName,
                 string.Join(", ", f.ViewCompiledColumns),
@@ -1688,7 +1688,7 @@ public static class ReadableScanReportWriter
             [WhereHeader],
             [.. report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -1708,7 +1708,7 @@ public static class ReadableScanReportWriter
             [WhereHeader],
             [.. report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -1728,7 +1728,7 @@ public static class ReadableScanReportWriter
             [WhereHeader],
             [.. report.Find<ForXmlPathMissingOrderFinding>(nameof(ForXmlPathMissingOrderScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -1748,7 +1748,7 @@ public static class ReadableScanReportWriter
             [WhereHeader],
             [.. report.Find<JsonArrayAggMissingOrderFinding>(nameof(JsonArrayAggMissingOrderScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -1768,7 +1768,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Duplicate key"],
             [.. report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.DuplicateKey,
             })]);
     }
@@ -1789,7 +1789,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Escape sequence"],
             [.. report.Find<UnistrUnpairedSurrogateFinding>(nameof(UnistrUnpairedSurrogateScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.EscapeSequence,
             })]);
     }
@@ -1810,7 +1810,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Dollar token"],
             [.. report.Find<RegexpReplaceDollarBackreferenceFinding>(nameof(RegexpReplaceDollarBackreferenceScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.DollarToken,
             })]);
     }
@@ -1831,7 +1831,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Function", "Column"],
             [.. report.Find<RegexpDefaultCaseSensitiveOnCiColumnFinding>(nameof(RegexpDefaultCaseSensitiveOnCiColumnScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.FunctionName,
                 $"{f.TableQualifiedName}.{f.ColumnName}",
             })]);
@@ -1853,7 +1853,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Function", "Column"],
             [.. report.Find<RegexpAccentInsensitiveColumnFinding>(nameof(RegexpAccentInsensitiveColumnScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.FunctionName,
                 $"{f.TableQualifiedName}.{f.ColumnName}",
             })]);
@@ -1875,7 +1875,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, ColumnHeader],
             [.. report.Find<StringConcatNullFinding>(nameof(StringConcatNullScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.ColumnName,
             })]);
@@ -1897,7 +1897,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, "Policy", "Predicate function", "Filtered column(s)"],
             [.. report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.PolicyQualifiedName,
                 f.PredicateFunctionQualifiedName,
@@ -1921,7 +1921,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ConstraintHeader, "Parent", "Referenced", "Delete action", "Update action"],
             [.. report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ConstraintName,
                 f.ParentTableQualifiedName,
                 f.ReferencedTableQualifiedName,
@@ -1946,7 +1946,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "CTE", "References"],
             [.. report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CteName,
                 f.ReferenceCount.ToString(CultureInfo.InvariantCulture),
             })]);
@@ -1968,7 +1968,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "View", "Depth", "Chain", "Base tables"],
             [.. report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ViewQualifiedName,
                 f.Depth.ToString(CultureInfo.InvariantCulture),
                 string.Join(" -> ", f.Chain),
@@ -1992,7 +1992,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Written", "Expanded", "Inflating source(s)", "Unexpanded?"],
             [.. report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.WrittenCount.ToString(CultureInfo.InvariantCulture),
                 f.ExpandedCount.ToString(CultureInfo.InvariantCulture),
                 string.Join(", ", f.InflatingSources),
@@ -2016,7 +2016,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "View", "View columns", "Consumer selects"],
             [.. report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Select(f => new List<string>
             {
-                Where(f.ConsumerSourcePath, f.ConsumerLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.ConsumerSourcePath, f.ConsumerLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ViewQualifiedName,
                 $"{f.ViewFullColumns.Count} ({string.Join(", ", f.ViewFullColumns)})",
                 string.Join(", ", f.ConsumerSelectedColumns),
@@ -2046,7 +2046,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 })]);
         }
     }
@@ -2071,7 +2071,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     $"{f.TempTableQualifiedName} position {f.ColumnPosition} ('{f.ColumnName}', {f.TempColumnTypeDisplay}) <- {f.ExecutedProcQualifiedName} ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
                 })]);
         }
@@ -2097,7 +2097,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     $"{f.ExecutedProcQualifiedName} WITH RESULT SETS position {f.ColumnPosition} ('{f.ColumnName}', {f.DeclaredColumnTypeDisplay}) <- described ({f.DescribedColumnTypeDisplay}): {f.WriteLoss}",
                 })]);
         }
@@ -2119,7 +2119,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Statement", TargetHeader, DetailHeader],
             [.. report.Find<SelfReferencingDmlFinding>(nameof(SelfReferencingDmlScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.StatementKind,
                 f.TargetTableQualifiedName,
                 f.Kind == SelfReferencingDmlFindingKind.ThroughView
@@ -2144,7 +2144,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Current table", "History table", IndexHeader, "Key columns"],
             [.. report.Find<TemporalTableHistoryIndexGapFinding>(nameof(TemporalTableHistoryIndexGapScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CurrentTableQualifiedName,
                 f.HistoryTableQualifiedName,
                 f.CurrentIndexName ?? "(unnamed)",
@@ -2175,7 +2175,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ModuleHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ModuleQualifiedName,
                 })]);
         }
@@ -2202,7 +2202,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 })]);
         }
     }
@@ -2227,7 +2227,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, FunctionHeader, "Computed length", "Cap"],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.FunctionName,
                     f.ComputedLength.ToString(CultureInfo.InvariantCulture),
                     f.CapBytes.ToString(CultureInfo.InvariantCulture),
@@ -2251,7 +2251,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Inside open transaction?"],
             [.. report.Find<WaitForFinding>(nameof(WaitForScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.IsInsideTransaction ? "Yes" : "No",
             })]);
     }
@@ -2272,7 +2272,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Cursor", "Closed by"],
             [.. report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.FetchLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.FetchLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CursorName,
                 f.ClosedByRollback ? "ROLLBACK" : "COMMIT",
             })]);
@@ -2299,7 +2299,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ObjectHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ObjectQualifiedName,
                 })]);
         }
@@ -2336,7 +2336,7 @@ public static class ReadableScanReportWriter
                 columns,
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.BeginTransactionLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.BeginTransactionLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     $"{f.SourcePath}:{f.UnresolvedExitLine}",
                 })]);
         }
@@ -2358,7 +2358,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, ColumnHeader],
             [.. report.Find<MissingStatisticsFinding>(nameof(MissingStatisticsScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.ColumnName,
             })]);
@@ -2380,7 +2380,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, TableHeader, IndexHeader, "Key columns", "Unconstrained leading column", "Violating column"],
             [.. report.Find<CompositeIndexLeadingColumnFinding>(nameof(CompositeIndexLeadingColumnScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
                 f.IndexName ?? "(unnamed)",
                 string.Join(", ", f.IndexKeyColumns),
@@ -2409,7 +2409,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, TableHeader, "Hinted index", "Problem"],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.TableQualifiedName,
                     f.HintedIndexName,
                     $"Leading column {f.LeadingColumnName} never bound",
@@ -2438,7 +2438,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 })]);
         }
     }
@@ -2460,7 +2460,7 @@ public static class ReadableScanReportWriter
             [.. report.Find<AmbiguousDateLiteralConversionFinding>(nameof(AmbiguousDateLiteralConversionScanner)).Select(f => new List<string>
             {
                 f.LiteralText,
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -2491,7 +2491,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, "First table", "Second table"],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.FirstTableQualifiedName,
                     f.SecondTableQualifiedName,
                 })]);
@@ -2514,7 +2514,7 @@ public static class ReadableScanReportWriter
             [WhereHeader],
             [.. report.Find<TruncateSwallowedFinding>(nameof(TruncateSwallowedScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
             })]);
     }
 
@@ -2539,7 +2539,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, "Temp table"],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.UsageLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.UsageLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.TempTableQualifiedName,
                 })]);
         }
@@ -2561,7 +2561,7 @@ public static class ReadableScanReportWriter
             ["Procedure at", ParameterHeader, "Unresolved at"],
             [.. report.Find<OutputParameterFinding>(nameof(OutputParameterScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.ProcedureLine, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.ProcedureLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ParameterName,
                 $"{f.SourcePath}:{f.UnresolvedExitLine}",
             })]);
@@ -2625,7 +2625,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, ConstraintHeader, "Tables", "Matched columns", "Missing columns"],
             [.. report.Find<PartialCompositeForeignKeyJoinFinding>(nameof(PartialCompositeForeignKeyJoinScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.ConstraintName,
                 $"{f.ParentTableQualifiedName} -> {f.ReferencedTableQualifiedName}",
                 string.Join(", ", f.MatchedColumnPairs.Select(p => $"{p.ParentColumnName}={p.ReferencedColumnName}")),
@@ -2649,7 +2649,7 @@ public static class ReadableScanReportWriter
             [WhereHeader, "Join kind", TableHeader, ColumnHeader],
             [.. report.Find<OuterJoinPredicateCollapseFinding>(nameof(OuterJoinPredicateCollapseScanner)).Select(f => new List<string>
             {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.Kind switch
                 {
                     OuterJoinPredicateCollapseKind.LeftOuterJoin => "LEFT OUTER JOIN",
@@ -2684,7 +2684,7 @@ public static class ReadableScanReportWriter
                 [WhereHeader, ModuleHeader, "Touched object", "Kind"],
                 [.. ordered.Select(f => new List<string>
                 {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: null, pathBase, f.Confidence),
+                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ModuleQualifiedName,
                     DescribeTouchedObject(f.TouchedObjectQualifiedName, f.TouchedIndexName),
                     f.TouchedIsIndexedView ? "indexed view" : "filtered index",
@@ -2909,6 +2909,8 @@ public static class ReadableScanReportWriter
 
         return words.ToString();
     }
+
+    private static SourceSpan? DynamicSqlCallSiteOf(IFinding finding) => (finding as IRelocatableFinding)?.DynamicSqlCallSite;
 
     private static string Where(string sourcePath, int line, SourceSpan? dynamicSqlCallSite, string? pathBase, FindingConfidence confidence = FindingConfidence.High)
     {
