@@ -733,4 +733,22 @@ public sealed class ParameterReassignmentPredicateScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Fact]
+    public void PredicateInsideDerivedTableSubquery_StillFires()
+    {
+        var findings = Scan(
+            """
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                SET @p = 'OVERWRITTEN';
+                SELECT * FROM (SELECT 1 AS X FROM dbo.Customers WHERE Code = @p) AS Wrap;
+            END
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("dbo.Customers", finding.TableQualifiedName);
+        Assert.Equal("Code", finding.ColumnName);
+        Assert.True(finding.Indexed);
+    }
 }
