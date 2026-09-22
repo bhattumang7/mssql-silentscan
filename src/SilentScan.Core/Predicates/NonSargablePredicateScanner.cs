@@ -267,8 +267,16 @@ public static class NonSargablePredicateScanner
 
                 case CoalesceExpression or NullIfExpression or IIfCall or SearchedCaseExpression or SimpleCaseExpression
                     when FindAnyColumn(expression) is { } wrapped:
+                {
+                    var (wrappedTableQualifiedName, _, _) = ResolveIndexInfo(wrapped.Ref, scopeChain, walker);
+                    if (wrappedTableQualifiedName is { } wrappedTable && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, wrappedTable, expression))
+                    {
+                        break;
+                    }
+
                     Add(SargabilityFindingKind.FunctionWrappedColumn, wrapped.Name, WrapConstructName(expression), expression, wrapped.Ref, scopeChain, walker);
                     break;
+                }
             }
         }
 
@@ -303,6 +311,12 @@ public static class NonSargablePredicateScanner
                 }
 
                 Add(SargabilityFindingKind.DateFunctionOnColumn, named.Name, functionCall.FunctionName.Value, functionCall, named.Ref, scopeChain, walker);
+                return;
+            }
+
+            if (ResolveIndexInfo(named.Ref, scopeChain, walker).TableQualifiedName is { } genericTable
+                && ComputedColumnMatcher.HasIndexedMatchingComputedColumn(catalog, genericTable, functionCall))
+            {
                 return;
             }
 
