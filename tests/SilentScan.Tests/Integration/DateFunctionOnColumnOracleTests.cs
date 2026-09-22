@@ -39,6 +39,36 @@ public sealed class DateFunctionOnColumnOracleTests : IAsyncLifetime
                 SELECT Code FROM dbo.Orders WHERE YEAR(OrderDate) = @x;
             END
             GO
+            CREATE PROCEDURE dbo.ProbeMonth @x INT AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE MONTH(OrderDate) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeDay @x INT AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE DAY(OrderDate) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeDatepart @x INT AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE DATEPART(YEAR, OrderDate) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeDatediff @x INT AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE DATEDIFF(DAY, '2020-01-01', OrderDate) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeDateadd @x DATETIME2(3) AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE DATEADD(DAY, 1, OrderDate) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeDatename @x VARCHAR(20) AS
+            BEGIN
+                SELECT Code FROM dbo.Orders WHERE DATENAME(MONTH, OrderDate) = @x;
+            END
+            GO
             CREATE PROCEDURE dbo.ProbeBareColumn @x DATETIME2(3) AS
             BEGIN
                 SELECT Code FROM dbo.Orders WHERE OrderDate = @x;
@@ -60,6 +90,30 @@ public sealed class DateFunctionOnColumnOracleTests : IAsyncLifetime
     [Fact]
     public async Task YearOnColumn_NeverSeeks() =>
         Assert.False(await HasIndexSeek("EXEC dbo.ProbeYear @x = 2021;"));
+
+    [Fact]
+    public async Task MonthOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeMonth @x = 6;"));
+
+    [Fact]
+    public async Task DayOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeDay @x = 15;"));
+
+    [Fact]
+    public async Task DatepartOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeDatepart @x = 2021;"));
+
+    [Fact]
+    public async Task DatediffOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeDatediff @x = 100;"));
+
+    [Fact]
+    public async Task DateaddOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeDateadd @x = '2021-06-15';"));
+
+    [Fact]
+    public async Task DatenameOnColumn_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeDatename @x = 'June';"));
 
     [Fact]
     public async Task BareColumnComparison_Seeks() =>
