@@ -101,6 +101,19 @@ against the same root-cause category before it's treated as new.
   nodes reachable through the statement's `FROM` clause (including through
   joins), inspecting each nested query specification's own predicate
   locations with a freshly resolved scope chain.
+- **Category: run-once catalog fact re-run per batch.** When the full rule
+  harness began running on dynamic SQL, `RuleRunner.RunOnBatch` also called
+  every rule's `ScanCatalogOnce`, so each whole-catalog finding (the
+  statement-shape "table has no primary key" check) was emitted again for
+  every analysed dynamic-SQL batch and then relocated onto that batch's call
+  site. One table produced one correct finding plus one duplicate per
+  dynamic-SQL-bearing module, each wrongly attributed to an unrelated
+  `EXEC`/`sp_executesql` call. Fixed by keeping `ScanCatalogOnce` solely in
+  the once-per-run path; per-batch execution now runs only the batch's own
+  module and legacy scans. Sibling sweep: `ScanCatalogOnce` has one
+  implementer and one remaining call site, `RuleRunner.Run` and the
+  catalog-only index-design scan each have a single caller, and the only
+  `Prepare` override builds a lookup rather than findings.
 
 ---
 

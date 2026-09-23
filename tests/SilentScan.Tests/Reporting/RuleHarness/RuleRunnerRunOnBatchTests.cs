@@ -38,6 +38,25 @@ public sealed class RuleRunnerRunOnBatchTests
                 .Select(scope => new ProcScopeFinding(new SourceSpan(parseResult.SourcePath, 1, 1), FindingConfidence.High, scope))];
     }
 
+    private sealed record CatalogOnceFinding(SourceSpan Location, FindingConfidence Confidence) : IFinding;
+
+    private sealed class CatalogOnceRule : IPerFileRule
+    {
+        public int CallCount;
+
+        public string Id => "CatalogOnceTestRule";
+
+        public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
+
+        public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => [];
+
+        public IReadOnlyList<IFinding> ScanCatalogOnce(RuleContext context)
+        {
+            CallCount++;
+            return [new CatalogOnceFinding(new SourceSpan("catalog", 1, 1), FindingConfidence.High)];
+        }
+    }
+
     private static RuleContext BuildEmptyContext()
     {
         var catalog = CatalogBuilder.Build([]);
@@ -76,5 +95,20 @@ public sealed class RuleRunnerRunOnBatchTests
 
         var finding = Assert.Single(results["ProcScopeTestRule"].Cast<ProcScopeFinding>());
         Assert.Null(finding.ObservedProcScope);
+    }
+
+    [Fact]
+    public void RunOnBatch_NeverInvokesScanCatalogOnce()
+    {
+        var innerParseResult = SqlScriptParser.ParseText("outer.sql::dynamic-sql@1", "SELECT 1;");
+        var context = BuildEmptyContext();
+        var callerContext = new ModuleWalkerCallerContext(context.Ledger, "dbo.OuterProc", null);
+        var crashes = new List<SkippedConstruct>();
+        var rule = new CatalogOnceRule();
+
+        var results = RuleRunner.RunOnBatch([rule], innerParseResult, context, callerContext, crashes);
+
+        Assert.Equal(0, rule.CallCount);
+        Assert.Empty(results["CatalogOnceTestRule"]);
     }
 }
