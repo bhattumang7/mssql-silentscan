@@ -126,8 +126,6 @@ public static class RuleRunner
             RunModuleRules(moduleRules, moduleRuleOwner, innerParseResult, context, state, callerContext);
         }
 
-        ScanCatalogOnceForAll(preparedRules, context, state, innerParseResult.SourcePath);
-
         return results;
     }
 
@@ -237,25 +235,6 @@ public static class RuleRunner
             }
 
             state.Results[rule.Id].AddRange(harvested);
-        }
-    }
-
-    private static void ScanCatalogOnceForAll(
-        List<IPerFileRule> preparedRules,
-        RuleContext context,
-        BatchState state,
-        string sourcePath)
-    {
-        foreach (var rule in preparedRules)
-        {
-            try
-            {
-                state.Results[rule.Id].AddRange(rule.ScanCatalogOnce(context));
-            }
-            catch (Exception ex)
-            {
-                RecordCrash(state.Crashes, rule.Id, sourcePath, ex);
-            }
         }
     }
 
