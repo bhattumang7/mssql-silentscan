@@ -96,6 +96,27 @@ public sealed class DynamicSqlRuleParityTests
     }
 
     [Fact]
+    public void NolockHintInsideLiteralExecString_KeepsOwnLowConfidence_NotRaisedToScriptConfidence()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.RunNoLock
+            AS
+            BEGIN
+                EXEC('SELECT * FROM dbo.A WITH (NOLOCK);');
+            END
+            """;
+
+        var result = Run(sql);
+
+        var findings = result.HarnessFindings!["ControlFlowRiskScanner"];
+        var finding = Assert.Single(findings);
+        var controlFlowRisk = Assert.IsType<ControlFlowRiskFinding>(finding);
+        Assert.Equal(ControlFlowRiskFindingKind.DirtyReadIsolationHint, controlFlowRisk.Kind);
+        Assert.NotNull(controlFlowRisk.DynamicSqlCallSite);
+        Assert.Equal(FindingConfidence.Low, controlFlowRisk.Confidence);
+    }
+
+    [Fact]
     public void OuterTempTableDeclaredThenJoinedInsideSpExecuteSql_NoIndex_FiresAtOuterCallSite()
     {
         const string sql = """

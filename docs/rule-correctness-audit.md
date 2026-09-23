@@ -57,6 +57,23 @@ against the same root-cause category before it's treated as new.
   remaining call sites, and extending the matcher's structural comparison to
   `BinaryExpression` so it recognizes arithmetic definitions too. Both
   oracle-confirmed.
+- **Category: relocation across a dynamic-SQL call site overwrote a
+  finding's own confidence with the script's confidence instead of combining
+  them.** `DynamicSqlPipeline`'s generic `Remap<TFinding>` helper, its
+  harness-rule relocation loop, and its cross-boundary temp-table-usage
+  relocation all substituted `script.Confidence` for whatever confidence the
+  underlying scanner had already assigned, so a rule's own Medium- or
+  Low-confidence finding (e.g. an intrinsic `NOLOCK` dirty-read hint at Low)
+  came out at High whenever it was folded into a literal (High-confidence)
+  `EXEC('...')`/`sp_executesql` script - the opposite of the one-level-deeper
+  nested-relocation path, which already combined via `Worse(finding.Confidence,
+  outerScript.Confidence)`. This let genuinely lower-confidence findings pass
+  the default `--confidence high` filter. Fixed by routing all three call
+  sites through the same `Worse` combinator used by the nested path; no other
+  caller of `.Relocated`/`RelocatedAny` exists outside `DynamicSqlPipeline.cs`,
+  and no other report/ranking/SARIF-level-mapping code overwrites a finding's
+  confidence rather than combining it (SARIF only ever floors a level from a
+  confidence, never raises one).
 - **Category: same computed-column-suppression gap, reached through
   view-layer lineage instead of a direct predicate.** The rule's doc for
   `silentscan/lineage/expression-derived-column` claims a computed expression

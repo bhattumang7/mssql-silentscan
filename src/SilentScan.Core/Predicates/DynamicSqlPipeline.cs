@@ -591,7 +591,7 @@ public static partial class DynamicSqlPipeline
                 }
 
                 var span = map(relocatable.Line, relocatable.PositionColumn);
-                relocated.Add(relocatable.RelocatedAny(span, script.CallSite, script.Confidence));
+                relocated.Add(relocatable.RelocatedAny(span, script.CallSite, Worse(finding.Confidence, script.Confidence)));
             }
 
             if (relocated.Count > 0)
@@ -682,7 +682,7 @@ public static partial class DynamicSqlPipeline
         foreach (var finding in crossBoundaryFindings)
         {
             var span = map(finding.UsageLine, finding.UsageColumn);
-            existing.Add(((IRelocatableFinding<UnindexedTempTableUsageFinding>)finding).Relocated(span, script.CallSite, script.Confidence));
+            existing.Add(((IRelocatableFinding<UnindexedTempTableUsageFinding>)finding).Relocated(span, script.CallSite, Worse(finding.Confidence, script.Confidence)));
         }
     }
 
@@ -815,7 +815,7 @@ public static partial class DynamicSqlPipeline
         where TFinding : IFinding, IRelocatableFinding<TFinding>
     {
         var span = map(finding.Line, finding.PositionColumn);
-        return finding.Relocated(span, script.CallSite, script.Confidence);
+        return finding.Relocated(span, script.CallSite, Worse(finding.Confidence, script.Confidence));
     }
 
     private static SkippedConstruct Remap(SkippedConstruct entry, DynamicSqlScript script) =>
