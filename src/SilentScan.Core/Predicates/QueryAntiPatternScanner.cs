@@ -69,7 +69,8 @@ public static class QueryAntiPatternScanner
             {
                 foreach (var variableRef in CollectVariableTableReferences(tableReference))
                 {
-                    if (_tableVariableNames.Contains(variableRef.Variable.Name)
+                    if (_recompileStatementDepth == 0
+                        && _tableVariableNames.Contains(variableRef.Variable.Name)
                         && catalog.CompatibilityLevel is { } level && level < 150)
                     {
                         Findings.Add(new QueryAntiPatternFinding(
@@ -97,25 +98,68 @@ public static class QueryAntiPatternScanner
             }
         }
 
+        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
+            EnterStatementHints(node);
+
+        public void OnLeaveSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
+            LeaveStatementHints(node);
+
+        public void OnLeaveInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            LeaveStatementHints(node);
+
+        public void OnLeaveUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            LeaveStatementHints(node);
+
+        public void OnLeaveDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            LeaveStatementHints(node);
+
+        public void OnLeaveMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            LeaveStatementHints(node);
+
+        private int _recompileStatementDepth;
+
+        private static bool HasOptionRecompile(StatementWithCtesAndXmlNamespaces statement) =>
+            statement.OptimizerHints.Any(h => h.HintKind == OptimizerHintKind.Recompile);
+
+        private void EnterStatementHints(StatementWithCtesAndXmlNamespaces statement)
+        {
+            if (HasOptionRecompile(statement))
+            {
+                _recompileStatementDepth++;
+            }
+        }
+
+        private void LeaveStatementHints(StatementWithCtesAndXmlNamespaces statement)
+        {
+            if (HasOptionRecompile(statement))
+            {
+                _recompileStatementDepth--;
+            }
+        }
+
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {
+            EnterStatementHints(node);
             InspectSiteIfNamedTable(node.InsertSpecification.Target);
         }
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            EnterStatementHints(node);
             InspectSiteIfNamedTable(node.UpdateSpecification.Target);
             InspectUnboundedWrite(node.UpdateSpecification.WhereClause, node.UpdateSpecification.TopRowFilter, node);
         }
 
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            EnterStatementHints(node);
             InspectSiteIfNamedTable(node.DeleteSpecification.Target);
             InspectUnboundedWrite(node.DeleteSpecification.WhereClause, node.DeleteSpecification.TopRowFilter, node);
         }
 
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            EnterStatementHints(node);
             InspectSiteIfNamedTable(node.MergeSpecification.Target);
             InspectSiteIfNamedTable(node.MergeSpecification.TableReference);
             InspectMergeHazards(node.MergeSpecification);
