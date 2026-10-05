@@ -84,6 +84,30 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (RECOMPILE);")]
+    [InlineData("SELECT Id FROM @t OPTION (RECOMPILE);")]
+    [InlineData("INSERT INTO dbo.Big SELECT Id FROM @t OPTION (MAXDOP 1, RECOMPILE);")]
+    [InlineData("UPDATE b SET Id = Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (RECOMPILE);")]
+    [InlineData("DELETE b FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (RECOMPILE);")]
+    public void TableVariableInStatementWithOptionRecompile_BelowCompat150_NeverFiresLowCompatKind(string statement)
+    {
+        var findings = Scan($"DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; {statement}", compatibilityLevel: 130);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
+    [Fact]
+    public void TableVariableInStatementWithoutOptionRecompile_NextToOneWithIt_StillFires()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; "
+            + "SELECT Id FROM @t OPTION (RECOMPILE); SELECT Id FROM @t;",
+            compatibilityLevel: 130);
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
     [Fact]
     public void TableVariableAsJoinSource_AtCompat150_NeverFiresLowCompatKind()
     {

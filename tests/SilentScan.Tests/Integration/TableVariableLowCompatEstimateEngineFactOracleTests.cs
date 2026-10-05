@@ -30,7 +30,8 @@ public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests 
             INSERT INTO @t (Id)
             SELECT TOP (1000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL))
             FROM sys.objects a CROSS JOIN sys.objects b;
-            SELECT COUNT(*) FROM @t;
+            SELECT Id FROM @t;
+            SELECT Id FROM @t OPTION (RECOMPILE);
             """;
 
         var planXmlBuilder = new System.Text.StringBuilder();
@@ -69,11 +70,24 @@ public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests 
     {
         var planXml = await CaptureTableVariableCountPlanAsync();
 
-        var countStatementMatch = CountEstimateRegex().Match(planXml);
-        Assert.True(countStatementMatch.Success, planXml);
-        Assert.Equal("1", countStatementMatch.Groups[1].Value);
+        var plainStatementMatch = PlainEstimateRegex().Match(planXml);
+        Assert.True(plainStatementMatch.Success, planXml);
+        Assert.Equal("1", plainStatementMatch.Groups[1].Value);
     }
 
-    [GeneratedRegex("StatementText=\"SELECT COUNT\\(\\*\\) FROM @t\"[^>]*StatementEstRows=\"([^\"]*)\"")]
-    private static partial Regex CountEstimateRegex();
+    [Fact]
+    public async Task BelowCompat150_StatementWithOptionRecompile_EstimatesTheRealRowCount()
+    {
+        var planXml = await CaptureTableVariableCountPlanAsync();
+
+        var recompileStatementMatch = RecompileEstimateRegex().Match(planXml);
+        Assert.True(recompileStatementMatch.Success, planXml);
+        Assert.Equal("1000", recompileStatementMatch.Groups[1].Value);
+    }
+
+    [GeneratedRegex("StatementText=\"SELECT Id FROM @t\"[^>]*StatementEstRows=\"([^\"]*)\"")]
+    private static partial Regex PlainEstimateRegex();
+
+    [GeneratedRegex("StatementText=\"SELECT Id FROM @t OPTION \\(RECOMPILE\\)\"[^>]*StatementEstRows=\"([^\"]*)\"")]
+    private static partial Regex RecompileEstimateRegex();
 }
