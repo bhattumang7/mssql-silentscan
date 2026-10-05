@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
@@ -7,12 +8,16 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", "silentscan/forced-serial/table-variable-modification")]
 public sealed class TableVariableModificationOracleTests : OracleTestFixture
 {
+    private static readonly string[] NonScanningOperators = ["Table Insert", "Constant Scan", "Compute Scalar", "Parameter Table Scan"];
+
     protected override string DatabaseNameSeed => nameof(TableVariableModificationOracleTests);
 
     protected override string Ddl => """
         CREATE TABLE dbo.BigTable (Id INT NOT NULL, Grp INT NOT NULL, Val VARCHAR(100) NOT NULL);
         GO
         CREATE TABLE dbo.Audit (Id INT NOT NULL);
+        GO
+        CREATE PROCEDURE dbo.ProbeProc AS SELECT 1 AS Id;
         GO
         """;
 
@@ -34,51 +39,10 @@ public sealed class TableVariableModificationOracleTests : OracleTestFixture
         await seedCommand.ExecuteNonQueryAsync();
     }
 
-    private async Task<string> CaptureRealExecutionPlanAsync(string probe)
-    {
-        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
-        await connection.OpenAsync();
-
-        await using (var onCommand = new SqlCommand("SET STATISTICS XML ON;", connection))
-        {
-            await onCommand.ExecuteNonQueryAsync();
-        }
-
-        string planXml;
-        await using (var probeCommand = new SqlCommand(probe, connection))
-        await using (var reader = await probeCommand.ExecuteReaderAsync())
-        {
-            planXml = string.Empty;
-            do
-            {
-                while (await reader.ReadAsync())
-                {
-                    if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string))
-                    {
-                        var value = reader.GetString(0);
-                        if (value.Contains("ShowPlanXML", StringComparison.Ordinal))
-                        {
-                            planXml = value;
-                        }
-                    }
-                }
-            }
-            while (await reader.NextResultAsync());
-        }
-
-        await using (var offCommand = new SqlCommand("SET STATISTICS XML OFF;", connection))
-        {
-            await offCommand.ExecuteNonQueryAsync();
-        }
-
-        Assert.NotEmpty(planXml);
-        return planXml;
-    }
-
     [Fact]
     public async Task InsertIntoTableVariable_ForcesSerial()
     {
-        var planXml = await CaptureRealExecutionPlanAsync(
+        var planXml = await CaptureActualPlanAsync(
             "DECLARE @t TABLE (Grp INT, Cnt INT); INSERT INTO @t (Grp, Cnt) SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp OPTION (MAXDOP 0);");
 
         Assert.Contains("NonParallelPlanReason=\"TableVariableTransactionsDoNotSupportParallelNestedTransaction\"", planXml);
@@ -87,7 +51,7 @@ public sealed class TableVariableModificationOracleTests : OracleTestFixture
     [Fact]
     public async Task OutputIntoTableVariable_ForcesSerial()
     {
-        var planXml = await CaptureRealExecutionPlanAsync(
+        var planXml = await CaptureActualPlanAsync(
             "DECLARE @out TABLE (Id INT); DELETE FROM dbo.BigTable OUTPUT deleted.Id INTO @out WHERE Grp = -1 OPTION (MAXDOP 0);");
 
         Assert.Contains("NonParallelPlanReason=\"TableVariableTransactionsDoNotSupportParallelNestedTransaction\"", planXml);
@@ -96,7 +60,7 @@ public sealed class TableVariableModificationOracleTests : OracleTestFixture
     [Fact]
     public async Task ReadOnlyReferenceToTableVariable_NeverBlocksParallelism()
     {
-        var planXml = await CaptureRealExecutionPlanAsync(
+        var planXml = await CaptureActualPlanAsync(
             """
             DECLARE @t TABLE (Grp INT);
             INSERT INTO @t (Grp) VALUES (1);
@@ -109,9 +73,60 @@ public sealed class TableVariableModificationOracleTests : OracleTestFixture
     [Fact]
     public async Task OutputIntoRealTable_NeverBlocksParallelism()
     {
-        var planXml = await CaptureRealExecutionPlanAsync(
+        var planXml = await CaptureActualPlanAsync(
             "DELETE FROM dbo.BigTable OUTPUT deleted.Id INTO dbo.Audit WHERE Grp = -1 OPTION (MAXDOP 0);");
 
         Assert.DoesNotContain("NonParallelPlanReason=\"TableVariableTransactionsDoNotSupportParallelNestedTransaction\"", planXml);
+    }
+
+    [Fact]
+    public async Task InsertIntoTempTable_FromLargeSource_GetsParallelPlan()
+    {
+        var planXml = await CaptureActualPlanAsync(
+            "CREATE TABLE #t (Grp INT, Cnt INT); INSERT INTO #t (Grp, Cnt) SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'));");
+
+        Assert.Contains("PhysicalOp=\"Parallelism\"", planXml);
+    }
+
+    [Fact]
+    public async Task InsertIntoTableVariable_EvenWhenParallelPlanIsPreferred_StaysSerial()
+    {
+        var planXml = await CaptureActualPlanAsync(
+            "DECLARE @t TABLE (Grp INT, Cnt INT); INSERT INTO @t (Grp, Cnt) SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'));");
+
+        Assert.DoesNotContain("PhysicalOp=\"Parallelism\"", planXml);
+        Assert.Contains("NonParallelPlanReason=\"TableVariableTransactionsDoNotSupportParallelNestedTransaction\"", planXml);
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO @t (Grp) VALUES (1);")]
+    [InlineData("INSERT INTO @t (Grp) VALUES (1), (2), (3);")]
+    [InlineData("INSERT INTO @t (Grp) SELECT 1;")]
+    [InlineData("INSERT INTO @t (Grp) EXEC dbo.ProbeProc;")]
+    public async Task InsertIntoTableVariable_WithoutRowSource_HasNothingToParallelize(string statement)
+    {
+        var planXml = await CaptureActualPlanAsync($"DECLARE @t TABLE (Grp INT); {statement}");
+
+        var physicalOps = XDocument.Parse(planXml).Descendants()
+            .Where(element => element.Name.LocalName == "RelOp")
+            .Select(element => (string?)element.Attribute("PhysicalOp"))
+            .ToList();
+
+        Assert.NotEmpty(physicalOps);
+        Assert.All(physicalOps, op => Assert.Contains(op, NonScanningOperators));
+    }
+
+    [Fact]
+    public async Task InsertIntoTableVariable_FromRealTable_ScansTheRealTable()
+    {
+        var planXml = await CaptureActualPlanAsync(
+            "DECLARE @t TABLE (Grp INT); INSERT INTO @t (Grp) SELECT Grp FROM dbo.BigTable OPTION (MAXDOP 0);");
+
+        var physicalOps = XDocument.Parse(planXml).Descendants()
+            .Where(element => element.Name.LocalName == "RelOp")
+            .Select(element => (string?)element.Attribute("PhysicalOp"))
+            .ToList();
+
+        Assert.Contains(physicalOps, op => op is "Table Scan" or "Clustered Index Scan" or "Index Scan");
     }
 }

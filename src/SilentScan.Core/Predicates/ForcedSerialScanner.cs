@@ -111,7 +111,7 @@ public static class ForcedSerialScanner
             var targetVariable = TableVariableName(spec.Target);
             var outputVariable = TableVariableName(spec.OutputIntoClause?.IntoTable);
             var variableName = targetVariable ?? outputVariable;
-            if (variableName is null)
+            if (variableName is null || (targetVariable is not null && InsertHasNoRowSource(spec)))
             {
                 return;
             }
@@ -119,6 +119,36 @@ public static class ForcedSerialScanner
             Findings.Add(new ForcedSerialFinding(
                 ForcedSerialFindingKind.TableVariableModification, sourcePath, sourcePath,
                 spec.StartLine, spec.StartColumn, DetailText: variableName));
+        }
+
+        private static bool InsertHasNoRowSource(DataModificationSpecification spec)
+        {
+            if (spec is not InsertSpecification insert)
+            {
+                return false;
+            }
+
+            if (insert.InsertSource is SelectInsertSource select)
+            {
+                var references = new TableReferenceCounter();
+                select.Select.Accept(references);
+                return references.Count == 0;
+            }
+
+            return true;
+        }
+
+        private sealed class TableReferenceCounter : TSqlFragmentVisitor
+        {
+            public int Count { get; private set; }
+
+            public override void Visit(TSqlFragment node)
+            {
+                if (node is TableReference)
+                {
+                    Count++;
+                }
+            }
         }
 
         private string? TableVariableName(TableReference? tableReference) =>
