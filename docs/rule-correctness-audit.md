@@ -422,6 +422,33 @@ statement — is uncontroversial syntax, not a claim needing verification).
   case; the fix generalizes to unqualified column references in the WHERE
   clause too, consistent with the scope boundary that ambiguous unqualified
   references are assumed unreachable (hard-error out of scope).
+- `ScalarUdfScanner` — root cause: claim attached to a context that cannot
+  trigger the effect. A projection-position scalar UDF call was reported as
+  per-row execution even in shapes with no row source (FROM-less SELECT,
+  VALUES, variable assignment) or when the call only appears in the argument
+  list of an uncorrelated table-valued function. Oracle-confirmed through the
+  actual plan: the operator holding the function reference reports as many
+  actual rows as the row source yields, and exactly one for the no-source
+  shapes. Fixed by firing only inside a FROM-bearing query (or UPDATE/DELETE/
+  MERGE) and not inside an uncorrelated TVF argument. A sampled set of
+  findings after the fix was all true positives.
+- `ForcedSerialScanner` (table-variable modification) — root cause: claim
+  attached to a context that cannot trigger the effect. An INSERT into a
+  table variable with no row source (VALUES, EXEC, SELECT without a table
+  reference) was reported as forcing a serial plan although there is nothing
+  to parallelize. Oracle-confirmed that the plans for these shapes contain
+  only constant/compute/insert operators, while an INSERT from a real table
+  keeps the serial-reason marker and never gets a Parallelism operator even
+  when a parallel plan is preferred (a `#temp` target does). Fixed by
+  skipping row-source-less inserts into a table variable.
+- `TypedPredicateExtractor` (expression-derived-column) — root cause: shared
+  resolver reused outside the context its finding assumes. The operand
+  resolver recorded a derived-column finding for any column reached while
+  resolving a predicate operand, including columns buried inside a wrapping
+  function or arithmetic whose text the finding's predicate did not show.
+  Fixed by recording the finding only when the column reference is itself the
+  direct (parenthesis-unwrapped) operand of the predicate.
+
 ---
 
 ## Not yet audited

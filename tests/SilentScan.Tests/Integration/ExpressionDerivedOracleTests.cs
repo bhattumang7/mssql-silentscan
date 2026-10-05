@@ -34,6 +34,10 @@ public sealed class ExpressionDerivedOracleTests : IAsyncLifetime
             SELECT OrderId, CAST(CustomerId AS VARCHAR(20)) AS CustomerIdStr
             FROM dbo.Orders;
             GO
+            CREATE VIEW dbo.vw_OrdersBoth AS
+            SELECT OrderId, CustomerId, CAST(CustomerId AS VARCHAR(20)) AS CustomerIdStr
+            FROM dbo.Orders;
+            GO
             CREATE VIEW dbo.vw_OrdersRoundTrip AS
             SELECT OrderId, CAST(CustomerIdStr AS INT) AS CustomerIdAgain
             FROM dbo.vw_OrdersStr;
@@ -58,6 +62,22 @@ public sealed class ExpressionDerivedOracleTests : IAsyncLifetime
     public async Task RoundTrippedIntThroughTwoViews_NoIndexSeek()
     {
         var planXml = await _planXmlCapture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.vw_OrdersRoundTrip WHERE CustomerIdAgain = 5;");
+
+        Assert.False(IndexAccessDetector.HasIndexSeek(planXml, IndexName));
+    }
+
+    [Fact]
+    public async Task DerivedColumnOnlyProjected_PredicateOnBaseColumn_StillSeeks()
+    {
+        var planXml = await _planXmlCapture.CaptureAsync(DatabaseName, "SELECT CustomerIdStr FROM dbo.vw_OrdersBoth WHERE CustomerId = 5;");
+
+        Assert.True(IndexAccessDetector.HasIndexSeek(planXml, IndexName));
+    }
+
+    [Fact]
+    public async Task DerivedColumnAsPredicateOperand_NoIndexSeek()
+    {
+        var planXml = await _planXmlCapture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.vw_OrdersBoth WHERE CustomerIdStr = '5';");
 
         Assert.False(IndexAccessDetector.HasIndexSeek(planXml, IndexName));
     }
