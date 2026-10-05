@@ -475,6 +475,39 @@ statement — is uncontroversial syntax, not a claim needing verification).
   cache-reading tests filter to their own database, and no test issues
   `DBCC FREEPROCCACHE`.
 
+- `QueryAntiPatternScanner` (table-variable-low-compat-estimate) — root
+  cause: claim attached to a context that cannot trigger the effect. A table
+  variable read in a statement carrying `OPTION (RECOMPILE)` was reported as
+  estimated at one row. Oracle-confirmed that below compatibility level 150 a
+  plain statement estimates 1 row while the same statement with
+  `OPTION (RECOMPILE)` estimates the real row count, and that a procedure-level
+  `WITH RECOMPILE` does not change the plain statement's estimate. Fixed by
+  skipping table-variable sources inside a statement with the statement-level
+  hint. The existing oracle read `COUNT(*)`, whose estimate is one row at any
+  compatibility level, so it could not fail; it now reads the rows directly
+  and has the recompile sibling.
+- `IndexCoverageScanner` (key-lookup-prone) — root cause: competing access
+  path ignored. An equality on a nonclustered index's leading key was
+  reported even when the same predicate also constrained the leading key of
+  the clustered index, where the optimizer seeks the clustered index and no
+  lookup is produced; the single-candidate guard only counted nonclustered
+  indexes. Fixed by skipping the table when the clustered leading key is
+  equality-constrained too.
+- `ConstrainedColumnStatementVisitor` (key-lookup-prone) — root cause: shared
+  predicate extraction reused outside the context its finding assumes. The
+  equality-constrained set counted both sides of every equality, so a
+  column-to-column join condition counted as a WHERE equality. Oracle-confirmed
+  that an unfiltered join on a nonclustered key plans as a hash join over
+  scans with no lookup, while an equality against a constant in the ON clause
+  keeps the lookup. Fixed by counting a column only when the opposite side
+  holds no column reference. Siblings checked: the leading-column and
+  missing-statistics scanners use the any-comparison set for different claims,
+  and the leading-column scanner already treats the clustered index as an
+  alternative seek path.
+- `PostExpansionJoinWidthScanner` (post-expansion-join-width) — sampled 20
+  findings across 20 modules: all true positives (each flagged view joins the
+  listed tables). Not covered by the sample: a view read with `NOEXPAND`.
+
 ---
 
 ## Not yet audited

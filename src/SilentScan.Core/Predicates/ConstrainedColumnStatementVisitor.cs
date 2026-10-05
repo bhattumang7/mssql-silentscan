@@ -96,7 +96,7 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
 
         var andEqualityConstrainedColumns = andComparisons
             .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
-            .SelectMany(c => BaseColumnResolver.ResolveBothSides(c, SourcePath, scopeChain, Catalog))
+            .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
         InspectStatement(new ConstrainedStatement(
