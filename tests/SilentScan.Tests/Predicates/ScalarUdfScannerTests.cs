@@ -159,12 +159,76 @@ public sealed class ScalarUdfScannerTests
         var findings = ScanSql("""
             CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
             GO
+            CREATE TABLE dbo.T (Id INT NOT NULL);
+            GO
             DECLARE @v INT;
-            SET @v = dbo.fn_Compute(1);
+            SELECT @v = dbo.fn_Compute(Id) FROM dbo.T;
             """);
 
         var finding = Assert.Single(findings);
         Assert.Equal(ScalarUdfContext.VariableAssignment, finding.Context);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @v INT; SET @v = dbo.fn_Compute(1);")]
+    [InlineData("DECLARE @v INT; SELECT @v = dbo.fn_Compute(1);")]
+    [InlineData("DECLARE @v INT = dbo.fn_Compute(1);")]
+    [InlineData("DECLARE @t TABLE (A INT); INSERT @t VALUES (dbo.fn_Compute(1));")]
+    [InlineData("DECLARE @v INT = 1; IF dbo.fn_Compute(@v) = 2 PRINT 'x';")]
+    public void ScalarUdfEvaluatedOncePerExecution_NeverFiresProjectionInvocation(string statement)
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            """ + "\n" + statement);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.ProjectionInvocation);
+    }
+
+    [Fact]
+    public void ScalarUdfInUncorrelatedTableFunctionArgument_NeverFiresProjectionInvocation()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE FUNCTION dbo.Wrap(@x INT) RETURNS TABLE AS RETURN SELECT @x AS V;
+            GO
+            DECLARE @v INT = 1;
+            SELECT w.V FROM dbo.Wrap(dbo.fn_Compute(@v)) w;
+            """);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.ProjectionInvocation);
+    }
+
+    [Fact]
+    public void ScalarUdfInCrossApplyTableFunctionArgument_FiresProjectionInvocation()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE FUNCTION dbo.Wrap(@x INT) RETURNS TABLE AS RETURN SELECT @x AS V;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL);
+            GO
+            SELECT w.V FROM dbo.T t CROSS APPLY dbo.Wrap(dbo.fn_Compute(t.Id)) w;
+            """);
+
+        Assert.Single(findings, f => f.Kind == ScalarUdfFindingKind.ProjectionInvocation);
+    }
+
+    [Fact]
+    public void ScalarUdfInScalarSubqueryWithFromInsideVariableAssignment_FiresProjectionInvocation()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL);
+            GO
+            DECLARE @v INT;
+            SET @v = (SELECT MAX(dbo.fn_Compute(Id)) FROM dbo.T);
+            """);
+
+        Assert.Single(findings, f => f.Kind == ScalarUdfFindingKind.ProjectionInvocation);
     }
 
     [Fact]

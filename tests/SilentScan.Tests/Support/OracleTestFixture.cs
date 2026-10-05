@@ -143,4 +143,45 @@ public abstract class OracleTestFixture : IAsyncLifetime
         Assert.False(string.IsNullOrEmpty(planXml), probeSql);
         return XDocument.Parse(planXml!);
     }
+
+    protected async Task<string> CaptureActualPlanAsync(string probe)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var onCommand = new SqlCommand("SET STATISTICS XML ON;", connection))
+        {
+            await onCommand.ExecuteNonQueryAsync();
+        }
+
+        string planXml;
+        await using (var probeCommand = new SqlCommand(probe, connection))
+        await using (var reader = await probeCommand.ExecuteReaderAsync())
+        {
+            planXml = string.Empty;
+            do
+            {
+                while (await reader.ReadAsync())
+                {
+                    if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string))
+                    {
+                        var value = reader.GetString(0);
+                        if (value.Contains("ShowPlanXML", StringComparison.Ordinal))
+                        {
+                            planXml = value;
+                        }
+                    }
+                }
+            }
+            while (await reader.NextResultAsync());
+        }
+
+        await using (var offCommand = new SqlCommand("SET STATISTICS XML OFF;", connection))
+        {
+            await offCommand.ExecuteNonQueryAsync();
+        }
+
+        Assert.NotEmpty(planXml);
+        return planXml;
+    }
 }

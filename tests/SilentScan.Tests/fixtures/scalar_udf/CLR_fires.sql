@@ -13,4 +13,7 @@ RETURNS INT
 AS EXTERNAL NAME FirstUdf.T.ReturnOrderCount;
 GO
 
-SELECT dbo.CountSalesOrderHeader();
+CREATE TABLE dbo.Probe (Id INT NOT NULL);
+GO
+
+SELECT dbo.CountSalesOrderHeader() FROM dbo.Probe;
