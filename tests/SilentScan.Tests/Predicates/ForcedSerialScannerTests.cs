@@ -61,7 +61,30 @@ public sealed class ForcedSerialScannerTests
     [Fact]
     public void TableVariable_ReadOnlyReference_NeverFires()
     {
-        var findings = Scan("DECLARE @t TABLE (Id INT); INSERT INTO @t (Id) VALUES (1); SELECT Id FROM @t JOIN dbo.T ON @t.Id = dbo.T.Id;");
+        var findings = Scan("DECLARE @t TABLE (Id INT); INSERT INTO @t (Id) SELECT Id FROM dbo.T; SELECT Id FROM @t JOIN dbo.T ON @t.Id = dbo.T.Id;");
+
+        Assert.Single(findings);
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO @t (Id) VALUES (1);")]
+    [InlineData("INSERT INTO @t (Id) VALUES (1), (2);")]
+    [InlineData("INSERT INTO @t (Id) EXEC dbo.p;")]
+    [InlineData("INSERT INTO @t (Id) SELECT 1;")]
+    [InlineData("DECLARE @v INT = 1; INSERT INTO @t (Id) SELECT @v;")]
+    public void TableVariable_InsertWithoutAnyRowSource_NeverFires(string statement)
+    {
+        var findings = Scan("CREATE PROCEDURE dbo.p AS SELECT 1 AS Id;\nGO\nDECLARE @t TABLE (Id INT); " + statement);
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO @t (Id) SELECT Id FROM dbo.T;")]
+    [InlineData("INSERT INTO @t (Id) SELECT (SELECT MAX(Id) FROM dbo.T);")]
+    public void TableVariable_InsertWithRealRowSource_Fires(string statement)
+    {
+        var findings = Scan("DECLARE @t TABLE (Id INT); " + statement);
 
         Assert.Single(findings);
     }
@@ -72,7 +95,7 @@ public sealed class ForcedSerialScannerTests
         var findings = Scan(
             """
             DECLARE @t TABLE (Id INT);
-            INSERT INTO @t (Id) VALUES (1);
+            INSERT INTO @t (Id) SELECT Id FROM dbo.T;
             GO
             DECLARE @t TABLE (Id INT);
             SELECT Id FROM @t;
