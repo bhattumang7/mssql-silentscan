@@ -427,6 +427,11 @@ public sealed class TypedPredicateExtractorTests
     [InlineData("DECLARE @k VARCHAR(10); SELECT @k = s.X FROM dbo.vw_Derived s WHERE s.Id = 1;")]
     [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE LEN(s.X) = 2;")]
     [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE s.X + 'a' = 'ba';")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE 'a' + s.X = 'ab';")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE CAST(s.X AS INT) = 1;")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE COALESCE(s.X, 'a') = 'a';")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE s.Id IN (1, CAST(s.X AS INT));")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE (s.X + 'a') = 'ba';")]
     public void Extract_DerivedColumnOutsideDirectPredicateOperand_NoExpressionDerivedFinding(string statement)
     {
         var findings = ExtractExpressionDerived(
