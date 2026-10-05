@@ -61,6 +61,38 @@ internal static class BaseColumnResolver
         }
     }
 
+    public static IEnumerable<ColumnProvenance.BaseColumn> ResolveAgainstColumnFreeSide(
+        BooleanComparisonExpression predicate, string sourcePath,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+        DatabaseCatalog? catalog = null)
+    {
+        var sides = new[]
+        {
+            (Column: predicate.FirstExpression, Other: predicate.SecondExpression),
+            (Column: predicate.SecondExpression, Other: predicate.FirstExpression),
+        };
+
+        foreach (var (column, other) in sides)
+        {
+            if (ContainsColumnReference(other))
+            {
+                continue;
+            }
+
+            if (ResolveBaseColumn(column, sourcePath, scopeChain, catalog) is { } resolved)
+            {
+                yield return resolved;
+            }
+        }
+    }
+
+    private static bool ContainsColumnReference(ScalarExpression expression)
+    {
+        var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+        expression.Accept(collector);
+        return collector.References.Count > 0;
+    }
+
     public sealed class ColumnReferenceCollector(
         string sourcePath,
         IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
