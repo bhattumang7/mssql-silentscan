@@ -81,6 +81,8 @@ public static class TypedPredicateExtractor
 
         private TSqlFragment? _currentPredicateFragment;
 
+        private ColumnReferenceExpression? _directPredicateOperand;
+
         private readonly Dictionary<string, SqlType?> _variables = externalVariables is null
             ? new Dictionary<string, SqlType?>(StringComparer.OrdinalIgnoreCase)
             : new Dictionary<string, SqlType?>(externalVariables, StringComparer.OrdinalIgnoreCase);
@@ -696,7 +698,7 @@ public static class TypedPredicateExtractor
             }
 
             _currentPredicateFragment = node;
-            if (ResolveOperand(node.Expression, scopeChain, walker) is not PredicateOperand.Column column)
+            if (ResolvePredicateOperand(node.Expression, scopeChain, walker) is not PredicateOperand.Column column)
             {
 
                 return;
@@ -754,7 +756,7 @@ public static class TypedPredicateExtractor
             }
 
             _currentPredicateFragment = node;
-            if (ResolveOperand(node.Expression, scopeChain, walker) is not PredicateOperand.Column column)
+            if (ResolvePredicateOperand(node.Expression, scopeChain, walker) is not PredicateOperand.Column column)
             {
                 return;
             }
@@ -829,8 +831,8 @@ public static class TypedPredicateExtractor
             }
 
             _currentPredicateFragment = node;
-            var left = ResolveOperand(first, scopeChain, walker);
-            var right = ResolveOperand(second, scopeChain, walker);
+            var left = ResolvePredicateOperand(first, scopeChain, walker);
+            var right = ResolvePredicateOperand(second, scopeChain, walker);
 
             if (left is PredicateOperand.Column leftColumn && right is PredicateOperand.Column rightColumn)
             {
@@ -986,6 +988,25 @@ public static class TypedPredicateExtractor
 
             var content = literalText[(firstQuote + 1)..lastQuote];
             return content.Length > 0 && char.IsWhiteSpace(content[^1]);
+        }
+
+        private PredicateOperand ResolvePredicateOperand(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            while (expression is ParenthesisExpression parenthesis)
+            {
+                expression = parenthesis.Expression;
+            }
+
+            var previous = _directPredicateOperand;
+            _directPredicateOperand = expression as ColumnReferenceExpression;
+            try
+            {
+                return ResolveOperand(expression, scopeChain, walker);
+            }
+            finally
+            {
+                _directPredicateOperand = previous;
+            }
         }
 
         private PredicateOperand ResolveOperand(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
@@ -1177,7 +1198,10 @@ public static class TypedPredicateExtractor
 
             if (ColumnProvenanceAnalysis.IsExpressionDerived(provenance))
             {
-                RecordExpressionDerivedFinding(columnName, columnRef, provenance, scopeChain, walker);
+                if (ReferenceEquals(columnRef, _directPredicateOperand))
+                {
+                    RecordExpressionDerivedFinding(columnName, columnRef, provenance, scopeChain, walker);
+                }
             }
             else if (provenance is ColumnProvenance.Union union)
             {

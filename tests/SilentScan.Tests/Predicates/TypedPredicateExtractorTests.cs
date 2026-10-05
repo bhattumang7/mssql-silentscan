@@ -420,6 +420,36 @@ public sealed class TypedPredicateExtractorTests
         Assert.Equal("Col", underlying.ColumnName);
     }
 
+    [Theory]
+    [InlineData("INSERT INTO @sink (V) SELECT s.X FROM dbo.vw_Derived s WHERE s.Id = 1;")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE s.Id = 1 ORDER BY s.X;")]
+    [InlineData("UPDATE s SET Id = Id FROM dbo.vw_Derived s WHERE s.Id = 1;")]
+    [InlineData("DECLARE @k VARCHAR(10); SELECT @k = s.X FROM dbo.vw_Derived s WHERE s.Id = 1;")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE LEN(s.X) = 2;")]
+    [InlineData("SELECT s.Id FROM dbo.vw_Derived s WHERE s.X + 'a' = 'ba';")]
+    public void Extract_DerivedColumnOutsideDirectPredicateOperand_NoExpressionDerivedFinding(string statement)
+    {
+        var findings = ExtractExpressionDerived(
+            "CREATE TABLE dbo.T (Id INT NOT NULL, Col INT NOT NULL);",
+            "CREATE VIEW dbo.vw_Derived AS SELECT Id, CAST(Col AS VARCHAR(10)) AS X FROM dbo.T;",
+            "DECLARE @sink TABLE (V VARCHAR(10)); " + statement);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extract_DerivedColumnAsDirectPredicateOperand_ReportsFindingWithItsOwnPredicateText()
+    {
+        var findings = ExtractExpressionDerived(
+            "CREATE TABLE dbo.T (Id INT NOT NULL, Col INT NOT NULL);",
+            "CREATE VIEW dbo.vw_Derived AS SELECT Id, CAST(Col AS VARCHAR(10)) AS X FROM dbo.T;",
+            "SELECT s.Id FROM dbo.vw_Derived s WHERE s.Id = 1 AND (s.X) = 'a';");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("X", finding.ColumnName);
+        Assert.Contains("X", finding.PredicateFragmentText);
+    }
+
     [Fact]
     public void Extract_ArithmeticExpressionCombiningTwoColumnsInView_ReportsBothUnderlyingColumns()
     {
