@@ -431,7 +431,23 @@ statement — is uncontroversial syntax, not a claim needing verification).
   actual rows as the row source yields, and exactly one for the no-source
   shapes. Fixed by firing only inside a FROM-bearing query (or UPDATE/DELETE/
   MERGE) and not inside an uncorrelated TVF argument. A sampled set of
-  findings after the fix was all true positives.
+  findings after the fix was all true positives. Sibling of the same root
+  cause: the predicate-position finding fired for a WHERE with no row source
+  (`SELECT 1 WHERE dbo.f(1) = 2`); the row-source requirement now applies to
+  every context.
+- Sibling hunt for the three row-source/attribution fixes above — checked and
+  clean: `ForcedSerialScanner` intrinsic kind (already gated on a FROM-bearing
+  query; engine reports the serial reason for OBJECT_ID with a variable
+  argument), its cursor kind (engine reports the reason even for a FROM-less
+  cursor query, so no row-source gate is warranted), its OUTPUT INTO
+  table-variable path (engine reports the reason even with no row source);
+  the other `_currentPredicateFragment` consumers in `TypedPredicateExtractor`
+  (only reached right after the fragment is set) and `NonSargablePredicateScanner`
+  (renders its own node). Post-fix sample of table-variable, intrinsic and
+  cursor forced-serial findings across distinct modules: all true positives,
+  doubtful shapes (DML on a table variable as its own only source, OBJECT_ID
+  over a variable in an EXISTS, OUTPUT INTO a table variable) confirmed through
+  the plan's non-parallel reason.
 - `ForcedSerialScanner` (table-variable modification) — root cause: claim
   attached to a context that cannot trigger the effect. An INSERT into a
   table variable with no row source (VALUES, EXEC, SELECT without a table

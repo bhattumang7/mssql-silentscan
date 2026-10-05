@@ -142,9 +142,9 @@ public static class ForcedSerialScanner
         {
             public int Count { get; private set; }
 
-            public override void Visit(TSqlFragment node)
+            public override void Visit(TSqlFragment fragment)
             {
-                if (node is TableReference)
+                if (fragment is TableReference)
                 {
                     Count++;
                 }
