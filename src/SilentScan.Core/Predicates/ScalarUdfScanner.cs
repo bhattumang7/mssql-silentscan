@@ -30,6 +30,10 @@ public static class ScalarUdfScanner
 
         private readonly List<(int Start, int End, ScalarUdfContext Context)> _regions = [];
 
+        private readonly List<(int Start, int End)> _rowSourceRegions = [];
+
+        private readonly List<(int Start, int End)> _uncorrelatedFunctionArgumentRegions = [];
+
         private readonly HashSet<FunctionCall> _claimed = [];
 
         public List<ScalarUdfFinding> Findings { get; } = [];
@@ -55,11 +59,28 @@ public static class ScalarUdfScanner
 
         public void OnEnterSetVariableStatement(SetVariableStatement node, ModuleWalker walker) => RecordRegion(node.Expression, ScalarUdfContext.VariableAssignment);
 
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (node.FromClause is not null)
+            {
+                RecordRowSource(node);
+            }
+        }
+
+        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            RecordRowSource(node.UpdateSpecification);
+
+        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            RecordRowSource(node.DeleteSpecification);
+
+        public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            RecordRowSource(node.MergeSpecification);
+
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
             foreach (var tableReference in node.TableReferences)
             {
-                Flatten(tableReference);
+                Flatten(tableReference, isApplied: false);
             }
         }
 
@@ -89,20 +110,42 @@ public static class ScalarUdfScanner
             }
         }
 
-        private void Flatten(TableReference tableReference)
+        private void RecordRowSource(TSqlFragment fragment) =>
+            _rowSourceRegions.Add((fragment.StartOffset, fragment.StartOffset + fragment.FragmentLength));
+
+        private bool IsEvaluatedPerRow(FunctionCall node) =>
+            Contains(_rowSourceRegions, node) && !Contains(_uncorrelatedFunctionArgumentRegions, node);
+
+        private static bool Contains(List<(int Start, int End)> regions, FunctionCall node) =>
+            regions.Exists(region => node.StartOffset >= region.Start && node.StartOffset < region.End);
+
+        private void Flatten(TableReference tableReference, bool isApplied)
         {
             switch (tableReference)
             {
+                case UnqualifiedJoin { UnqualifiedJoinType: UnqualifiedJoinType.CrossApply or UnqualifiedJoinType.OuterApply } apply:
+                    Flatten(apply.FirstTableReference, isApplied);
+                    Flatten(apply.SecondTableReference, isApplied: true);
+                    break;
+
                 case JoinTableReference join:
-                    Flatten(join.FirstTableReference);
-                    Flatten(join.SecondTableReference);
+                    Flatten(join.FirstTableReference, isApplied);
+                    Flatten(join.SecondTableReference, isApplied);
                     break;
 
                 case JoinParenthesisTableReference parenthesis:
-                    Flatten(parenthesis.Join);
+                    Flatten(parenthesis.Join, isApplied);
                     break;
 
                 case SchemaObjectFunctionTableReference function:
+                    if (!isApplied)
+                    {
+                        foreach (var parameter in function.Parameters)
+                        {
+                            _uncorrelatedFunctionArgumentRegions.Add((parameter.StartOffset, parameter.StartOffset + parameter.FragmentLength));
+                        }
+                    }
+
                     var functionQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(function.SchemaObject));
                     TryEmitNested(functionQualifiedName, function.StartLine, function.StartColumn, FragmentTextRenderer.Render(function));
                     break;
@@ -147,6 +190,10 @@ public static class ScalarUdfScanner
         {
             var context = ResolveContext(node);
             var kind = ScalarUdfClassifier.ClassifyInvocationKind(context);
+            if (kind == ScalarUdfFindingKind.ProjectionInvocation && !IsEvaluatedPerRow(node))
+            {
+                return;
+            }
 
             var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel);
             var constantArgumentsNotFolded = info.IsSchemaBound == false && node.Parameters.Count > 0 && node.Parameters.All(p => p is Literal);
