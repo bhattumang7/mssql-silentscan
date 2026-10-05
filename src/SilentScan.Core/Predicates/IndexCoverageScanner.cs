@@ -81,6 +81,11 @@ public static class IndexCoverageScanner
                 table.Indexes.FirstOrDefault(i => i.IsClustered && !i.IsColumnstore)?.KeyColumns
                 ?? [];
 
+            if (clusteringKeyColumns.Count > 0 && constrainedColumnsOnTable.Contains(clusteringKeyColumns[0]))
+            {
+                return;
+            }
+
             var indexColumns = index.KeyColumns
                 .Concat(index.IncludedColumns)
                 .Concat(clusteringKeyColumns)
