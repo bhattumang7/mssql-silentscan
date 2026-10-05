@@ -190,7 +190,7 @@ public static class ScalarUdfScanner
         {
             var context = ResolveContext(node);
             var kind = ScalarUdfClassifier.ClassifyInvocationKind(context);
-            if (kind == ScalarUdfFindingKind.ProjectionInvocation && !IsEvaluatedPerRow(node))
+            if (!IsEvaluatedPerRow(node))
             {
                 return;
             }

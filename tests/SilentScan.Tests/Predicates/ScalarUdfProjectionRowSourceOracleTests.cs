@@ -47,6 +47,20 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Fact]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    public async Task UdfInWhereWithRowSource_RunsOncePerRow()
+    {
+        Assert.Equal(RowCount, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT Id FROM dbo.Source WHERE dbo.Bump(Id) > 0;"));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    public async Task UdfInWhereWithoutRowSource_RunsOnce()
+    {
+        Assert.Equal(1, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT 1 AS One WHERE dbo.Bump(1) = 2;"));
+    }
+
+    [Fact]
     public async Task UdfInCrossApplyFunctionArgument_RunsOncePerOuterRow()
     {
         Assert.Equal(RowCount, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT w.V FROM dbo.Source s CROSS APPLY dbo.Wrap(dbo.Bump(s.Id)) w;"));

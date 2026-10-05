@@ -185,6 +185,19 @@ public sealed class ScalarUdfScannerTests
         Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.ProjectionInvocation);
     }
 
+    [Theory]
+    [InlineData("SELECT 1 WHERE dbo.fn_Compute(1) = 2;")]
+    [InlineData("DECLARE @v INT = 1; IF EXISTS (SELECT 1 WHERE dbo.fn_Compute(@v) = 2) PRINT 'x';")]
+    public void ScalarUdfInPredicateWithoutRowSource_NeverFiresPredicateInvocation(string statement)
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            """ + "\n" + statement);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
+    }
+
     [Fact]
     public void ScalarUdfInUncorrelatedTableFunctionArgument_NeverFiresProjectionInvocation()
     {
