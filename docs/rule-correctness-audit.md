@@ -464,6 +464,16 @@ statement — is uncontroversial syntax, not a claim needing verification).
   function or arithmetic whose text the finding's predicate did not show.
   Fixed by recording the finding only when the column reference is itself the
   direct (parenthesis-unwrapped) operand of the predicate.
+- Test suite (plan-cache and forced-parameterization oracle tests) — root
+  cause: server-wide side effect run concurrently with tests that assume an
+  isolated plan cache. The only test changing server-wide state
+  (`sp_configure` + `RECONFIGURE`) sat in a named xunit collection, which
+  serializes only its own members while every other collection keeps running
+  in parallel, so a reconfigure could clear the shared plan cache under a
+  plan-cache reader and a different pair failed on each run. Fixed by
+  declaring that collection with parallelization disabled. All other
+  cache-reading tests filter to their own database, and no test issues
+  `DBCC FREEPROCCACHE`.
 
 ---
 
