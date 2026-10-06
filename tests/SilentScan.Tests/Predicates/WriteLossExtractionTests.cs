@@ -187,6 +187,34 @@ public sealed class WriteLossExtractionTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("DECLARE @d DATE = CONVERT(DATETIME, CONVERT(CHAR(8), 20240115));")]
+    [InlineData("DECLARE @i INT = 20240115; DECLARE @d DATE = CAST(CAST(@i AS VARCHAR(8)) AS DATETIME);")]
+    [InlineData("DECLARE @s DATE = '2024-01-01'; DECLARE @d DATE = CAST(@s AS DATETIME);")]
+    [InlineData("DECLARE @d DATE = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0);")]
+    [InlineData("DECLARE @d DATE = DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0);")]
+    [InlineData("DECLARE @d DATE = DATEADD(DAY, 1, DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0));")]
+    [InlineData("DECLARE @d DATE = DATEADD(DAY, DATEDIFF(DAY, '19000101', GETDATE()), '19000101');")]
+    [InlineData("DECLARE @d DATE = DATEADD(DAY, 5, 1);")]
+    public void Extract_DateTimeSourceThatIsProvablyMidnight_IntoDate_NoFinding(string statement)
+    {
+        Assert.Empty(Extract(statement));
+    }
+
+    [Theory]
+    [InlineData("DECLARE @d DATE = GETDATE();")]
+    [InlineData("DECLARE @t DATETIME = GETDATE(); DECLARE @d DATE = DATEADD(DAY, 1, @t);")]
+    [InlineData("DECLARE @d DATE = DATEADD(HOUR, DATEDIFF(HOUR, 0, GETDATE()), 0);")]
+    [InlineData("DECLARE @s VARCHAR(30) = 'x'; DECLARE @d DATE = CAST(@s AS DATETIME);")]
+    [InlineData("DECLARE @d DATE = CAST(CAST(GETDATE() AS VARCHAR(8)) AS DATETIME);")]
+    [InlineData("DECLARE @t DATETIME = GETDATE(); DECLARE @d DATE = CAST(@t AS DATETIME);")]
+    public void Extract_DateTimeSourceThatMayCarryATime_IntoDate_FlagsTemporalPrecisionLoss(string statement)
+    {
+        var finding = Assert.Single(Extract(statement));
+
+        Assert.Equal(WriteLossKind.TemporalPrecisionLoss, finding.Kind);
+    }
+
     [Fact]
     public void Extract_InsertValuesWithDateOnlyLiteralIntoDate_ProvablySafe_NoFinding()
     {
