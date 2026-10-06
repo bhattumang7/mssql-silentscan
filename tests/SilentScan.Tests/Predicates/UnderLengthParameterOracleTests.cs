@@ -67,6 +67,38 @@ public sealed class UnderLengthParameterOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task ShorterVariableAssignedOnlyALiteralThatFits_IsNotTruncatedAndStillMatches()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var insertCommand = new SqlCommand("INSERT INTO dbo.Customers (Code) VALUES ('ABCDEF');", connection))
+        {
+            await insertCommand.ExecuteNonQueryAsync();
+        }
+
+        await using var command = new SqlCommand(
+            "DECLARE @p VARCHAR(6) = 'ABCDEF'; SELECT COUNT(*) FROM dbo.Customers WHERE Code = @p;", connection);
+        Assert.Equal(1, (int)(await command.ExecuteScalarAsync())!);
+    }
+
+    [Fact]
+    public async Task ConcatenationOfShortOperands_IsNotTruncatedAndStillMatches()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var insertCommand = new SqlCommand("INSERT INTO dbo.Customers (Code) VALUES ('ABCDEF');", connection))
+        {
+            await insertCommand.ExecuteNonQueryAsync();
+        }
+
+        await using var command = new SqlCommand(
+            "DECLARE @p VARCHAR(3) = 'ABC'; SELECT COUNT(*) FROM dbo.Customers WHERE Code = @p + 'DEF';", connection);
+        Assert.Equal(1, (int)(await command.ExecuteScalarAsync())!);
+    }
+
+    [Fact]
     public async Task VariableWithNoExplicitLength_DefaultsToOneAndTruncatesJustAsSeverely()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));

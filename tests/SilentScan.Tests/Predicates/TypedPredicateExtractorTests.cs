@@ -1531,7 +1531,7 @@ public sealed class TypedPredicateExtractorTests
     {
         var result = ExtractAll(
             "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(5) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
+            "DECLARE @p VARCHAR(5) = 'ABCDEFG'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal("dbo.Customers", finding.TableQualifiedName);
@@ -1561,7 +1561,7 @@ public sealed class TypedPredicateExtractorTests
 
         var result = ExtractAll(
             "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR = 'A'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
+            "DECLARE @p VARCHAR = 'ABCDEFG'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.True(finding.IsImplicitDefault);
@@ -1573,7 +1573,7 @@ public sealed class TypedPredicateExtractorTests
     {
         var result = ExtractAll(
             "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(3) = 'AB%'; SELECT 1 FROM dbo.Customers WHERE Code LIKE @p;");
+            "DECLARE @p VARCHAR(3) = 'ABCD%'; SELECT 1 FROM dbo.Customers WHERE Code LIKE @p;");
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal("LIKE", finding.Operator);
@@ -1585,7 +1585,7 @@ public sealed class TypedPredicateExtractorTests
     {
         var result = ExtractAll(
             "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
-            "DECLARE @p VARCHAR(5) = 'ABCDE'; SELECT 1 FROM dbo.Customers WHERE Code > @p;");
+            "DECLARE @p VARCHAR(5) = 'ABCDEFG'; SELECT 1 FROM dbo.Customers WHERE Code > @p;");
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal(">", finding.Operator);
@@ -1679,6 +1679,51 @@ public sealed class TypedPredicateExtractorTests
 
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal(10, finding.OtherOperandLength);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5); SET @p = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; SELECT @p = 'DE'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; IF 1 = 1 SET @p = NULL; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5); SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    public void Extract_LocalVariableOnlyEverAssignedLiteralsThatFit_NeverFiresUnderLength(string sql)
+    {
+        var result = ExtractAll("CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);", sql);
+
+        Assert.Empty(result.UnderLengthParameterFindings);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; SELECT @p = Code FROM dbo.Customers; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; SET @p = (SELECT MAX(Code) FROM dbo.Customers); SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; SET @p += 'DEFGH'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; EXEC dbo.usp_Fill @p OUTPUT; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABC'; DECLARE c CURSOR FOR SELECT Code FROM dbo.Customers; OPEN c; FETCH NEXT FROM c INTO @p; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR(5) = 'ABCDEFGH'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    [InlineData("DECLARE @p VARCHAR = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @p;")]
+    public void Extract_LocalVariableThatCanReceiveALongerValue_FiresUnderLength(string sql)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
+            sql);
+
+        Assert.Single(result.UnderLengthParameterFindings);
+    }
+
+    [Theory]
+    [InlineData("Code = @Code + 'x'")]
+    [InlineData("Code = UPPER(@Code)")]
+    [InlineData("Code = LEFT(@Code, 3)")]
+    [InlineData("Code LIKE @Code + '%'")]
+    [InlineData("Code = COALESCE(@Code, 'none')")]
+    public void Extract_ColumnComparedToExpressionDerivedFromAShortOperand_NeverFiresUnderLength(string predicate)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
+            $"CREATE PROCEDURE dbo.usp_Find @Code VARCHAR(5) AS BEGIN SELECT 1 FROM dbo.Customers WHERE {predicate}; END");
+
+        Assert.Empty(result.UnderLengthParameterFindings);
     }
 
     private static IReadOnlyList<AnsiPaddingMismatchFinding> ExtractAnsiPaddingMismatch(bool isAnsiPadded, string sql)
