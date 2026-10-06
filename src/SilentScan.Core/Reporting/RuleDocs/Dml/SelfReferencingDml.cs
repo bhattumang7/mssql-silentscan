@@ -53,6 +53,15 @@ internal static class SelfReferencingDml
             GROUP BY, such as SELECT MAX(Id) + 1 FROM the same table - which the engine plans
             without any spool or sort, on heaps and clustered tables alike; this rule does not fire
             on that shape either.
+
+            A statement pinned to a single row by a unique key is the same kind of exception: an
+            UPDATE or DELETE with no FROM clause whose WHERE clause equates every key column of a
+            unique index to a value that does not depend on the target's own columns, or an
+            INSERT ... SELECT whose inner or left joined tables are each pinned that way (directly
+            or through the columns of an already pinned table), can touch at most one row. The
+            engine plans those without any spool or sort even when the read side scans the target,
+            and the rule does not fire on them. Equating only part of a composite key, a range, an
+            OR, or a value computed from the target's own columns still pins nothing.
             """,
         Examples:
         [

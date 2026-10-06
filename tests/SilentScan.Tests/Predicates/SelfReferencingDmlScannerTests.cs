@@ -10,6 +10,7 @@ public sealed class SelfReferencingDmlScannerTests
     private const string Ddl = """
         CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, Val INT NOT NULL, Flag BIT NOT NULL);
         CREATE TABLE dbo.Other (Id INT NOT NULL PRIMARY KEY, RefId INT NOT NULL);
+        CREATE TABLE dbo.Ck (A INT NOT NULL, B INT NOT NULL, Val INT NOT NULL, PRIMARY KEY (A, B));
         GO
         CREATE VIEW dbo.vT AS SELECT Id, Val, Flag FROM dbo.T;
         GO
@@ -233,6 +234,38 @@ public sealed class SelfReferencingDmlScannerTests
     [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT COUNT(*) OVER () + 5000, 0, 0 FROM dbo.T;")]
     [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT Id + 5000, 0, 0 FROM dbo.T;")]
     public void InsertWhoseSourceCanProduceManyRows_StillFires(string sql)
+    {
+        Assert.Single(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = 5;")]
+    [InlineData("DECLARE @i INT = 5; UPDATE dbo.T SET Val = Val + 1 WHERE Id = @i AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("UPDATE dbo.T SET Val = 1 WHERE 5 = T.Id AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("DELETE FROM dbo.T WHERE Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("UPDATE dbo.Ck SET Val = (SELECT MAX(Val) FROM dbo.Ck) WHERE A = 1 AND B = (SELECT MAX(c3.B) FROM dbo.Ck c3 WHERE c3.A = 1);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o JOIN dbo.T t ON t.Id = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o LEFT JOIN dbo.T t ON t.Id = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WHERE t.Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WITH (FORCESCAN) WHERE t.Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    public void StatementPinnedToOneRowByAUniqueKey_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id > 5;")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = 5 OR Flag = 1;")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = Val;")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = (SELECT MAX(t2.Id) FROM dbo.T t2 WHERE t2.Val = T.Val);")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = (SELECT MAX(Id) FROM dbo.T t2 WHERE Val = T.Val);")]
+    [InlineData("UPDATE dbo.Ck SET Val = (SELECT MAX(Val) FROM dbo.Ck) WHERE A = 1;")]
+    [InlineData("UPDATE t1 SET t1.Val = t2.Val FROM dbo.T t1 JOIN dbo.T t2 ON t1.Id = t2.Id - 1 WHERE t1.Id = 5;")]
+    [InlineData("DELETE FROM dbo.T WHERE Id > 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o JOIN dbo.T t ON t.Val = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o JOIN dbo.T t ON t.Id = o.RefId WHERE o.RefId = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WHERE t.Val = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    public void StatementNotPinnedToOneRowByAUniqueKey_StillFires(string sql)
     {
         Assert.Single(Scan(sql));
     }
