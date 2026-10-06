@@ -726,7 +726,7 @@ public static class SarifReportWriter
         var viaDisplay = finding.Kind == SelfReferencingDmlFindingKind.ThroughView
             ? $" (through view '{finding.ReadSideQualifiedName}')"
             : string.Empty;
-        var message = $"{finding.StatementKind} on '{finding.TargetTableQualifiedName}' also reads from that same table{viaDisplay} - this forces extra defensive plan work (an Eager Spool or Sort the engine would not otherwise need) to guarantee every write sees a consistent read.";
+        var message = $"{finding.StatementKind} on '{finding.TargetTableQualifiedName}' also reads from that same table{viaDisplay} - the engine must isolate the read side from the write side, which typically costs an extra Eager Spool or Sort unless the chosen plan already reads the table through a blocking operator.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }

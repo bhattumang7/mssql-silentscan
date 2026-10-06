@@ -2112,7 +2112,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Self-referencing DML - Halloween Protection risk ({report.Find<SelfReferencingDmlFinding>(nameof(SelfReferencingDmlScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "An INSERT/UPDATE/DELETE/MERGE whose own read side (a self-join, a WHERE/SET subquery, or a view over the same base table) also names the exact table it writes to. Oracle-confirmed to force extra defensive plan work an otherwise-identical statement reading a different table never pays - a LogicalOp=\"Eager Spool\" for INSERT/DELETE, an extra Sort operator for UPDATE ... FROM self-joins and MERGE (no spool at all in that case). A performance-cost finding, not a correctness one - the result is identical either way.");
+            "An INSERT/UPDATE/DELETE/MERGE whose own read side (a self-join, a WHERE/SET subquery, or a view over the same base table) also names the exact table it writes to. The engine must isolate the read side from the write side, which in the common shapes costs extra defensive plan work an otherwise-identical statement reading a different table never pays - a LogicalOp=\"Eager Spool\" for INSERT/DELETE, an extra Sort operator for UPDATE ... FROM self-joins and MERGE - unless the chosen plan already reads the table through a blocking operator such as a hash build. A performance-cost finding, not a correctness one - the result is identical either way.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SelfReferencingDmlRuleId));
         yield return new ReadableBlock.Table(

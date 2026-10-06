@@ -20,18 +20,22 @@ internal static class SelfReferencingDml
             statement that kept giving already-raised employees another raise as it repeatedly
             re-encountered their updated rows.
 
-            The engine's defense against this is architectural, not optional, and it costs real
-            plan work: for a self-referencing INSERT or DELETE, the plan gets an Eager Spool that
-            fully materializes the read side into a worktable before a single write happens, so the
-            write side can never see its own in-flight changes. For a self-referencing UPDATE ...
-            FROM or MERGE, the plan instead gets an extra Sort forcing the same full-materialize-
-            before-write ordering. Both are pure overhead relative to an otherwise identical
-            statement whose read side names a different table - there's nothing to defensively
-            spool or sort when the rows being read can never be the rows being written, so that
-            version of the plan skips the extra operator entirely. This is oracle-confirmed by
-            comparing the two plans directly: same row counts, same indexes, same statement shape,
-            differing only in whether the read side names the write target - and the self-
-            referencing version consistently carries the extra spool or sort.
+            The engine's defense against this is architectural, not optional, and it can cost real
+            plan work: the plan must fully consume the read side before the write side can see
+            any of its own in-flight changes. It does that either with an extra Eager Spool or
+            Sort inserted just for the purpose, or, when the chosen plan already has a blocking
+            operator over the target's rows (for instance a hash join that reads the target as its
+            build input, or a hash aggregate), by relying on that operator and adding nothing. Which
+            of the two happens is a cost-based plan decision, so the rule cannot promise an extra
+            operator for every flagged statement; it flags the statements for which the engine has
+            to make this choice at all. An otherwise identical statement whose read side names a
+            different table needs no such protection, so its plan never carries an operator added
+            for it. This is oracle-confirmed by comparing plans directly: same row counts, same
+            indexes, same statement shape, differing only in whether the read side names the write
+            target - the self-referencing versions in the common shapes (a NOT EXISTS hole-filling
+            INSERT, a self-join UPDATE, a DELETE with an EXISTS subquery, a MERGE) carry the extra
+            spool or sort, while a heap INSERT whose plan reads the target through a hash build
+            carries neither.
 
             The performance cost is easy to miss because nothing about it shows up in the source
             text - the statement reads like ordinary DML, and the extra plan work only becomes
@@ -43,7 +47,12 @@ internal static class SelfReferencingDml
             One real, oracle-confirmed exception: a statement whose own TOP row limiter is the
             literal integer 1 (not PERCENT, not a variable) guarantees at most one row can ever be
             touched, and across all four statement kinds the extra spool or sort disappears from the
-            plan entirely - this rule does not fire on that shape.
+            plan entirely - this rule does not fire on that shape. The same holds for an INSERT ...
+            SELECT whose source can only ever produce one row - a SELECT with no FROM clause (the
+            usual INSERT ... SELECT ... WHERE NOT EXISTS guard) or an aggregate-only SELECT with no
+            GROUP BY, such as SELECT MAX(Id) + 1 FROM the same table - which the engine plans
+            without any spool or sort, on heaps and clustered tables alike; this rule does not fire
+            on that shape either.
             """,
         Examples:
         [
