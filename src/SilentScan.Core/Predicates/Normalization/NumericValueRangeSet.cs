@@ -59,6 +59,39 @@ internal sealed class NumericValueRangeSet
     public NumericValueRangeSet Union(NumericValueRangeSet other) =>
         new(Coalesce([.. _ranges, .. other._ranges]), NullPossible || other.NullPossible);
 
+    public bool EveryIntegerIsIn(IReadOnlySet<decimal> values, int maxSpan)
+    {
+        if (_ranges.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var range in _ranges)
+        {
+            if (range.Lower is not { } lower || range.Upper is not { } upper)
+            {
+                return false;
+            }
+
+            var first = range.LowerInclusive ? Math.Ceiling(lower) : Math.Floor(lower) + 1;
+            var last = range.UpperInclusive ? Math.Floor(upper) : Math.Ceiling(upper) - 1;
+            if (last - first + 1 > maxSpan)
+            {
+                return false;
+            }
+
+            for (var value = first; value <= last; value++)
+            {
+                if (!values.Contains(value))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     public bool IsSubsetOf(NumericValueRangeSet other)
     {
         if (NullPossible && !other.NullPossible)

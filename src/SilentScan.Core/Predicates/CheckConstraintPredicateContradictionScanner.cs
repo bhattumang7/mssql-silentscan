@@ -211,7 +211,7 @@ public static class CheckConstraintPredicateContradictionScanner
                 CheckConstraintPredicateContradictionKind.NotNullConstraint, isNull);
         }
 
-        private static Dictionary<(string Table, string Column), List<(string ConstraintName, NumericValueRangeSet Domain)>> BuildDomains(DatabaseCatalog catalog)
+        internal static Dictionary<(string Table, string Column), List<(string ConstraintName, NumericValueRangeSet Domain)>> BuildDomains(DatabaseCatalog catalog)
         {
             var domains = new Dictionary<(string, string), List<(string, NumericValueRangeSet)>>(TableColumnKeyComparer.For(catalog));
 

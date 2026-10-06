@@ -74,6 +74,22 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
+    [Trait("Rule", "silentscan/control-flow/case-expression-missing-else")]
+    public async Task SimpleCaseCoveringEveryDatepartValue_NeverReturnsNull_PartialCoverageDoes()
+    {
+        const string days = "WITH d AS (SELECT TOP (14) DATEADD(DAY, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), '2024-01-01') AS v FROM sys.all_objects) ";
+        const string covered = "CASE DATEPART(dw, v) WHEN 1 THEN 'a' WHEN 2 THEN 'a' WHEN 3 THEN 'a' WHEN 4 THEN 'a' WHEN 5 THEN 'a' WHEN 6 THEN 'a' WHEN 7 THEN 'a' END";
+        const string partial = "CASE DATEPART(dw, v) WHEN 1 THEN 'a' WHEN 2 THEN 'a' WHEN 3 THEN 'a' WHEN 4 THEN 'a' WHEN 5 THEN 'a' WHEN 6 THEN 'a' END";
+
+        for (var first = 1; first <= 7; first++)
+        {
+            var prefix = $"SET DATEFIRST {first}; " + days;
+            Assert.Equal(0, await ScalarAsync<int>(prefix + $"SELECT SUM(CASE WHEN {covered} IS NULL THEN 1 ELSE 0 END) FROM d;"));
+            Assert.Equal(2, await ScalarAsync<int>(prefix + $"SELECT SUM(CASE WHEN {partial} IS NULL THEN 1 ELSE 0 END) FROM d;"));
+        }
+    }
+
+    [Fact]
     [Trait("Rule", "silentscan/control-flow/non-deterministic-case-input")]
     public async Task SimpleCaseOverNewid_IsReEvaluatedPerWhen_DeterministicControlNeverYieldsNull()
     {

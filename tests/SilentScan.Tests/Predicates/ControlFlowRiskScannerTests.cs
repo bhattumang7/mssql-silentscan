@@ -265,6 +265,87 @@ public sealed class ControlFlowRiskScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    private static DatabaseCatalog CalendarCatalog(string? checkDefinition, bool isNotTrusted = false, bool isDisabled = false)
+    {
+        var ddl = SqlScriptParser.ParseText("ddl.sql", "CREATE TABLE dbo.Cal (D INT NOT NULL, Flag BIT NOT NULL, Name VARCHAR(10) NOT NULL);");
+        var catalog = CatalogBuilder.Build([ddl]);
+        if (checkDefinition is not null)
+        {
+            catalog.AddCheckConstraint(new CatalogCheckConstraint("CK_Cal_D", "dbo.Cal", isNotTrusted, isDisabled, checkDefinition));
+        }
+
+        return catalog;
+    }
+
+    private static string CalendarCase(string input, string whenValues) =>
+        $"CREATE PROCEDURE dbo.P AS BEGIN SELECT CASE {input} {string.Join(" ", whenValues.Split(',').Select(v => $"WHEN {v} THEN 'x'"))} END FROM dbo.Cal; END";
+
+    [Theory]
+    [InlineData("DATEPART(dw, GETDATE())", "1,2,3,4,5,6,7")]
+    [InlineData("DATEPART(weekday, GETDATE())", "7,6,5,4,3,2,1")]
+    [InlineData("DATEPART(QUARTER, GETDATE())", "1,2,3,4")]
+    [InlineData("DATEPART(month, GETDATE())", "1,2,3,4,5,6,7,8,9,10,11,12")]
+    [InlineData("DATEPART(hour, GETDATE())", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23")]
+    [InlineData("MONTH(GETDATE())", "1,2,3,4,5,6,7,8,9,10,11,12")]
+    [InlineData("Flag", "0,1")]
+    public void SimpleCaseWhoseWhenValuesCoverTheInputsWholeDomain_NeverFiresMissingElse(string input, string whenValues)
+    {
+        var findings = Scan(CalendarCase(input, whenValues), CalendarCatalog(null));
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("DATEPART(dw, GETDATE())", "1,2,3,4,5,6")]
+    [InlineData("DATEPART(dw, GETDATE())", "1,2,3,4,5,5,7")]
+    [InlineData("DATEPART(dw, GETDATE())", "0,1,2,3,4,5,6")]
+    [InlineData("DATEPART(dayofyear, GETDATE())", "1,2,3,4,5,6,7")]
+    [InlineData("DATEPART(year, GETDATE())", "1,2,3,4,5,6,7")]
+    [InlineData("MONTH(GETDATE())", "1,2,3,4,5,6,7,8,9,10,11")]
+    [InlineData("Flag", "1")]
+    [InlineData("D", "1,2,3,4,5,6,7")]
+    public void SimpleCaseWhoseWhenValuesLeaveAnInputValueUnmatched_StillFiresMissingElse(string input, string whenValues)
+    {
+        var findings = Scan(CalendarCase(input, whenValues), CalendarCatalog(null));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("([D]>=(1) AND [D]<=(7))", "1,2,3,4,5,6,7")]
+    [InlineData("([D]>=(1) AND [D]<=(7))", "7,6,5,4,3,2,1,9")]
+    [InlineData("([D]>=(0) AND [D]<=(6))", "0,1,2,3,4,5,6")]
+    [InlineData("([D]=(1) OR [D]=(2) OR [D]=(3))", "1,2,3")]
+    public void SimpleCaseOverAColumnWhoseTrustedCheckDomainIsCovered_NeverFiresMissingElse(string check, string whenValues)
+    {
+        var findings = Scan(CalendarCase("D", whenValues), CalendarCatalog(check));
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("([D]>=(1) AND [D]<=(7))", "1,2,3,4,5,6", false, false)]
+    [InlineData("([D]>=(1) AND [D]<=(7))", "1,2,3,4,5,6,7", true, false)]
+    [InlineData("([D]>=(1) AND [D]<=(7))", "1,2,3,4,5,6,7", false, true)]
+    [InlineData("([D]>=(1))", "1,2,3,4,5,6,7", false, false)]
+    [InlineData("([D]>(0) AND [D]<(8))", "1,2,3,4,5,6", false, false)]
+    public void SimpleCaseOverAColumnWhoseCheckDomainIsNotCoveredOrNotTrusted_StillFiresMissingElse(string check, string whenValues, bool isNotTrusted, bool isDisabled)
+    {
+        var findings = Scan(CalendarCase("D", whenValues), CalendarCatalog(check, isNotTrusted, isDisabled));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Fact]
+    public void SimpleCaseWithANonLiteralWhenOverACoveredDomain_StillFiresMissingElse()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.P AS BEGIN DECLARE @v INT = 7; SELECT CASE D WHEN 1 THEN 'x' WHEN 2 THEN 'x' WHEN @v THEN 'x' END FROM dbo.Cal; END",
+            CalendarCatalog("([D]>=(1) AND [D]<=(3))"));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
     [Fact]
     public void SimpleCaseWithElse_NeverFires()
     {
