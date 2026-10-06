@@ -164,6 +164,21 @@ against the same root-cause category before it's treated as new.
   `under-length-parameter`, the ANSI-padding mismatch, local-variable
   predicate and filtered-index parameter findings make no claim about a seek
   lost to a conversion.
+- **Category: assignment form missed by the shared write-site helper.**
+  `control-flow/unassigned-output-parameter` treated `EXEC @p = proc` as no
+  write to `@p`. Oracle-confirmed: the return status is assigned to the
+  caller's variable, so an OUTPUT parameter set that way is assigned. Fixed in
+  `VariableWriteSites`, which every scanner built on it shares; the other
+  consumers only gain a recognised write.
+- **Category: CATCH path assumed reachable from any TRY statement.**
+  The flow walker entered CATCH from the state before the TRY body, so an
+  assignment inside TRY was ignored on the CATCH path even though CATCH runs
+  only when an error is raised. Under the no-hard-error scope the only
+  statically decidable entries are `THROW` and `RAISERROR` with a literal
+  severity of 11 or higher. Oracle-confirmed for assignment before the raise,
+  after it, and a swallowing CATCH. The behaviour is opt-in through
+  `CatchEntersOnlyThroughExplicitRaise`, so other walker policies are
+  unchanged.
 - **Category: constraint-enforcement claim made for a disabled foreign key.**
   `index-design/unindexed-foreign-key` (a parent-side DELETE/UPDATE forces a
   referential-integrity scan of the child) and `catalog/cascading-foreign-key`
