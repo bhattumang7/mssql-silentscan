@@ -50,7 +50,7 @@ public static class CompositeIndexLeadingColumnScanner
 
             foreach (var table in statement.BaseTables)
             {
-                InspectTable(table, statement.AndConstrainedColumns, anyReferencedColumns, statement.Node);
+                InspectTable(table, statement.RowFilterColumns, anyReferencedColumns, statement.Node);
             }
         }
 

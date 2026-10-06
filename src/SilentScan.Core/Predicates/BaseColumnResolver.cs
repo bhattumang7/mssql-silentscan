@@ -86,7 +86,7 @@ internal static class BaseColumnResolver
         }
     }
 
-    private static bool ContainsColumnReference(ScalarExpression expression)
+    internal static bool ContainsColumnReference(ScalarExpression expression)
     {
         var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
         expression.Accept(collector);

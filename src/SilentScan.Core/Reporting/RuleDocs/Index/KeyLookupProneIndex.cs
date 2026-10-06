@@ -28,7 +28,9 @@ internal static class KeyLookupProneIndex
             which one the optimizer would actually pick. It also declines when the equality
             constrains every key column of a unique index, since such a seek matches at most one
             row and the lookup costs a single fetch; a non-unique index, or only part of a unique
-            composite key, can match many rows and is still flagged.
+            composite key, can match many rows and is still flagged. A constant in the ON clause of
+            an outer join on the preserved side filters nothing, so such a predicate is never
+            counted as an equality that selects rows.
             """,
         HowToFixIt: """
             Widen the nonclustered index to cover every column the statement references on that
