@@ -11,7 +11,9 @@ public static partial class WriteLossClassifier
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     }
 
-    public static Predicates.WriteLossKind? Classify(SqlType? target, SqlType? source, ScalarExpression? sourceExpression, bool isVariableTarget)
+    public static Predicates.WriteLossKind? Classify(
+        SqlType? target, SqlType? source, ScalarExpression? sourceExpression, bool isVariableTarget,
+        Func<ScalarExpression, SqlType?>? operandType = null)
     {
         if (target is null || source is null)
         {
@@ -20,7 +22,7 @@ public static partial class WriteLossClassifier
 
         var literal = Unwrap(sourceExpression) as Literal;
 
-        if (IsUnicodeReplacementRisk(target, source, literal))
+        if (IsUnicodeReplacementRisk(target, source, literal) && !IsProvablyRepresentable(target, sourceExpression, operandType))
         {
             return Predicates.WriteLossKind.UnicodeToNonUnicodeReplacement;
         }
@@ -99,6 +101,44 @@ public static partial class WriteLossClassifier
 
     private static bool IsWiderTemporal(SqlTypeCategory category) =>
         category is SqlTypeCategory.DateTime or SqlTypeCategory.DateTime2 or SqlTypeCategory.SmallDateTime or SqlTypeCategory.DateTimeOffset;
+
+    private static bool IsProvablyRepresentable(SqlType target, ScalarExpression? expression, Func<ScalarExpression, SqlType?>? operandType)
+    {
+        switch (expression)
+        {
+            case null:
+                return false;
+            case ParenthesisExpression paren:
+                return IsProvablyRepresentable(target, paren.Expression, operandType);
+            case StringLiteral stringLiteral:
+                return IsRepresentableInTargetCodePage(target, stringLiteral);
+            case BinaryExpression { BinaryExpressionType: BinaryExpressionType.Add } add:
+                return IsProvablyRepresentable(target, add.FirstExpression, operandType)
+                    && IsProvablyRepresentable(target, add.SecondExpression, operandType);
+            case FunctionCall { Parameters.Count: >= 1 and <= 2 } call
+                when call.FunctionName.Value.Equals("QUOTENAME", StringComparison.OrdinalIgnoreCase) && call.CallTarget is null:
+                return IsProvablyRepresentable(target, call.Parameters[0], operandType)
+                    && (call.Parameters.Count == 1 || call.Parameters[1] is StringLiteral { Value: { Length: 1 } quote } && quote[0] <= 127);
+            case ColumnReferenceExpression or VariableReference when operandType?.Invoke(expression) is { IsNonUnicodeString: true } leaf:
+                return SameCodePage(leaf, target);
+            default:
+                return false;
+        }
+    }
+
+    private static bool SameCodePage(SqlType leaf, SqlType target)
+    {
+        var leafName = leaf.Collation?.Name;
+        var targetName = target.Collation?.Name;
+        if (string.Equals(leafName, targetName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return CollationCodePageCatalog.TryGetCodePage(leafName) is { } leafPage
+            && CollationCodePageCatalog.TryGetCodePage(targetName) is { } targetPage
+            && leafPage == targetPage;
+    }
 
     private static bool IsRepresentableInTargetCodePage(SqlType target, Literal? literal)
     {

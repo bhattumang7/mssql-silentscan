@@ -18,6 +18,7 @@ public sealed class WriteLossOracleTests : OracleTestFixture
             DateCol DATE NULL,
             VarCol VARCHAR(20) NULL,
             VarColLatin1 VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL,
+            NVarCol NVARCHAR(20) NULL,
             RealCol REAL NULL
         );
         """;
@@ -75,6 +76,37 @@ public sealed class WriteLossOracleTests : OracleTestFixture
         Assert.True(await reader.ReadAsync());
         Assert.Equal("café", reader.GetString(0));
         Assert.Equal(4, reader.GetInt32(1));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/write-loss/unicode-to-non-unicode")]
+    public async Task Insert_QuotenameOverVarcharColumn_RoundTripsExactly_WhileQuotenameOverNvarcharColumnIsReplaced()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var seed = new SqlCommand(
+            "INSERT INTO dbo.T (VarColLatin1, NVarCol) VALUES ('café', N'日本語');", connection))
+        {
+            await seed.ExecuteNonQueryAsync();
+        }
+
+        await using (var copy = new SqlCommand(
+            "UPDATE dbo.T SET VarColLatin1 = QUOTENAME(VarColLatin1);", connection))
+        {
+            await copy.ExecuteNonQueryAsync();
+        }
+
+        await using (var lossy = new SqlCommand("UPDATE dbo.T SET VarCol = QUOTENAME(NVarCol);", connection))
+        {
+            await lossy.ExecuteNonQueryAsync();
+        }
+
+        await using var select = new SqlCommand("SELECT VarColLatin1, VarCol FROM dbo.T", connection);
+        await using var reader = await select.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal("[café]", reader.GetString(0));
+        Assert.Equal("[???]", reader.GetString(1));
     }
 
     [Fact]
