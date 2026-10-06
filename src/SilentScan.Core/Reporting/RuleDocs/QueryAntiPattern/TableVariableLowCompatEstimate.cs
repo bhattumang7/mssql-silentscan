@@ -35,6 +35,12 @@ internal static class TableVariableLowCompatEstimate
             finding only fires below that compatibility level, where deferred compilation isn't
             available and the fixed-1-row estimate is unavoidable for any table variable read.
 
+            It fires only where the estimate can change the plan: a table variable joined to
+            another row source, or read under GROUP BY, DISTINCT, or an IN / EXISTS semi-join.
+            A table variable that is the only row source of a plain select, an ORDER BY, TOP,
+            COUNT or SUM, an INSERT ... SELECT, or a filter gets the same plan whatever row count
+            the optimizer assumes, so those reads are not flagged.
+
             One documented exception: a session running under DBCC TRACEON(11034) gets a real
             cardinality estimate for a table variable read at any compatibility level, oracle-
             confirmed (compat level 140, 5,000-row table variable: EstimateRows goes from 1 without
