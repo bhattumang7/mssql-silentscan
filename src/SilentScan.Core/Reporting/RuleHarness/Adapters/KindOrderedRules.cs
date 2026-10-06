@@ -170,8 +170,8 @@ internal sealed class SetOptionRule : IPerFileRule
 {
     public string Id => "SetOptionScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SetOptionScanner.Scan(parseResult, context.Catalog, context.Lineage);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SetOptionScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<SetOptionFinding>(f => f.Kind);
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SetOptionScanner.CreateRule();
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SetOptionScanner.Harvest(parseResult, context.Catalog, context.Lineage, (SetOptionScanner.SetStatementRule)moduleRule);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SetOptionScanner.Harvest(parseResult, context.Catalog,(SetOptionScanner.SetStatementRule)moduleRule);
 }

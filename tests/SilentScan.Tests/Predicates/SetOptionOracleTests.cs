@@ -64,6 +64,21 @@ public sealed class SetOptionOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task QuotedIdentifierOff_QueryThatNeverRestatesTheFilter_PlansIdenticallyToQuotedIdentifierOn()
+    {
+        const string unrelated = "SELECT CustomerId FROM dbo.Orders WHERE CustomerId = 5;";
+        var capture = new PlanXmlCapture(Options);
+
+        var off = await capture.CaptureAsync(DatabaseName, unrelated, ["SET QUOTED_IDENTIFIER OFF;"]);
+        var on = await capture.CaptureAsync(DatabaseName, unrelated, ["SET QUOTED_IDENTIFIER ON;"]);
+
+        Assert.DoesNotContain("IX_Orders_ActiveCustomer", off);
+        Assert.DoesNotContain("IX_Orders_ActiveCustomer", on);
+        Assert.Contains("PhysicalOp=\"Table Scan\"", off);
+        Assert.Contains("PhysicalOp=\"Table Scan\"", on);
+    }
+
+    [Fact]
     public async Task AnsiNullsOff_FilteredIndexBecomesUnusable()
     {
         var planXml = await new PlanXmlCapture(Options).CaptureAsync(DatabaseName, Probe, ["SET ANSI_NULLS OFF;"]);
