@@ -87,7 +87,7 @@ public sealed class ScalarUdfPipelineTests : OracleTestFixture
 
         var report = await EngineAuthoritativeScan.ScanAsync(MissingFunctionSql, "SQL_Latin1_General_CP1_CI_AS");
 
-        var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Code");
-        Assert.Equal(Verdict.Unknown, finding.Verdict);
+        Assert.DoesNotContain(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Code");
+        Assert.Equal(1, report.TypedPredicateSummary.UnknownCount);
     }
 }
