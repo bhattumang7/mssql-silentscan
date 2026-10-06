@@ -122,4 +122,22 @@ public sealed class NonSargableWrapSeekAvailabilityOracleTests : OracleTestFixtu
         Assert.False(await SeeksAsync(Wrapped));
         Assert.DoesNotContain(Scan(Wrapped), f => f.Confidence == FindingConfidence.High);
     }
+
+    [Fact]
+    public async Task WrappedIndexedColumnBesideFullUniqueKeyEquality_PlanStillSeeks_ScannerDoesNotReportIt()
+    {
+        const string Query = "SELECT Id FROM dbo.Wrap WHERE Id = 5 AND ABS(Idx) = 5;";
+
+        Assert.True(await SeeksAsync(Query));
+        Assert.Empty(Scan(Query));
+    }
+
+    [Fact]
+    public async Task UniqueKeyEqualityInsideOrWithWrappedIndexedColumn_PlanDoesNotSeekTheWrappedColumn_ScannerStillReportsIt()
+    {
+        const string Query = "SELECT Id FROM dbo.Wrap WHERE Id = 5 OR ABS(Idx) = 5;";
+
+        Assert.False(await SeeksAsync(Query));
+        Assert.Single(Scan(Query), f => f.Confidence == FindingConfidence.High);
+    }
 }

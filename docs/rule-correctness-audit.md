@@ -539,6 +539,14 @@ statement — is uncontroversial syntax, not a claim needing verification).
   index key. Oracle-confirmed that wrapping a column no index keys leaves the
   plan unchanged, including through a UNION ALL view. Fixed by reporting
   unresolved columns at Medium, as columns known to key no index already are.
+- `NonSargablePredicateScanner` (function-wrapped-column, date-function-on-column)
+  — root cause: competing access path ignored. A wrapped column was reported
+  although the same statement equality-binds every key column of a unique
+  index on its table, so the plan seeks that index for at most one row and the
+  wrap is a residual filter. Oracle-confirmed that a primary-key equality plus a
+  wrapped indexed column still plans as a seek, while the same equality under
+  OR does not. Fixed by skipping wraps beside a full-key equality on a unique
+  index of the same table, in WHERE or an inner-join ON.
 
 ---
 
