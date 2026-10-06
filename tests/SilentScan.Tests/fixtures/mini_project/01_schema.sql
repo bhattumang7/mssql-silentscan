@@ -18,6 +18,8 @@ CREATE INDEX IX_Users_Phone ON dbo.Users(Phone);
 GO
 CREATE INDEX IX_Users_AccountCode ON dbo.Users(AccountCode);
 GO
+CREATE INDEX IX_Users_CreatedAt ON dbo.Users(CreatedAt);
+GO
 
 CREATE TABLE dbo.Orders
 (
