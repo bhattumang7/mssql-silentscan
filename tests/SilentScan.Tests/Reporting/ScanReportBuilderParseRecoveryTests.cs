@@ -16,6 +16,7 @@ public sealed class ScanReportBuilderParseRecoveryTests
     {
         const string ValidSql = """
             CREATE TABLE dbo.Orders (OrderCode VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
+            CREATE INDEX IX_Orders_OrderCode ON dbo.Orders (OrderCode);
             GO
             CREATE PROCEDURE dbo.usp_Find @OrderCode NVARCHAR(20)
             AS
@@ -26,6 +27,7 @@ public sealed class ScanReportBuilderParseRecoveryTests
 
         const string MixedSql = """
             CREATE TABLE dbo.Orders (OrderCode VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
+            CREATE INDEX IX_Orders_OrderCode ON dbo.Orders (OrderCode);
             GO
             CREATE TABLE dbo.Bad ((( THIS IS NOT VALID SYNTAX;
             GO
