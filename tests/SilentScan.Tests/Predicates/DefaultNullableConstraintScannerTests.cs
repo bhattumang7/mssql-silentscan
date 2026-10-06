@@ -31,6 +31,34 @@ public sealed class DefaultNullableConstraintScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("(NULL)")]
+    [InlineData("((NULL))")]
+    [InlineData("(null)")]
+    [InlineData("( NULL )")]
+    public void NullableColumnWithANullLiteralDefault_NeverFires(string definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Status", isNullable: true)]));
+        catalog.AddSchemaExpression(new SchemaExpressionReference(
+            SchemaDependencyKind.DefaultConstraint, "dbo.Orders", "Status", definition, "dbo.Orders", 1));
+
+        Assert.Empty(DefaultNullableConstraintScanner.Scan(catalog));
+    }
+
+    [Theory]
+    [InlineData("(COALESCE(NULL,(0)))")]
+    [InlineData("((0))")]
+    public void NullableColumnWithADefaultThatIsNotTheNullLiteral_StillFires(string definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Status", isNullable: true)]));
+        catalog.AddSchemaExpression(new SchemaExpressionReference(
+            SchemaDependencyKind.DefaultConstraint, "dbo.Orders", "Status", definition, "dbo.Orders", 1));
+
+        Assert.Single(DefaultNullableConstraintScanner.Scan(catalog));
+    }
+
     [Fact]
     public void NotNullColumnWithDefault_NeverFires()
     {

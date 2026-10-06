@@ -19,6 +19,8 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE TABLE dbo.DfNotNull (Id INT NOT NULL, Status INT NOT NULL CONSTRAINT DF_DfNotNull DEFAULT 5);
         GO
+        CREATE TABLE dbo.DfNullDefault (Id INT NOT NULL, Status INT NULL CONSTRAINT DF_DfNullDefault DEFAULT NULL);
+        GO
         CREATE TABLE dbo.ParCascade (Id INT PRIMARY KEY);
         CREATE TABLE dbo.ChdCascade (Id INT PRIMARY KEY, PId INT NOT NULL CONSTRAINT FK_ChdCascade FOREIGN KEY REFERENCES dbo.ParCascade(Id) ON DELETE CASCADE);
         CREATE TABLE dbo.ParPlain (Id INT PRIMARY KEY);
@@ -92,6 +94,22 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(5, rows[0][1]);
         Assert.Null(rows[1][1]);
         Assert.Equal(515, await SqlErrorNumberAsync("INSERT INTO dbo.DfNotNull (Id, Status) VALUES (2, NULL);"));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/catalog/default-constraint-on-nullable-column")]
+    public async Task ExplicitNullMatchesANullDefaultOnNullableColumn_ButANonNullDefaultDiffers()
+    {
+        await ExecuteAsync("INSERT INTO dbo.DfNullDefault (Id) VALUES (1); INSERT INTO dbo.DfNullDefault (Id, Status) VALUES (2, NULL);");
+        await ExecuteAsync("INSERT INTO dbo.DfNullable (Id) VALUES (11); INSERT INTO dbo.DfNullable (Id, Status) VALUES (12, NULL);");
+
+        var nullDefault = await RowsAsync("SELECT Status FROM dbo.DfNullDefault ORDER BY Id;");
+        var nonNullDefault = await RowsAsync("SELECT Status FROM dbo.DfNullable WHERE Id IN (11, 12) ORDER BY Id;");
+
+        Assert.Null(nullDefault[0][0]);
+        Assert.Null(nullDefault[1][0]);
+        Assert.Equal(5, nonNullDefault[0][0]);
+        Assert.Null(nonNullDefault[1][0]);
     }
 
     [Fact]
