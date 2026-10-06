@@ -3,6 +3,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Collection("ServerLevelConfiguration")]
 public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CatalogConstraintAndViewEngineFactOracleTests);
@@ -136,7 +137,7 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         var afterText = await ScalarAsync<long>(counter);
 
         Assert.Equal(before, afterMax);
-        Assert.True(afterText > before);
+        Assert.True(afterText >= afterMax + 1);
     }
 
     [Fact]
