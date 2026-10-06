@@ -3,7 +3,9 @@ using SilentScan.Core.Catalog;
 using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.Predicates.Normalization;
 using SilentScan.Core.Rules;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -32,6 +34,11 @@ public static class ControlFlowRiskScanner
 
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
+        private const int MaxCoveredDomainSpan = 1024;
+
+        private readonly Lazy<Dictionary<(string Table, string Column), List<(string ConstraintName, NumericValueRangeSet Domain)>>> _checkDomains =
+            new(() => CheckConstraintPredicateContradictionScanner.Rule.BuildDomains(catalog));
+
         public List<ControlFlowRiskFinding> Findings { get; } = [];
 
         private static string CurrentModule(ModuleWalker walker) => walker.CurrentProcScope ?? "(batch)";
@@ -172,7 +179,7 @@ public static class ControlFlowRiskScanner
                 return;
             }
 
-            if (simpleCase.ElseExpression is null)
+            if (simpleCase.ElseExpression is null && !WhenValuesCoverInputDomain(simpleCase, walker))
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.CaseExpressionMissingElse,
@@ -194,6 +201,71 @@ public static class ControlFlowRiskScanner
             }
         }
 
+
+        private bool WhenValuesCoverInputDomain(SimpleCaseExpression simpleCase, ModuleWalker walker)
+        {
+            var whenValues = new HashSet<decimal>();
+            foreach (var clause in simpleCase.WhenClauses)
+            {
+                if (clause.WhenExpression is not IntegerLiteral literal || !decimal.TryParse(literal.Value, System.Globalization.CultureInfo.InvariantCulture, out var value))
+                {
+                    return false;
+                }
+
+                whenValues.Add(value);
+            }
+
+            if (TryGetFunctionDomain(simpleCase.InputExpression) is { } functionDomain)
+            {
+                return CoversRange(whenValues, functionDomain.Min, functionDomain.Max);
+            }
+
+            if (simpleCase.InputExpression is not ColumnReferenceExpression columnRef
+                || walker.ResolveCatalogColumn(columnRef, walker.CurrentScopeChain()) is not { } resolved)
+            {
+                return false;
+            }
+
+            if (resolved.Column.Type?.Category == SqlTypeCategory.Bit)
+            {
+                return CoversRange(whenValues, 0, 1);
+            }
+
+            return resolved.Column.Type?.Category is SqlTypeCategory.TinyInt or SqlTypeCategory.SmallInt or SqlTypeCategory.Int or SqlTypeCategory.BigInt
+                && _checkDomains.Value.TryGetValue((resolved.TableQualifiedName, resolved.Column.Name), out var domains)
+                && domains.Any(d => d.Domain.EveryIntegerIsIn(whenValues, MaxCoveredDomainSpan));
+        }
+
+        private static bool CoversRange(HashSet<decimal> values, int min, int max) =>
+            Enumerable.Range(min, max - min + 1).All(v => values.Contains(v));
+
+        private static (int Min, int Max)? TryGetFunctionDomain(ScalarExpression input)
+        {
+            if (input is not FunctionCall { FunctionName.Value: { } name } call)
+            {
+                return null;
+            }
+
+            if (name.Equals("MONTH", StringComparison.OrdinalIgnoreCase) && call.Parameters.Count == 1)
+            {
+                return (1, 12);
+            }
+
+            if (!name.Equals("DATEPART", StringComparison.OrdinalIgnoreCase)
+                || call.Parameters is not [IdentifierLiteral part, _])
+            {
+                return null;
+            }
+
+            return part.Value.ToUpperInvariant() switch
+            {
+                "WEEKDAY" or "DW" or "W" => (1, 7),
+                "MONTH" or "MM" or "M" => (1, 12),
+                "QUARTER" or "QQ" or "Q" => (1, 4),
+                "HOUR" or "HH" => (0, 23),
+                _ => null,
+            };
+        }
 
         private static string? ContainsNonDeterministicCall(ScalarExpression expression)
         {
