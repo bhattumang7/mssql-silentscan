@@ -90,9 +90,12 @@ public sealed class IndexCoverageScannerSelectivityOracleTests : OracleTestFixtu
         const string Query = "SELECT Id, Flag, Payload FROM dbo.FlagT WHERE Flag = 0;";
 
         var plan = await PlanInSessionAsync(string.Empty, Query);
-        var lookupPresent = plan.Descendants().Any(e => e.Name.LocalName == "RelOp" && (string?)e.Attribute("PhysicalOp") == "Key Lookup");
+        var lookupPresent = plan.Descendants().Any(e => e.Name.LocalName == "IndexScan" && (string?)e.Attribute("Lookup") == "1");
 
         Assert.False(lookupPresent, "expected a scan, not a seek plus Key Lookup, for a bit flag equal to the value nearly every row holds");
+
+        var rareValuePlan = await PlanInSessionAsync(string.Empty, "SELECT Id, Flag, Payload FROM dbo.FlagT WHERE Flag = 1;");
+        Assert.Contains(rareValuePlan.Descendants(), e => e.Name.LocalName == "IndexScan" && (string?)e.Attribute("Lookup") == "1");
 
         var findings = Scan(Query);
         Assert.DoesNotContain(findings, f => f.Kind == IndexCoverageFindingKind.KeyLookupProneIndex);

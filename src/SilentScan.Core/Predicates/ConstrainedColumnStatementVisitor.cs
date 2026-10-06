@@ -9,6 +9,8 @@ internal sealed record ConstrainedStatement(
     IReadOnlyList<CatalogTable> BaseTables,
     HashSet<ColumnProvenance.BaseColumn> AndConstrainedColumns,
     HashSet<ColumnProvenance.BaseColumn> AndEqualityConstrainedColumns,
+    HashSet<ColumnProvenance.BaseColumn> RowFilterColumns,
+    HashSet<ColumnProvenance.BaseColumn> RowFilterEqualityColumns,
     IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> ScopeChain,
     IReadOnlyList<QualifiedJoin> JoinNodes,
     BooleanExpression? WhereCondition,
@@ -99,7 +101,58 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
             .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
+        var rowFilterComparisons = joinNodes
+            .SelectMany(j => PredicateTreeWalker.FlattenAnd(j.SearchCondition)
+                .OfType<BooleanComparisonExpression>()
+                .Where(c => !IsConstantOnPreservedSide(c, j)))
+            .Concat(PredicateTreeWalker.FlattenAnd(whereCondition).OfType<BooleanComparisonExpression>())
+            .ToList();
+
+        var rowFilterColumns = rowFilterComparisons
+            .SelectMany(c => BaseColumnResolver.ResolveBothSides(c, SourcePath, scopeChain, Catalog))
+            .ToHashSet(TableColumnKeyComparer.For(Catalog));
+
+        var rowFilterEqualityColumns = rowFilterComparisons
+            .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
+            .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
+            .ToHashSet(TableColumnKeyComparer.For(Catalog));
+
         InspectStatement(new ConstrainedStatement(
-            baseTables, andConstrainedColumns, andEqualityConstrainedColumns, scopeChain, joinNodes, whereCondition, node, walker));
+            baseTables, andConstrainedColumns, andEqualityConstrainedColumns, rowFilterColumns, rowFilterEqualityColumns,
+            scopeChain, joinNodes, whereCondition, node, walker));
+    }
+
+    private bool IsConstantOnPreservedSide(BooleanComparisonExpression comparison, QualifiedJoin join)
+    {
+        var preservedBranches = join.QualifiedJoinType switch
+        {
+            QualifiedJoinType.LeftOuter => new[] { join.FirstTableReference },
+            QualifiedJoinType.RightOuter => new[] { join.SecondTableReference },
+            QualifiedJoinType.FullOuter => new[] { join.FirstTableReference, join.SecondTableReference },
+            _ => [],
+        };
+
+        if (preservedBranches.Length == 0)
+        {
+            return false;
+        }
+
+        var firstFree = !BaseColumnResolver.ContainsColumnReference(comparison.FirstExpression);
+        var secondFree = !BaseColumnResolver.ContainsColumnReference(comparison.SecondExpression);
+        if (firstFree == secondFree)
+        {
+            return false;
+        }
+
+        var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+        (firstFree ? comparison.SecondExpression : comparison.FirstExpression).Accept(collector);
+
+        var preservedAliases = preservedBranches
+            .SelectMany(PredicateTreeWalker.FlattenNamedTables)
+            .Select(n => n.Alias?.Value ?? n.SchemaObject.BaseIdentifier.Value)
+            .ToHashSet(Catalog.IdentifierComparer);
+
+        return collector.References.All(r =>
+            r.MultiPartIdentifier is not { Identifiers: { Count: >= 2 } ids } || preservedAliases.Contains(ids[^2].Value));
     }
 }

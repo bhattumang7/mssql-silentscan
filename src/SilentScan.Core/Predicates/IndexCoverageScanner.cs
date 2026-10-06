@@ -43,7 +43,7 @@ public static class IndexCoverageScanner
 
             foreach (var table in statement.BaseTables)
             {
-                InspectTable(table, statement.AndEqualityConstrainedColumns, allReferencedColumns, statement.Node);
+                InspectTable(table, statement.RowFilterEqualityColumns, allReferencedColumns, statement.Node);
             }
         }
 
