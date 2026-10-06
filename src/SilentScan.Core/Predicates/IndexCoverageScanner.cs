@@ -77,6 +77,11 @@ public static class IndexCoverageScanner
 
             var index = candidateIndexes[0];
 
+            if (index.IsUnique && index.KeyColumns.All(constrainedColumnsOnTable.Contains))
+            {
+                return;
+            }
+
             var clusteringKeyColumns =
                 table.Indexes.FirstOrDefault(i => i.IsClustered && !i.IsColumnstore)?.KeyColumns
                 ?? [];
