@@ -43,12 +43,20 @@ public static class VariableWriteSites
 
                 break;
 
-            case ExecuteStatement { ExecuteSpecification.ExecutableEntity: ExecutableProcedureReference procRef }:
-                foreach (var parameter in procRef.Parameters)
+            case ExecuteStatement { ExecuteSpecification: { } specification }:
+                if (specification.Variable is { } returnStatusVariable)
                 {
-                    if (parameter is { IsOutput: true, ParameterValue: VariableReference variable })
+                    yield return (returnStatusVariable.Name, statement, true);
+                }
+
+                if (specification.ExecutableEntity is ExecutableProcedureReference procRef)
+                {
+                    foreach (var parameter in procRef.Parameters)
                     {
-                        yield return (variable.Name, statement, true);
+                        if (parameter is { IsOutput: true, ParameterValue: VariableReference variable })
+                        {
+                            yield return (variable.Name, statement, true);
+                        }
                     }
                 }
 

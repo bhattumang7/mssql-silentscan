@@ -130,7 +130,7 @@ public sealed class OutputParameterScannerTests
     }
 
     [Fact]
-    public void TryCatch_CatchEntersWithTryStartState_AssignmentOnlyInsideTry_Fires()
+    public void TryCatch_NoExplicitRaiseInTry_CatchIsNeverEntered_AssignmentInsideTryIsEnough()
     {
         var findings = Scan(
             """
@@ -142,6 +142,90 @@ public sealed class OutputParameterScannerTests
                 SELECT ERROR_MESSAGE();
             END CATCH
             """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TryCatch_ThrowBeforeAssignment_CatchEntersWithUnassignedState_Fires()
+    {
+        var findings = Scan(
+            """
+            BEGIN TRY
+                IF (@fail = 1) THROW 50001, 'boom', 1;
+                SET @x = 1;
+            END TRY
+            BEGIN CATCH
+                SELECT ERROR_MESSAGE();
+            END CATCH
+            """);
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void TryCatch_ThrowAfterAssignment_CatchEntersWithAssignedState_NeverFires()
+    {
+        var findings = Scan(
+            """
+            BEGIN TRY
+                SET @x = 1;
+                THROW 50001, 'boom', 1;
+            END TRY
+            BEGIN CATCH
+                SELECT ERROR_MESSAGE();
+            END CATCH
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TryCatch_RaiserrorSeverity16BeforeAssignment_CatchEntersWithUnassignedState_Fires()
+    {
+        var findings = Scan(
+            """
+            BEGIN TRY
+                IF (@fail = 1) RAISERROR('boom', 16, 1);
+                SET @x = 1;
+            END TRY
+            BEGIN CATCH
+                SELECT ERROR_MESSAGE();
+            END CATCH
+            """);
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void TryCatch_RaiserrorSeverity10_DoesNotEnterCatch_NeverFires()
+    {
+        var findings = Scan(
+            """
+            BEGIN TRY
+                IF (@fail = 1) RAISERROR('info', 10, 1);
+                SET @x = 1;
+            END TRY
+            BEGIN CATCH
+                SELECT ERROR_MESSAGE();
+            END CATCH
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void ExecReturnStatusIntoOutputParameter_CountsAsAssignment_NeverFires()
+    {
+        var findings = Scan("EXEC @x = dbo.q;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void ExecWithoutReturnStatusVariable_DoesNotAssign_Fires()
+    {
+        var findings = Scan("EXEC dbo.q;");
 
         Assert.Single(findings);
     }

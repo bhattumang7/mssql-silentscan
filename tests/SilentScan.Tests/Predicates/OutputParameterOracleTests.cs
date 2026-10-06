@@ -38,6 +38,49 @@ public sealed class OutputParameterOracleTests : OracleTestFixture
             SELECT @x = SUM(Val) FROM @T WHERE Id = 1;
         END
         GO
+        CREATE PROCEDURE dbo.p_status_seven AS RETURN 7;
+        GO
+        CREATE PROCEDURE dbo.p_return_status_assigns @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            EXEC @x = dbo.p_status_seven;
+        END
+        GO
+        CREATE PROCEDURE dbo.p_assign_in_try_swallowing_catch @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            BEGIN TRY
+                SET @x = 42;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+        END
+        GO
+        CREATE PROCEDURE dbo.p_throw_before_assign @x INT OUTPUT, @fail BIT AS
+        BEGIN
+            SET NOCOUNT ON;
+            BEGIN TRY
+                IF (@fail = 1) THROW 50001, 'boom', 1;
+                SET @x = 42;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+        END
+        GO
+        CREATE PROCEDURE dbo.p_throw_after_assign @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            BEGIN TRY
+                SET @x = 42;
+                THROW 50001, 'boom', 1;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+        END
+        GO
         """;
 
     private new async Task<SqlConnection> OpenConnectionAsync()
@@ -144,6 +187,69 @@ public sealed class OutputParameterOracleTests : OracleTestFixture
         var findings = Scan("SELECT @x = 42;");
 
         Assert.Empty(findings);
+    }
+
+    private async Task<object?> CallerValueAfterAsync(string call)
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand($"DECLARE @caller INT = 999; {call}; SELECT @caller;", connection);
+        var result = await command.ExecuteScalarAsync();
+        return result is DBNull ? null : result;
+    }
+
+    [Fact]
+    public async Task ExecReturnStatusIntoOutputParameter_OverwritesCallerVariable_AndScannerDoesNotFlagIt()
+    {
+        Assert.Equal(7, await CallerValueAfterAsync("EXEC dbo.p_return_status_assigns @x = @caller OUTPUT"));
+        Assert.Equal(999, await CallerValueAfterAsync("EXEC dbo.p_never_assigns @x = @caller OUTPUT"));
+
+        Assert.Empty(Scan("EXEC @x = dbo.p_status_seven;"));
+        Assert.Single(Scan("EXEC dbo.p_status_seven;"));
+    }
+
+    [Fact]
+    public async Task TryBodyThatCompletesWithoutError_NeverRunsCatch_AssignedValueReachesCaller_AndScannerDoesNotFlagIt()
+    {
+        Assert.Equal(42, await CallerValueAfterAsync("EXEC dbo.p_assign_in_try_swallowing_catch @x = @caller OUTPUT"));
+
+        Assert.Empty(Scan(
+            """
+            BEGIN TRY
+                SET @x = 42;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+            """));
+    }
+
+    [Fact]
+    public async Task ThrowBeforeAssignmentInTry_LeavesCallerVariableUnchanged_NoThrowControlAssigns_AndScannerFlagsOnlyTheFormer()
+    {
+        Assert.Equal(999, await CallerValueAfterAsync("EXEC dbo.p_throw_before_assign @x = @caller OUTPUT, @fail = 1"));
+        Assert.Equal(42, await CallerValueAfterAsync("EXEC dbo.p_throw_before_assign @x = @caller OUTPUT, @fail = 0"));
+        Assert.Equal(42, await CallerValueAfterAsync("EXEC dbo.p_throw_after_assign @x = @caller OUTPUT"));
+
+        Assert.Single(Scan(
+            """
+            BEGIN TRY
+                IF (@fail = 1) THROW 50001, 'boom', 1;
+                SET @x = 42;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+            """));
+        Assert.Empty(Scan(
+            """
+            BEGIN TRY
+                SET @x = 42;
+                THROW 50001, 'boom', 1;
+            END TRY
+            BEGIN CATCH
+                DECLARE @message NVARCHAR(2048) = ERROR_MESSAGE();
+            END CATCH
+            """));
     }
 
     private static IReadOnlyList<OutputParameterFinding> Scan(string procedureBody)

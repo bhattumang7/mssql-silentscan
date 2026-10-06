@@ -90,6 +90,8 @@ public static class OutputParameterScanner
             }
         }
 
+        public bool CatchEntersOnlyThroughExplicitRaise => true;
+
         public bool IsDeclined(FlowState state) => state.Declined;
 
         public bool IsDone(FlowState state) => state.Unassigned!.Count == 0;

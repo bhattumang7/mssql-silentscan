@@ -10,10 +10,15 @@ internal static class OutputParameter
         WhyItMatters: """
             A procedure parameter declared `OUTPUT` reaches a `RETURN`, or the natural end of the
             module body, on some statically reachable path with no intervening assignment (`SET
-            @p = ...`, `SELECT @p = ...`, or passing `@p` onward as an OUTPUT argument to another
-            call) at the same scope - a real, path-sensitive reachability walk, not a heuristic, so
-            a parameter assigned on SOME paths but left unassigned on others still fires, since the
-            defect is per-path, not per-procedure.
+            @p = ...`, `SELECT @p = ...`, `EXEC @p = ...` receiving a return status, or passing `@p`
+            onward as an OUTPUT argument to another call) at the same scope - a real, path-sensitive
+            reachability walk, not a heuristic, so a parameter assigned on SOME paths but left
+            unassigned on others still fires, since the defect is per-path, not per-procedure.
+
+            A `CATCH` block counts as reachable only through a `THROW` or a `RAISERROR` of
+            severity 11 or higher written in the `TRY` body, and it is entered with the state at
+            that raise. A statement that fails at run time is assumed to run without error, so a
+            `CATCH` that only an unplanned failure could reach does not create a path.
 
             Oracle-confirmed directly against a real engine: on the unassigned path, the caller's
             own variable is left COMPLETELY UNCHANGED by the call - not reset to NULL, not zeroed,
