@@ -205,11 +205,31 @@ public static class ExpressionTypeInferencer
 
     private static SqlType? CombineStringConcat(SqlType left, SqlType right)
     {
-        if (left.Category != right.Category)
+        if (!IsSizedCharacterCategory(left.Category) || !IsSizedCharacterCategory(right.Category))
         {
-            return Combine(left, right);
+            return left.Category == right.Category ? ConcatenateSameCategory(left, right, left.Category) : Combine(left, right);
         }
 
+        var unicode = left.Category is SqlTypeCategory.NChar or SqlTypeCategory.NVarChar
+            || right.Category is SqlTypeCategory.NChar or SqlTypeCategory.NVarChar;
+        var variable = left.Category is SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar
+            || right.Category is SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar;
+        var category = (unicode, variable) switch
+        {
+            (true, true) => SqlTypeCategory.NVarChar,
+            (true, false) => SqlTypeCategory.NChar,
+            (false, true) => SqlTypeCategory.VarChar,
+            _ => SqlTypeCategory.Char,
+        };
+
+        return ConcatenateSameCategory(left, right, category);
+    }
+
+    private static bool IsSizedCharacterCategory(SqlTypeCategory category) =>
+        category is SqlTypeCategory.Char or SqlTypeCategory.VarChar or SqlTypeCategory.NChar or SqlTypeCategory.NVarChar;
+
+    private static SqlType? ConcatenateSameCategory(SqlType left, SqlType right, SqlTypeCategory category)
+    {
         if (IsAmbiguousCollationConflict(left.Collation, right.Collation))
         {
             return null;
@@ -218,16 +238,16 @@ public static class ExpressionTypeInferencer
         var collation = DominantCollation(left.Collation, right.Collation);
         if (left.IsMax || right.IsMax)
         {
-            return new SqlType(left.Category, Collation: collation, IsMax: true);
+            return new SqlType(category, Collation: collation, IsMax: true);
         }
 
         if (left.Length is not { } l || right.Length is not { } r)
         {
-            return new SqlType(left.Category, Collation: collation);
+            return new SqlType(category, Collation: collation);
         }
 
-        var maxWidth = left.Category is SqlTypeCategory.NChar or SqlTypeCategory.NVarChar ? 4000 : 8000;
-        return new SqlType(left.Category, Length: Math.Min(l + r, maxWidth), Collation: collation);
+        var maxWidth = category is SqlTypeCategory.NChar or SqlTypeCategory.NVarChar ? 4000 : 8000;
+        return new SqlType(category, Length: Math.Min(l + r, maxWidth), Collation: collation);
     }
 
     private static SqlType? CombineCase(
