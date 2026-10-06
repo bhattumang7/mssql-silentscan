@@ -28,6 +28,19 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: rationale promised a plan operator the engine adds only when the
+  chosen plan lacks a blocking one.** `dml/self-referencing` claimed every
+  flagged statement carries an Eager Spool or Sort. Plan probes on heap and
+  clustered targets showed UPDATE, DELETE and MERGE always protected in the
+  probed shapes, but an INSERT whose plan reads the target through a hash
+  join build input or a hash aggregate carries neither, and an INSERT whose
+  source can only produce one row (no FROM clause, or an aggregate-only SELECT
+  without GROUP BY) never gets one on a heap or a clustered table. The scanner
+  now skips the single-row INSERT source (the shared single-row query helper
+  also stopped counting a windowed aggregate as a scalar aggregate), and the
+  rationale and doc state that the protection is a cost-based plan decision.
+  No other rule's rationale claims a protective spool or sort operator.
+
 - **Category: finding emitted although the claimed plan loss cannot occur.**
   Four shapes, each oracle-confirmed against plan shape or actual rows:
   (1) `index/key-lookup-prone` fired on equality over the full key of a unique
@@ -644,6 +657,43 @@ statement — is uncontroversial syntax, not a claim needing verification).
   `= 1` guards are not treated as closing, since the other state is still an
   open transaction. Siblings checked clean: the implicit-transaction finding
   kind shares this flow and gains the same behavior.
+
+- `ScalarUdfScanner` (in-predicate) — root cause: column-free conjuncts
+  treated as per-row. A UDF call whose arguments reference no column of the
+  row source is evaluated once per statement; only conjuncts that depend on
+  row data repeat. Fixed by recording column-free conjunct regions and
+  excluding them. Oracle-confirmed through function-stats deltas with a
+  column-dependent sibling. Known remaining gap: a UDF used as an index seek
+  bound also runs once and is still reported.
+
+- `ForcedSerialScanner` (non-parallelizable intrinsic, fast-forward cursor) —
+  root cause: a query over a system catalog view is already serial. The
+  catalog views force the non-parallelizable-intrinsic reason on their own,
+  and a cursor over them reports only that reason, never the fast-forward
+  one. Fixed by suppressing both findings when the outermost query reads a
+  system catalog view. Oracle-confirmed with a user-table sibling that still
+  reports the fast-forward reason. Known gap: a user view wrapping a system
+  view is not recognised; bare read-only cursors are not reported.
+
+- `TypedPredicateExtractor` (under-length parameter) — two root causes.
+  Derived expressions (function results, scalar subqueries, concatenations)
+  take their type from their inputs and never truncate, so only declared
+  parameters and variables are considered. A variable whose only writes are
+  literals no longer than its declared length cannot be truncated and is
+  skipped. Oracle-confirmed with sibling cases that do truncate.
+
+- `WriteLossClassifier` (temporal precision loss) — root cause: a datetime
+  source that is provably midnight was reported as losing a time. Provable
+  forms: date-only strings, integers rendered to a string, date-typed
+  operands converted to datetime, and day-or-coarser DATEADD over a midnight
+  base. Oracle-confirmed by a round-trip comparison, with time-carrying
+  siblings (HOUR unit, time-bearing strings) still reported. The procedure-call,
+  table-function-call, sp_executesql and table-valued-argument scanners call
+  the same classifier and share the fix, without operand typing for
+  variable-derived forms.
+
+- `tier1/column-arithmetic` — sampled, no change. One sampled finding depends
+  on runtime data and is not statically decidable; documented, not fixed.
 
 ---
 
