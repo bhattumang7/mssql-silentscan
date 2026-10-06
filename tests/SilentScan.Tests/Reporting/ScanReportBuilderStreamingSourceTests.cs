@@ -17,6 +17,7 @@ public sealed class ScanReportBuilderStreamingSourceTests
     {
         const string Sql = """
             CREATE TABLE dbo.Orders (OrderCode VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
+            CREATE INDEX IX_Orders_OrderCode ON dbo.Orders (OrderCode);
             GO
             CREATE VIEW dbo.vw_Orders AS SELECT OrderCode FROM dbo.Orders;
             GO

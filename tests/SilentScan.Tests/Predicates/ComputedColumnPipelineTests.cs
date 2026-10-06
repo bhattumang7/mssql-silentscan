@@ -46,7 +46,7 @@ public sealed class ComputedColumnPipelineTests : OracleTestFixture
     [Fact]
     public async Task StringConcatenationComputedColumn_AgainstNvarcharLiteral_ClassifiesScanForced_OracleConfirmed()
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(ConcatSql, "SQL_Latin1_General_CP1_CI_AS");
+        var report = await EngineAuthoritativeScan.ScanAsync(ConcatSql, "SQL_Latin1_General_CP1_CI_AS", FindingConfidence.Medium);
 
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "FullName");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
