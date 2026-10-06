@@ -85,6 +85,46 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT Id FROM @t;")]
+    [InlineData("SELECT COUNT(*) FROM @t;")]
+    [InlineData("SELECT Id FROM @t ORDER BY Id;")]
+    [InlineData("SELECT TOP (10) Id FROM @t WHERE Id > 5 ORDER BY Id;")]
+    [InlineData("INSERT INTO dbo.Big (Id, Col) SELECT Id, 'x' FROM @t;")]
+    [InlineData("IF EXISTS (SELECT 1 FROM @t) SELECT 1;")]
+    [InlineData("DECLARE @c INT = (SELECT COUNT(*) FROM @t);")]
+    public void TableVariableAsOnlyRowSource_BelowCompat150_NeverFiresLowCompatKind(string statement)
+    {
+        var findings = Scan($"DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; {statement}", compatibilityLevel: 130);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
+    [Theory]
+    [InlineData("SELECT Id, COUNT(*) FROM @t GROUP BY Id;")]
+    [InlineData("SELECT DISTINCT Id FROM @t;")]
+    [InlineData("SELECT b.Id FROM dbo.Big b WHERE b.Id IN (SELECT Id FROM @t);")]
+    [InlineData("SELECT b.Id FROM dbo.Big b WHERE EXISTS (SELECT 1 FROM @t t WHERE t.Id = b.Id);")]
+    [InlineData("SELECT t.Id FROM @t t, dbo.Big b WHERE t.Id = b.Id;")]
+    [InlineData("UPDATE b SET Col = 'y' FROM dbo.Big b JOIN @t t ON b.Id = t.Id;")]
+    [InlineData("IF EXISTS (SELECT 1 FROM dbo.Big b JOIN @t t ON b.Id = t.Id) SELECT 1;")]
+    public void TableVariableWhereOneRowEstimateChangesThePlan_BelowCompat150_FiresLowCompatKind(string statement)
+    {
+        var findings = Scan($"DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; {statement}", compatibilityLevel: 130);
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
+    [Fact]
+    public void TableVariableJoinedToItself_BelowCompat150_FiresLowCompatKind()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; SELECT t.Id FROM @t t JOIN @t u ON t.Id = u.Id;",
+            compatibilityLevel: 130);
+
+        Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
+    [Theory]
     [InlineData("SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (RECOMPILE);")]
     [InlineData("SELECT Id FROM @t OPTION (RECOMPILE);")]
     [InlineData("INSERT INTO dbo.Big SELECT Id FROM @t OPTION (MAXDOP 1, RECOMPILE);")]
@@ -102,7 +142,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; "
-            + "SELECT Id FROM @t OPTION (RECOMPILE); SELECT Id FROM @t;",
+            + "SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (RECOMPILE); SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id;",
             compatibilityLevel: 130);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);

@@ -32,7 +32,9 @@ public static class QueryAntiPatternScanner
     {
         var cteNameCollector = new Rule.CteNameCollector(catalog.IdentifierComparer);
         parseResult.Fragment.Accept(cteNameCollector);
-        return new Rule(parseResult.SourcePath, catalog, cteNameCollector.Names);
+        var estimateSensitiveFromClauses = new EstimateSensitiveFromClauseCollector();
+        parseResult.Fragment.Accept(estimateSensitiveFromClauses);
+        return new Rule(parseResult.SourcePath, catalog, cteNameCollector.Names, estimateSensitiveFromClauses.FromClauses);
     }
 
     internal static IReadOnlyList<QueryAntiPatternFinding> Harvest(Rule rule) =>
@@ -47,7 +49,8 @@ public static class QueryAntiPatternScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, HashSet<string> cteNames) : IModuleRule
+    internal sealed class Rule(
+        string sourcePath, DatabaseCatalog catalog, HashSet<string> cteNames, HashSet<FromClause> estimateSensitiveFromClauses) : IModuleRule
     {
         public List<QueryAntiPatternFinding> Findings { get; } = [];
 
@@ -70,6 +73,7 @@ public static class QueryAntiPatternScanner
                 foreach (var variableRef in CollectVariableTableReferences(tableReference))
                 {
                     if (_recompileStatementDepth == 0
+                        && estimateSensitiveFromClauses.Contains(node)
                         && _tableVariableNames.Contains(variableRef.Variable.Name)
                         && catalog.CompatibilityLevel is { } level && level < 150)
                     {
