@@ -18,7 +18,44 @@ public sealed class SelfReferencingDmlOracleTests : OracleTestFixture
         GO
         CREATE TABLE dbo.Hp (Id INT NOT NULL, Val INT NOT NULL);
         GO
+        CREATE TABLE dbo.Ck (A INT NOT NULL, B INT NOT NULL, Val INT NOT NULL, PRIMARY KEY (A, B));
+        GO
         """;
+
+    private static void AssertGainsProtectiveOperator(string planXml)
+    {
+        Assert.True(
+            planXml.Contains("LogicalOp=\"Eager Spool\"", StringComparison.Ordinal) || planXml.Contains("PhysicalOp=\"Sort\"", StringComparison.Ordinal),
+            "expected an Eager Spool or a Sort");
+    }
+
+    [Theory]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = 5;")]
+    [InlineData("UPDATE dbo.T SET Val = Val + 1 WHERE Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("DELETE FROM dbo.T WHERE Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("UPDATE dbo.Ck SET Val = (SELECT MAX(Val) FROM dbo.Ck) WHERE A = 1 AND B = (SELECT MAX(c3.B) FROM dbo.Ck c3 WHERE c3.A = 1);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o JOIN dbo.T t ON t.Id = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o LEFT JOIN dbo.T t ON t.Id = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WHERE t.Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WITH (FORCESCAN) WHERE t.Id = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    public async Task StatementPinnedToOneRowByAUniqueKey_NeverGainsAProtectiveOperator(string probe)
+    {
+        AssertNoProtectiveOperator(await CaptureAsync(probe));
+    }
+
+    [Theory]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id > 5;")]
+    [InlineData("UPDATE dbo.T SET Val = Val + 1 WHERE Id > 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("DELETE FROM dbo.T WHERE Id > 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val > 3);")]
+    [InlineData("UPDATE dbo.Ck SET Val = (SELECT MAX(Val) FROM dbo.Ck) WHERE A = 1;")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = Val;")]
+    [InlineData("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T) WHERE Id = (SELECT MAX(t2.Id) FROM dbo.T t2 WHERE t2.Val = T.Val);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 7000, o.RefId, 0 FROM dbo.Other o JOIN dbo.T t ON t.Val = o.RefId WHERE o.Id = 1;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT t.Id + 7000, t.Val, 0 FROM dbo.T t WHERE t.Val = 5 AND EXISTS (SELECT 1 FROM dbo.T t2 WHERE t2.Val = t.Val);")]
+    public async Task StatementNotPinnedToOneRowByAUniqueKey_GainsAProtectiveOperator(string probe)
+    {
+        AssertGainsProtectiveOperator(await CaptureAsync(probe));
+    }
 
     private static void AssertNoProtectiveOperator(string planXml)
     {

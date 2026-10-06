@@ -42,7 +42,9 @@ public static class SelfReferencingDmlScanner
                 var targetQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(targetRef.SchemaObject));
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
 
-                var match = spec.InsertSource is SelectInsertSource select && !VariableWriteSites.ProducesAtMostOneRow(select.Select)
+                var match = spec.InsertSource is SelectInsertSource select
+                    && !VariableWriteSites.ProducesAtMostOneRow(select.Select)
+                    && !IsPinnedToOneRowByUniqueKeys(select.Select, cteNames)
                     ? FindMatchInFragment(select.Select, targetQualifiedName, cteNames)
                     : null;
                 Report(match, "INSERT", targetQualifiedName, node);
@@ -57,11 +59,13 @@ public static class SelfReferencingDmlScanner
                 && ResolveTargetQualifiedName(spec.Target, updateTargetAlias, scopeChain) is { } targetQualifiedName)
             {
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
-                var match = FindMatchInFromClauseExtras(spec.FromClause, spec.Target, targetQualifiedName, cteNames)
-                    ?? FindMatchInFragment(spec.WhereClause, targetQualifiedName, cteNames)
-                    ?? spec.SetClauses.OfType<AssignmentSetClause>()
-                        .Select(sc => FindMatchInFragment(sc.NewValue, targetQualifiedName, cteNames))
-                        .FirstOrDefault(m => m is not null);
+                var match = IsTargetPinnedToOneRowByUniqueKey(spec.FromClause, spec.Target, spec.WhereClause, cteNames)
+                    ? null
+                    : FindMatchInFromClauseExtras(spec.FromClause, spec.Target, targetQualifiedName, cteNames)
+                        ?? FindMatchInFragment(spec.WhereClause, targetQualifiedName, cteNames)
+                        ?? spec.SetClauses.OfType<AssignmentSetClause>()
+                            .Select(sc => FindMatchInFragment(sc.NewValue, targetQualifiedName, cteNames))
+                            .FirstOrDefault(m => m is not null);
                 Report(match, "UPDATE", targetQualifiedName, node);
             }
         }
@@ -74,8 +78,10 @@ public static class SelfReferencingDmlScanner
                 && ResolveTargetQualifiedName(spec.Target, deleteTargetAlias, scopeChain) is { } targetQualifiedName)
             {
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
-                var match = FindMatchInFromClauseExtras(spec.FromClause, spec.Target, targetQualifiedName, cteNames)
-                    ?? FindMatchInFragment(spec.WhereClause, targetQualifiedName, cteNames);
+                var match = IsTargetPinnedToOneRowByUniqueKey(spec.FromClause, spec.Target, spec.WhereClause, cteNames)
+                    ? null
+                    : FindMatchInFromClauseExtras(spec.FromClause, spec.Target, targetQualifiedName, cteNames)
+                        ?? FindMatchInFragment(spec.WhereClause, targetQualifiedName, cteNames);
                 Report(match, "DELETE", targetQualifiedName, node);
             }
         }
@@ -94,6 +100,50 @@ public static class SelfReferencingDmlScanner
                         .Select(actionClause => FindMatchInFragment(actionClause, targetQualifiedName, cteNames))
                         .FirstOrDefault(m => m is not null);
                 Report(match, "MERGE", targetQualifiedName, node);
+            }
+        }
+
+        private bool IsTargetPinnedToOneRowByUniqueKey(FromClause? fromClause, TableReference target, WhereClause? whereClause, HashSet<string> cteNames) =>
+            fromClause is null
+            && target is NamedTableReference named
+            && SingleRowKeyPinning.PinsAtMostOneRow([named], PredicateTreeWalker.FlattenAnd(whereClause?.SearchCondition), cteNames, catalog);
+
+        private bool IsPinnedToOneRowByUniqueKeys(QueryExpression query, HashSet<string> cteNames)
+        {
+            while (query is QueryParenthesisExpression parenthesized)
+            {
+                query = parenthesized.QueryExpression;
+            }
+
+            if (query is not QuerySpecification { FromClause.TableReferences.Count: 1 } spec)
+            {
+                return false;
+            }
+
+            var tables = new List<NamedTableReference>();
+            var conjuncts = PredicateTreeWalker.FlattenAnd(spec.WhereClause?.SearchCondition).ToList();
+            return CollectPinnableTables(spec.FromClause.TableReferences[0], tables, conjuncts)
+                && SingleRowKeyPinning.PinsAtMostOneRow(tables, conjuncts, cteNames, catalog);
+        }
+
+        private static bool CollectPinnableTables(TableReference reference, List<NamedTableReference> tables, List<BooleanExpression> conjuncts)
+        {
+            switch (reference)
+            {
+                case NamedTableReference named:
+                    tables.Add(named);
+                    return true;
+
+                case QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner or QualifiedJoinType.LeftOuter } join:
+                    conjuncts.AddRange(PredicateTreeWalker.FlattenAnd(join.SearchCondition));
+                    return CollectPinnableTables(join.FirstTableReference, tables, conjuncts)
+                        && CollectPinnableTables(join.SecondTableReference, tables, conjuncts);
+
+                case JoinParenthesisTableReference { Join: { } inner }:
+                    return CollectPinnableTables(inner, tables, conjuncts);
+
+                default:
+                    return false;
             }
         }
 

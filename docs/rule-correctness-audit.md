@@ -28,6 +28,26 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: statement provably limited to one row by a unique key reported
+  as needing Halloween protection.** Plan checks on a fresh sample of
+  `dml/self-referencing` findings showed two statements whose plans carry no
+  spool, sort or blocking operator: an UPDATE whose WHERE equates both key
+  columns of a unique index to variables and an uncorrelated scalar
+  subquery, and an INSERT ... SELECT whose source is a primary-key seek
+  joined by another primary key to the target. Probes on heaps and clustered
+  tables confirmed the engine adds nothing for UPDATE, DELETE and INSERT
+  statements pinned to one row this way, even when the read side scans the
+  target and, for an INSERT source, even under FORCESCAN on the pinned table, while a range, a
+  partial composite key, an OR, a bound that references the target's own
+  column and a correlated bound subquery all still get an Eager Spool. The
+  scanner now skips an UPDATE or DELETE without FROM, and an INSERT source
+  of inner or left joined named tables, whose WHERE and ON equalities cover
+  every key column of a unique index for each table, directly or through an
+  already pinned table's columns. Other scanners that reason about
+  single-row statements (the literal TOP 1 and aggregate-only source skips
+  in this scanner) were already covered; no other scanner makes a
+  Halloween-protection claim.
+
 - **Category: a scalar UDF used as an index seek bound reported as per-row
   work.** `scalar-udf/in-predicate` reported `Key = dbo.f(@p)` where `Key` is
   the sole key column of a unique index. Execution counts
