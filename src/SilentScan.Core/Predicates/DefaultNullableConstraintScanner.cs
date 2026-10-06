@@ -16,7 +16,7 @@ public static class DefaultNullableConstraintScanner
             }
 
             var column = catalog.Find(expression.TableQualifiedName)?.FindColumn(columnName, catalog.IdentifierComparer);
-            if (column is not { IsNullable: true })
+            if (column is not { IsNullable: true } || IsNullLiteral(expression.DefinitionText))
             {
                 continue;
             }
@@ -31,5 +31,16 @@ public static class DefaultNullableConstraintScanner
                 .OrderBy(f => f.TableQualifiedName, StringComparer.Ordinal)
                 .ThenBy(f => f.ColumnName, StringComparer.Ordinal),
         ];
+    }
+
+    private static bool IsNullLiteral(string definitionText)
+    {
+        var text = definitionText.AsSpan().Trim();
+        while (text.Length >= 2 && text[0] == '(' && text[^1] == ')')
+        {
+            text = text[1..^1].Trim();
+        }
+
+        return text.Equals("NULL", StringComparison.OrdinalIgnoreCase);
     }
 }
