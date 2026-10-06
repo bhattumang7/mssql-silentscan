@@ -20,6 +20,14 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
         GO
         CREATE FUNCTION dbo.Wrap(@x INT) RETURNS TABLE AS RETURN SELECT @x AS V;
         GO
+        CREATE TABLE dbo.Keyed (Code VARCHAR(20) NOT NULL PRIMARY KEY, V INT NOT NULL DEFAULT 0);
+        GO
+        INSERT INTO dbo.Keyed (Code) SELECT TOP ({RowCount}) CAST(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS VARCHAR(20)) FROM sys.all_objects;
+        GO
+        CREATE FUNCTION dbo.BumpText(@x INT) RETURNS VARCHAR(20) WITH INLINE = OFF AS BEGIN RETURN CAST(@x + 1 AS VARCHAR(20)); END;
+        GO
+        CREATE FUNCTION dbo.BumpUnicode(@x INT) RETURNS NVARCHAR(20) WITH INLINE = OFF AS BEGIN RETURN CAST(@x + 1 AS NVARCHAR(20)); END;
+        GO
         """;
 
     private async Task<long> MaxActualRowsOfOperatorsCallingUdfAsync(string probe)
@@ -62,7 +70,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
 
     private async Task<long> UdfExecutionsAsync(string statement)
     {
-        const string counter = "SELECT ISNULL(SUM(execution_count), 0) FROM sys.dm_exec_function_stats WHERE database_id = DB_ID() AND object_id = OBJECT_ID('dbo.Bump');";
+        const string counter = "SELECT ISNULL(SUM(execution_count), 0) FROM sys.dm_exec_function_stats WHERE database_id = DB_ID() AND object_id IN (OBJECT_ID('dbo.Bump'), OBJECT_ID('dbo.BumpText'), OBJECT_ID('dbo.BumpUnicode'));";
         var before = await ScalarAsync<long>(counter);
         await ExecuteAsync(statement);
         return await ScalarAsync<long>(counter) - before;
@@ -85,6 +93,30 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V = 5 OR dbo.Bump(@v) > 100;")]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source a JOIN dbo.Source b ON a.Id = b.Id AND a.V < dbo.Bump(@v) + 1000;")]
     public async Task UdfInPredicateConjunctWithAColumn_RunsOncePerRow(string statement)
+    {
+        Assert.True(await UdfExecutionsAsync(statement) >= RowCount);
+    }
+
+    [Theory]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE Id = dbo.Bump(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE V >= 0 AND dbo.Bump(@v) = Id;")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Keyed WHERE Code = dbo.BumpText(@v);")]
+    [InlineData("DECLARE @v INT = 1; UPDATE dbo.Source SET V = 0 WHERE Id = dbo.Bump(@v);")]
+    public async Task UdfAsEqualityBoundOnSingleColumnUniqueKey_RunsOnce(string statement)
+    {
+        Assert.Equal(1, await UdfExecutionsAsync(statement));
+    }
+
+    [Theory]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(@v) OR V = 5;")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(V);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE V = dbo.Bump(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WITH (FORCESCAN) WHERE Id = dbo.Bump(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Keyed WHERE Code = dbo.BumpUnicode(@v);")]
+    public async Task UdfInEqualityWithoutASingleColumnUniqueKeySeek_RunsOncePerRow(string statement)
     {
         Assert.True(await UdfExecutionsAsync(statement) >= RowCount);
     }

@@ -232,6 +232,61 @@ public sealed class ScalarUdfScannerTests
         Assert.Contains(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
     }
 
+    private const string UniqueKeyDdl = """
+        CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+        GO
+        CREATE FUNCTION dbo.fn_Text(@x INT) RETURNS NVARCHAR(20) AS BEGIN RETURN CAST(@x AS NVARCHAR(20)); END;
+        GO
+        CREATE TABLE dbo.K (Id INT NOT NULL PRIMARY KEY, V INT NOT NULL);
+        GO
+        CREATE TABLE dbo.U (Id INT NOT NULL, V INT NOT NULL);
+        CREATE UNIQUE INDEX ux_U ON dbo.U (Id);
+        GO
+        CREATE TABLE dbo.F (Id INT NOT NULL, V INT NOT NULL);
+        CREATE UNIQUE INDEX ux_F ON dbo.F (Id) WHERE V > 0;
+        GO
+        CREATE TABLE dbo.C (A INT NOT NULL, B INT NOT NULL, PRIMARY KEY (A, B));
+        GO
+        CREATE TABLE dbo.S (Code VARCHAR(20) NOT NULL PRIMARY KEY, V INT NOT NULL);
+        GO
+        CREATE TABLE dbo.N (Id INT NOT NULL, V INT NOT NULL);
+        GO
+        """;
+
+    [Theory]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE dbo.fn_Compute(@v) = Id;")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE V > 0 AND Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.U WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT x.V FROM dbo.K AS x WHERE x.Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; UPDATE dbo.K SET V = 0 WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; DELETE dbo.K WHERE Id = dbo.fn_Compute(@v);")]
+    public void ScalarUdfAsEqualityBoundOnSingleColumnUniqueKey_NeverFiresPredicateInvocation(string statement)
+    {
+        var findings = ScanSql(UniqueKeyDdl + "\n" + statement);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.N WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.F WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.C WHERE A = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id > dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(V);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(@v) OR V = 5;")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(@v) + V;")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE V = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.S WHERE Code = dbo.fn_Text(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WITH (FORCESCAN) WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WITH (INDEX(0)) WHERE Id = dbo.fn_Compute(@v);")]
+    public void ScalarUdfInEqualityWithoutASingleColumnUniqueKeySeek_StillFiresPredicateInvocation(string statement)
+    {
+        var findings = ScanSql(UniqueKeyDdl + "\n" + statement);
+
+        Assert.Contains(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
+    }
+
     [Fact]
     public void ScalarUdfInUncorrelatedTableFunctionArgument_NeverFiresProjectionInvocation()
     {
