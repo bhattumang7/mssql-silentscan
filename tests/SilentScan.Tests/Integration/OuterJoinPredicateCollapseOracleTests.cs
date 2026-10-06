@@ -61,9 +61,19 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
             SELECT p.Id FROM dbo.Child c RIGHT JOIN dbo.Parent p ON c.ParentId = p.Id WHERE c.Status = 'X';
         END
         GO
-        CREATE PROCEDURE dbo.P_FullOuterJoinUnguardedFires AS
+        CREATE PROCEDURE dbo.P_FullOuterJoinOneSidedNoFire AS
         BEGIN
-            SELECT p.Id FROM dbo.Parent p FULL OUTER JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status = 'X';
+            SELECT p.Id, c.Id FROM dbo.Parent p FULL OUTER JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status = 'X';
+        END
+        GO
+        CREATE PROCEDURE dbo.P_FullOuterJoinBothSidesFires AS
+        BEGIN
+            SELECT p.Id, c.Id FROM dbo.Parent p FULL OUTER JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status = 'X' AND p.Id > 0;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_FullOuterJoinBothSidesInnerEquivalent AS
+        BEGIN
+            SELECT p.Id, c.Id FROM dbo.Parent p INNER JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status = 'X' AND p.Id > 0;
         END
         GO
         CREATE PROCEDURE dbo.P_InnerJoinNoFire AS
@@ -106,7 +116,7 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
         END
         GO
         INSERT INTO dbo.Parent (Id, Flag) VALUES (1, NULL), (2, NULL);
-        INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (1, 1, 'X', 5);
+        INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (1, 1, 'X', 5), (2, NULL, 'X', 7);
         GO
         """;
 
@@ -178,12 +188,32 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task FullOuterJoinUnguardedPredicate_Fires()
+    public async Task FullOuterJoinPredicateRejectingBothSides_Fires()
     {
-        var findings = await FindingsForAsync("P_FullOuterJoinUnguardedFires");
+        var findings = await FindingsForAsync("P_FullOuterJoinBothSidesFires");
 
-        var finding = Assert.Single(findings);
-        Assert.Equal(OuterJoinPredicateCollapseKind.FullOuterJoin, finding.Kind);
+        Assert.NotEmpty(findings);
+        Assert.All(findings, f => Assert.Equal(OuterJoinPredicateCollapseKind.FullOuterJoin, f.Kind));
+    }
+
+    [Fact]
+    public async Task FullOuterJoinPredicateRejectingOneSideOnly_DoesNotFire()
+    {
+        var findings = await FindingsForAsync("P_FullOuterJoinOneSidedNoFire");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public async Task FullOuterJoinRejectingBothSides_RealExecutionEqualsTheInnerJoin_OneSidedControlKeepsTheOrphanRow()
+    {
+        var bothSides = await RowsAsync("EXEC dbo.P_FullOuterJoinBothSidesFires;");
+        var innerEquivalent = await RowsAsync("EXEC dbo.P_FullOuterJoinBothSidesInnerEquivalent;");
+        var oneSided = await RowsAsync("EXEC dbo.P_FullOuterJoinOneSidedNoFire;");
+
+        Assert.Equal(innerEquivalent.Count, bothSides.Count);
+        Assert.Single(bothSides);
+        Assert.Equal(2, oneSided.Count);
     }
 
     [Fact]

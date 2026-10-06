@@ -30,6 +30,8 @@ public static class OuterJoinPredicateCollapseScanner
 
     internal sealed class Rule(string sourcePath, StringComparer identifierComparer) : IModuleRule
     {
+        private readonly List<(OuterJoinPredicateCollapseFinding Finding, AliasNullSide Side)> _hits = [];
+
         public List<OuterJoinPredicateCollapseFinding> Findings { get; } = [];
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
@@ -54,9 +56,23 @@ public static class OuterJoinPredicateCollapseScanner
                 return;
             }
 
+            _hits.Clear();
             foreach (var conjunct in PredicateTreeWalker.FlattenAnd(searchCondition))
             {
                 InspectConjunct(conjunct, nullSupplyingAliases);
+            }
+
+            var rejectedFullJoinBranches = _hits
+                .Where(h => h.Side.FullJoin is not null)
+                .Select(h => (h.Side.FullJoin, h.Side.IsFirstBranch))
+                .ToHashSet();
+            foreach (var (finding, side) in _hits)
+            {
+                if (side.FullJoin is null
+                    || (rejectedFullJoinBranches.Contains((side.FullJoin, true)) && rejectedFullJoinBranches.Contains((side.FullJoin, false))))
+                {
+                    Findings.Add(finding);
+                }
             }
         }
 
@@ -106,13 +122,15 @@ public static class OuterJoinPredicateCollapseScanner
                 return;
             }
 
-            Findings.Add(new OuterJoinPredicateCollapseFinding(
-                side.Kind,
-                side.TableQualifiedName,
-                ids[^1].Value,
-                sourcePath,
-                columnRef.StartLine,
-                columnRef.StartColumn));
+            _hits.Add((
+                new OuterJoinPredicateCollapseFinding(
+                    side.Kind,
+                    side.TableQualifiedName,
+                    ids[^1].Value,
+                    sourcePath,
+                    columnRef.StartLine,
+                    columnRef.StartColumn),
+                side));
         }
 
         private static Dictionary<string, AliasNullSide> CollectNullSupplyingAliases(FromClause fromClause, StringComparer identifierComparer)
@@ -125,16 +143,16 @@ public static class OuterJoinPredicateCollapseScanner
                     switch (join.QualifiedJoinType)
                     {
                         case QualifiedJoinType.LeftOuter:
-                            AddAliases(join.SecondTableReference, OuterJoinPredicateCollapseKind.LeftOuterJoin, result);
+                            AddAliases(join.SecondTableReference, OuterJoinPredicateCollapseKind.LeftOuterJoin, null, false, result);
                             break;
 
                         case QualifiedJoinType.RightOuter:
-                            AddAliases(join.FirstTableReference, OuterJoinPredicateCollapseKind.RightOuterJoin, result);
+                            AddAliases(join.FirstTableReference, OuterJoinPredicateCollapseKind.RightOuterJoin, null, false, result);
                             break;
 
                         case QualifiedJoinType.FullOuter:
-                            AddAliases(join.FirstTableReference, OuterJoinPredicateCollapseKind.FullOuterJoin, result);
-                            AddAliases(join.SecondTableReference, OuterJoinPredicateCollapseKind.FullOuterJoin, result);
+                            AddAliases(join.FirstTableReference, OuterJoinPredicateCollapseKind.FullOuterJoin, join, true, result);
+                            AddAliases(join.SecondTableReference, OuterJoinPredicateCollapseKind.FullOuterJoin, join, false, result);
                             break;
                     }
                 }
@@ -144,14 +162,18 @@ public static class OuterJoinPredicateCollapseScanner
         }
 
         private static void AddAliases(
-            TableReference branch, OuterJoinPredicateCollapseKind kind, Dictionary<string, AliasNullSide> result)
+            TableReference branch,
+            OuterJoinPredicateCollapseKind kind,
+            QualifiedJoin? fullJoin,
+            bool isFirstBranch,
+            Dictionary<string, AliasNullSide> result)
         {
             foreach (var named in PredicateTreeWalker.FlattenNamedTables(branch))
             {
                 var alias = AliasKey(named);
                 if (!result.ContainsKey(alias))
                 {
-                    result.Add(alias, new AliasNullSide(kind, SchemaObjectNameHelper.Qualify(named.SchemaObject)));
+                    result.Add(alias, new AliasNullSide(kind, SchemaObjectNameHelper.Qualify(named.SchemaObject), fullJoin, isFirstBranch));
                 }
             }
         }
@@ -159,6 +181,6 @@ public static class OuterJoinPredicateCollapseScanner
         private static string AliasKey(NamedTableReference named) =>
             named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value;
 
-        private readonly record struct AliasNullSide(OuterJoinPredicateCollapseKind Kind, string TableQualifiedName);
+        private readonly record struct AliasNullSide(OuterJoinPredicateCollapseKind Kind, string TableQualifiedName, QualifiedJoin? FullJoin, bool IsFirstBranch);
     }
 }
