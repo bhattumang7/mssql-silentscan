@@ -633,6 +633,18 @@ statement — is uncontroversial syntax, not a claim needing verification).
   `ProcCallTableValuedArgumentMismatchScanner`) classify already-typed
   caller arguments without scope and stay conservative.
 
+- `TransactionHygieneScanner` — root cause: path-insensitive guard handling.
+  `IF @@TRANCOUNT > 0 ROLLBACK` (and `>= 1`, `<> 0`, `XACT_STATE() <> 0`) was
+  merged with an implicit else that still carried the open transaction,
+  although the false branch of such a guard means no transaction is open.
+  Fixed by clearing the open site on the else path of those guards only.
+  Oracle-confirmed: a catch rolling back under `XACT_STATE() <> 0` leaves
+  the transaction count at zero, while a guard of `@@TRANCOUNT > 1` leaves it
+  elevated and raises the count-mismatch error. `XACT_STATE() = -1` and
+  `= 1` guards are not treated as closing, since the other state is still an
+  open transaction. Siblings checked clean: the implicit-transaction finding
+  kind shares this flow and gains the same behavior.
+
 ---
 
 ## Not yet audited

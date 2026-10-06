@@ -44,6 +44,30 @@ public sealed class TransactionHygieneOracleTests : OracleTestFixture
             END CATCH
         END
         GO
+        CREATE PROCEDURE dbo.p_guard_above_one AS
+        BEGIN
+            BEGIN TRANSACTION;
+            BEGIN TRY
+                SELECT 1 / 0;
+                COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+                IF (@@TRANCOUNT > 1) ROLLBACK TRANSACTION;
+            END CATCH
+        END
+        GO
+        CREATE PROCEDURE dbo.p_state_guard AS
+        BEGIN
+            BEGIN TRANSACTION;
+            BEGIN TRY
+                SELECT 1 / 0;
+                COMMIT TRANSACTION;
+            END TRY
+            BEGIN CATCH
+                IF (XACT_STATE() <> 0) ROLLBACK TRANSACTION;
+            END CATCH
+        END
+        GO
         """;
 
     private new async Task<SqlConnection> OpenConnectionAsync()
@@ -94,6 +118,31 @@ public sealed class TransactionHygieneOracleTests : OracleTestFixture
 
             await using var after = new SqlCommand("SELECT @@TRANCOUNT;", connection);
             Assert.Equal(1, (int)(await after.ExecuteScalarAsync())!);
+        }
+        finally
+        {
+            await CleanUpAnyOpenTransactionAsync(connection);
+        }
+    }
+
+    [Fact]
+    public async Task CatchRollingBackUnderXactStateGuard_ResolvesTheTransaction_WhileTranCountAboveOneGuardDoesNot()
+    {
+        await using var connection = await OpenConnectionAsync();
+        try
+        {
+            await using var guarded = new SqlCommand("EXEC dbo.p_state_guard;", connection);
+            await guarded.ExecuteNonQueryAsync();
+
+            await using var afterGuarded = new SqlCommand("SELECT @@TRANCOUNT;", connection);
+            Assert.Equal(0, (int)(await afterGuarded.ExecuteScalarAsync())!);
+
+            await using var unguarded = new SqlCommand("EXEC dbo.p_guard_above_one;", connection);
+            var ex = await Assert.ThrowsAsync<SqlException>(() => unguarded.ExecuteNonQueryAsync());
+            Assert.Equal(266, ex.Number);
+
+            await using var afterUnguarded = new SqlCommand("SELECT @@TRANCOUNT;", connection);
+            Assert.Equal(1, (int)(await afterUnguarded.ExecuteScalarAsync())!);
         }
         finally
         {
