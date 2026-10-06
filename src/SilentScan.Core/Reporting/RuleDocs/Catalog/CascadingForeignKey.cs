@@ -23,6 +23,8 @@ internal static class CascadingForeignKey
             query. It makes no claim about magnitude (how many child rows, how often the cascade
             actually fires) - only that the cascade exists and is worth being aware of before
             writing or reviewing DML against the parent table.
+
+            A disabled foreign key (`NOCHECK`) is skipped: the engine does not cascade through it.
             """,
         Examples:
         [

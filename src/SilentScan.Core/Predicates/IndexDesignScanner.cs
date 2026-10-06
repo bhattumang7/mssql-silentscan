@@ -271,7 +271,7 @@ public static class IndexDesignScanner
         foreach (var group in constraints)
         {
             var parentTable = catalog.Find(group.Key.ParentTableQualifiedName);
-            if (parentTable is null)
+            if (parentTable is null || group.Any(fk => fk.IsDisabled))
             {
 
                 continue;

@@ -41,6 +41,20 @@ public sealed class CascadingForeignKeyScannerTests
     }
 
     [Fact]
+    public void DisabledCascadingForeignKey_NeverFires_EnabledSiblingStillFires()
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddForeignKey(new ForeignKeyRelationship(
+            "FK_Off", "dbo.OrderLines", "OrderId", "dbo.Orders", "OrderId", IsDisabled: true, DeleteAction: ReferentialAction.Cascade));
+        catalog.AddForeignKey(new ForeignKeyRelationship(
+            "FK_On", "dbo.OrderNotes", "OrderId", "dbo.Orders", "OrderId", DeleteAction: ReferentialAction.Cascade));
+
+        var finding = Assert.Single(CascadingForeignKeyScanner.Scan(catalog));
+
+        Assert.Equal("FK_On", finding.ConstraintName);
+    }
+
+    [Fact]
     public void CompositeForeignKey_ReportedOncePerConstraint()
     {
         var catalog = new DatabaseCatalog();

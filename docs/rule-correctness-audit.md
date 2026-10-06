@@ -164,6 +164,22 @@ against the same root-cause category before it's treated as new.
   `under-length-parameter`, the ANSI-padding mismatch, local-variable
   predicate and filtered-index parameter findings make no claim about a seek
   lost to a conversion.
+- **Category: constraint-enforcement claim made for a disabled foreign key.**
+  `index-design/unindexed-foreign-key` (a parent-side DELETE/UPDATE forces a
+  referential-integrity scan of the child) and `catalog/cascading-foreign-key`
+  (a parent DML silently cascades) both read foreign keys from the catalog
+  without looking at `is_disabled`. Oracle-confirmed: after `NOCHECK` a parent
+  DELETE plan no longer touches the child table at all while an enabled,
+  equally unindexed sibling is still scanned, and a disabled `ON DELETE
+  CASCADE` leaves the child rows in place while the enabled sibling cascades.
+  Fixed by skipping disabled foreign keys in both scanners. The sampled
+  `unindexed-foreign-key` findings were otherwise all genuine: none of the
+  sampled keys had any index leading on its column set, an index leading on
+  only a prefix of a composite key was oracle-confirmed to still be scanned by
+  the referential-integrity check, and untrusted-but-enabled keys are still
+  enforced. Sibling sweep: `PartialCompositeForeignKeyJoinScanner` reads
+  foreign keys too but its claim rests on the parent key's uniqueness, which a
+  disabled constraint does not change, so it is unchanged.
 
 ---
 

@@ -26,6 +26,15 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         INSERT INTO dbo.ChdCascade VALUES (10, 1), (11, 1), (12, 2);
         INSERT INTO dbo.ParPlain VALUES (1), (2);
         INSERT INTO dbo.ChdPlain VALUES (10, 1), (11, 1), (12, 2);
+        CREATE TABLE dbo.ParCascadeOff (Id INT PRIMARY KEY);
+        CREATE TABLE dbo.ChdCascadeOff (Id INT PRIMARY KEY, PId INT NOT NULL CONSTRAINT FK_ChdCascadeOff FOREIGN KEY REFERENCES dbo.ParCascadeOff(Id) ON DELETE CASCADE);
+        INSERT INTO dbo.ParCascadeOff VALUES (1), (2);
+        INSERT INTO dbo.ChdCascadeOff VALUES (10, 1), (11, 1), (12, 2);
+        ALTER TABLE dbo.ChdCascadeOff NOCHECK CONSTRAINT FK_ChdCascadeOff;
+        CREATE TABLE dbo.ParCascadeOn (Id INT PRIMARY KEY);
+        CREATE TABLE dbo.ChdCascadeOn (Id INT PRIMARY KEY, PId INT NOT NULL CONSTRAINT FK_ChdCascadeOn FOREIGN KEY REFERENCES dbo.ParCascadeOn(Id) ON DELETE CASCADE);
+        INSERT INTO dbo.ParCascadeOn VALUES (1), (2);
+        INSERT INTO dbo.ChdCascadeOn VALUES (10, 1), (11, 1), (12, 2);
         GO
         CREATE TABLE dbo.Lob (Id INT PRIMARY KEY, Body TEXT NULL, BodyMax VARCHAR(MAX) NULL);
         GO
@@ -93,6 +102,17 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascade;"));
         Assert.Equal(547, await SqlErrorNumberAsync("DELETE FROM dbo.ParPlain WHERE Id = 1;"));
         Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdPlain;"));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/catalog/cascading-foreign-key")]
+    public async Task DeletingParentDoesNotCascadeThroughDisabledForeignKey_EnabledCascadeControlDoes()
+    {
+        await ExecuteAsync("DELETE FROM dbo.ParCascadeOff WHERE Id = 1;");
+        await ExecuteAsync("DELETE FROM dbo.ParCascadeOn WHERE Id = 1;");
+
+        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascadeOff;"));
+        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascadeOn;"));
     }
 
     [Fact]
