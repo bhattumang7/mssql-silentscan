@@ -50,13 +50,14 @@ public static class CompositeIndexLeadingColumnScanner
 
             foreach (var table in statement.BaseTables)
             {
-                InspectTable(table, statement.RowFilterColumns, anyReferencedColumns, statement.Node);
+                InspectTable(table, statement.RowFilterColumns, statement.RowFilterConstantComparedColumns, anyReferencedColumns, statement.Node);
             }
         }
 
         private void InspectTable(
             CatalogTable table,
             HashSet<ColumnProvenance.BaseColumn> andConstrainedColumns,
+            HashSet<ColumnProvenance.BaseColumn> constantComparedColumns,
             HashSet<(string Table, string Column)> anyReferencedColumns,
             TSqlFragment node)
         {
@@ -81,7 +82,8 @@ public static class CompositeIndexLeadingColumnScanner
 
                     var hasAlternativeSeekPath = usableIndexes.Any(other =>
                         !ReferenceEquals(other, index)
-                        && Catalog.IdentifierComparer.Equals(other.KeyColumns[0], violatingColumn));
+                        && (Catalog.IdentifierComparer.Equals(other.KeyColumns[0], violatingColumn)
+                            || constantComparedColumns.Contains(new ColumnProvenance.BaseColumn(table.QualifiedName, other.KeyColumns[0], Type: null))));
                     if (hasAlternativeSeekPath)
                     {
                         continue;
