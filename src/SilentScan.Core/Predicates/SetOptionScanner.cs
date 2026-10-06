@@ -16,17 +16,17 @@ public static class SetOptionScanner
         (SetOptions.AnsiPadding, false, SetOptionFindingKind.AnsiPaddingOffBlocksIndexedFeature),
     ];
 
-    public static IReadOnlyList<SetOptionFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog, LineageCatalog lineage)
+    public static IReadOnlyList<SetOptionFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
         var rule = CreateRule();
         var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
-        return Harvest(parseResult, catalog, lineage, rule);
+        return Harvest(parseResult, catalog, rule);
     }
 
     internal static SetStatementRule CreateRule() => new();
 
-    internal static IReadOnlyList<SetOptionFinding> Harvest(SqlParseResult parseResult, DatabaseCatalog catalog, LineageCatalog lineage, SetStatementRule rule)
+    internal static IReadOnlyList<SetOptionFinding> Harvest(SqlParseResult parseResult, DatabaseCatalog catalog, SetStatementRule rule)
     {
         var moduleQualifiedName = parseResult.SourcePath;
         var findings = new List<SetOptionFinding>();
@@ -47,7 +47,7 @@ public static class SetOptionScanner
             return findings;
         }
 
-        if (!ModuleReachableObjectWalker.TryFindTouch(parseResult.Fragment, catalog, lineage, out var touch))
+        if (!ModuleReachableObjectWalker.TryFindTouch(parseResult.Fragment, catalog, out var touch))
         {
             return findings;
         }
