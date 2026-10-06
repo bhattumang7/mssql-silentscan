@@ -396,6 +396,23 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
+    public void DisabledForeignKeyWithoutIndex_NeverFires_EnabledSiblingStillFires()
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("RegionId", IntType)], []));
+        catalog.AddOrReplace(Table("dbo", "Customers", [Column("Id", IntType)], []));
+        catalog.AddForeignKey(new ForeignKeyRelationship(
+            "FK_Orders_Customers", "dbo.Orders", "CustomerId", "dbo.Customers", "Id", IsDisabled: true));
+        catalog.AddForeignKey(new ForeignKeyRelationship(
+            "FK_Orders_Regions", "dbo.Orders", "RegionId", "dbo.Customers", "Id"));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        var finding = Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.UnindexedForeignKey);
+        Assert.Contains("FK_Orders_Regions", finding.DetailText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ForeignKeyWithLeadingIndex_NeverFires()
     {
         var catalog = new DatabaseCatalog();

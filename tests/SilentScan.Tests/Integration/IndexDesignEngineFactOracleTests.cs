@@ -17,6 +17,11 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         INSERT INTO dbo.ChdNo (ParId) SELECT TOP (20000) (ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 1000) + 1 FROM sys.all_objects a, sys.all_objects b;
         INSERT INTO dbo.ChdYes (ParId) SELECT ParId FROM dbo.ChdNo;
         CREATE INDEX IX_ChdYes_ParId ON dbo.ChdYes(ParId);
+        CREATE TABLE dbo.ParOff (Id INT PRIMARY KEY);
+        CREATE TABLE dbo.ChdOff (Id INT IDENTITY PRIMARY KEY, ParId INT NOT NULL CONSTRAINT FK_ChdOff FOREIGN KEY REFERENCES dbo.ParOff(Id), Pad CHAR(100) DEFAULT 'x');
+        INSERT INTO dbo.ParOff SELECT Id FROM dbo.ParNo;
+        INSERT INTO dbo.ChdOff (ParId) SELECT ParId FROM dbo.ChdNo;
+        ALTER TABLE dbo.ChdOff NOCHECK CONSTRAINT FK_ChdOff;
         GO
         CREATE TABLE dbo.Fi (Id INT PRIMARY KEY, Status INT NOT NULL, Other INT NOT NULL);
         INSERT INTO dbo.Fi SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 10, 1 FROM sys.all_objects a, sys.all_objects b;
@@ -106,6 +111,17 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         Assert.False(Seeks(unindexed, "ChdNo"));
         Assert.True(Seeks(indexed, "ChdYes"));
         Assert.Contains("IX_ChdYes_ParId", ShowPlan.IndexNames(indexed));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/index-design/unindexed-foreign-key")]
+    public async Task ParentDelete_DoesNotTouchChildOfDisabledForeignKey_EnabledUnindexedControlScansIt()
+    {
+        var disabled = await PlanInSessionAsync(string.Empty, "DELETE FROM dbo.ParOff WHERE Id = 5;");
+        var enabled = await PlanInSessionAsync(string.Empty, "DELETE FROM dbo.ParNo WHERE Id = 5;");
+
+        Assert.Empty(ShowPlan.PhysicalOpsOnTable(disabled, "ChdOff"));
+        Assert.Contains("Clustered Index Scan", ShowPlan.PhysicalOpsOnTable(enabled, "ChdNo"));
     }
 
     [Fact]

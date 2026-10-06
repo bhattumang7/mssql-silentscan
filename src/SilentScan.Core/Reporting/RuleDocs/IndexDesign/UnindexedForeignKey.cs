@@ -22,6 +22,9 @@ internal static class UnindexedForeignKey
             related uniqueness/join checks elsewhere. A filtered index covering the right columns
             still counts as "no index" for this rule's purposes, since a filtered index's own WHERE
             predicate might not cover every row the referential-integrity check needs to see.
+
+            A disabled foreign key (`NOCHECK`) is skipped: the engine performs no referential-integrity
+            check for it, so a parent-side DELETE or UPDATE never reads the child table on its account.
             """,
         HowToFixIt: """
             Add an index leading on the foreign key's parent-side column set.

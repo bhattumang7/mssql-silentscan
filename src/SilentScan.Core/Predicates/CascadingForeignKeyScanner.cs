@@ -9,7 +9,7 @@ public static class CascadingForeignKeyScanner
         var findings = new List<CascadingForeignKeyFinding>();
 
         foreach (var fk in catalog.ForeignKeys
-            .Where(fk => fk.DeleteAction != ReferentialAction.NoAction || fk.UpdateAction != ReferentialAction.NoAction)
+            .Where(fk => !fk.IsDisabled && (fk.DeleteAction != ReferentialAction.NoAction || fk.UpdateAction != ReferentialAction.NoAction))
             .DistinctBy(fk => fk.ConstraintName, catalog.IdentifierComparer))
         {
             var table = catalog.Find(fk.ReferencedTableQualifiedName);
