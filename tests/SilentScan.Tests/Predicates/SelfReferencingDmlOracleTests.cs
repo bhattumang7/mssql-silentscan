@@ -16,7 +16,15 @@ public sealed class SelfReferencingDmlOracleTests : OracleTestFixture
         GO
         CREATE VIEW dbo.vT AS SELECT Id, Val, Flag FROM dbo.T;
         GO
+        CREATE TABLE dbo.Hp (Id INT NOT NULL, Val INT NOT NULL);
+        GO
         """;
+
+    private static void AssertNoProtectiveOperator(string planXml)
+    {
+        Assert.DoesNotContain("Eager Spool", planXml);
+        Assert.DoesNotContain("PhysicalOp=\"Sort\"", planXml);
+    }
 
     private Task<string> CaptureAsync(string probe) => new PlanXmlCapture(Options).CaptureAsync(DatabaseName, probe);
 
@@ -30,6 +38,44 @@ public sealed class SelfReferencingDmlOracleTests : OracleTestFixture
             """);
 
         Assert.Contains("LogicalOp=\"Eager Spool\"", planXml);
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT MAX(Id) + 1, 0, 0 FROM dbo.T;")]
+    [InlineData("INSERT INTO dbo.Hp (Id, Val) SELECT MAX(Id) + 1, 0 FROM dbo.Hp;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 9999, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM dbo.T WHERE Id = 9999);")]
+    [InlineData("INSERT INTO dbo.Hp (Id, Val) SELECT 9999, 0 WHERE NOT EXISTS (SELECT 1 FROM dbo.Hp WHERE Val = 5);")]
+    [InlineData("INSERT INTO dbo.Hp (Id, Val) SELECT (SELECT MAX(Id) + 1 FROM dbo.Hp), 0;")]
+    public async Task InsertWhoseSourceProducesAtMostOneRow_NeverGainsAProtectiveOperator(string probe)
+    {
+        AssertNoProtectiveOperator(await CaptureAsync(probe));
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT Id + 1000, Val, 0 FROM dbo.T;")]
+    [InlineData("INSERT INTO dbo.Hp (Id, Val) SELECT Id + 1000, Val FROM dbo.Hp;")]
+    public async Task InsertWhoseSourceCanProduceManyRows_GainsAnEagerSpool(string probe)
+    {
+        Assert.Contains("LogicalOp=\"Eager Spool\"", await CaptureAsync(probe));
+    }
+
+    [Fact]
+    public async Task HeapInsertReadingTargetThroughAHashBuild_NeedsNoSpoolOrSort_WhileTheNotExistsFormGetsOne()
+    {
+        await ExecuteAsync(
+            """
+            INSERT INTO dbo.Hp (Id, Val) SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT 1)), 1 FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+            INSERT INTO dbo.Other (Id, RefId) SELECT Id, Val FROM dbo.Hp;
+            """);
+
+        var hashBuild = await CaptureAsync(
+            "INSERT INTO dbo.Hp (Id, Val) SELECT o.Id + 10000, o.RefId FROM dbo.Other o WHERE EXISTS (SELECT 1 FROM dbo.Hp h WHERE h.Id = o.Id);");
+        var notExists = await CaptureAsync(
+            "INSERT INTO dbo.Hp (Id, Val) SELECT h.Id + 10000, h.Val FROM dbo.Hp h WHERE NOT EXISTS (SELECT 1 FROM dbo.Hp x WHERE x.Id = h.Id + 10000);");
+
+        Assert.Contains("PhysicalOp=\"Hash Match\"", hashBuild);
+        AssertNoProtectiveOperator(hashBuild);
+        Assert.Contains("LogicalOp=\"Eager Spool\"", notExists);
     }
 
     [Fact]

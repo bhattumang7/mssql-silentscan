@@ -218,6 +218,31 @@ public sealed class SelfReferencingDmlScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT MAX(Id) + 1, 0, 0 FROM dbo.T;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT 9999, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM dbo.T WHERE Id = 9999);")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT (SELECT MAX(Id) + 1 FROM dbo.T), 0, 0;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT COUNT(*) + 5000, 0, 0 FROM dbo.T HAVING COUNT(*) > 0;")]
+    public void InsertWhoseSourceProducesAtMostOneRow_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT MAX(Id) + 1, 0, 0 FROM dbo.T GROUP BY Val;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT COUNT(*) OVER () + 5000, 0, 0 FROM dbo.T;")]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT Id + 5000, 0, 0 FROM dbo.T;")]
+    public void InsertWhoseSourceCanProduceManyRows_StillFires(string sql)
+    {
+        Assert.Single(Scan(sql));
+    }
+
+    [Fact]
+    public void UpdateAssigningScalarAggregateOverTheTarget_StillFires()
+    {
+        Assert.Single(Scan("UPDATE dbo.T SET Val = (SELECT MAX(Val) FROM dbo.T);"));
+    }
+
     [Fact]
     public void MergeWithLiteralTopOne_NeverFires()
     {

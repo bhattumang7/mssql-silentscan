@@ -77,6 +77,19 @@ public static class VariableWriteSites
     private static bool IsGuaranteedRow(QuerySpecification spec, SelectSetVariable element) =>
         spec.FromClause is null || (spec.GroupByClause is null && ContainsTopLevelAggregate(element.Expression));
 
+    public static bool ProducesAtMostOneRow(QueryExpression query)
+    {
+        while (query is QueryParenthesisExpression parenthesized)
+        {
+            query = parenthesized.QueryExpression;
+        }
+
+        return query is QuerySpecification spec
+            && (spec.FromClause is null
+                || (spec.GroupByClause is null
+                    && spec.SelectElements.OfType<SelectScalarExpression>().Any(e => ContainsTopLevelAggregate(e.Expression))));
+    }
+
     private static bool ContainsTopLevelAggregate(ScalarExpression expression)
     {
         var collector = new TopLevelAggregateCollector();
@@ -90,7 +103,7 @@ public static class VariableWriteSites
 
         public override void ExplicitVisit(FunctionCall node)
         {
-            if (AggregateFunctionNames.Contains(node.FunctionName.Value))
+            if (node.OverClause is null && AggregateFunctionNames.Contains(node.FunctionName.Value))
             {
                 Found = true;
                 return;

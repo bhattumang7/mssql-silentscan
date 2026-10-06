@@ -42,7 +42,9 @@ public static class SelfReferencingDmlScanner
                 var targetQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(targetRef.SchemaObject));
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
 
-                var match = spec.InsertSource is SelectInsertSource select ? FindMatchInFragment(select.Select, targetQualifiedName, cteNames) : null;
+                var match = spec.InsertSource is SelectInsertSource select && !VariableWriteSites.ProducesAtMostOneRow(select.Select)
+                    ? FindMatchInFragment(select.Select, targetQualifiedName, cteNames)
+                    : null;
                 Report(match, "INSERT", targetQualifiedName, node);
             }
         }
