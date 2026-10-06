@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/set-option/numeric-roundabort-on</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">An explicit SET NUMERIC_ROUNDABORT ON in a module whose own body touches a filtered index or an indexed view - the optimizer cannot use either under this setting, so it silently falls back to a base-table/heap scan.</p>
+  <p class="rationale">An explicit SET NUMERIC_ROUNDABORT ON in a module whose own body references an indexed view or restates a filtered index&#x27;s filter in a WHERE clause - the optimizer cannot use either under this setting, so it silently falls back to a base-table/heap scan.</p>
   <p class="rationale">A filtered index or an indexed view also requires NUMERIC_ROUNDABORT to be OFF at the point a statement touches them - unlike QUOTED_IDENTIFIER/ANSI_NULLS, this one is triggered by an explicit `SET NUMERIC_ROUNDABORT ON` inside the module body itself, rather than by a compiled catalog flag. When it&#x27;s ON, the optimizer silently falls back to a base-table or clustered-index scan instead of using either feature - no error is raised, and the query still returns correct results, just by a slower path.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Remove the `SET NUMERIC_ROUNDABORT ON` statement, or explicitly set it OFF, before the module touches the filtered index or indexed view.</p>
