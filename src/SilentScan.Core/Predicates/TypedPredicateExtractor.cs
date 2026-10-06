@@ -171,8 +171,11 @@ public static class TypedPredicateExtractor
             && numericRoundAbortByStatement.TryGetValue(statement, out var isOn)
             && isOn;
 
+        private LiteralOnlyVariableCollector _literalOnlyVariables = new();
+
         public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker)
         {
+            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -188,6 +191,7 @@ public static class TypedPredicateExtractor
 
         public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker)
         {
+            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -336,6 +340,7 @@ public static class TypedPredicateExtractor
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
         {
+            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -951,8 +956,9 @@ public static class TypedPredicateExtractor
         private void TryAddUnderLengthParameterFinding(
             PredicateOperand.Column column, PredicateOperand other, bool otherIsLiteral, string operatorText, TSqlFragment node)
         {
-            if (otherIsLiteral || other is not PredicateOperand.Value { Type: { } otherType }
-                || Rules.ParameterLengthClassifier.ClassifyUnderLength(column.Type, otherType) is not { } result)
+            if (otherIsLiteral || other is not PredicateOperand.Value { Type: { } otherType, IsDerivedType: false } value
+                || Rules.ParameterLengthClassifier.ClassifyUnderLength(column.Type, otherType) is not { } result
+                || CannotExceedDeclaredLength(value, otherType.Length ?? 1))
             {
                 return;
             }
@@ -963,6 +969,11 @@ public static class TypedPredicateExtractor
                 column.TableQualifiedName, column.ColumnName, result.ColumnLength, result.OtherLength, result.IsImplicitDefault,
                 operatorText, changesRangeOrPatternShape, sourcePath, node.StartLine, node.StartColumn));
         }
+
+        private bool CannotExceedDeclaredLength(PredicateOperand.Value value, int declaredLength) =>
+            value is { VariableName: { } name, IsFormalParameter: false }
+            && _literalOnlyVariables.TryGetLongestLiteral(name, out var longestLiteral)
+            && longestLiteral <= declaredLength;
 
         private void TryAddAnsiPaddingMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node, ModuleWalker walker)
         {
@@ -1032,10 +1043,10 @@ public static class TypedPredicateExtractor
                     return new PredicateOperand.Value(TypeInference.LiteralTypeResolver.Resolve(literal), IsLiteral: true, Rules.LiteralTextRenderer.Render(literal));
 
                 case GlobalVariableExpression globalVariable:
-                    return ResolveGlobalVariableOperand(globalVariable);
+                    return ResolveGlobalVariableOperand(globalVariable) with { IsDerivedType = true };
 
                 case FunctionCall functionCall:
-                    return ResolveFunctionCallOperand(functionCall, scopeChain, walker);
+                    return ResolveFunctionCallOperand(functionCall, scopeChain, walker) with { IsDerivedType = true };
 
                 case CastCall castCall:
                     return ResolveCastOrConvertOperand(castCall.DataType, castCall.Parameter, scopeChain, walker);
@@ -1044,13 +1055,14 @@ public static class TypedPredicateExtractor
                     return ResolveCastOrConvertOperand(convertCall.DataType, convertCall.Parameter, scopeChain, walker);
 
                 case ScalarSubquery scalarSubquery:
-                    return new PredicateOperand.Value(ResolveInSubqueryType(scalarSubquery, walker));
+                    return new PredicateOperand.Value(ResolveInSubqueryType(scalarSubquery, walker), IsDerivedType: true);
 
                 case ParenthesisExpression or UnaryExpression or BinaryExpression
                     or CoalesceExpression or NullIfExpression or IIfCall
                     or SearchedCaseExpression or SimpleCaseExpression:
                     return new PredicateOperand.Value(
-                        ExpressionTypeInferencer.Resolve(expression, e => OperandType(ResolveOperand(e, scopeChain, walker)), catalog.TypeAliases));
+                        ExpressionTypeInferencer.Resolve(expression, e => OperandType(ResolveOperand(e, scopeChain, walker)), catalog.TypeAliases),
+                        IsDerivedType: true);
 
                 default:
 

@@ -27,5 +27,5 @@ public abstract record PredicateOperand
 
     public sealed record Value(
         SqlType? Type, bool IsLiteral = false, string? LiteralText = null,
-        string? VariableName = null, bool IsFormalParameter = false) : PredicateOperand;
+        string? VariableName = null, bool IsFormalParameter = false, bool IsDerivedType = false) : PredicateOperand;
 }
