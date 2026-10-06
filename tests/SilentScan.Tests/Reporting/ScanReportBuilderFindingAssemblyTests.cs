@@ -34,7 +34,7 @@ public sealed class ScanReportBuilderFindingAssemblyTests
     }
 
     [Fact]
-    public void SeekPreservedVerdict_IsExcludedFromTypedFindingsButStillCountedInSummary_AndScanForcedOutranksUnknownDespiteAppearingLater()
+    public void SeekPreservedAndUnknownVerdicts_AreExcludedFromTypedFindingsButStillCountedInSummary()
     {
         const string Sql = """
             CREATE TABLE dbo.OrdersUnknownCol (Col INT NOT NULL);
@@ -62,14 +62,11 @@ public sealed class ScanReportBuilderFindingAssemblyTests
         Assert.Equal(1, report.TypedPredicateSummary.SeekPreservedCount);
 
         var typedFindings = report.Find<TypedPredicateFinding>("TypedPredicateExtractor").ToList();
-        var scanForcedIndex = typedFindings.FindIndex(f => f.Verdict == Verdict.ScanForced);
-        var unknownIndex = typedFindings.FindIndex(f => f.Verdict == Verdict.Unknown);
 
-        Assert.True(scanForcedIndex >= 0, "expected a ScanForced finding to survive filtering");
-        Assert.True(unknownIndex >= 0, "expected an Unknown finding to survive filtering");
-        Assert.True(
-            scanForcedIndex < unknownIndex,
-            "a ScanForced verdict must rank ahead of an Unknown verdict even though its source statement appears later in the file");
+        Assert.DoesNotContain(typedFindings, f => f.Verdict == Verdict.Unknown);
+        Assert.Equal(1, report.TypedPredicateSummary.UnknownCount);
+        Assert.Contains(typedFindings, f => f.Verdict == Verdict.ScanForced);
+        Assert.All(typedFindings, f => Assert.NotNull(f.RuleId));
     }
 
     [Fact]

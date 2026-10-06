@@ -50,7 +50,7 @@ public sealed class DynamicSqlNestedParameterBindingPipelineTests
             END;
             """);
 
-        var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "VendorCode");
-        Assert.Equal(Verdict.Unknown, finding.Verdict);
+        Assert.DoesNotContain(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "VendorCode");
+        Assert.Equal(1, report.TypedPredicateSummary.UnknownCount);
     }
 }

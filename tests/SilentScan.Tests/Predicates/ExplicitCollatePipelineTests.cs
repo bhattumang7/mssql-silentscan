@@ -143,8 +143,8 @@ public sealed class ExplicitCollatePipelineTests : OracleTestFixture
             SELECT 1 FROM dbo.T, dbo.Raw WHERE Code = CONVERT(nvarchar(20), Value);
             """);
 
-        var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Code");
-        Assert.Equal(Verdict.OperandClash, finding.Verdict);
+        Assert.DoesNotContain(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Code");
+        Assert.Equal(1, report.TypedPredicateSummary.OperandClashCount);
     }
 
 }

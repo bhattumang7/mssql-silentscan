@@ -182,7 +182,7 @@ public static class ScanReportBuilder
 
         var dynamicSqlSummary = DynamicSqlSummary.From(dynamicSqlFindings);
 
-        typedFindings = [.. typedFindings.Where(f => f.Verdict != Verdict.SeekPreserved && f.Confidence <= minimumConfidence)];
+        typedFindings = [.. typedFindings.Where(f => f.Verdict is not (Verdict.SeekPreserved or Verdict.Unknown or Verdict.OperandClash) && f.Confidence <= minimumConfidence)];
         tier1Findings = [.. tier1Findings.Where(f => f.Confidence <= minimumConfidence)];
         expressionDerivedFindings = [.. expressionDerivedFindings.Where(f => f.Confidence <= minimumConfidence)];
         writeLossFindings = [.. writeLossFindings.Where(f => f.Confidence <= minimumConfidence)];
