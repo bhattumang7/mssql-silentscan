@@ -12,7 +12,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     protected override string DatabaseNameSeed => nameof(ScalarUdfProjectionRowSourceOracleTests);
 
     protected override string Ddl => $"""
-        CREATE TABLE dbo.Source (Id INT NOT NULL PRIMARY KEY);
+        CREATE TABLE dbo.Source (Id INT NOT NULL PRIMARY KEY, V INT NOT NULL DEFAULT 0);
         GO
         INSERT INTO dbo.Source (Id) SELECT TOP ({RowCount}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects;
         GO
@@ -58,6 +58,35 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     public async Task UdfInWhereWithoutRowSource_RunsOnce()
     {
         Assert.Equal(1, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT 1 AS One WHERE dbo.Bump(1) = 2;"));
+    }
+
+    private async Task<long> UdfExecutionsAsync(string statement)
+    {
+        const string counter = "SELECT ISNULL(SUM(execution_count), 0) FROM sys.dm_exec_function_stats WHERE database_id = DB_ID() AND object_id = OBJECT_ID('dbo.Bump');";
+        var before = await ScalarAsync<long>(counter);
+        await ExecuteAsync(statement);
+        return await ScalarAsync<long>(counter) - before;
+    }
+
+    [Theory]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE dbo.Bump(@v) > 0 AND Id > 0;")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE @v < dbo.Bump(DATEPART(day, GETDATE()));")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source a JOIN dbo.Source b ON a.Id = b.Id AND dbo.Bump(@v) > 0;")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE CASE WHEN dbo.Bump(@v) > 0 THEN 1 ELSE 0 END = 1;")]
+    public async Task UdfInPredicateConjunctWithoutAnyColumn_RunsOnce(string statement)
+    {
+        Assert.Equal(1, await UdfExecutionsAsync(statement));
+    }
+
+    [Theory]
+    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V < dbo.Bump(@v) + 1000;")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V = 5 OR dbo.Bump(@v) > 100;")]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source a JOIN dbo.Source b ON a.Id = b.Id AND a.V < dbo.Bump(@v) + 1000;")]
+    public async Task UdfInPredicateConjunctWithAColumn_RunsOncePerRow(string statement)
+    {
+        Assert.True(await UdfExecutionsAsync(statement) >= RowCount);
     }
 
     [Fact]

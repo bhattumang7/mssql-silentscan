@@ -38,11 +38,21 @@ public static class ScalarUdfScanner
 
         public List<ScalarUdfFinding> Findings { get; } = [];
 
-        public void OnEnterWhereClause(WhereClause node, ModuleWalker walker) => RecordRegion(node.SearchCondition, ScalarUdfContext.Where);
+        private readonly List<(int Start, int End)> _columnFreeConjunctRegions = [];
+
+        public void OnEnterWhereClause(WhereClause node, ModuleWalker walker)
+        {
+            RecordRegion(node.SearchCondition, ScalarUdfContext.Where);
+            RecordColumnFreeConjuncts(node.SearchCondition);
+        }
 
         public void OnEnterHavingClause(HavingClause node, ModuleWalker walker) => RecordRegion(node.SearchCondition, ScalarUdfContext.Having);
 
-        public void OnEnterJoinSearchCondition(QualifiedJoin node, ModuleWalker walker) => RecordRegion(node.SearchCondition, ScalarUdfContext.JoinOn);
+        public void OnEnterJoinSearchCondition(QualifiedJoin node, ModuleWalker walker)
+        {
+            RecordRegion(node.SearchCondition, ScalarUdfContext.JoinOn);
+            RecordColumnFreeConjuncts(node.SearchCondition);
+        }
 
         public void OnEnterMergeSearchCondition(MergeSpecification node, ModuleWalker walker) => RecordRegion(node.SearchCondition, ScalarUdfContext.MergeOn);
 
@@ -113,8 +123,23 @@ public static class ScalarUdfScanner
         private void RecordRowSource(TSqlFragment fragment) =>
             _rowSourceRegions.Add((fragment.StartOffset, fragment.StartOffset + fragment.FragmentLength));
 
+        private void RecordColumnFreeConjuncts(BooleanExpression? condition)
+        {
+            foreach (var conjunct in PredicateTreeWalker.FlattenAnd(condition))
+            {
+                var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+                conjunct.Accept(collector);
+                if (collector.References.Count == 0)
+                {
+                    _columnFreeConjunctRegions.Add((conjunct.StartOffset, conjunct.StartOffset + conjunct.FragmentLength));
+                }
+            }
+        }
+
         private bool IsEvaluatedPerRow(FunctionCall node) =>
-            Contains(_rowSourceRegions, node) && !Contains(_uncorrelatedFunctionArgumentRegions, node);
+            Contains(_rowSourceRegions, node)
+            && !Contains(_uncorrelatedFunctionArgumentRegions, node)
+            && !Contains(_columnFreeConjunctRegions, node);
 
         private static bool Contains(List<(int Start, int End)> regions, FunctionCall node) =>
             regions.Exists(region => node.StartOffset >= region.Start && node.StartOffset < region.End);
