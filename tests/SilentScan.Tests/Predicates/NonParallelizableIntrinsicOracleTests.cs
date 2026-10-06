@@ -92,6 +92,29 @@ public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
     }
 
     [Theory]
+    [InlineData("sys.objects")]
+    [InlineData("sys.tables")]
+    [InlineData("sys.columns")]
+    [InlineData("sys.indexes")]
+    [InlineData("sys.sql_modules")]
+    [InlineData("dbo.sysobjects")]
+    [InlineData("INFORMATION_SCHEMA.TABLES")]
+    public async Task QueryOverASystemCatalogView_ForcesSerialWithoutAnyIntrinsicInTheQueryText(string view)
+    {
+        var planXml = await CaptureRealExecutionPlanAsync($"SELECT COUNT(*) FROM {view} OPTION (MAXDOP 0);");
+
+        Assert.Contains("NonParallelPlanReason=\"NonParallelizableIntrinsicFunction\"", planXml);
+    }
+
+    [Fact]
+    public async Task QueryOverAUserTableWithoutAnyIntrinsic_StaysParallelEligible()
+    {
+        var planXml = await CaptureRealExecutionPlanAsync("SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp OPTION (MAXDOP 0);");
+
+        Assert.DoesNotContain("NonParallelPlanReason", planXml);
+    }
+
+    [Theory]
     [InlineData("@@ROWCOUNT >= 0")]
     [InlineData("SCOPE_IDENTITY() IS NULL OR SCOPE_IDENTITY() IS NOT NULL")]
     public async Task ExcludedIntrinsic_InsideQueryWithFrom_NeverForcesSerial(string predicate)

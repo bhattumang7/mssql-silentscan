@@ -32,7 +32,8 @@ public sealed class FastForwardCursorOracleTests : OracleTestFixture
         await seedCommand.ExecuteNonQueryAsync();
     }
 
-    private async Task<string> CaptureCursorDefiningQueryPlanAsync(string cursorOptions)
+    private async Task<string> CaptureCursorDefiningQueryPlanAsync(
+        string cursorOptions, string definingQuery = "SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp")
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();
@@ -44,7 +45,7 @@ public sealed class FastForwardCursorOracleTests : OracleTestFixture
 
         var probe =
             $"""
-            DECLARE c CURSOR {cursorOptions} FOR SELECT Grp, COUNT(*) FROM dbo.BigTable GROUP BY Grp;
+            DECLARE c CURSOR {cursorOptions} FOR {definingQuery};
             OPEN c;
             FETCH NEXT FROM c;
             CLOSE c;
@@ -112,6 +113,27 @@ public sealed class FastForwardCursorOracleTests : OracleTestFixture
         var planXml = await CaptureCursorDefiningQueryPlanAsync("DYNAMIC");
 
         Assert.DoesNotContain("NonParallelPlanReason=\"NoParallelFastForwardCursor\"", planXml);
+    }
+
+    [Theory]
+    [InlineData("SELECT name FROM sys.objects")]
+    [InlineData("SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES")]
+    [InlineData("SELECT o.name FROM sys.objects o JOIN dbo.BigTable b ON b.Id = o.object_id")]
+    public async Task FastForward_OverASystemCatalogView_ReportsNoFastForwardReason(string definingQuery)
+    {
+        var planXml = await CaptureCursorDefiningQueryPlanAsync("LOCAL FAST_FORWARD", definingQuery);
+
+        Assert.DoesNotContain("NonParallelPlanReason=\"NoParallelFastForwardCursor\"", planXml);
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.BigTable")]
+    [InlineData("SELECT Id FROM dbo.BigTable WHERE Id = 5")]
+    public async Task FastForward_OverAUserTable_ReportsTheFastForwardReason(string definingQuery)
+    {
+        var planXml = await CaptureCursorDefiningQueryPlanAsync("LOCAL FAST_FORWARD", definingQuery);
+
+        Assert.Contains("NonParallelPlanReason=\"NoParallelFastForwardCursor\"", planXml);
     }
 
     [Fact]

@@ -138,6 +138,22 @@ public sealed class ForcedSerialScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("SELECT name FROM sys.objects")]
+    [InlineData("SELECT name FROM dbo.sysobjects")]
+    [InlineData("SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES")]
+    [InlineData("SELECT o.name FROM sys.objects o JOIN dbo.T t ON t.Id = o.object_id")]
+    public void Cursor_FastForward_OverASystemCatalogView_NeverFires(string query)
+    {
+        Assert.Empty(Scan($"DECLARE c CURSOR LOCAL FAST_FORWARD FOR {query}; OPEN c; CLOSE c; DEALLOCATE c;"));
+    }
+
+    [Fact]
+    public void CursorVariable_FastForward_OverASystemCatalogView_NeverFires()
+    {
+        Assert.Empty(Scan("DECLARE @c CURSOR; SET @c = CURSOR FAST_FORWARD FOR SELECT name FROM sys.tables; OPEN @c; CLOSE @c; DEALLOCATE @c;"));
+    }
+
     [Fact]
     public void Cursor_Dynamic_NeverFires()
     {
@@ -181,6 +197,27 @@ public sealed class ForcedSerialScannerTests
 
         var finding = Assert.Single(findings);
         Assert.Equal("@@TRANCOUNT", finding.DetailText);
+    }
+
+    [Theory]
+    [InlineData("IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.T')) PRINT 'x';")]
+    [InlineData("IF EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'dbo.T')) PRINT 'x';")]
+    [InlineData("IF EXISTS (SELECT * FROM tempdb.dbo.sysobjects WHERE id = OBJECT_ID(N'dbo.T')) PRINT 'x';")]
+    [InlineData("SELECT t.Id FROM dbo.T t WHERE EXISTS (SELECT 1 FROM sys.tables s WHERE s.object_id = OBJECT_ID(N'dbo.T'));")]
+    [InlineData("SELECT c.name FROM INFORMATION_SCHEMA.COLUMNS c WHERE @@TRANCOUNT > 0;")]
+    [InlineData("SELECT s.name FROM sys.indexes s WHERE s.object_id = OBJECT_ID(N'dbo.T') AND ERROR_NUMBER() IS NULL;")]
+    public void Intrinsic_InQueryThatReadsASystemCatalogView_NeverFires(string statement)
+    {
+        Assert.Empty(Scan(statement));
+    }
+
+    [Fact]
+    public void Intrinsic_InQueryOverUserTableAlongsideAnUnrelatedSystemViewStatement_StillFires()
+    {
+        var findings = Scan("SELECT 1 FROM sys.objects; SELECT Id FROM dbo.T WHERE OBJECT_ID('dbo.T') IS NOT NULL;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(ForcedSerialFindingKind.NonParallelizableIntrinsic, finding.Kind);
     }
 
     [Fact]
