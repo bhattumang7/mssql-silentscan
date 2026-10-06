@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/set-option/ansi-nulls-off</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">The module was compiled under ANSI_NULLS OFF (sys.sql_modules.uses_ansi_nulls) while its own body touches a filtered index or an indexed view - the optimizer cannot use either under this setting, so it silently falls back to a base-table/heap scan.</p>
+  <p class="rationale">The module was compiled under ANSI_NULLS OFF (sys.sql_modules.uses_ansi_nulls) while its own body references an indexed view or restates a filtered index&#x27;s filter in a WHERE clause - the optimizer cannot use either under this setting, so it silently falls back to a base-table/heap scan.</p>
   <p class="rationale">Like QUOTED_IDENTIFIER, ANSI_NULLS is one of the session-level settings a filtered index or an indexed view requires to be ON at the point a statement touches them. A module compiled under ANSI_NULLS OFF - recorded permanently as `sys.sql_modules.uses_ansi_nulls` - can never use either feature: the optimizer silently falls back to a base-table or clustered-index scan instead of raising any error, no matter how the query is written.</p>
   <p class="rationale">This is a purely catalog-derived fact once a module is deployed - the compiled setting is fixed for the module&#x27;s lifetime - so it&#x27;s decidable without executing anything.</p>
   <h2>How can I fix it?</h2>

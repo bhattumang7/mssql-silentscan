@@ -28,6 +28,54 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: filtered-index claim made for a module that never restates the
+  filter.** The `set-option/*` rules (quoted-identifier-off, ansi-nulls-off,
+  numeric-roundabort-on, ansi-warnings-off, concat-null-yields-null-off,
+  ansi-padding-off) fired for any module that mentioned a table carrying a
+  filtered index, directly or through a view. A sampled set of
+  `quoted-identifier-off` findings contained no statement whose WHERE could
+  imply the index filter, so none could ever have used the index; the engine
+  plans such a query identically with the option on or off. Oracle: a query
+  that does not restate the filter plans as a table scan under both
+  settings, while the sibling that restates it loses its seek only under the
+  OFF setting. Fixed by counting a filtered index only when one statement over
+  that table restates every conjunct of the filter (qualifier-aware, parentheses
+  and quoting insensitive) and by dropping the view-lineage route; an index with
+  no recorded filter text is never counted. Indexed views are unchanged.
+  Sibling sweep: `filtered-index-parameter-mismatch` and the index-design
+  filter checks already start from the filter text, and every other scanner
+  reading `IsFiltered` excludes filtered indexes rather than asserting on them.
+- **Category: explicit NULL equals the default.** `catalog/default-constraint-on-nullable-column`
+  fired for a nullable column whose DEFAULT is the NULL literal, where supplying NULL
+  explicitly and omitting the column give the same value. Oracle-confirmed with both
+  insert shapes against a NULL default and a non-NULL default control. Fixed by skipping a
+  default whose definition is a bare NULL, including parenthesised forms;
+  `COALESCE(NULL, ...)` and other expressions still count. Sibling sweep: the only other
+  reader of default constraints is the index-design scanner, which asks about keys, not
+  nullability.
+- **Category: unspecified column nullability resolved against the database option.** A
+  temp table column declared with no NULL/NOT NULL was resolved from the database-level
+  ANSI_NULL_DFLT_OFF option, so it was treated as NOT NULL and
+  `correctness/not-null-predicate-contradiction` fired on `IS NULL` tests. Client sessions
+  set ANSI_NULL_DFLT_ON, so the database option does not apply; oracle-confirmed that a
+  column with no specification stays nullable under a database with the option off,
+  unless the script itself sets ANSI_NULL_DFLT_OFF. Fixed in the catalog builder, so every
+  consumer of the resolved nullability benefits. Sibling sweep: the nullability fact is read
+  through the one catalog resolver, so no scanner needed its own change.
+- **Category: FULL OUTER JOIN collapse claimed for a one-sided predicate.**
+  `join/outer-join-predicate-collapse` reported an INNER JOIN collapse for a FULL JOIN
+  when only one side was rejected, but the engine plans that as a LEFT or RIGHT join.
+  Oracle: a FULL JOIN with a predicate on one side keeps the unmatched rows of the other
+  side, and with predicates on both sides it becomes an inner join. Fixed by requiring a
+  NULL-rejecting predicate on both branches. Sibling sweep: the constrained-column visitor
+  reads join types only for ON-clause constants on a preserved side, a different claim.
+- **Category: exhaustive simple CASE reported as missing ELSE.**
+  `control-flow/case-expression-missing-else` fired for a simple CASE whose WHEN values
+  cover every value the input can take. DATEPART of weekday, month, quarter or hour,
+  MONTH, BIT columns, and integer columns confined by a trusted, enabled CHECK
+  constraint are now treated as covered. Oracle: a seven-way weekday CASE never returns
+  NULL under any DATEFIRST setting, a six-way one does. Sibling sweep: the other
+  scanners that read an ELSE branch only search it for column references.
 - **Category: statement provably limited to one row by a unique key reported
   as needing Halloween protection.** Plan checks on a fresh sample of
   `dml/self-referencing` findings showed two statements whose plans carry no
