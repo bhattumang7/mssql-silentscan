@@ -143,7 +143,7 @@ public static class NonSargablePredicateScanner
                 || ScalarExpressionResolver.ResolveColumnReference(columnRef, scopeChain, sourcePath, walker.Ledger, catalog) is not ColumnProvenance.BaseColumn baseColumn
                 || catalog.Find(baseColumn.TableQualifiedName, walker.CurrentProcScope) is not { } table)
             {
-                return FindingConfidence.High;
+                return FindingConfidence.Medium;
             }
 
             return table.IsKeyColumnOfAnyIndex(baseColumn.ColumnName, catalog.IdentifierComparer)
