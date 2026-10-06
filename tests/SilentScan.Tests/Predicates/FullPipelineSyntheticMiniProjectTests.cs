@@ -101,7 +101,7 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
         Assert.Equal("YEAR", finding.Detail);
 
         Assert.Equal("dbo.Users", finding.TableQualifiedName);
-        Assert.False(finding.Indexed);
+        Assert.True(finding.Indexed);
     }
 
     [Fact]

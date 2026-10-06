@@ -50,8 +50,31 @@ public static class NonSargablePredicateScanner
 
         public List<TemporalBoundaryPrecisionFinding> TemporalBoundaryFindings { get; } = [];
 
-        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
-            ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectCondition(condition, chain, walker));
+        private IReadOnlyList<BooleanExpression> _companions = [];
+
+        private HashSet<(string Table, string Column)> _seekable = [];
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            var where = node.WhereClause?.SearchCondition;
+            var innerOnConditions = (node.FromClause?.TableReferences ?? [])
+                .SelectMany(PredicateTreeWalker.FlattenJoinNodes)
+                .Where(j => j.QualifiedJoinType == QualifiedJoinType.Inner && j.SearchCondition is not null)
+                .Select(j => j.SearchCondition!)
+                .ToList();
+            List<BooleanExpression> shared = [.. innerOnConditions];
+            if (where is not null)
+            {
+                shared.Add(where);
+            }
+
+            ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) =>
+            {
+                _companions = shared.Contains(condition) ? shared : [];
+                InspectCondition(condition, chain, walker);
+                _companions = [];
+            });
+        }
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
             ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectCondition(condition, chain, walker));
@@ -61,6 +84,7 @@ public static class NonSargablePredicateScanner
 
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            _seekable = [];
             var collector = new PredicateLeafCollector();
             node.Accept(collector);
             foreach (var leaf in collector.Leaves)
@@ -69,9 +93,68 @@ public static class NonSargablePredicateScanner
             }
         }
 
+        private HashSet<(string Table, string Column)> CollectBareSeekableColumns(IEnumerable<BooleanExpression> conditions, ScopeChain scopeChain)
+        {
+            HashSet<(string Table, string Column)> result = [];
+            foreach (var conjunct in conditions.SelectMany(PredicateTreeWalker.FlattenAnd))
+            {
+                IEnumerable<ColumnProvenance.BaseColumn> columns = conjunct switch
+                {
+                    BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals or BooleanComparisonType.LessThan or BooleanComparisonType.GreaterThan or BooleanComparisonType.LessThanOrEqualTo or BooleanComparisonType.GreaterThanOrEqualTo } comparison
+                        => BaseColumnResolver.ResolveAgainstColumnFreeSide(comparison, sourcePath, scopeChain, catalog),
+                    BooleanTernaryExpression { TernaryExpressionType: BooleanTernaryExpressionType.Between } between
+                        when IsColumnFree(between.SecondExpression) && IsColumnFree(between.ThirdExpression)
+                            && BaseColumnResolver.ResolveBaseColumn(between.FirstExpression, sourcePath, scopeChain, catalog) is { } resolved
+                        => [resolved],
+                    _ => [],
+                };
+
+                foreach (var column in columns)
+                {
+                    result.Add((column.TableQualifiedName, column.ColumnName));
+                }
+            }
+
+            return result;
+        }
+
+        private static bool IsColumnFree(ScalarExpression expression)
+        {
+            var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+            expression.Accept(collector);
+            return collector.References.Count == 0;
+        }
+
+        private bool IsResidualBesideBareSeek(ColumnReferenceExpression columnRef, ScopeChain scopeChain)
+        {
+            if (_seekable.Count == 0 || scopeChain.Count == 0)
+            {
+                return false;
+            }
+
+            return BaseColumnResolver.ResolveBaseColumn(columnRef, sourcePath, scopeChain, catalog) is { } baseColumn
+                && _seekable.Contains((baseColumn.TableQualifiedName, baseColumn.ColumnName))
+                && catalog.Find(baseColumn.TableQualifiedName)?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) == true;
+        }
+
+        private FindingConfidence ConfidenceFor(ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (scopeChain.Count == 0
+                || ScalarExpressionResolver.ResolveColumnReference(columnRef, scopeChain, sourcePath, walker.Ledger, catalog) is not ColumnProvenance.BaseColumn baseColumn
+                || catalog.Find(baseColumn.TableQualifiedName, walker.CurrentProcScope) is not { } table)
+            {
+                return FindingConfidence.High;
+            }
+
+            return table.IsKeyColumnOfAnyIndex(baseColumn.ColumnName, catalog.IdentifierComparer)
+                ? FindingConfidence.High
+                : FindingConfidence.Medium;
+        }
+
         private void InspectCondition(BooleanExpression condition, ScopeChain scopeChain, ModuleWalker walker)
         {
             var dead = PredicateSurvivalAnalyzer.FindDeadComparisons(condition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain));
+            _seekable = CollectBareSeekableColumns(_companions.Contains(condition) ? _companions : [condition], scopeChain);
 
             var collector = new PredicateLeafCollector();
             condition.Accept(collector);
@@ -391,10 +474,16 @@ public static class NonSargablePredicateScanner
 
         private void Add(SargabilityFindingKind kind, string columnName, string? detail, TSqlFragment node, ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
         {
+            if (IsResidualBesideBareSeek(columnRef, scopeChain))
+            {
+                return;
+            }
+
             var (tableQualifiedName, indexed, _) = ResolveIndexInfo(columnRef, scopeChain, walker);
             Findings.Add(new SargabilityFinding(
                 kind, columnName, detail, sourcePath, node.StartLine, node.StartColumn,
-                TableQualifiedName: tableQualifiedName, Indexed: indexed, PredicateFragmentText: Common.FragmentTextRenderer.Render(node)));
+                TableQualifiedName: tableQualifiedName, Indexed: indexed, PredicateFragmentText: Common.FragmentTextRenderer.Render(node),
+                Confidence: ConfidenceFor(columnRef, scopeChain, walker)));
         }
 
         private bool IsKnownNotNullColumn(ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
@@ -502,11 +591,17 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
+            if (IsResidualBesideBareSeek(named.Ref, scopeChain))
+            {
+                return;
+            }
+
             var detail = Rules.SargabilityClassifier.DescribeCaseFoldRemediation(functionCall.FunctionName.Value, type?.Collation);
 
             Findings.Add(new SargabilityFinding(
                 SargabilityFindingKind.CaseFoldOnColumn, named.Name, detail, sourcePath, functionCall.StartLine, functionCall.StartColumn,
-                TableQualifiedName: tableQualifiedName, Indexed: indexed, PredicateFragmentText: Common.FragmentTextRenderer.Render(functionCall)));
+                TableQualifiedName: tableQualifiedName, Indexed: indexed, PredicateFragmentText: Common.FragmentTextRenderer.Render(functionCall),
+                Confidence: ConfidenceFor(named.Ref, scopeChain, walker)));
         }
 
         private (string? TableQualifiedName, bool? Indexed, SqlType? Type) ResolveIndexInfo(ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)

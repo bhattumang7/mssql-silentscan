@@ -28,6 +28,22 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: finding emitted although the claimed plan loss cannot occur.**
+  Four shapes, each oracle-confirmed against plan shape or actual rows:
+  (1) `index/key-lookup-prone` fired on equality over the full key of a unique
+  index, which reads at most one row in the Key Lookup; (2)
+  `query/table-variable-low-compat-estimate` fired on single-source
+  statements whose plan is identical with or without the 1-row estimate, and
+  now fires only for joins, GROUP BY, DISTINCT and IN/EXISTS semi-joins; (3)
+  the sargability kinds fired on a column that is a key of no index, where the
+  wrap changes nothing, and now report those at Medium confidence; (4) the
+  sargability kinds fired on a wrapped predicate whose column also has a bare
+  range/equality conjunct (in WHERE or an inner-join ON), where the wrap is
+  only a residual filter. A bare predicate under OR does not suppress.
+- **Category: typed-predicate verdict with no rule id reported as a finding.**
+  `Unknown` and `OperandClash` typed-predicate verdicts carry no rule id and
+  were serialized into the findings list; they are now excluded from the list
+  and still counted in the typed-predicate summary.
 - **Category: seek-preserving conversion claim didn't cover a truncating
   target category.** `NonSargablePredicateScanner.IsSeekableThroughConvert`
   treated any datetime-family-to-datetime-family `CAST`/`CONVERT` as

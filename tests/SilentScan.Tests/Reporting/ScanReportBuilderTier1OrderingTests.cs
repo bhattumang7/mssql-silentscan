@@ -7,7 +7,7 @@ namespace SilentScan.Tests.Reporting;
 public sealed class ScanReportBuilderTier1OrderingTests
 {
     private const string Sql = """
-        CREATE TABLE dbo.Unindexed (Code VARCHAR(20) NOT NULL);
+        CREATE TABLE dbo.Unindexed (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, INDEX IX_Unindexed_IdCode (Id, Code));
         GO
         CREATE TABLE dbo.Indexed (Code VARCHAR(20) NOT NULL, INDEX IX_Indexed_Code (Code));
         GO

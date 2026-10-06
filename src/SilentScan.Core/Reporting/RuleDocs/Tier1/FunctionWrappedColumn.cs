@@ -31,6 +31,13 @@ internal static class FunctionWrappedColumn
             almost always the same shape: move the transformation off the column and onto the
             comparison side instead, so the column itself is compared directly against something
             an index can seek to.
+
+            The finding is withheld when the wrap costs nothing: a column that is a key of no
+            index has no seek to lose, so it is reported only at lower confidence, and a wrapped
+            predicate sitting next to a bare equality or range predicate on the same indexed
+            column (joined by AND) is not reported at all, because the bare predicate still drives
+            the seek and the wrapped one is applied afterwards as a residual filter. A bare
+            predicate on the other side of an OR does not help, and the wrap is still reported.
             """,
         HowToFixIt: """
             The general technique is called sargability (from "Search ARGument ABLE"): rewrite the
