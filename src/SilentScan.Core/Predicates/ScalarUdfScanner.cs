@@ -40,10 +40,77 @@ public static class ScalarUdfScanner
 
         private readonly List<(int Start, int End)> _columnFreeConjunctRegions = [];
 
+        private readonly List<(int Start, int End)> _uniqueKeySeekBoundRegions = [];
+
+        private bool _scanForcingHintSeen;
+
+        public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker)
+        {
+            if (node.TableHints.Any(hint => hint.HintKind is TableHintKind.ForceScan || hint is IndexTableHint))
+            {
+                _scanForcingHintSeen = true;
+            }
+        }
+
         public void OnEnterWhereClause(WhereClause node, ModuleWalker walker)
         {
             RecordRegion(node.SearchCondition, ScalarUdfContext.Where);
             RecordColumnFreeConjuncts(node.SearchCondition);
+            RecordUniqueKeySeekBounds(node.SearchCondition, walker);
+        }
+
+        private void RecordUniqueKeySeekBounds(BooleanExpression? condition, ModuleWalker walker)
+        {
+            if (_scanForcingHintSeen)
+            {
+                return;
+            }
+
+            var scopeChain = walker.CurrentScopeChain();
+            foreach (var conjunct in PredicateTreeWalker.FlattenAnd(condition))
+            {
+                if (conjunct is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
+                {
+                    continue;
+                }
+
+                var bound = UniqueKeySeekBound(comparison.FirstExpression, comparison.SecondExpression, scopeChain, walker)
+                    ?? UniqueKeySeekBound(comparison.SecondExpression, comparison.FirstExpression, scopeChain, walker);
+                if (bound is not null)
+                {
+                    _uniqueKeySeekBoundRegions.Add((bound.StartOffset, bound.StartOffset + bound.FragmentLength));
+                }
+            }
+        }
+
+        private FunctionCall? UniqueKeySeekBound(ScalarExpression keySide, ScalarExpression boundSide, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (keySide is not ColumnReferenceExpression columnRef || boundSide is not FunctionCall call)
+            {
+                return null;
+            }
+
+            var columnCollector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+            call.Accept(columnCollector);
+            if (columnCollector.References.Count > 0 || walker.ResolveCatalogColumn(columnRef, scopeChain) is not { } resolved)
+            {
+                return null;
+            }
+
+            var table = catalog.Find(resolved.TableQualifiedName, walker.CurrentProcScope);
+            var hasSingleColumnUniqueKey = table is { Kind: CatalogTableKind.Table }
+                && table.Indexes.Any(ix =>
+                    ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled && !ix.IsColumnstore
+                    && ix.KeyColumns.Count == 1
+                    && catalog.IdentifierComparer.Equals(ix.KeyColumns[0], resolved.Column.Name));
+            if (!hasSingleColumnUniqueKey)
+            {
+                return null;
+            }
+
+            var typeContext = new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog);
+            var boundType = ScalarExpressionResolver.ResolveScalarType(call, scopeChain, sourcePath, typeContext);
+            return boundType is not null && boundType.Category == resolved.Column.Type?.Category ? call : null;
         }
 
         public void OnEnterHavingClause(HavingClause node, ModuleWalker walker) => RecordRegion(node.SearchCondition, ScalarUdfContext.Having);
@@ -139,7 +206,8 @@ public static class ScalarUdfScanner
         private bool IsEvaluatedPerRow(FunctionCall node) =>
             Contains(_rowSourceRegions, node)
             && !Contains(_uncorrelatedFunctionArgumentRegions, node)
-            && !Contains(_columnFreeConjunctRegions, node);
+            && !Contains(_columnFreeConjunctRegions, node)
+            && !Contains(_uniqueKeySeekBoundRegions, node);
 
         private static bool Contains(List<(int Start, int End)> regions, FunctionCall node) =>
             regions.Exists(region => node.StartOffset >= region.Start && node.StartOffset < region.End);

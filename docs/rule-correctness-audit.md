@@ -28,6 +28,22 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: a scalar UDF used as an index seek bound reported as per-row
+  work.** `scalar-udf/in-predicate` reported `Key = dbo.f(@p)` where `Key` is
+  the sole key column of a unique index. Execution counts
+  (`sys.dm_exec_function_stats`) showed the function runs once when the plan
+  seeks the index, but once per row when the optimizer scans instead: an
+  unindexed column, a non-unique index with many duplicates, a range over a
+  wide table, an OR, a column argument, a type mismatch that converts the key
+  side (varchar key against an nvarchar-returning function), and any
+  FORCESCAN or index hint. Only an equality conjunct in WHERE between a
+  single-column unique key and a column-free call whose declared return type
+  has the key's type category is now skipped, with no scan-forcing hint on
+  any table reference earlier in the module. Siblings checked clean: the
+  projection and schema-dependency kinds of the same scanner have no seek
+  concept, and the forced-serial scanners make plan-level, not per-row,
+  claims.
+
 - **Category: rationale promised a plan operator the engine adds only when the
   chosen plan lacks a blocking one.** `dml/self-referencing` claimed every
   flagged statement carries an Eager Spool or Sort. Plan probes on heap and
