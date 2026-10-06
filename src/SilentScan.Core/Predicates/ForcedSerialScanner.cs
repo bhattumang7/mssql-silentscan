@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
+using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 
@@ -42,6 +43,35 @@ public static class ForcedSerialScanner
 
         private int _queryWithFromDepth;
 
+        private bool _outermostQueryReadsSystemCatalogView;
+
+        private static bool ReadsSystemCatalogView(TSqlFragment query)
+        {
+            var references = new NamedTableReferenceCollector();
+            query.Accept(references);
+            return references.References.Any(IsSystemCatalogView);
+        }
+
+        private static bool IsSystemCatalogView(NamedTableReference reference)
+        {
+            var (schema, name) = SchemaObjectNameHelper.Resolve(reference.SchemaObject);
+            return schema is not null
+                && (string.Equals(schema, "sys", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(schema, "INFORMATION_SCHEMA", StringComparison.OrdinalIgnoreCase)
+                    || SystemCatalogViewRegistry.TryResolve($"{schema}.{name}") is not null);
+        }
+
+        private sealed class NamedTableReferenceCollector : TSqlFragmentVisitor
+        {
+            public List<NamedTableReference> References { get; } = [];
+
+            public override void ExplicitVisit(NamedTableReference node)
+            {
+                References.Add(node);
+                base.ExplicitVisit(node);
+            }
+        }
+
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) => _tableVariableNames.Clear();
 
         public void OnEnterDeclareTableVariableStatement(DeclareTableVariableStatement node, ModuleWalker walker) =>
@@ -74,6 +104,11 @@ public static class ForcedSerialScanner
         {
             if (node.FromClause is not null)
             {
+                if (_queryWithFromDepth == 0)
+                {
+                    _outermostQueryReadsSystemCatalogView = ReadsSystemCatalogView(node);
+                }
+
                 _queryWithFromDepth++;
             }
         }
@@ -88,7 +123,7 @@ public static class ForcedSerialScanner
 
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
-            if (_queryWithFromDepth > 0 && NonParallelizableIntrinsicFunctionNames.Contains(node.FunctionName.Value))
+            if (_queryWithFromDepth > 0 && !_outermostQueryReadsSystemCatalogView && NonParallelizableIntrinsicFunctionNames.Contains(node.FunctionName.Value))
             {
                 Findings.Add(new ForcedSerialFinding(
                     ForcedSerialFindingKind.NonParallelizableIntrinsic, sourcePath, sourcePath,
@@ -98,7 +133,7 @@ public static class ForcedSerialScanner
 
         public void OnEnterGlobalVariableExpression(GlobalVariableExpression node, ModuleWalker walker)
         {
-            if (_queryWithFromDepth > 0 && string.Equals(node.Name, "@@TRANCOUNT", StringComparison.OrdinalIgnoreCase))
+            if (_queryWithFromDepth > 0 && !_outermostQueryReadsSystemCatalogView && string.Equals(node.Name, "@@TRANCOUNT", StringComparison.OrdinalIgnoreCase))
             {
                 Findings.Add(new ForcedSerialFinding(
                     ForcedSerialFindingKind.NonParallelizableIntrinsic, sourcePath, sourcePath,
@@ -158,6 +193,11 @@ public static class ForcedSerialScanner
 
         private void InspectCursorDefinition(CursorDefinition definition, string cursorName)
         {
+            if (ReadsSystemCatalogView(definition.Select))
+            {
+                return;
+            }
+
             var kinds = definition.Options.Select(o => o.OptionKind).ToHashSet();
 
             var hasExplicitType = kinds.Contains(CursorOptionKind.Static) || kinds.Contains(CursorOptionKind.Keyset) || kinds.Contains(CursorOptionKind.Dynamic);
