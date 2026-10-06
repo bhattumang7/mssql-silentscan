@@ -198,6 +198,40 @@ public sealed class ScalarUdfScannerTests
         Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
     }
 
+    [Theory]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE dbo.fn_Compute(@v) > 0 AND Id > 0;")]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE @v < dbo.fn_Compute(GETDATE());")]
+    [InlineData("DECLARE @v INT = 1; SELECT a.Id FROM dbo.T a JOIN dbo.T b ON a.Id = b.Id AND dbo.fn_Compute(@v) > 0;")]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE EXISTS (SELECT 1 FROM dbo.T x WHERE x.Id = 1 AND dbo.fn_Compute(@v) > 0);")]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE CASE WHEN dbo.fn_Compute(@v) > 0 THEN 1 ELSE 0 END = 1;")]
+    public void ScalarUdfInConjunctWithoutAnyColumn_NeverFiresPredicateInvocation(string statement)
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL);
+            GO
+            """ + "\n" + statement);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE Id < dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT Id FROM dbo.T WHERE Id = 1 OR dbo.fn_Compute(@v) > 1;")]
+    [InlineData("DECLARE @v INT = 1; SELECT a.Id FROM dbo.T a JOIN dbo.T b ON a.Id < dbo.fn_Compute(@v);")]
+    public void ScalarUdfInConjunctWithAColumn_StillFiresPredicateInvocation(string statement)
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL);
+            GO
+            """ + "\n" + statement);
+
+        Assert.Contains(findings, f => f.Kind == ScalarUdfFindingKind.PredicateInvocation);
+    }
+
     [Fact]
     public void ScalarUdfInUncorrelatedTableFunctionArgument_NeverFiresProjectionInvocation()
     {
