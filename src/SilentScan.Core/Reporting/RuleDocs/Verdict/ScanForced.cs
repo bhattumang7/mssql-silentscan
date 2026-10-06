@@ -28,6 +28,11 @@ internal static class ScanForced
             NVARCHAR parameter (the .NET/Java/etc. default string type) against a VARCHAR column -
             a mismatch that's invisible in the C#/Java source and only visible by comparing the
             column's DDL against the parameter's declared type.
+
+            The finding is reported at High confidence only when the converted column is the
+            leading key of an active, non-filtered index - the seek the conversion destroys. On a
+            column that leads no index the plan is a scan with or without the conversion, so the
+            finding drops to Medium confidence.
             """,
         HowToFixIt: """
             Make both sides of the comparison the same type, and make sure the CONVERSION - if one

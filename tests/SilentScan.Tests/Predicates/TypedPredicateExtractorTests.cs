@@ -43,6 +43,21 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_ConvertedColumnConfidence_HighOnlyWhenColumnLeadsAnIndex()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, Keyed VARCHAR(20) NOT NULL, Plain VARCHAR(20) NOT NULL, Second VARCHAR(20) NOT NULL);",
+            "CREATE INDEX IX_T_Keyed ON dbo.T(Keyed);",
+            "CREATE INDEX IX_T_Id_Second ON dbo.T(Id, Second);",
+            "SELECT Id FROM dbo.T WHERE Keyed = 1 AND Plain = 1 AND Second = 1;");
+
+        Assert.All(findings, f => Assert.Equal(Verdict.ScanForced, f.Verdict));
+        Assert.Equal(FindingConfidence.High, Assert.Single(findings, f => f.Column.ColumnName == "Keyed").Confidence);
+        Assert.Equal(FindingConfidence.Medium, Assert.Single(findings, f => f.Column.ColumnName == "Plain").Confidence);
+        Assert.Equal(FindingConfidence.Medium, Assert.Single(findings, f => f.Column.ColumnName == "Second").Confidence);
+    }
+
+    [Fact]
     public void Extract_VariableDeclaredInAnEarlierAdHocBatch_DoesNotLeakIntoALaterBatchWithNoDeclareOfItsOwn()
     {
 
