@@ -315,7 +315,7 @@ public static class TypedPredicateExtractor
             if (ResolveOperand(columnRef, scopeChain, walker) is PredicateOperand.Column target && target.Type is { } targetType)
             {
                 var sourceType = OperandType(ResolveOperand(node.NewValue, scopeChain, walker));
-                EmitWriteLossFinding(target.TableQualifiedName, target.ColumnName, targetType, sourceType, node.NewValue);
+                EmitWriteLossFinding(target.TableQualifiedName, target.ColumnName, targetType, sourceType, node.NewValue, scopeChain, walker);
             }
         }
 
@@ -331,7 +331,7 @@ public static class TypedPredicateExtractor
 
             var scopeChain = walker.CurrentScopeChain();
             var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-            EmitWriteLossFinding(tableQualifiedName: null, node.Variable.Name, target, sourceType, sourceExpression);
+            EmitWriteLossFinding(tableQualifiedName: null, node.Variable.Name, target, sourceType, sourceExpression, scopeChain, walker);
         }
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
@@ -418,7 +418,7 @@ public static class TypedPredicateExtractor
                 if (declaration.Value is { } sourceExpression && targetType is { } resolvedTargetType)
                 {
                     var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                    EmitWriteLossFinding(tableQualifiedName: null, declaration.VariableName.Value, resolvedTargetType, sourceType, sourceExpression);
+                    EmitWriteLossFinding(tableQualifiedName: null, declaration.VariableName.Value, resolvedTargetType, sourceType, sourceExpression, scopeChain, walker);
                 }
             }
         }
@@ -551,7 +551,7 @@ public static class TypedPredicateExtractor
 
                     var sourceExpression = columnValues[i];
                     var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                    EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression);
+                    EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker);
                 }
             }
         }
@@ -570,13 +570,19 @@ public static class TypedPredicateExtractor
                 }
 
                 var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression);
+                EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker);
             }
         }
 
-        private void EmitWriteLossFinding(string? tableQualifiedName, string columnName, SqlType targetType, SqlType? sourceType, ScalarExpression sourceExpression)
+        private void EmitWriteLossFinding(
+            string? tableQualifiedName, string columnName, SqlType targetType, SqlType? sourceType, ScalarExpression sourceExpression,
+            ScopeChain? scopeChain = null, ModuleWalker? walker = null)
         {
-            var kind = Rules.WriteLossClassifier.Classify(targetType, sourceType, sourceExpression, isVariableTarget: tableQualifiedName is null);
+            Func<ScalarExpression, SqlType?>? operandType = scopeChain is null || walker is null
+                ? null
+                : leaf => OperandType(ResolveOperand(leaf, scopeChain, walker));
+            var kind = Rules.WriteLossClassifier.Classify(
+                targetType, sourceType, sourceExpression, isVariableTarget: tableQualifiedName is null, operandType);
             if (kind is null)
             {
                 return;

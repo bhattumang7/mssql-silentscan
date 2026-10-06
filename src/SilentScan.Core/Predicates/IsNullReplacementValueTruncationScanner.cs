@@ -90,7 +90,8 @@ public static class IsNullReplacementValueTruncationScanner
             var checkExpressionType = ScalarExpressionResolver.ResolveScalarType(checkExpression, scopeChain, sourcePath, context);
             var replacementValueType = ScalarExpressionResolver.ResolveScalarType(replacementValue, scopeChain, sourcePath, context);
 
-            if (WriteLossClassifier.Classify(checkExpressionType, replacementValueType, replacementValue, isVariableTarget: true) is not { } kind)
+            if (WriteLossClassifier.Classify(checkExpressionType, replacementValueType, replacementValue, isVariableTarget: true,
+                    leaf => ScalarExpressionResolver.ResolveScalarType(leaf, scopeChain, sourcePath, context)) is not { } kind)
             {
                 return;
             }

@@ -58,6 +58,22 @@ public sealed class IsNullReplacementValueTruncationScannerTests
     }
 
     [Fact]
+    public void QuotenameOverVarcharColumnReplacingVarchar_NeverFiresUnicodeReplacement()
+    {
+        var findings = Scan("SELECT ISNULL(LongCode, QUOTENAME(ShortCode)) FROM dbo.T;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == WriteLossKind.UnicodeToNonUnicodeReplacement);
+    }
+
+    [Fact]
+    public void QuotenameOverNvarcharColumnReplacingVarchar_FiresUnicodeReplacement()
+    {
+        var findings = Scan("SELECT ISNULL(LongCode, QUOTENAME(UnicodeCol)) FROM dbo.T;");
+
+        Assert.Contains(findings, f => f.Kind == WriteLossKind.UnicodeToNonUnicodeReplacement);
+    }
+
+    [Fact]
     public void ReplacementSameWidthAsCheckExpression_NeverFires()
     {
         var findings = Scan("SELECT ISNULL(LongCode, SameLength) FROM dbo.T;");

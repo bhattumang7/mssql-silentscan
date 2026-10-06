@@ -70,6 +70,48 @@ public sealed class WriteLossExtractionTests
     }
 
     [Fact]
+    public void Extract_QuotenameOverVarcharColumnOfSameCodePageIntoVarchar_ProvablySafe_NoFinding()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.Src (VarCol VARCHAR(20) COLLATE Latin1_General_100_CI_AS NULL); CREATE TABLE dbo.Dst (VarCol VARCHAR(40) COLLATE Latin1_General_100_CI_AS NULL);",
+            "INSERT INTO dbo.Dst (VarCol) SELECT QUOTENAME(VarCol) FROM dbo.Src;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extract_ConcatenatedAsciiLiteralsAndQuotenameOverVarcharIntoVarchar_ProvablySafe_NoFinding()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.Src (VarCol VARCHAR(20) NULL); CREATE TABLE dbo.Dst (VarCol VARCHAR(80) NULL);",
+            "INSERT INTO dbo.Dst (VarCol) SELECT N'x.' + QUOTENAME(VarCol) FROM dbo.Src;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extract_QuotenameOverUnicodeColumnIntoVarchar_StillFlagged()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.Src (NCol NVARCHAR(20) NULL); CREATE TABLE dbo.Dst (VarCol VARCHAR(40) NULL);",
+            "INSERT INTO dbo.Dst (VarCol) SELECT QUOTENAME(NCol) FROM dbo.Src;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.UnicodeToNonUnicodeReplacement, finding.Kind);
+    }
+
+    [Fact]
+    public void Extract_QuotenameOverVarcharColumnOfDifferentCodePageIntoVarchar_StillFlagged()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.Src (VarCol VARCHAR(20) COLLATE Japanese_CI_AS NULL); CREATE TABLE dbo.Dst (VarCol VARCHAR(40) COLLATE Latin1_General_100_CI_AS NULL);",
+            "INSERT INTO dbo.Dst (VarCol) SELECT QUOTENAME(VarCol) FROM dbo.Src;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.UnicodeToNonUnicodeReplacement, finding.Kind);
+    }
+
+    [Fact]
     public void Extract_InsertValuesWithFractionalNumericLiteralIntoInt_FlagsNumericScaleNarrowing()
     {
 

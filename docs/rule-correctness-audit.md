@@ -617,6 +617,22 @@ statement — is uncontroversial syntax, not a claim needing verification).
   if either side is) and summing lengths for every char/varchar/nchar/nvarchar
   pairing, oracle-checked against the engine's described result type.
 
+- `WriteLossClassifier` unicode-to-non-unicode — root cause: expression
+  provenance ignored. `QUOTENAME` returns nvarchar even for varchar input, so
+  copying `QUOTENAME(varchar_col)` or a concatenation of ASCII literals and
+  such calls into a varchar column was reported although every character
+  already came from a non-unicode column of the same code page. Fixed by
+  proving representability through concatenation, `QUOTENAME` and
+  parentheses down to ASCII literals and non-unicode leaves sharing the
+  target code page. Oracle-confirmed: the varchar round-trip is exact while
+  `QUOTENAME` over an nvarchar column is replaced with question marks. Leaves
+  of another code page or of nvarchar type still fire. Siblings:
+  `IsNullReplacementValueTruncationScanner` shares the fix; the call-argument
+  scanners (`ProcCallArgumentMismatchScanner`, `TvfCallArgumentMismatchScanner`,
+  `SpExecuteSqlParameterMismatchScanner`,
+  `ProcCallTableValuedArgumentMismatchScanner`) classify already-typed
+  caller arguments without scope and stay conservative.
+
 ---
 
 ## Not yet audited
