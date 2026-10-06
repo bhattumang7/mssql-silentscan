@@ -14,7 +14,8 @@ public sealed class NonSargableWrapSeekAvailabilityOracleTests : OracleTestFixtu
     private const string StaticDdl =
         "CREATE TABLE dbo.Wrap (Id INT NOT NULL PRIMARY KEY CLUSTERED, Idx INT NOT NULL, NonKey INT NOT NULL, D DATETIME NOT NULL);"
         + "CREATE NONCLUSTERED INDEX IX_Wrap_Idx ON dbo.Wrap(Idx);"
-        + "CREATE NONCLUSTERED INDEX IX_Wrap_D ON dbo.Wrap(D);";
+        + "CREATE NONCLUSTERED INDEX IX_Wrap_D ON dbo.Wrap(D);"
+        + "\nGO\nCREATE VIEW dbo.WrapView AS SELECT Id, Idx, NonKey, D FROM dbo.Wrap UNION ALL SELECT Id, Idx, NonKey, D FROM dbo.Wrap;";
 
     protected override string DatabaseNameSeed => nameof(NonSargableWrapSeekAvailabilityOracleTests);
 
@@ -109,5 +110,16 @@ public sealed class NonSargableWrapSeekAvailabilityOracleTests : OracleTestFixtu
 
         Assert.False(await SeeksAsync(Query));
         Assert.Single(Scan(Query), f => f.Confidence == FindingConfidence.High);
+    }
+
+    [Fact]
+    public async Task WrappingNonKeyColumnReachedThroughUnionView_PlanIsUnchangedByTheWrap_ScannerDoesNotReportItAtHighConfidence()
+    {
+        const string Bare = "SELECT Id FROM dbo.WrapView WHERE NonKey = 5;";
+        const string Wrapped = "SELECT Id FROM dbo.WrapView WHERE ABS(NonKey) = 5;";
+
+        Assert.False(await SeeksAsync(Bare));
+        Assert.False(await SeeksAsync(Wrapped));
+        Assert.DoesNotContain(Scan(Wrapped), f => f.Confidence == FindingConfidence.High);
     }
 }

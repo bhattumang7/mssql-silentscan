@@ -531,6 +531,14 @@ statement — is uncontroversial syntax, not a claim needing verification).
   as a scan with no Key Lookup. Fixed by skipping indexes whose leading key is
   a bit column; the rare-value case is deliberately given up because the
   scanner has no value distribution to tell the two apart.
+- `NonSargablePredicateScanner` (function-wrapped-column, date-function-on-column)
+  — root cause: claim attached to a context that cannot trigger the effect. A
+  wrapped column whose base table could not be resolved (reached through a
+  UNION view, a system catalog view, or an undeclared source) was reported at
+  High, although the claimed seek loss exists only when the column leads an
+  index key. Oracle-confirmed that wrapping a column no index keys leaves the
+  plan unchanged, including through a UNION ALL view. Fixed by reporting
+  unresolved columns at Medium, as columns known to key no index already are.
 
 ---
 
