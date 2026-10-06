@@ -54,6 +54,8 @@ public static class NonSargablePredicateScanner
 
         private HashSet<(string Table, string Column)> _seekable = [];
 
+        private HashSet<(string Table, string Column)> _equalityBound = [];
+
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
             var where = node.WhereClause?.SearchCondition;
@@ -85,6 +87,7 @@ public static class NonSargablePredicateScanner
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _seekable = [];
+            _equalityBound = [];
             var collector = new PredicateLeafCollector();
             node.Accept(collector);
             foreach (var leaf in collector.Leaves)
@@ -93,9 +96,10 @@ public static class NonSargablePredicateScanner
             }
         }
 
-        private HashSet<(string Table, string Column)> CollectBareSeekableColumns(IEnumerable<BooleanExpression> conditions, ScopeChain scopeChain)
+        private (HashSet<(string Table, string Column)> Seekable, HashSet<(string Table, string Column)> EqualityBound) CollectBareSeekableColumns(IEnumerable<BooleanExpression> conditions, ScopeChain scopeChain)
         {
             HashSet<(string Table, string Column)> result = [];
+            HashSet<(string Table, string Column)> equalityBound = [];
             foreach (var conjunct in conditions.SelectMany(PredicateTreeWalker.FlattenAnd))
             {
                 IEnumerable<ColumnProvenance.BaseColumn> columns = conjunct switch
@@ -109,13 +113,18 @@ public static class NonSargablePredicateScanner
                     _ => [],
                 };
 
+                var isEquality = conjunct is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals };
                 foreach (var column in columns)
                 {
                     result.Add((column.TableQualifiedName, column.ColumnName));
+                    if (isEquality)
+                    {
+                        equalityBound.Add((column.TableQualifiedName, column.ColumnName));
+                    }
                 }
             }
 
-            return result;
+            return (result, equalityBound);
         }
 
         private static bool IsColumnFree(ScalarExpression expression)
@@ -132,10 +141,21 @@ public static class NonSargablePredicateScanner
                 return false;
             }
 
-            return BaseColumnResolver.ResolveBaseColumn(columnRef, sourcePath, scopeChain, catalog) is { } baseColumn
-                && _seekable.Contains((baseColumn.TableQualifiedName, baseColumn.ColumnName))
-                && catalog.Find(baseColumn.TableQualifiedName)?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) == true;
+            if (BaseColumnResolver.ResolveBaseColumn(columnRef, sourcePath, scopeChain, catalog) is not { } baseColumn)
+            {
+                return false;
+            }
+
+            var table = catalog.Find(baseColumn.TableQualifiedName);
+            return table is not null
+                && ((_seekable.Contains((baseColumn.TableQualifiedName, baseColumn.ColumnName))
+                        && table.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer))
+                    || HasFullUniqueKeyEquality(table));
         }
+
+        private bool HasFullUniqueKeyEquality(CatalogTable table) =>
+            table.Indexes.Any(i => i.IsUnique && !i.IsFiltered && !i.IsColumnstore && !i.IsDisabled && !i.IsJsonIndex && i.KeyColumns.Count > 0
+                && i.KeyColumns.All(k => _equalityBound.Contains((table.QualifiedName, k))));
 
         private FindingConfidence ConfidenceFor(ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -154,7 +174,7 @@ public static class NonSargablePredicateScanner
         private void InspectCondition(BooleanExpression condition, ScopeChain scopeChain, ModuleWalker walker)
         {
             var dead = PredicateSurvivalAnalyzer.FindDeadComparisons(condition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain));
-            _seekable = CollectBareSeekableColumns(_companions.Contains(condition) ? _companions : [condition], scopeChain);
+            (_seekable, _equalityBound) = CollectBareSeekableColumns(_companions.Contains(condition) ? _companions : [condition], scopeChain);
 
             var collector = new PredicateLeafCollector();
             condition.Accept(collector);
