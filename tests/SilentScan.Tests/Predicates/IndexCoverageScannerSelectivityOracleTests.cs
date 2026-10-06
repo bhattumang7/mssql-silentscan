@@ -14,6 +14,8 @@ public sealed class IndexCoverageScannerSelectivityOracleTests : OracleTestFixtu
     protected override string Ddl => """
         CREATE TABLE dbo.HeapT (Id INT NOT NULL, A INT NOT NULL, CONSTRAINT PK_HeapT PRIMARY KEY NONCLUSTERED (Id));
         CREATE NONCLUSTERED INDEX IX_HeapT_A ON dbo.HeapT(A);
+        CREATE TABLE dbo.FlagT (Id INT NOT NULL PRIMARY KEY, Flag BIT NOT NULL, Payload INT NOT NULL);
+        CREATE NONCLUSTERED INDEX IX_FlagT_Flag ON dbo.FlagT(Flag);
         GO
         """;
 
@@ -28,12 +30,22 @@ public sealed class IndexCoverageScannerSelectivityOracleTests : OracleTestFixtu
             FROM sys.all_objects a CROSS JOIN sys.all_objects b;
 
             UPDATE STATISTICS dbo.HeapT WITH FULLSCAN;
+
+            INSERT INTO dbo.FlagT (Id, Flag, Payload)
+            SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)),
+                   CASE WHEN ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) = 1 THEN 1 ELSE 0 END,
+                   ROW_NUMBER() OVER (ORDER BY (SELECT NULL))
+            FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+
+            UPDATE STATISTICS dbo.FlagT WITH FULLSCAN;
             """);
     }
 
     private const string StaticDdl =
         "CREATE TABLE dbo.HeapT (Id INT NOT NULL, A INT NOT NULL, CONSTRAINT PK_HeapT PRIMARY KEY NONCLUSTERED (Id));"
-        + "CREATE NONCLUSTERED INDEX IX_HeapT_A ON dbo.HeapT(A);";
+        + "CREATE NONCLUSTERED INDEX IX_HeapT_A ON dbo.HeapT(A);"
+        + "CREATE TABLE dbo.FlagT (Id INT NOT NULL PRIMARY KEY, Flag BIT NOT NULL, Payload INT NOT NULL);"
+        + "CREATE NONCLUSTERED INDEX IX_FlagT_Flag ON dbo.FlagT(Flag);";
 
     private static IReadOnlyList<IndexCoverageFinding> Scan(string query)
     {
@@ -70,5 +82,19 @@ public sealed class IndexCoverageScannerSelectivityOracleTests : OracleTestFixtu
 
         var findings = Scan(Query);
         Assert.Single(findings, f => f.Kind == IndexCoverageFindingKind.KeyLookupProneIndex);
+    }
+
+    [Fact]
+    public async Task EqualityOnBitLeadingKeyMatchingMostRows_OptimizerScansWithoutKeyLookup_ScannerDoesNotFlagIt()
+    {
+        const string Query = "SELECT Id, Flag, Payload FROM dbo.FlagT WHERE Flag = 0;";
+
+        var plan = await PlanInSessionAsync(string.Empty, Query);
+        var lookupPresent = plan.Descendants().Any(e => e.Name.LocalName == "RelOp" && (string?)e.Attribute("PhysicalOp") == "Key Lookup");
+
+        Assert.False(lookupPresent, "expected a scan, not a seek plus Key Lookup, for a bit flag equal to the value nearly every row holds");
+
+        var findings = Scan(Query);
+        Assert.DoesNotContain(findings, f => f.Kind == IndexCoverageFindingKind.KeyLookupProneIndex);
     }
 }

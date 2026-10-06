@@ -2,6 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -76,6 +77,11 @@ public static class IndexCoverageScanner
             }
 
             var index = candidateIndexes[0];
+
+            if (table.FindColumn(index.KeyColumns[0], Catalog.IdentifierComparer)?.Type?.Category == SqlTypeCategory.Bit)
+            {
+                return;
+            }
 
             if (index.IsUnique && index.KeyColumns.All(constrainedColumnsOnTable.Contains))
             {
