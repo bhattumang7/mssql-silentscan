@@ -202,12 +202,57 @@ public static class TransactionHygieneScanner
 
             var thenResult = AnalyzeSequential(ToStatementList(ifStatement.ThenStatement), enteringState);
 
-            var elseResult = ifStatement.ElseStatement is not null
-                ? AnalyzeSequential(ToStatementList(ifStatement.ElseStatement), enteringState)
+            var elseEntering = ImpliesNoOpenTransactionWhenFalse(ifStatement.Predicate)
+                ? enteringState with { OpenSite = null }
                 : enteringState;
+
+            var elseResult = ifStatement.ElseStatement is not null
+                ? AnalyzeSequential(ToStatementList(ifStatement.ElseStatement), elseEntering)
+                : elseEntering;
 
             return MergeBranches(thenResult, elseResult);
         }
+
+        private static bool ImpliesNoOpenTransactionWhenFalse(BooleanExpression predicate)
+        {
+            while (predicate is BooleanParenthesisExpression parenthesis)
+            {
+                predicate = parenthesis.Expression;
+            }
+
+            if (predicate is not BooleanComparisonExpression comparison)
+            {
+                return false;
+            }
+
+            var (probe, literal, type) = comparison.FirstExpression is IntegerLiteral
+                ? (comparison.SecondExpression, comparison.FirstExpression as IntegerLiteral, Mirror(comparison.ComparisonType))
+                : (comparison.FirstExpression, comparison.SecondExpression as IntegerLiteral, comparison.ComparisonType);
+
+            if (literal is null)
+            {
+                return false;
+            }
+
+            if (probe is GlobalVariableExpression { Name: var name } && name.Equals("@@TRANCOUNT", StringComparison.OrdinalIgnoreCase))
+            {
+                return literal.Value == "0" && type is BooleanComparisonType.GreaterThan or BooleanComparisonType.NotEqualToExclamation
+                        or BooleanComparisonType.NotEqualToBrackets
+                    || literal.Value == "1" && type == BooleanComparisonType.GreaterThanOrEqualTo;
+            }
+
+            return probe is FunctionCall { CallTarget: null, FunctionName.Value: var function } && function.Equals("XACT_STATE", StringComparison.OrdinalIgnoreCase)
+                && literal.Value == "0" && type is BooleanComparisonType.NotEqualToExclamation or BooleanComparisonType.NotEqualToBrackets;
+        }
+
+        private static BooleanComparisonType Mirror(BooleanComparisonType type) => type switch
+        {
+            BooleanComparisonType.GreaterThan => BooleanComparisonType.LessThan,
+            BooleanComparisonType.LessThan => BooleanComparisonType.GreaterThan,
+            BooleanComparisonType.GreaterThanOrEqualTo => BooleanComparisonType.LessThanOrEqualTo,
+            BooleanComparisonType.LessThanOrEqualTo => BooleanComparisonType.GreaterThanOrEqualTo,
+            _ => type,
+        };
 
         private FlowState AnalyzeWhile(WhileStatement whileStatement, FlowState enteringState)
         {

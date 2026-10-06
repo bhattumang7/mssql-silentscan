@@ -13,6 +13,48 @@ public sealed class TransactionHygieneScannerTests
         return TransactionHygieneScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("@@TRANCOUNT > 0")]
+    [InlineData("@@TRANCOUNT >= 1")]
+    [InlineData("@@TRANCOUNT <> 0")]
+    [InlineData("XACT_STATE() <> 0")]
+    [InlineData("XACT_STATE() != 0")]
+    [InlineData("0 <> XACT_STATE()")]
+    public void CatchRollsBackUnderTransactionStateGuard_NeverFires(string guard)
+    {
+        var findings = Scan(
+            $"BEGIN TRANSACTION;\nBEGIN TRY\nSELECT 1;\nCOMMIT TRANSACTION;\nEND TRY\nBEGIN CATCH\nIF ({guard}) ROLLBACK TRANSACTION;\nEND CATCH");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void RollbackGuardedByTranCountAboveOne_ElseDoesNotImplyClosed_Fires()
+    {
+        var findings = Scan(
+            "BEGIN TRANSACTION;\nBEGIN TRY\nSELECT 1;\nCOMMIT TRANSACTION;\nEND TRY\nBEGIN CATCH\nIF (@@TRANCOUNT > 1) ROLLBACK TRANSACTION;\nEND CATCH");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void RollbackGuardedByUncommittableStateOnly_ElseLeavesTransactionOpen_Fires()
+    {
+        var findings = Scan(
+            "BEGIN TRANSACTION;\nBEGIN TRY\nSELECT 1;\nCOMMIT TRANSACTION;\nEND TRY\nBEGIN CATCH\nIF (XACT_STATE() = -1) ROLLBACK TRANSACTION;\nEND CATCH");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void RollbackGuardedByUnrelatedCondition_Fires()
+    {
+        var findings = Scan(
+            "BEGIN TRANSACTION;\nDECLARE @x INT = 1;\nIF (@x > 0) ROLLBACK TRANSACTION;");
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void NoCommitOrRollback_FallsOffEnd_Fires()
     {
