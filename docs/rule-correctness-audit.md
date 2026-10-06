@@ -523,6 +523,14 @@ statement — is uncontroversial syntax, not a claim needing verification).
 - `PostExpansionJoinWidthScanner` (post-expansion-join-width) — sampled 20
   findings across 20 modules: all true positives (each flagged view joins the
   listed tables). Not covered by the sample: a view read with `NOEXPAND`.
+- `IndexCoverageScanner` (key-lookup-prone) — root cause: claim attached to a
+  context that cannot trigger the effect. An equality on a bit-typed leading
+  key was reported although the column has only two values, so the predicate
+  matches most of the table unless the value asked for is the rare one.
+  Oracle-confirmed that an equality on the common value of a bit flag plans
+  as a scan with no Key Lookup. Fixed by skipping indexes whose leading key is
+  a bit column; the rare-value case is deliberately given up because the
+  scanner has no value distribution to tell the two apart.
 
 ---
 
