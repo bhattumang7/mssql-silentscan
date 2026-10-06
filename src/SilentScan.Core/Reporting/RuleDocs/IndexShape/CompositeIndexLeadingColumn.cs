@@ -13,9 +13,10 @@ internal static class CompositeIndexLeadingColumn
             composite index is a single B-tree keyed first by its leading column - without a bound
             on that column, this specific index cannot be seek-used for this predicate at all; the
             engine would have to scan the whole index to find rows matching only the later key
-            column. This only fires when no OTHER usable index on the table leads with the same
-            violating column either, so a table that has a real alternative seek path for this
-            predicate is never flagged.
+            column. This only fires when no OTHER usable index on the table leads with a column the
+            same statement compares to a constant, so a table that has a real alternative seek path
+            for this predicate is never flagged. A constant in the ON clause of an outer join on the
+            preserved side filters nothing and is not counted as a constraint.
             """,
         HowToFixIt: """
             Either add a predicate on the index's leading key column so this index can be seeked, or

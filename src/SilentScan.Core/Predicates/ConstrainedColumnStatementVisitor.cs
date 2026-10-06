@@ -11,6 +11,7 @@ internal sealed record ConstrainedStatement(
     HashSet<ColumnProvenance.BaseColumn> AndEqualityConstrainedColumns,
     HashSet<ColumnProvenance.BaseColumn> RowFilterColumns,
     HashSet<ColumnProvenance.BaseColumn> RowFilterEqualityColumns,
+    HashSet<ColumnProvenance.BaseColumn> RowFilterConstantComparedColumns,
     IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> ScopeChain,
     IReadOnlyList<QualifiedJoin> JoinNodes,
     BooleanExpression? WhereCondition,
@@ -112,13 +113,17 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
             .SelectMany(c => BaseColumnResolver.ResolveBothSides(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
+        var rowFilterConstantComparedColumns = rowFilterComparisons
+            .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
+            .ToHashSet(TableColumnKeyComparer.For(Catalog));
+
         var rowFilterEqualityColumns = rowFilterComparisons
             .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
             .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
         InspectStatement(new ConstrainedStatement(
-            baseTables, andConstrainedColumns, andEqualityConstrainedColumns, rowFilterColumns, rowFilterEqualityColumns,
+            baseTables, andConstrainedColumns, andEqualityConstrainedColumns, rowFilterColumns, rowFilterEqualityColumns, rowFilterConstantComparedColumns,
             scopeChain, joinNodes, whereCondition, node, walker));
     }
 
