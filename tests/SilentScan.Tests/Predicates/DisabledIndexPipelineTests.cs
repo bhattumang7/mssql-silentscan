@@ -25,7 +25,7 @@ public sealed class DisabledIndexPipelineTests : OracleTestFixture
     [Fact]
     public async Task DisabledIndex_NoLongerReportsIndexed_OracleConfirmed()
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(DisabledIndexSql, "SQL_Latin1_General_CP1_CI_AS");
+        var report = await EngineAuthoritativeScan.ScanAsync(DisabledIndexSql, "SQL_Latin1_General_CP1_CI_AS", FindingConfidence.Medium);
 
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "SerialNo");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);

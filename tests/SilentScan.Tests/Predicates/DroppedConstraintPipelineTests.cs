@@ -49,7 +49,7 @@ public sealed class DroppedConstraintPipelineTests : OracleTestFixture
     [Fact]
     public async Task DroppedPrimaryKeyConstraint_NoLongerReportsIndexed_OracleConfirmed()
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(DroppedPkSql, "SQL_Latin1_General_CP1_CI_AS");
+        var report = await EngineAuthoritativeScan.ScanAsync(DroppedPkSql, "SQL_Latin1_General_CP1_CI_AS", FindingConfidence.Medium);
 
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "PartCode");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
@@ -62,7 +62,7 @@ public sealed class DroppedConstraintPipelineTests : OracleTestFixture
     [Fact]
     public async Task DroppedUniqueConstraint_NoLongerReportsIndexed_OracleConfirmed()
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(DroppedUniqueSql, "SQL_Latin1_General_CP1_CI_AS");
+        var report = await EngineAuthoritativeScan.ScanAsync(DroppedUniqueSql, "SQL_Latin1_General_CP1_CI_AS", FindingConfidence.Medium);
 
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Email");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);

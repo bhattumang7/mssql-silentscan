@@ -10,7 +10,7 @@ public sealed class DynamicSqlScopePropagationTests
 {
     private static async Task<ScanReport> Scan(string sql)
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS");
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS", FindingConfidence.Medium);
         foreach (var file in report.ParseHealth.Files)
         {
             Assert.Empty(file.Errors);
