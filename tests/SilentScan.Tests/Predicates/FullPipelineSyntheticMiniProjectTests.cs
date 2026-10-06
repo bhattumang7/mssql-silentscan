@@ -52,7 +52,7 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
         var finding = Assert.Single(_report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Region");
 
         Assert.Equal(Verdict.RangeSeek, finding.Verdict);
-        Assert.False(finding.Column.Indexed);
+        Assert.True(finding.Column.Indexed);
 
         var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, [finding]);
         PipelineOracleVerification.AssertAllConfirmed(results);

@@ -23,6 +23,10 @@ internal static class RangeSeek
             conversion into one severity bucket: a conversion that still lets the engine seek is a
             genuinely different, less urgent finding than one that forces a scan, and conflating
             them would waste a reader's time chasing a scan-level fix for a range-seek-level cost.
+
+            The finding is reported at High confidence only when the converted column is the
+            leading key of an active, non-filtered index; on a column that leads no index there is
+            no seek of either kind to degrade, so the finding drops to Medium confidence.
             """,
         HowToFixIt: """
             The fix is the same shape as ScanForced's: match the comparison value's declared type

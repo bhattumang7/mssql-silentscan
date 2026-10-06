@@ -147,6 +147,23 @@ against the same root-cause category before it's treated as new.
   implementer and one remaining call site, `RuleRunner.Run` and the
   catalog-only index-design scan each have a single caller, and the only
   `Prepare` override builds a lookup rather than findings.
+- **Category: seek-loss verdict emitted on a column that leads no index.**
+  `verdict/scan-forced` and `verdict/range-seek` claim that an implicit
+  conversion on the column side removes a seek (or degrades it to a dynamic
+  range seek), but the verdict was derived from the type pair alone. About
+  two thirds of the High `scan-forced` findings in a production-shaped sample
+  sat on columns that lead no index. Oracle-confirmed on plan shape: a
+  varchar column of no index cannot seek whether the literal is `'123'` or
+  `123`, and a column that is only a trailing key of an index behaves the
+  same, while the leading column of an index seeks with the matching literal
+  and cannot with the int literal. Fixed by reporting the verdict at High
+  only when the converted column resolves to a base column that leads an
+  active, non-filtered index (the catalog's existing `Indexed` fact), and at
+  Medium otherwise, mirroring the sargability kinds. Sibling sweep, rule
+  rationales read: the sargability kinds already gate on key-of-any-index;
+  `under-length-parameter`, the ANSI-padding mismatch, local-variable
+  predicate and filtered-index parameter findings make no claim about a seek
+  lost to a conversion.
 
 ---
 

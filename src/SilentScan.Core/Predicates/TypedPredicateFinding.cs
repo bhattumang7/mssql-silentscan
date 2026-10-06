@@ -19,6 +19,9 @@ public sealed record TypedPredicateFinding(
     string? Fingerprint = null,
     FindingConfidence Confidence = FindingConfidence.High) : IRelocatableFinding<TypedPredicateFinding>, IFinding
 {
+    public static FindingConfidence ConfidenceFor(PredicateOperand.Column column) =>
+        column.Indexed == true ? FindingConfidence.High : FindingConfidence.Medium;
+
     public string? RuleId { get; } = Verdict is Verdict.Unknown or Verdict.OperandClash ? null : FindingRuleIds.VerdictRuleId(Verdict);
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);

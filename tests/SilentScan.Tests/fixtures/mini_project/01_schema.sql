@@ -14,6 +14,8 @@ CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);
 GO
 CREATE INDEX IX_Users_Email ON dbo.Users(Email);
 GO
+CREATE INDEX IX_Users_Region ON dbo.Users(Region);
+GO
 CREATE INDEX IX_Users_Phone ON dbo.Users(Phone);
 GO
 CREATE INDEX IX_Users_AccountCode ON dbo.Users(AccountCode);
