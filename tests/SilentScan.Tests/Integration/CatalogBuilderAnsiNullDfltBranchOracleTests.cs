@@ -66,6 +66,53 @@ public sealed class CatalogBuilderAnsiNullDfltBranchOracleTests
     }
 
     [Fact]
+    [Trait("Rule", "silentscan/correctness/not-null-predicate-contradiction")]
+    public async Task Build_UnspecifiedNullabilityUnderDatabaseAnsiNullDefaultOff_MatchesRealClientSessionStayingNullable()
+    {
+        const string procedureSql = """
+            CREATE PROCEDURE dbo.usp_DbOptionOff AS
+            BEGIN
+                CREATE TABLE #t (Col INT);
+                SELECT is_nullable FROM tempdb.sys.columns WHERE object_id = OBJECT_ID('tempdb..#t') AND name = 'Col';
+            END
+            """;
+
+        var databaseName = $"SilentScanTest_{Guid.NewGuid():N}";
+        var provisioner = new DatabaseProvisioner(Options);
+        await provisioner.CreateFreshAsync(databaseName);
+        try
+        {
+            await new ScriptDeployer(Options).DeployAsync($"ALTER DATABASE [{databaseName}] SET ANSI_NULL_DEFAULT OFF;", "master");
+            await new ScriptDeployer(Options).DeployAsync(procedureSql, databaseName);
+            var connectionString = Options.BuildConnectionString(databaseName);
+
+            bool realIsNullable;
+            await using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                await using var command = connection.CreateCommand();
+                command.CommandText = "EXEC dbo.usp_DbOptionOff;";
+                realIsNullable = (bool)(await command.ExecuteScalarAsync())!;
+            }
+
+            var moduleResult = await new LiveModuleReader(connectionString).ReadAsync();
+            var parseResults = moduleResult.Modules
+                .Select(m => SqlScriptParser.ParseText(m.QualifiedName, m.Definition, m.UsesQuotedIdentifier))
+                .ToList();
+
+            var catalog = CatalogBuilder.Build(parseResults, manifestAnsiNullDefaultOn: false);
+            var staticIsNullable = catalog.Find("#t", "dbo.usp_DbOptionOff")!.FindColumn("Col")!.IsNullable;
+
+            Assert.True(realIsNullable);
+            Assert.Equal(realIsNullable, staticIsNullable);
+        }
+        finally
+        {
+            await provisioner.DropIfExistsAsync(databaseName);
+        }
+    }
+
+    [Fact]
     public async Task Build_ComputedColumnUnderAnsiNullDfltOff_MatchesRealEngineIgnoringTheOverride()
     {
         const string deploymentSql = """

@@ -1110,10 +1110,19 @@ public sealed class CatalogBuilderTests
     }
 
     [Fact]
-    public void Build_ColumnWithNoExplicitNullability_UnderDatabaseAnsiNullDefaultOff_DefaultsToNotNull()
+    public void Build_ColumnWithNoExplicitNullability_UnderDatabaseAnsiNullDefaultOff_StaysNullableBecauseClientSessionsOverrideTheDatabaseOption()
     {
         var catalog = CatalogBuilder.Build(
             [Parse("CREATE TABLE dbo.T (Col INT);")], manifestAnsiNullDefaultOn: false);
+
+        Assert.True(catalog.Find("dbo.T")!.FindColumn("Col")!.IsNullable);
+    }
+
+    [Fact]
+    public void Build_ColumnWithNoExplicitNullability_InScriptSetOffStillNotNullUnderDatabaseAnsiNullDefaultOn()
+    {
+        var catalog = CatalogBuilder.Build(
+            [Parse("SET ANSI_NULL_DFLT_OFF ON; CREATE TABLE dbo.T (Col INT);")], manifestAnsiNullDefaultOn: true);
 
         Assert.False(catalog.Find("dbo.T")!.FindColumn("Col")!.IsNullable);
     }

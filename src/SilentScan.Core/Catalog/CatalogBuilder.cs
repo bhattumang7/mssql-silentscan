@@ -154,7 +154,7 @@ public static class CatalogBuilder
         private string? _currentScope;
 
         private bool ResolveDefaultNullable(TSqlStatement node) =>
-            (_ansiNullDfltByStatement.TryGetValue(node, out var value) ? value : null) ?? catalog.IsAnsiNullDefaultOn ?? true;
+            (_ansiNullDfltByStatement.TryGetValue(node, out var value) ? value : null) ?? true;
 
         public override void ExplicitVisit(CreateTypeUddtStatement node)
         {

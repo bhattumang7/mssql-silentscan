@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
@@ -69,6 +70,19 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
             SELECT NoteId FROM dbo.Notes WHERE Body IS NULL;
         END
         GO
+        CREATE PROCEDURE dbo.P_TempUnspecifiedNullabilityQueriedForNull AS
+        BEGIN
+            CREATE TABLE #Unspecified (V INT);
+            INSERT INTO #Unspecified (V) VALUES (NULL);
+            SELECT V FROM #Unspecified WHERE V IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_TempExplicitNotNullQueriedForNull AS
+        BEGIN
+            CREATE TABLE #Explicit (V INT NOT NULL);
+            SELECT V FROM #Explicit WHERE V IS NULL;
+        END
+        GO
         CREATE PROCEDURE dbo.P_ParameterNoFire AS
         BEGIN
             DECLARE @amt INT = -5;
@@ -96,10 +110,18 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
         var catalog = await new LiveCatalogReader(connectionString).ReadAsync();
         var moduleResult = await new LiveModuleReader(connectionString).ReadAsync();
 
+        var parseResults = moduleResult.Modules
+            .Select(m => SqlScriptParser.ParseText(m.QualifiedName, m.Definition, m.UsesQuotedIdentifier, catalog.CompatibilityLevel))
+            .ToList();
+
+        var knownPermanentTables = catalog.Tables.Where(t => t.Kind == CatalogTableKind.Table).ToList();
+        catalog.MergeFileModeExtras(CatalogBuilder.Build(
+            parseResults, catalog.DefaultCollation?.Name, catalog.TempdbCollation?.Name, catalog.IsAnsiNullDefaultOn,
+            knownTables: knownPermanentTables));
+
         var findings = new List<CheckConstraintPredicateContradictionFinding>();
-        foreach (var module in moduleResult.Modules)
+        foreach (var parseResult in parseResults)
         {
-            var parseResult = SqlScriptParser.ParseText(module.QualifiedName, module.Definition, module.UsesQuotedIdentifier, catalog.CompatibilityLevel);
             findings.AddRange(CheckConstraintPredicateContradictionScanner.Scan(parseResult, catalog));
         }
 
@@ -215,6 +237,25 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
 
         Assert.Empty(notNullQueryRows);
         Assert.Single(nullableQueryRows);
+    }
+
+    [Fact]
+    public async Task TempTableColumnWithUnspecifiedNullability_DoesNotFire_ExplicitNotNullControlFires()
+    {
+        var procedures = await ProcedureNamesWithFindingsAsync(CheckConstraintPredicateContradictionKind.NotNullConstraint);
+
+        Assert.DoesNotContain(procedures, p => p.Contains("P_TempUnspecifiedNullabilityQueriedForNull", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(procedures, p => p.Contains("P_TempExplicitNotNullQueriedForNull", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TempTableColumnWithUnspecifiedNullability_RealExecutionReturnsTheNullRow_ExplicitNotNullControlReturnsNone()
+    {
+        var unspecifiedRows = await RowsAsync("EXEC dbo.P_TempUnspecifiedNullabilityQueriedForNull;");
+        var explicitNotNullRows = await RowsAsync("EXEC dbo.P_TempExplicitNotNullQueriedForNull;");
+
+        Assert.Single(unspecifiedRows);
+        Assert.Empty(explicitNotNullRows);
     }
 
     [Fact]
