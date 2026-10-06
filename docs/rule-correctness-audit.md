@@ -547,6 +547,27 @@ statement — is uncontroversial syntax, not a claim needing verification).
   wrapped indexed column still plans as a seek, while the same equality under
   OR does not. Fixed by skipping wraps beside a full-key equality on a unique
   index of the same table, in WHERE or an inner-join ON.
+- `IndexCoverageScanner` (key-lookup-prone), `CompositeIndexLeadingColumnScanner`
+  — root cause: outer-join semantics ignored. A constant compared in the ON
+  clause of an outer join against a column of the preserved side was counted as
+  a row filter. Oracle-confirmed that such a predicate filters nothing: the
+  preserved side is scanned in full with no Key Lookup and no pushed predicate,
+  while the same constant on the null-supplied side, or in WHERE, still plans as
+  a seek plus lookup. Fixed by excluding those comparisons from the row-filter
+  sets both scanners consume. The statistics scanner sharing the visitor keeps
+  the unfiltered sets.
+- `CompositeIndexLeadingColumnScanner` — root cause: competing access path
+  ignored. A composite index was reported although another index on the table
+  leads with a column the same statement compares to a constant, which the
+  engine seeks instead. Oracle-confirmed, with a sibling table lacking that
+  index staying a scan. Only constant comparisons count; a join-key equality
+  does not, because the engine still scans there.
+- `ExpressionTypeInferencer` string concatenation — root cause: category
+  mismatch fell back to the wider-of-two rule instead of summing lengths.
+  `varchar(11) + ', ' + char(8)` inferred length 13, the engine reports 21.
+  Fixed by deriving the result category (unicode if either side is, variable
+  if either side is) and summing lengths for every char/varchar/nchar/nvarchar
+  pairing, oracle-checked against the engine's described result type.
 
 ---
 
