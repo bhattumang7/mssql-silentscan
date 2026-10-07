@@ -115,6 +115,46 @@ public sealed class CheckConstraintScannerTests
         Assert.Equal("A", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("(ISNULL([Qty],(0))>(0))")]
+    [InlineData("(COALESCE([Qty],(0))>(0))")]
+    [InlineData("(CASE WHEN [Qty]>(0) THEN (1) ELSE (0) END=(1))")]
+    [InlineData("([dbo].[IsPositive]([Qty])=(1))")]
+    [InlineData("([Id]>(0) AND [dbo].[IsPositive]([Qty])=(1) OR [Id]<=(0))")]
+    [InlineData("(COALESCE([Qty],[Id]) IS NOT NULL)")]
+    public void NullableColumn_OnlyReachedThroughNullReplacingOrUserCode_NeverFires(string definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id"), Column("Qty", isNullable: true)]));
+        catalog.AddCheckConstraint(new CatalogCheckConstraint(
+            "CK_Orders_Qty", "dbo.Orders", IsNotTrusted: false, IsDisabled: false, DefinitionText: definition));
+
+        var findings = CheckConstraintScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.Kind == CheckConstraintFindingKind.NullNotHandled);
+    }
+
+    [Theory]
+    [InlineData("(LEN([Qty])>(0))")]
+    [InlineData("(ABS([Qty])>(0))")]
+    [InlineData("(([Qty]+(1))>(0))")]
+    [InlineData("(CAST([Qty] AS BIGINT)>(0))")]
+    [InlineData("([Qty] IN ((1),(2)))")]
+    [InlineData("([Qty] BETWEEN (1) AND (5))")]
+    [InlineData("(ISNULL([Id],(0))>(0) AND [Qty]>(0))")]
+    public void NullableColumn_ReachedThroughNullPropagatingExpression_StillFires(string definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id"), Column("Qty", isNullable: true)]));
+        catalog.AddCheckConstraint(new CatalogCheckConstraint(
+            "CK_Orders_Qty", "dbo.Orders", IsNotTrusted: false, IsDisabled: false, DefinitionText: definition));
+
+        var findings = CheckConstraintScanner.Scan(catalog);
+
+        var finding = Assert.Single(findings, f => f.Kind == CheckConstraintFindingKind.NullNotHandled);
+        Assert.Equal("Qty", finding.ColumnName);
+    }
+
     [Fact]
     public void DisabledConstraint_NeverFires()
     {

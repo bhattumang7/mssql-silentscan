@@ -27,6 +27,19 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: NULL assumed to reach the comparison as UNKNOWN.**
+  `catalog/check-constraint-null-not-handled` reported any nullable column
+  mentioned anywhere in a CHECK predicate without an IS NULL test, including
+  columns reachable only through `ISNULL`/`COALESCE`, a CASE expression or a
+  user-defined function. Oracle: `ISNULL(Qty, 0) > 0` and a user function that
+  maps NULL to 0 both reject a NULL insert (error 547), while `LEN(Qty) > 0`
+  admits it. Fixed by walking the predicate's boolean structure and counting a
+  column only when it is compared directly or through arithmetic, CAST/CONVERT
+  or a fixed list of null-propagating built-ins. Sibling sweep:
+  `not-in-nullable-subquery` requires a bare selected column (no wrapping), and
+  `default-constraint-on-nullable-column` reads defaults, not predicates; both
+  clean.
+
 - **Category: filtered-index claim made for a module that never restates the
   filter.** The `set-option/*` rules (quoted-identifier-off, ansi-nulls-off,
   numeric-roundabort-on, ansi-warnings-off, concat-null-yields-null-off,

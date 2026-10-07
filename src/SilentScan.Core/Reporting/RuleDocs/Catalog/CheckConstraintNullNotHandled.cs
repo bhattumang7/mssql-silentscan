@@ -28,6 +28,12 @@ internal static class CheckConstraintNullNotHandled
             almost always to forbid bad data, and NULL sailing through untested is very rarely the
             intended behavior, which is exactly what makes this a routine, unnoticed data-quality
             hole rather than a deliberate design choice.
+
+            The rule reports a column only when NULL really reaches a comparison as UNKNOWN: the
+            column is compared directly or through null-propagating arithmetic, string, date or
+            CAST/CONVERT expressions. A column that is only reached through ISNULL/COALESCE, a CASE
+            expression or a user-defined function is not reported - there the NULL is replaced or
+            decided by other code, so the predicate evaluates to TRUE or FALSE instead of UNKNOWN.
             """,
         HowToFixIt: """
             Add an explicit IS NULL or IS NOT NULL test for the column in the CHECK constraint's own

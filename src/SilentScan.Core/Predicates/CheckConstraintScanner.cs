@@ -49,6 +49,9 @@ public static class CheckConstraintScanner
         var columnRefVisitor = new ColumnNameCollector(referencedColumnNames);
         searchCondition.Accept(columnRefVisitor);
 
+        var unknownExposedColumnNames = new HashSet<string>(catalog.IdentifierComparer);
+        UnknownExposure.Collect(searchCondition, unknownExposedColumnNames);
+
         var nullGuardedColumnNames = new HashSet<string>(catalog.IdentifierComparer);
         var nullGuardVisitor = new NullGuardCollector(nullGuardedColumnNames);
         searchCondition.Accept(nullGuardVisitor);
@@ -64,7 +67,7 @@ public static class CheckConstraintScanner
                 continue;
             }
 
-            if (catalogColumn.IsNullable && !nullGuardedColumnNames.Contains(columnName))
+            if (catalogColumn.IsNullable && unknownExposedColumnNames.Contains(columnName) && !nullGuardedColumnNames.Contains(columnName))
             {
                 findings.Add(new CheckConstraintFinding(
                     CheckConstraintFindingKind.NullNotHandled, check.ConstraintName, check.TableQualifiedName,
@@ -103,6 +106,89 @@ public static class CheckConstraintScanner
 
             base.ExplicitVisit(node);
         }
+    }
+
+    private static class UnknownExposure
+    {
+        private static readonly HashSet<string> NullPropagatingFunctions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "LEN", "DATALENGTH", "CHARINDEX", "PATINDEX", "UPPER", "LOWER", "LTRIM", "RTRIM", "TRIM", "ABS",
+            "SUBSTRING", "LEFT", "RIGHT", "REPLACE", "REVERSE", "DATEDIFF", "DATEADD", "DATEPART", "YEAR", "MONTH",
+            "DAY", "FLOOR", "CEILING", "ROUND", "SIGN", "SQRT", "POWER",
+        };
+
+        public static void Collect(BooleanExpression condition, HashSet<string> names)
+        {
+            switch (condition)
+            {
+                case BooleanParenthesisExpression parenthesis:
+                    Collect(parenthesis.Expression, names);
+                    break;
+                case BooleanNotExpression not:
+                    Collect(not.Expression, names);
+                    break;
+                case BooleanBinaryExpression binary:
+                    Collect(binary.FirstExpression, names);
+                    Collect(binary.SecondExpression, names);
+                    break;
+                case BooleanComparisonExpression comparison:
+                    Collect(comparison.FirstExpression, names);
+                    Collect(comparison.SecondExpression, names);
+                    break;
+                case InPredicate inPredicate:
+                    Collect(inPredicate.Expression, names);
+                    foreach (var value in inPredicate.Values)
+                    {
+                        Collect(value, names);
+                    }
+
+                    break;
+                case LikePredicate like:
+                    Collect(like.FirstExpression, names);
+                    Collect(like.SecondExpression, names);
+                    break;
+                case BooleanTernaryExpression ternary:
+                    Collect(ternary.FirstExpression, names);
+                    Collect(ternary.SecondExpression, names);
+                    Collect(ternary.ThirdExpression, names);
+                    break;
+            }
+        }
+
+        private static void Collect(ScalarExpression expression, HashSet<string> names)
+        {
+            switch (expression)
+            {
+                case ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers }:
+                    names.Add(identifiers[^1].Value);
+                    break;
+                case ParenthesisExpression parenthesis:
+                    Collect(parenthesis.Expression, names);
+                    break;
+                case UnaryExpression unary:
+                    Collect(unary.Expression, names);
+                    break;
+                case BinaryExpression binary:
+                    Collect(binary.FirstExpression, names);
+                    Collect(binary.SecondExpression, names);
+                    break;
+                case CastCall cast:
+                    Collect(cast.Parameter, names);
+                    break;
+                case ConvertCall convert:
+                    Collect(convert.Parameter, names);
+                    break;
+                case FunctionCall { CallTarget: null } function when NullPropagatingFunctions.Contains(function.FunctionName.Value):
+                    foreach (var parameter in function.Parameters.Skip(DatePartFunctions.Contains(function.FunctionName.Value) ? 1 : 0))
+                    {
+                        Collect(parameter, names);
+                    }
+
+                    break;
+            }
+        }
+
+        private static readonly HashSet<string> DatePartFunctions = new(StringComparer.OrdinalIgnoreCase) { "DATEDIFF", "DATEADD", "DATEPART" };
     }
 
     private sealed class NullGuardCollector(HashSet<string> names) : TSqlFragmentVisitor

@@ -17,6 +17,11 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE TABLE dbo.ChkCoalesceRejects (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkCoalesceRejects CHECK (COALESCE(Qty, 0) > 0));
         GO
+        CREATE FUNCTION dbo.ChkNullPositive(@v INT) RETURNS BIT AS BEGIN RETURN CASE WHEN @v > 0 THEN 1 ELSE 0 END; END;
+        GO
+        CREATE TABLE dbo.ChkNullUdf (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkNullUdf CHECK (dbo.ChkNullPositive(Qty) = 1));
+        CREATE TABLE dbo.ChkNullLen (Id INT NOT NULL, Qty VARCHAR(10) NULL, CONSTRAINT CK_ChkNullLen CHECK (LEN(Qty) > 0));
+        GO
         GO
         CREATE TABLE dbo.DfNullable (Id INT NOT NULL, Status INT NULL CONSTRAINT DF_DfNullable DEFAULT 5);
         GO
@@ -76,6 +81,15 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChkNull WHERE Qty IS NULL;"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNull VALUES (2, -1);"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullSafe VALUES (1, NULL);"));
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.CheckConstraintNullNotHandledRuleId)]
+    public async Task NullPassedToUserFunction_IsDecidedWithoutUnknown_WhileNullPropagatingExpressionLetsNullThrough()
+    {
+        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullUdf VALUES (1, NULL);"));
+        Assert.Null(await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullLen VALUES (1, NULL);"));
+        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullLen VALUES (2, '');"));
     }
 
     [Fact]
