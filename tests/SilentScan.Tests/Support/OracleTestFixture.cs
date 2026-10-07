@@ -19,8 +19,18 @@ public abstract class OracleTestFixture : IAsyncLifetime
 
     public virtual async Task InitializeAsync()
     {
-        await new DatabaseProvisioner(Options).CreateFreshAsync(DatabaseName);
-        await new ScriptDeployer(Options).DeployAsync(Ddl, DatabaseName);
+        var provisioner = new DatabaseProvisioner(Options);
+        await provisioner.CreateFreshAsync(DatabaseName);
+        try
+        {
+            await new ScriptDeployer(Options).DeployAsync(Ddl, DatabaseName);
+        }
+        catch
+        {
+            SqlConnection.ClearAllPools();
+            await provisioner.DropIfExistsAsync(DatabaseName);
+            throw;
+        }
     }
 
     public virtual async Task DisposeAsync()

@@ -37,15 +37,23 @@ public sealed partial class DatabaseProvisioner
             await DropIfExistsCoreAsync(connection, databaseName, cancellationToken);
             var collateClause = collationName is null ? string.Empty : $" COLLATE {collationName}";
             await ExecuteAsync(connection, $"CREATE DATABASE [{databaseName}]{collateClause};", cancellationToken);
-            var (currentLevel, queryStoreOn) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
-            if (currentLevel != PinnedCompatibilityLevel)
+            try
             {
-                await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
-            }
+                var (currentLevel, queryStoreOn) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
+                if (currentLevel != PinnedCompatibilityLevel)
+                {
+                    await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
+                }
 
-            if (queryStoreOn)
+                if (queryStoreOn)
+                {
+                    await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+                }
+            }
+            catch
             {
-                await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+                await DropIfExistsCoreAsync(connection, databaseName, CancellationToken.None);
+                throw;
             }
         }
         finally
