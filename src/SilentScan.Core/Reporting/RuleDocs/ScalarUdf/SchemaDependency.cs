@@ -21,6 +21,12 @@ internal static class SchemaDependency
             plans on the same table stay parallel-capable. None of this depends on whether the
             function is provably inlineable at that engine version.
 
+            One exception keeps the DEFAULT case honest: a default that calls a schema-bound,
+            deterministic function that reads no table is evaluated once per statement, not once
+            per row, so the rule does not report it. A default that calls a function that is not
+            schema-bound, reads a table, or depends on the clock is evaluated for every inserted
+            row.
+
             This is also a genuinely different detection stream from the other scalar-UDF rules on
             this page: those are found by walking a query's predicate, SELECT list, or dependency
             chain through views and TVFs. This one is found by walking the catalog alone - a

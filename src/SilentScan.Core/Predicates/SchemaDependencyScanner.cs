@@ -35,6 +35,11 @@ public static class SchemaDependencyScanner
                     continue;
                 }
 
+                if (reference.Kind == SchemaDependencyKind.DefaultConstraint && !IsEvaluatedPerRow(info))
+                {
+                    continue;
+                }
+
                 var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel, catalog.IsScopedConfigurationDisabled("TSQL_SCALAR_UDF_INLINING"));
 
                 findings.Add(new ScalarUdfFinding(
@@ -58,6 +63,13 @@ public static class SchemaDependencyScanner
 
         return findings;
     }
+
+    private static bool IsEvaluatedPerRow(ScalarUdfInfo info) =>
+        info.IsSchemaBound == false
+        || info.InlineabilityTableReferenceCount > 0
+        || (info.InlineabilityBlocker?.StartsWith(TimeDependentBlockerPrefix, StringComparison.Ordinal) ?? false);
+
+    private const string TimeDependentBlockerPrefix = "time-dependent intrinsic";
 
     private static TSqlFragment? TryParse(SchemaExpressionReference reference, int? compatibilityLevel)
     {

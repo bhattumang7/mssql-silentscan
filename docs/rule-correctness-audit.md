@@ -27,6 +27,17 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: per-row cost assumed for a construct the engine evaluates once.**
+  `scalar-udf/in-computed-column-or-constraint` reported every DEFAULT that
+  calls a scalar UDF as per-row cost. Oracle (function-stats execution counts
+  over a multi-row INSERT): a default calling a schema-bound deterministic UDF
+  that reads no table runs once per statement, while a non-schema-bound UDF, a
+  schema-bound UDF reading a table, a clock-dependent UDF and a non-persisted
+  computed column's UDF all run once per row. Fixed by reporting a default only
+  when the function is not schema-bound, reads a table, or is time-dependent;
+  the rationale and rule page no longer claim a default affects every query.
+  Sibling sweep: the computed-column and CHECK kinds were engine-confirmed
+  per-row and serial; no other scanner reasons about default evaluation.
 - **Category: NULL assumed to reach the comparison as UNKNOWN.**
   `catalog/check-constraint-null-not-handled` reported any nullable column
   mentioned anywhere in a CHECK predicate without an IS NULL test, including

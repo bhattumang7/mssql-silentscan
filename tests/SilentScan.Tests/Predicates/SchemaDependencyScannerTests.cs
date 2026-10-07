@@ -116,6 +116,57 @@ public sealed class SchemaDependencyScannerTests
     }
 
     [Fact]
+    public void ColumnDefaultCallingSchemaBoundTableFreeUdf_DoesNotFire()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Const() RETURNS INT WITH SCHEMABINDING AS BEGIN RETURN 5; END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL, Code INT NOT NULL DEFAULT (dbo.fn_Const()));
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void ColumnDefaultCallingSchemaBoundUdfReadingATable_Fires()
+    {
+        var findings = ScanSql("""
+            CREATE TABLE dbo.Src (V INT NOT NULL);
+            GO
+            CREATE FUNCTION dbo.fn_Read() RETURNS INT WITH SCHEMABINDING AS BEGIN RETURN (SELECT MAX(V) FROM dbo.Src); END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL, Code INT NOT NULL DEFAULT (dbo.fn_Read()));
+            """);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(SchemaDependencyKind.DefaultConstraint, finding.SchemaDependencyKind);
+    }
+
+    [Fact]
+    public void ColumnDefaultCallingSchemaBoundUdfUsingTheClock_Fires()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Now() RETURNS DATETIME WITH SCHEMABINDING AS BEGIN RETURN GETDATE(); END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL, At DATETIME NOT NULL DEFAULT (dbo.fn_Now()));
+            """);
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void ComputedColumnCallingSchemaBoundTableFreeUdf_StillFires()
+    {
+        var findings = ScanSql("""
+            CREATE FUNCTION dbo.fn_Const(@x INT) RETURNS INT WITH SCHEMABINDING AS BEGIN RETURN @x + 1; END;
+            GO
+            CREATE TABLE dbo.T (Id INT NOT NULL, Computed AS dbo.fn_Const(Id));
+            """);
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
     public void ColumnLevelCheckConstraintCallingScalarUdf_Fires()
     {
         var findings = ScanSql("""
