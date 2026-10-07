@@ -34,7 +34,7 @@ public sealed class DynamicSqlScopePropagationTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
 
         var scanForcedFindings = report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Where(f => f.Verdict == Verdict.ScanForced).ToList();
         Assert.Equal(2, scanForcedFindings.Count);

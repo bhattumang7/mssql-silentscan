@@ -48,7 +48,7 @@ public sealed class CorpusSummaryRegressionTripwireTests
         Assert.Equal(6, report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count);
         Assert.Empty(report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor"));
         Assert.Empty(report.Find<WriteLossFinding>("TypedPredicateExtractor"));
-        Assert.Equal(5, report.Find<DynamicSqlFinding>("DynamicSqlScanner").Count);
+        Assert.Equal(5, report.DynamicSqlCallSites.Count);
         Assert.Single(report.SkippedConstructs);
     }
 }

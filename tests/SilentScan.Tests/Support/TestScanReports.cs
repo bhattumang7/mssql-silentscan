@@ -107,7 +107,6 @@ public static class TestScanReports
         Set("TypedPredicateExtractor", AnsiPaddingMismatchFindings);
         Set("TypedPredicateExtractor", LocalVariablePredicateFindings);
         Set("TypedPredicateExtractor", FilteredIndexParameterMismatchFindings);
-        Set("DynamicSqlScanner", DynamicSqlFindings);
         Set("DynamicSqlScanner", UnparameterizedDynamicSqlFindings);
         Set("TvfFenceScanner", TvfFenceFindings);
         Set("ScalarUdfScanner", ScalarUdfFindings);
@@ -177,6 +176,7 @@ public static class TestScanReports
             SkippedConstructSummary ?? SkippedConstructSummary.From([]),
             TypedPredicateSummary ?? TypedPredicateSummary.From([]),
             DynamicSqlSummary ?? DynamicSqlSummary.From([]),
+            DynamicSqlFindings ?? [],
             SchemaVersion);
     }
 }

@@ -10,9 +10,10 @@ public sealed record ScanReport(
     SkippedConstructSummary SkippedConstructSummary,
     TypedPredicateSummary TypedPredicateSummary,
     DynamicSqlSummary DynamicSqlSummary,
+    IReadOnlyList<DynamicSqlFinding> DynamicSqlCallSites,
     int SchemaVersion = ScanReport.CurrentSchemaVersion)
 {
-    public const int CurrentSchemaVersion = 81;
+    public const int CurrentSchemaVersion = 82;
 
     public IReadOnlyList<RuleCatalogEntry> RuleCatalog { get; } = RuleCatalogEntries.All;
 

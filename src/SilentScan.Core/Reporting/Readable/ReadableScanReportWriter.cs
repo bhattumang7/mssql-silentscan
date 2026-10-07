@@ -2300,7 +2300,7 @@ public static class ReadableScanReportWriter
 
     private static IEnumerable<ReadableBlock> DynamicSql(ScanReport report, int level, string? pathBase, ReadableVerbosity verbosity)
     {
-        var unresolved = report.Find<DynamicSqlFinding>(DynamicSqlRuleId)
+        var unresolved = report.DynamicSqlCallSites
             .Where(f => f.Outcome != DynamicSqlOutcome.AnalyzedLiteral)
             .ToList();
 

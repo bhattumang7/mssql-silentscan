@@ -235,7 +235,7 @@ public static class ScanReportBuilder
                 .. underLengthParameterFindings, .. ansiPaddingMismatchFindings,
                 .. localVariablePredicateFindings, .. filteredIndexParameterMismatchFindings,
             ],
-            ["DynamicSqlScanner"] = [.. dynamicSqlFindings, .. unparameterizedDynamicSqlFindings],
+            ["DynamicSqlScanner"] = unparameterizedDynamicSqlFindings,
             ["ForcedParameterizationScanner"] = [.. (dynamicSqlResult.ForcedParameterizationFindings ?? [])
                 .OrderBy(f => f.Kind)
                 .ThenBy(f => f.SourcePath, StringComparer.Ordinal)
@@ -264,7 +264,7 @@ public static class ScanReportBuilder
 
         return new ScanReport(
             new ParseHealthReport(fileHealth), findingsByRuleId,
-            orderedSkippedConstructs, SkippedConstructSummary.From(orderedSkippedConstructs), typedPredicateSummary, dynamicSqlSummary);
+            orderedSkippedConstructs, SkippedConstructSummary.From(orderedSkippedConstructs), typedPredicateSummary, dynamicSqlSummary, dynamicSqlFindings);
     }
 
     private static (HashSet<string> UsableSourcePaths, int UsableCount) CollectUsableSourcePaths(

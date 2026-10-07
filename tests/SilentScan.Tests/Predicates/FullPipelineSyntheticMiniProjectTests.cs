@@ -114,7 +114,7 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
     public void DynamicSqlUnanalyzable_IsPlantedAndFound()
     {
 
-        var finding = Assert.Single(_report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        var finding = Assert.Single(_report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
 
         Assert.Equal("symbolic-value-not-positionable:whole-statement", finding.Reason);
     }
@@ -123,7 +123,7 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
     public void DynamicSqlLiteralOnly_NoInnerFinding_IsAnalyzedWithNoFurtherFindings()
     {
 
-        var analyzed = _report.Find<DynamicSqlFinding>("DynamicSqlScanner").Where(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral).ToList();
+        var analyzed = _report.DynamicSqlCallSites.Where(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral).ToList();
 
         Assert.Equal(4, analyzed.Count);
     }
@@ -132,7 +132,7 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
     public void DynamicSqlCleanTwin_OrdinaryProcCall_ProducesNoFinding()
     {
 
-        Assert.Equal(5, _report.Find<DynamicSqlFinding>("DynamicSqlScanner").Count);
+        Assert.Equal(5, _report.DynamicSqlCallSites.Count);
     }
 
     [Fact]

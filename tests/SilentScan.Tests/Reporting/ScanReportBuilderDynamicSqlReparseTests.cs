@@ -42,7 +42,7 @@ public sealed class ScanReportBuilderDynamicSqlReparseTests
 
         var report = ScanReportBuilder.BuildFromParseResults(countingSource, catalog);
 
-        var finding = Assert.Single(report.Find<DynamicSqlFinding>("DynamicSqlScanner"));
+        var finding = Assert.Single(report.DynamicSqlCallSites);
         Assert.Equal(DynamicSqlOutcome.AnalyzedLiteral, finding.Outcome);
 
         Assert.True(

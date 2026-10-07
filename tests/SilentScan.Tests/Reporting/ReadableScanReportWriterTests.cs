@@ -745,7 +745,7 @@ public sealed class ReadableScanReportWriterTests
             new DynamicSqlFinding("a.sql", 3, 1, DynamicSqlOutcome.PartiallyAnalyzed, null),
             new DynamicSqlFinding("a.sql", 4, 1, DynamicSqlOutcome.InnerParseFailed, null),
         };
-        var report = Blank().WithFindings("DynamicSqlScanner", findings) with { DynamicSqlSummary = DynamicSqlSummary.From(findings) };
+        var report = Blank() with { DynamicSqlCallSites = findings, DynamicSqlSummary = DynamicSqlSummary.From(findings) };
 
         var blocks = BuildBlocks(report);
         var heading = blocks.OfType<ReadableBlock.Heading>().First(h => h.Text.Contains("Dynamic SQL not fully analyzed", StringComparison.Ordinal));
@@ -764,7 +764,7 @@ public sealed class ReadableScanReportWriterTests
     public void DynamicSql_Brief_OmitsTableShowsPointer()
     {
         var findings = new[] { new DynamicSqlFinding("a.sql", 2, 1, DynamicSqlOutcome.Unanalyzable, "runtime value") };
-        var report = Blank().WithFindings("DynamicSqlScanner", findings) with { DynamicSqlSummary = DynamicSqlSummary.From(findings) };
+        var report = Blank() with { DynamicSqlCallSites = findings, DynamicSqlSummary = DynamicSqlSummary.From(findings) };
 
         var blocks = BuildBlocks(report, verbosity: ReadableVerbosity.Brief);
 

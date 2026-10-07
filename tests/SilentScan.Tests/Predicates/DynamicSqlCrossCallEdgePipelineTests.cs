@@ -42,7 +42,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
         Assert.True(finding.Column.Indexed);
         Assert.NotNull(finding.DynamicSqlCallSite);
-        Assert.DoesNotContain(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Reason?.StartsWith("variable-not-in-scope", StringComparison.Ordinal) == true);
+        Assert.DoesNotContain(report.DynamicSqlCallSites, f => f.Reason?.StartsWith("variable-not-in-scope", StringComparison.Ordinal) == true);
     }
 
     [Fact]
@@ -92,8 +92,8 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             CREATE PROCEDURE dbo.usp_CallerB AS BEGIN EXEC dbo.usp_FindByStatus @Status = N'Closed'; END;
             """);
 
-        var onlyCallerACount = withOnlyCallerA.Find<DynamicSqlFinding>("DynamicSqlScanner").Count(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
-        var bothCallersCount = withBothCallers.Find<DynamicSqlFinding>("DynamicSqlScanner").Count(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
+        var onlyCallerACount = withOnlyCallerA.DynamicSqlCallSites.Count(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
+        var bothCallersCount = withBothCallers.DynamicSqlCallSites.Count(f => f.Outcome == DynamicSqlOutcome.AnalyzedLiteral);
 
         Assert.Equal(onlyCallerACount + 1, bothCallersCount);
 
@@ -133,7 +133,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
         Assert.Empty(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
     }
@@ -150,7 +150,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
         Assert.Empty(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
     }
@@ -167,7 +167,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        var finding = Assert.Single(report.Find<DynamicSqlFinding>("DynamicSqlScanner"));
+        var finding = Assert.Single(report.DynamicSqlCallSites);
         Assert.Equal(DynamicSqlOutcome.Unanalyzable, finding.Outcome);
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
         Assert.Empty(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
@@ -189,7 +189,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Status");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
         Assert.True(finding.Column.Indexed);
@@ -212,7 +212,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Name");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
         Assert.True(finding.Column.Indexed);
@@ -235,7 +235,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """);
 
-        Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
+        Assert.Contains(report.DynamicSqlCallSites, f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
     }
 
@@ -267,7 +267,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             [.. report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Select(f => $"{f.Column.TableQualifiedName}.{f.Column.ColumnName}:{f.Verdict}:{f.Confidence}")];
 
         static IReadOnlyList<string> DynamicShape(Core.Reporting.ScanReport report) =>
-            [.. report.Find<DynamicSqlFinding>("DynamicSqlScanner").Select(f => $"{f.Outcome}:{f.Reason}").OrderBy(s => s, StringComparer.Ordinal)];
+            [.. report.DynamicSqlCallSites.Select(f => $"{f.Outcome}:{f.Reason}").OrderBy(s => s, StringComparer.Ordinal)];
 
         Assert.Contains(viaDefault.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.TableQualifiedName == "dbo.Small");
         Assert.Equal(TypedShape(viaLiteralArgument), TypedShape(viaDefault));

@@ -68,6 +68,31 @@ public sealed class ScanReportBuilderFindingAssemblyTests
     }
 
     [Fact]
+    public void UnanalyzableDynamicSql_IsACoverageRecord_NeverAFindingWithoutARuleId()
+    {
+        const string Sql = """
+            CREATE TABLE dbo.T (Col INT NOT NULL);
+            GO
+            CREATE PROCEDURE dbo.usp_Run @Sql NVARCHAR(MAX) AS
+            BEGIN
+                EXEC(@Sql);
+            END
+            """;
+        var parseResult = SqlScriptParser.ParseText("dyn.sql", Sql);
+        Assert.False(parseResult.HasErrors);
+
+        var report = ScanReportBuilder.BuildFromParseResults([parseResult], CatalogBuilder.Build([parseResult]));
+
+        var withoutRuleId = report.FindingsByRuleId.Values.SelectMany(findings => findings)
+            .Where(f => f.GetType().GetProperty("RuleId")?.GetValue(f) is not string)
+            .ToList();
+        Assert.Empty(withoutRuleId);
+        Assert.Equal(1, report.DynamicSqlSummary.UnanalyzableCount);
+        var coverage = Assert.Single(report.DynamicSqlCallSites);
+        Assert.Equal(DynamicSqlOutcome.Unanalyzable, coverage.Outcome);
+    }
+
+    [Fact]
     public void EmptyParseResults_ProduceAnEmptyReportAcrossEveryStreamWithoutThrowing()
     {
         var report = ScanReportBuilder.BuildFromParseResults([], new DatabaseCatalog());
@@ -75,7 +100,7 @@ public sealed class ScanReportBuilderFindingAssemblyTests
         Assert.Empty(report.ParseHealth.Files);
         Assert.Empty(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
-        Assert.Empty(report.Find<DynamicSqlFinding>("DynamicSqlScanner"));
+        Assert.Empty(report.DynamicSqlCallSites);
         Assert.Empty(report.SkippedConstructs);
         Assert.Equal(0, report.TypedPredicateSummary.TotalClassified);
         Assert.Equal(0, report.DynamicSqlSummary.TotalCallSites);
