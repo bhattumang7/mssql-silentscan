@@ -30,10 +30,26 @@ public static class FloatEqualityPredicateScanner
 
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
-        public List<FloatEqualityFinding> Findings { get; } = [];
+        private readonly ExtremumCopyTracker _extremumCopies = new(sourcePath, catalog);
+        private readonly List<(FloatEqualityFinding Finding, ColumnProvenance.BaseColumn Column, ColumnProvenance.BaseColumn? Other)> _candidates = [];
 
-        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
+        public IReadOnlyList<FloatEqualityFinding> Findings =>
+            [.. _candidates.Where(c => !_extremumCopies.AreExactCopies(c.Column, c.Other)).Select(c => c.Finding)];
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            _extremumCopies.OnQuerySpecification(node, scopeChain);
             ModuleWalker.InspectAllPredicateLocations(node, scopeChain, Inspect);
+        }
+
+        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            _extremumCopies.OnInsert(node, walker);
+
+        public void OnEnterAssignmentSetClause(AssignmentSetClause node, ModuleWalker walker) =>
+            _extremumCopies.OnAssignment(node);
+
+        public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            _extremumCopies.OnMerge(node);
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
             ModuleWalker.InspectAllPredicateLocations(node, scopeChain, Inspect);
@@ -62,13 +78,15 @@ public static class FloatEqualityPredicateScanner
                     continue;
                 }
 
-                Findings.Add(new FloatEqualityFinding(
+                var otherSide = ReferenceEquals(side, comparison.FirstExpression) ? comparison.SecondExpression : comparison.FirstExpression;
+                var finding = new FloatEqualityFinding(
                     resolved.TableQualifiedName,
                     resolved.ColumnName,
                     resolved.Type!.ToString(),
                     sourcePath,
                     comparison.StartLine,
-                    comparison.StartColumn));
+                    comparison.StartColumn);
+                _candidates.Add((finding, resolved, BaseColumnResolver.ResolveBaseColumn(otherSide, sourcePath, scopeChain, catalog)));
 
                 return;
             }

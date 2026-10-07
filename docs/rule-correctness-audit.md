@@ -27,6 +27,20 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: equality between a value and an exact copy of itself reported as approximate comparison.**
+  `predicates/float-equality` flagged a join or filter between a float column
+  and a table-variable or temp-table column that is populated only from `MIN`
+  or `MAX` (plain or windowed) of that same column, the idiom for locating the
+  row that holds an extreme. Oracle: `MIN`/`MAX` return an existing stored
+  value bit for bit, so the join back to the source matches, while a column
+  populated from `AVG` or a `MIN` later changed by an UPDATE misses the row.
+  Fixed by tracking, per module, INSERT...SELECT targets whose every write is a
+  `MIN`/`MAX` of one resolved base column (any other write, UPDATE assignment
+  of the column name, MERGE, or non-SELECT source disables it) and dropping a
+  finding whose two compared columns are such a pair. Sibling sweep:
+  `FloatOrderDependentAggregateScanner` only concerns SUM/AVG-style aggregates
+  and does not treat MIN/MAX as order dependent; no other scanner compares
+  float columns.
 - **Category: positional INSERT mapped onto columns the engine does not fill from the value list.**
   `write-loss/*` (all kinds extracted by `TypedPredicateExtractor`) paired the
   values of an `INSERT` with no column list against every column of the target
