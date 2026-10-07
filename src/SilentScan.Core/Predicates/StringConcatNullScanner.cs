@@ -151,16 +151,29 @@ public static class StringConcatNullScanner
         {
             var collector = new ConcatChainRootCollector();
             root.Accept(collector);
-            foreach (var chainRoot in collector.Roots)
+            foreach (var (chainRoot, nonNullColumns) in collector.Roots)
             {
-                InspectChain(chainRoot, scopeChain, nullRejected);
+                InspectChain(chainRoot, scopeChain, nullRejected, ResolveColumns(nonNullColumns, scopeChain));
             }
         }
+
+        private List<(string Table, string Column)> ResolveColumns(
+            IEnumerable<ColumnReferenceExpression> columns,
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain) =>
+            [.. columns
+                .Select(column => BaseColumnResolver.ResolveBaseColumn(column, sourcePath, scopeChain, catalog))
+                .Where(resolved => resolved is not null)
+                .Select(resolved => (resolved!.Value.TableQualifiedName, resolved.Value.ColumnName))];
+
+        private bool IsProvenNonNull(Leaf leaf, List<(string Table, string Column)> proven) =>
+            proven.Exists(p => catalog.IdentifierComparer.Equals(p.Table, leaf.TableQualifiedName)
+                && catalog.IdentifierComparer.Equals(p.Column, leaf.ColumnName));
 
         private void InspectChain(
             BinaryExpression chainRoot,
             IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
-            IReadOnlySet<string> nullRejected)
+            IReadOnlySet<string> nullRejected,
+            List<(string Table, string Column)> provenNonNull)
         {
             var leaves = new List<Leaf>();
             FlattenAddChain(chainRoot, scopeChain, leaves);
@@ -178,6 +191,7 @@ public static class StringConcatNullScanner
             }
 
             var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn
+                && !IsProvenNonNull(l, provenNonNull)
                 && !KeysOf(l).Any(key => nullRejected.Contains(key) || IsRejectedByAnEnclosingQuery(key)));
             if (nullableLeaf.TableQualifiedName is null)
             {
@@ -286,18 +300,36 @@ public static class StringConcatNullScanner
 
         private sealed class ConcatChainRootCollector : TSqlFragmentVisitor
         {
-            public List<BinaryExpression> Roots { get; } = [];
+            private readonly List<ColumnReferenceExpression> _nonNull = [];
+
+            public List<(BinaryExpression Root, IReadOnlyList<ColumnReferenceExpression> NonNullColumns)> Roots { get; } = [];
 
             public override void ExplicitVisit(BinaryExpression node)
             {
                 if (node.BinaryExpressionType == BinaryExpressionType.Add)
                 {
-                    Roots.Add(node);
+                    Roots.Add((node, [.. _nonNull]));
 
                     return;
                 }
 
                 base.ExplicitVisit(node);
+            }
+
+            public override void ExplicitVisit(SearchedCaseExpression node)
+            {
+                var priorFalse = new List<ColumnReferenceExpression>();
+                foreach (var clause in node.WhenClauses)
+                {
+                    VisitUnder(priorFalse, clause.WhenExpression);
+                    VisitUnder([.. priorFalse, .. NullImplication.NonNullWhenTrue(clause.WhenExpression)], clause.ThenExpression);
+                    priorFalse.AddRange(NullImplication.NonNullWhenFalse(clause.WhenExpression));
+                }
+
+                if (node.ElseExpression is not null)
+                {
+                    VisitUnder(priorFalse, node.ElseExpression);
+                }
             }
 
             public override void ExplicitVisit(FunctionCall node)
@@ -324,6 +356,14 @@ public static class StringConcatNullScanner
             public override void ExplicitVisit(QuerySpecification node)
             {
                 _ = node;
+            }
+
+            private void VisitUnder(List<ColumnReferenceExpression> facts, TSqlFragment fragment)
+            {
+                var added = facts.Count;
+                _nonNull.AddRange(facts);
+                fragment.Accept(this);
+                _nonNull.RemoveRange(_nonNull.Count - added, added);
             }
         }
     }

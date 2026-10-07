@@ -110,4 +110,32 @@ public sealed class StringConcatNullOracleTests : IAsyncLifetime
         Assert.Equal(0, reader.GetInt32(0));
         Assert.Equal(1, reader.GetInt32(1));
     }
+
+    private async Task<object?> ScalarAsync(string sql)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(sql, connection);
+        return await command.ExecuteScalarAsync();
+    }
+
+    private const string People = "(VALUES (1, CAST('x' AS VARCHAR(5))), (2, CAST(NULL AS VARCHAR(5))), (3, CAST('z' AS VARCHAR(5)))) AS p(Id, Name)";
+
+    [Fact]
+    public async Task ConcatenationInsideCaseBranchThatExcludesNull_NeverYieldsNull_WhileTheUnguardedControlDoes()
+    {
+        var guardedNulls = await ScalarAsync(
+            $"SELECT COUNT(*) FROM {People} WHERE CASE WHEN p.Name IS NULL THEN 'none' ELSE 'a' + p.Name END IS NULL;");
+        var comparisonGuardedNulls = await ScalarAsync(
+            $"SELECT COUNT(*) FROM {People} WHERE CASE WHEN p.Name <> '' THEN 'a' + p.Name ELSE 'none' END IS NULL;");
+        var unguardedNulls = await ScalarAsync(
+            $"SELECT COUNT(*) FROM {People} WHERE 'a' + p.Name IS NULL;");
+        var wrongBranchNulls = await ScalarAsync(
+            $"SELECT COUNT(*) FROM {People} WHERE CASE WHEN p.Name IS NULL THEN 'a' + p.Name ELSE 'none' END IS NULL;");
+
+        Assert.Equal(0, guardedNulls);
+        Assert.Equal(0, comparisonGuardedNulls);
+        Assert.Equal(1, unguardedNulls);
+        Assert.Equal(1, wrongBranchNulls);
+    }
 }

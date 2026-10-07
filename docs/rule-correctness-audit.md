@@ -27,6 +27,19 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: nullable column treated as possibly NULL inside a branch that excludes NULL.**
+  `predicate/plus-operator-null-propagation` reported a nullable column
+  concatenated inside a CASE branch that is reached only when the column is not
+  NULL (an earlier WHEN tested it IS NULL, or the branch's own WHEN is IS NOT NULL,
+  a comparison, or an AND containing one). Oracle: such a concatenation never
+  yields NULL over rows including a NULL one, while the same expression outside
+  the CASE and inside the IS NULL branch does. Fixed by carrying the
+  null-excluding facts of the enclosing CASE branches into the chain and
+  treating a resolved base column proven non-NULL as guarded; an OR keeps only
+  facts common to both sides. Sibling sweep: `not-in-nullable-subquery` has its
+  own IS NOT NULL filter check, and the other readers of column nullability
+  (`default-constraint-on-nullable-column`, `check-constraint-null-not-handled`,
+  trigger correctness) do not reason inside CASE branches.
 - **Category: per-row cost assumed for a construct the engine evaluates once.**
   `scalar-udf/in-computed-column-or-constraint` reported every DEFAULT that
   calls a scalar UDF as per-row cost. Oracle (function-stats execution counts

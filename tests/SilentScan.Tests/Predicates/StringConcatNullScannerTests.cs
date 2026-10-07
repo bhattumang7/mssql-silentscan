@@ -80,6 +80,29 @@ public sealed class StringConcatNullScannerTests
         Assert.Empty(Scan(sql));
     }
 
+    [Theory]
+    [InlineData("SELECT CASE WHEN MiddleName IS NULL THEN FirstName ELSE FirstName + ' ' + MiddleName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName IS NOT NULL THEN FirstName + ' ' + MiddleName ELSE FirstName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName <> '' THEN FirstName + ' ' + MiddleName ELSE FirstName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN Age > 1 THEN FirstName WHEN MiddleName IS NULL THEN LastName ELSE FirstName + MiddleName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName IS NOT NULL AND Age > 1 THEN FirstName + MiddleName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN NOT (MiddleName IS NULL) THEN FirstName + MiddleName END FROM dbo.Person;")]
+    public void ConcatenationInsideCaseBranchThatProvesTheColumnNotNull_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT CASE WHEN Age IS NULL THEN FirstName ELSE FirstName + ' ' + MiddleName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName IS NULL THEN FirstName + MiddleName ELSE FirstName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName IS NOT NULL THEN FirstName ELSE FirstName + MiddleName END FROM dbo.Person;")]
+    [InlineData("SELECT CASE WHEN MiddleName IS NOT NULL OR Age > 1 THEN FirstName + MiddleName END FROM dbo.Person;")]
+    public void ConcatenationInsideCaseBranchThatDoesNotProveTheColumnNotNull_StillFires(string sql)
+    {
+        var finding = Assert.Single(Scan(sql));
+        Assert.Equal("MiddleName", finding.ColumnName);
+    }
+
     [Fact]
     public void ThreeLeafChain_ReportsOnceForWholeChain()
     {
