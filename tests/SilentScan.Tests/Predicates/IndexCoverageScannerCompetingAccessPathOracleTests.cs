@@ -18,9 +18,8 @@ public sealed class IndexCoverageScannerCompetingAccessPathOracleTests : OracleT
 
     protected override string Ddl => StaticDdl.Replace(";", ";\nGO\n", StringComparison.Ordinal);
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Trips (Id, AgencyId, Funding, Payload)

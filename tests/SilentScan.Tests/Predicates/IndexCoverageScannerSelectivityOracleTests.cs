@@ -19,9 +19,8 @@ public sealed class IndexCoverageScannerSelectivityOracleTests : OracleTestFixtu
         GO
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.HeapT (Id, A)

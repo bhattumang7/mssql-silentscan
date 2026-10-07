@@ -19,9 +19,8 @@ public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
         GO
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
 
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();

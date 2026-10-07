@@ -16,6 +16,32 @@ public sealed class OracleTestFixtureCleanupTests
     }
 
     [Fact]
+    public async Task InitializeAsync_WhenSubclassSeedingFails_DropsTheProvisionedDatabase()
+    {
+        var fixture = new FailingSeedFixture();
+
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(fixture.InitializeAsync);
+
+        Assert.False(await DatabaseExistsAsync(fixture.ProvisionedName));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenSubclassSeedingSucceeds_SeedRunsAgainstTheDeployedDatabase()
+    {
+        var fixture = new SeededFixture();
+
+        await fixture.InitializeAsync();
+        try
+        {
+            Assert.Equal(1, await fixture.SeededRowCountAsync());
+        }
+        finally
+        {
+            await fixture.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenDeploymentSucceeds_KeepsTheDatabaseUntilDisposed()
     {
         var fixture = new SucceedingDeploymentFixture();
@@ -49,6 +75,28 @@ public sealed class OracleTestFixtureCleanupTests
         protected override string DatabaseNameSeed => nameof(FailingDeploymentFixture);
 
         protected override string Ddl => "CREATE TABLE dbo.Broken (Id NOT_A_TYPE);";
+    }
+
+    private sealed class FailingSeedFixture : OracleTestFixture
+    {
+        public string ProvisionedName => DatabaseName;
+
+        protected override string DatabaseNameSeed => nameof(FailingSeedFixture);
+
+        protected override string Ddl => "CREATE TABLE dbo.Fine (Id INT NOT NULL);";
+
+        protected override Task SeedAsync() => throw new InvalidOperationException("seed failed");
+    }
+
+    private sealed class SeededFixture : OracleTestFixture
+    {
+        protected override string DatabaseNameSeed => nameof(SeededFixture);
+
+        protected override string Ddl => "CREATE TABLE dbo.Fine (Id INT NOT NULL);";
+
+        public Task<int> SeededRowCountAsync() => ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Fine;");
+
+        protected override Task SeedAsync() => ExecuteAsync("INSERT INTO dbo.Fine (Id) VALUES (1);");
     }
 
     private sealed class SucceedingDeploymentFixture : OracleTestFixture

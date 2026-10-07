@@ -25,9 +25,8 @@ public sealed class CompositeIndexLeadingColumnAlternativeIndexOracleTests : Ora
         + "CREATE NONCLUSTERED INDEX IX_JoinAlt_A_B ON dbo.JoinAlt(A, B);"
         + "CREATE NONCLUSTERED INDEX IX_JoinAlt_B ON dbo.JoinAlt(B);";
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Alt (Id, A, B, C, Payload)

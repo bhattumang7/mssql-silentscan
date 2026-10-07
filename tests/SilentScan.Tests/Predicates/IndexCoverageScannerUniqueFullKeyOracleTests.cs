@@ -20,9 +20,8 @@ public sealed class IndexCoverageScannerUniqueFullKeyOracleTests : OracleTestFix
 
     protected override string Ddl => StaticDdl.Replace(";", ";\nGO\n", StringComparison.Ordinal);
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Items (Id, Code, Grp, A, B, Payload)

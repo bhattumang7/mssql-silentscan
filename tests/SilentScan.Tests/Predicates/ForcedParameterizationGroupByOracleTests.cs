@@ -13,9 +13,8 @@ public sealed class ForcedParameterizationGroupByOracleTests : OracleTestFixture
         CREATE TABLE dbo.GroupByProbeTable (Id INT NOT NULL, Val INT NOT NULL);
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
 
         var connectionString = Options.BuildConnectionString(DatabaseName);
         await using var connection = new SqlConnection(connectionString);

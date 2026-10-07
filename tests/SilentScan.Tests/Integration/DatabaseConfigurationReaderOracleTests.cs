@@ -140,19 +140,13 @@ public sealed class DatabaseConfigurationReaderSpatialPersistedComputedColumnOra
         GO
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task PrepareAsync()
     {
-        await using (var connection = new SqlConnection(Options.BuildConnectionString(database: null)))
-        {
-            await connection.OpenAsync();
-            await using var command = connection.CreateCommand();
-            command.CommandText = $"CREATE DATABASE [{DatabaseName}];";
-            await command.ExecuteNonQueryAsync();
-            command.CommandText = $"ALTER DATABASE [{DatabaseName}] SET COMPATIBILITY_LEVEL = 100;";
-            await command.ExecuteNonQueryAsync();
-        }
-
-        await new ScriptDeployer(Options).DeployAsync(Ddl, DatabaseName);
+        await using var connection = new SqlConnection(Options.BuildConnectionString(database: null));
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"ALTER DATABASE [{DatabaseName}] SET COMPATIBILITY_LEVEL = 100;";
+        await command.ExecuteNonQueryAsync();
     }
 
     [Fact]

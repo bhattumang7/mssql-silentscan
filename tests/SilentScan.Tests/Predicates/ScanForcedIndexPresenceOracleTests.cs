@@ -21,9 +21,8 @@ public sealed class ScanForcedIndexPresenceOracleTests : OracleTestFixture
 
     protected override string Ddl => StaticDdl.Replace(";", ";\nGO\n", StringComparison.Ordinal);
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Conv (Id, KeyedV, PlainV, SecondV)

@@ -19,9 +19,8 @@ public sealed class FullPipelineSyntheticMiniProjectTests : OracleTestFixture
         File.ReadAllText(Path.Combine(ProjectDir, "01_schema.sql")) + "\nGO\n" +
         File.ReadAllText(Path.Combine(ProjectDir, "02_views.sql"));
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
 
         var files = SqlFileDiscovery.EnumerateSqlFiles(ProjectDir);
         _report = await EngineAuthoritativeScan.ScanFilesAsync(files, "SQL_Latin1_General_CP1_CI_AS");

@@ -17,13 +17,19 @@ public abstract class OracleTestFixture : IAsyncLifetime
 
     protected abstract string Ddl { get; }
 
-    public virtual async Task InitializeAsync()
+    protected virtual Task PrepareAsync() => Task.CompletedTask;
+
+    protected virtual Task SeedAsync() => Task.CompletedTask;
+
+    public async Task InitializeAsync()
     {
         var provisioner = new DatabaseProvisioner(Options);
         await provisioner.CreateFreshAsync(DatabaseName);
         try
         {
+            await PrepareAsync();
             await new ScriptDeployer(Options).DeployAsync(Ddl, DatabaseName);
+            await SeedAsync();
         }
         catch
         {

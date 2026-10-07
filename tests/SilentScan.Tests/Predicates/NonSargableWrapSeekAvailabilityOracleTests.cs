@@ -28,9 +28,8 @@ public sealed class NonSargableWrapSeekAvailabilityOracleTests : OracleTestFixtu
 
     protected override string Ddl => StaticDdl.Replace(";", ";\nGO\n", StringComparison.Ordinal);
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Wrap (Id, Idx, NonKey, D)

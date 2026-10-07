@@ -20,9 +20,8 @@ public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests 
         GO
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Big (Id)

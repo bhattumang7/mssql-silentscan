@@ -20,9 +20,8 @@ public sealed class IndexHintOracleTests : OracleTestFixture
         GO
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
 
         var seedRows = """
             INSERT INTO dbo.Orders (Id, Region, Status)

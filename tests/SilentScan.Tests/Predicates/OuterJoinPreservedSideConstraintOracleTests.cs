@@ -21,9 +21,8 @@ public sealed class OuterJoinPreservedSideConstraintOracleTests : OracleTestFixt
         + "CREATE TABLE dbo.Pairs (Id INT NOT NULL PRIMARY KEY, A INT NOT NULL, B INT NOT NULL, Payload CHAR(200) NOT NULL);"
         + "CREATE NONCLUSTERED INDEX IX_Pairs_A_B ON dbo.Pairs(A, B);";
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync(
             """
             INSERT INTO dbo.Probe (Id, K)

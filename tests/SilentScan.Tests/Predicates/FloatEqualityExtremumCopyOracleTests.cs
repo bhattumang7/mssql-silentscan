@@ -15,9 +15,8 @@ public sealed class FloatEqualityExtremumCopyOracleTests : OracleTestFixture
 
     protected override string Ddl => TableDdl;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         await ExecuteAsync("INSERT dbo.Readings (Grp, V) VALUES (1, 0.1), (1, 0.2), (1, 0.3);");
     }
 

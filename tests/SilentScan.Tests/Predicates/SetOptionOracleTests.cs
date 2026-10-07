@@ -23,10 +23,8 @@ public sealed class SetOptionOracleTests : OracleTestFixture
 
     private const string Probe = "SELECT CustomerId FROM dbo.Orders WHERE IsActive = 1 AND CustomerId = 5;";
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
-
         var seedRows = """
             INSERT INTO dbo.Orders (OrderId, CustomerId, IsActive)
             SELECT TOP (2000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1

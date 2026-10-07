@@ -13,10 +13,8 @@ public sealed class LivePlanCacheReaderOracleTests : OracleTestFixture
         CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, OrderCode VARCHAR(30) NOT NULL);
         """;
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
-
         var connectionString = Options.BuildConnectionString(DatabaseName);
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
