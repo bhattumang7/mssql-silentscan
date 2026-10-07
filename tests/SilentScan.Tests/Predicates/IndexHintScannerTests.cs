@@ -83,6 +83,22 @@ public sealed class IndexHintScannerTests
     }
 
     [Fact]
+    public void HintedIndexLeadingColumnIsTheLeadingOrderByColumn_NeverFires()
+    {
+        var findings = Scan("SELECT o.OrderId FROM dbo.Orders o WITH (INDEX(IX_Orders_Status)) WHERE o.OrderId > 1 ORDER BY o.Status, o.OrderId;", CatalogWithIndex());
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void HintedIndexLeadingColumnIsOnlyASecondaryOrderByColumn_StillFires()
+    {
+        var findings = Scan("SELECT o.OrderId FROM dbo.Orders o WITH (INDEX(IX_Orders_Status)) WHERE o.OrderId > 1 ORDER BY o.OrderId, o.Status;", CatalogWithIndex());
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
     public void HintNamesRealIndexWithBoundLeadingColumn_NeverFires()
     {
         var findings = Scan("SELECT 1 FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status = 5;", CatalogWithIndex());

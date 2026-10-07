@@ -88,6 +88,20 @@ public sealed class IndexHintOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task HintedScanOrderedByTheLeadingColumn_NeedsNoSort_OrderingByAnotherColumnDoes()
+    {
+        var ordered = await new PlanXmlCapture(Options).CaptureAsync(
+            DatabaseName, "SELECT Id, Region FROM dbo.Orders WITH (INDEX(IX_Orders_Region)) WHERE Id > 5 ORDER BY Region;");
+        var unordered = await new PlanXmlCapture(Options).CaptureAsync(
+            DatabaseName, "SELECT Id, Region FROM dbo.Orders WITH (INDEX(IX_Orders_Region)) WHERE Id > 5 ORDER BY Id;");
+
+        Assert.Contains("PhysicalOp=\"Index Scan\"", ordered);
+        Assert.DoesNotContain("PhysicalOp=\"Sort\"", ordered);
+        Assert.Contains("PhysicalOp=\"Index Scan\"", unordered);
+        Assert.Contains("PhysicalOp=\"Sort\"", unordered);
+    }
+
+    [Fact]
     public async Task HintForcesIndexWhoseLeadingColumnIsBound_StaysASeek()
     {
         var planXml = await new PlanXmlCapture(Options).CaptureAsync(

@@ -96,7 +96,9 @@ public static class IndexHintScanner
 
             foreach (var namedTable in namedTables)
             {
-                InspectNamedTable(namedTable, byAlias, new References(anyReferencedColumns, seekableColumns), statementColumns, wildcardDetector.Found);
+                InspectNamedTable(
+                    namedTable, byAlias, new References(anyReferencedColumns, seekableColumns), statementColumns, wildcardDetector.Found,
+                    (statement as QuerySpecification)?.OrderByClause);
             }
         }
 
@@ -105,7 +107,8 @@ public static class IndexHintScanner
 
         private void InspectNamedTable(
             NamedTableReference namedTable, IReadOnlyDictionary<string, ScopeEntry> byAlias,
-            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
+            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard,
+            OrderByClause? orderBy)
         {
             var indexHints = namedTable.TableHints.OfType<IndexTableHint>().ToList();
             if (indexHints.Count == 0)
@@ -127,13 +130,29 @@ public static class IndexHintScanner
 
             foreach (var hint in indexHints)
             {
-                InspectHint(hint, table, references, statementColumns, hasWildcard);
+                InspectHint(hint, table, references, statementColumns, hasWildcard, OrderingColumnOf(orderBy, alias, byAlias.Count == 1));
             }
+        }
+
+        private static string? OrderingColumnOf(OrderByClause? orderBy, string alias, bool isOnlySource)
+        {
+            if (orderBy is not { OrderByElements.Count: > 0 } || orderBy.OrderByElements[0].Expression is not ColumnReferenceExpression { MultiPartIdentifier.Identifiers: var identifiers })
+            {
+                return null;
+            }
+
+            return identifiers.Count switch
+            {
+                >= 2 when string.Equals(identifiers[^2].Value, alias, StringComparison.OrdinalIgnoreCase) => identifiers[^1].Value,
+                1 when isOnlySource => identifiers[0].Value,
+                _ => null,
+            };
         }
 
         private void InspectHint(
             IndexTableHint hint, CatalogTable table,
-            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
+            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard,
+            string? orderingColumn)
         {
             foreach (var indexValue in hint.IndexValues)
             {
@@ -156,6 +175,11 @@ public static class IndexHintScanner
                 }
 
                 var leadingColumn = matchedIndex.KeyColumns[0];
+                if (orderingColumn is not null && catalog.IdentifierComparer.Equals(orderingColumn, leadingColumn))
+                {
+                    continue;
+                }
+
                 if (!references.Seekable.Contains((table.QualifiedName, leadingColumn))
                     && (references.Any.Contains((table.QualifiedName, leadingColumn))
                         ? table.FindColumn(leadingColumn, catalog.IdentifierComparer) is not { IsComputed: true }

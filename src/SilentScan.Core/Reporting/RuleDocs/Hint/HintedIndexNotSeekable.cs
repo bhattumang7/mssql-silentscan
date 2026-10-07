@@ -19,6 +19,11 @@ internal static class HintedIndexNotSeekable
             only way to satisfy that is a full Index Scan reading every row, typically followed by a
             bookmark lookup back to the real access path the query actually needed.
 
+            A statement whose first `ORDER BY` column is the hinted index's leading key column is
+            never reported: scanning the index in key order delivers the rows already sorted, so the
+            plan needs no Sort operator, which is a deliberate use of the hint rather than a lost
+            seek.
+
             Oracle-confirmed directly against a real seeded index: the identical query with no hint
             produces a clean Clustered Index Seek; adding the hint against a predicate that never
             touches the hinted index's leading column degrades the same query to an Index Scan plus
