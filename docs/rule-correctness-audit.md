@@ -375,6 +375,16 @@ against the same root-cause category before it's treated as new.
   enforced. Sibling sweep: `PartialCompositeForeignKeyJoinScanner` reads
   foreign keys too but its claim rests on the parent key's uniqueness, which a
   disabled constraint does not change, so it is unchanged.
+- **Category: published claim stronger than the engine fact.**
+  `write-loss/approximate-to-exact-truncation` said the fractional part is
+  "dropped" for every exact target, and `index-design/non-unique-clustered-index`
+  said the uniquifier is paid on every row. Oracle-confirmed: a float assigned
+  into DECIMAL/NUMERIC or MONEY/SMALLMONEY rounds half away from zero to the
+  target's scale while TINYINT/SMALLINT/INT/BIGINT truncate toward zero, and a
+  non-unique clustered index over all-distinct key values produces
+  nonclustered leaf records exactly as wide as a unique clustered index does,
+  because only duplicated key values carry a uniquifier. Rationale and rule
+  pages reworded; detection is unchanged.
 
 ---
 
