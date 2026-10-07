@@ -26,6 +26,12 @@ internal static class StringConcatNull
             runs with it OFF genuinely does not exhibit the NULL-propagation behavior described
             here.
 
+            One idiom is deliberately not reported: a `+` expression selected by a query that ends
+            in `FOR XML PATH`, the classic string-aggregation pattern (`SELECT ',' + Name ... FOR XML
+            PATH('')`). There the NULL operand removes that row's whole contribution, delimiter
+            included, which is what the idiom relies on; guarding the operand with ISNULL would
+            instead leave a stray delimiter for every NULL row.
+
             CONCAT(), added in SQL Server 2012, was specifically designed to behave differently: it
             treats a NULL argument as an empty string rather than propagating it, so
             `CONCAT('Mr. ', NULL, ' Smith')` evaluates to `'Mr.  Smith'`. The two functions are easy

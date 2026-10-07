@@ -104,6 +104,22 @@ public sealed class StringConcatNullScannerTests
     }
 
     [Fact]
+    public void ConcatenationFeedingForXmlPathAggregation_NeverFires()
+    {
+        Assert.Empty(Scan("SELECT ',' + MiddleName FROM dbo.Person FOR XML PATH('');"));
+        Assert.Empty(Scan("SELECT (SELECT ',' + MiddleName AS [data()] FROM dbo.Person FOR XML PATH('')) AS Joined;"));
+    }
+
+    [Fact]
+    public void ConcatenationInPlainSelectBesideForXmlSubquery_StillFires()
+    {
+        var findings = Scan("SELECT FirstName + MiddleName, (SELECT ',' + Label FROM dbo.Other FOR XML PATH('')) FROM dbo.Person;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("MiddleName", finding.ColumnName);
+    }
+
+    [Fact]
     public void ThreeLeafChain_ReportsOnceForWholeChain()
     {
 

@@ -138,4 +138,16 @@ public sealed class StringConcatNullOracleTests : IAsyncLifetime
         Assert.Equal(1, unguardedNulls);
         Assert.Equal(1, wrongBranchNulls);
     }
+
+    [Fact]
+    public async Task ConcatenationFeedingForXmlPath_DropsTheNullRowWithItsDelimiter_WhileAGuardedOperandLeavesAStrayDelimiter()
+    {
+        var unguarded = await ScalarAsync(
+            $"SELECT (SELECT ',' + p.Name FROM {People} ORDER BY p.Id FOR XML PATH(''));");
+        var guarded = await ScalarAsync(
+            $"SELECT (SELECT ',' + ISNULL(p.Name, '') FROM {People} ORDER BY p.Id FOR XML PATH(''));");
+
+        Assert.Equal(",x,z", unguarded);
+        Assert.Equal(",x,,z", guarded);
+    }
 }

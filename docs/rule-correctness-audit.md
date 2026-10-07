@@ -27,6 +27,15 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: intended NULL-dropping idiom reported as a NULL bug.**
+  `predicate/plus-operator-null-propagation` reported `',' + col` inside a
+  `FOR XML PATH('')` string aggregation, roughly half of the High findings in a
+  large real codebase. Oracle: with the unguarded operand a NULL row contributes
+  nothing (`,x,z`), while an `ISNULL`-guarded operand leaves a stray delimiter
+  (`,x,,z`), so the NULL-propagating form is the idiom's purpose, not a silent
+  loss. Fixed by not inspecting select elements of a query carrying an XML FOR
+  clause; FOR JSON and plain selects are unchanged. Sibling sweep: no other
+  scanner inspects `+` chains or reasons about FOR XML.
 - **Category: nullable column treated as possibly NULL inside a branch that excludes NULL.**
   `predicate/plus-operator-null-propagation` reported a nullable column
   concatenated inside a CASE branch that is reached only when the column is not
