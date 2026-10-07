@@ -335,7 +335,12 @@ public static class CatchAllPredicateScanner
                 return;
             }
 
-            var indexed = catalog.Find(baseColumn.TableQualifiedName)?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) ?? false;
+            var table = catalog.Find(baseColumn.TableQualifiedName);
+            var indexed = table?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) ?? false;
+            if (table is not null && !indexed)
+            {
+                return;
+            }
 
             Findings.Add(new CatchAllPredicateFinding(
                 baseColumn.TableQualifiedName, baseColumn.ColumnName, indexed, variableRef.Name,

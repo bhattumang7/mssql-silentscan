@@ -385,6 +385,23 @@ against the same root-cause category before it's treated as new.
   nonclustered leaf records exactly as wide as a unique clustered index does,
   because only duplicated key values carry a uniquifier. Rationale and rule
   pages reworded; detection is unchanged.
+- **Category: lost-seek claim made for a column no index could seek on.**
+  `predicates/catch-all-parameter` reported `(col = @p OR @p IS NULL)` on a
+  column that leads no index (downgraded only in SARIF level). The claim is a
+  forfeited seek that OPTION (RECOMPILE) restores; oracle-confirmed that on an
+  unindexed column the plan is the same scan with and without RECOMPILE, while
+  on a leading-indexed column RECOMPILE turns the scan into a seek (including
+  the `col = @p OR col IS NULL OR @p IS NULL` shape). Fixed by not reporting a
+  catch-all whose base column is known to the catalog and leads no index; a
+  table unknown to the catalog still reports. Known limit: inside an inline
+  table-valued function the effect depends on the caller (a literal argument is
+  folded into the predicate and seeks, a variable argument scans), which a
+  per-module scan cannot decide, so those findings are unchanged. Sibling
+  sweep: `ParameterReassignmentPredicateScanner` also emits regardless of
+  indexing but its claim is a density-based estimate replacing the histogram,
+  which applies to unindexed columns too; the tier-one sargability scanners
+  carry the index flag into confidence and SARIF level and their claims are not
+  solely about a lost seek. Neither changed.
 
 ---
 

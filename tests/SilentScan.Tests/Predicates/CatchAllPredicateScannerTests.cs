@@ -8,8 +8,8 @@ public sealed class CatchAllPredicateScannerTests
 {
     private static IReadOnlyList<CatchAllPredicateFinding> Scan(string sql, int? compatibilityLevel = null)
     {
-        var ddl = "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code));"
-            + "CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, Code VARCHAR(20) NOT NULL);";
+        var ddl = "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, Segment VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code), INDEX IX_Customers_Segment (Segment));"
+            + "CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, Code VARCHAR(20) NOT NULL, INDEX IX_Orders_Code (Code));";
         return ScanWithDdl(ddl, sql, compatibilityLevel);
     }
 
@@ -139,13 +139,13 @@ public sealed class CatchAllPredicateScannerTests
             """
             CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20), @q VARCHAR(20) AS
             BEGIN
-                SELECT 1 FROM dbo.Customers WHERE (Code = @p OR @p IS NULL) AND (Region = @q OR @q IS NULL);
+                SELECT 1 FROM dbo.Customers WHERE (Code = @p OR @p IS NULL) AND (Segment = @q OR @q IS NULL);
             END
             """);
 
         Assert.Equal(2, findings.Count);
         Assert.Contains(findings, f => f.ColumnName == "Code" && f.ParameterName == "@p");
-        Assert.Contains(findings, f => f.ColumnName == "Region" && f.ParameterName == "@q");
+        Assert.Contains(findings, f => f.ColumnName == "Segment" && f.ParameterName == "@q");
     }
 
     [Fact]
@@ -156,25 +156,50 @@ public sealed class CatchAllPredicateScannerTests
             """
             CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
             BEGIN
-                WITH Customers AS (SELECT Region AS Code FROM dbo.Customers)
-                SELECT 1 FROM Customers WHERE (Code = @p OR @p IS NULL);
+                WITH Customers AS (SELECT Code AS Region FROM dbo.Customers)
+                SELECT 1 FROM Customers WHERE (Region = @p OR @p IS NULL);
             END
             """);
 
         var finding = Assert.Single(findings);
         Assert.Equal("dbo.Customers", finding.TableQualifiedName);
-        Assert.Equal("Region", finding.ColumnName);
-        Assert.False(finding.Indexed);
+        Assert.Equal("Code", finding.ColumnName);
+        Assert.True(finding.Indexed);
     }
 
     [Fact]
-    public void UnindexedColumn_StillFiresButReportsUnindexed()
+    public void CteAliasesAnUnindexedColumnAsAnIndexedName_AttributionFollowsTheRealColumn_NoFinding()
+    {
+        var findings = Scan(
+            """
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                WITH Customers AS (SELECT Region AS Code FROM dbo.Customers)
+                SELECT 1 FROM Customers WHERE (Code = @p OR @p IS NULL);
+            END
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void UnindexedColumn_NoSeekExistsToLose_NeverFires()
     {
         var findings = Scan(
             "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE (Region = @p OR @p IS NULL); END");
 
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void IndexedAndUnindexedCatchAllsInOneStatement_OnlyTheIndexedOneFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20), @q VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE (Code = @p OR @p IS NULL) AND (Region = @q OR @q IS NULL); END");
+
         var finding = Assert.Single(findings);
-        Assert.False(finding.Indexed);
+        Assert.Equal("Code", finding.ColumnName);
+        Assert.True(finding.Indexed);
     }
 
     [Fact]
@@ -268,10 +293,10 @@ public sealed class CatchAllPredicateScannerTests
     {
         var findings = Scan(
             "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN "
-            + "SELECT Region FROM dbo.Customers GROUP BY Region HAVING (Region = @p OR @p IS NULL); END");
+            + "SELECT Code FROM dbo.Customers GROUP BY Code HAVING (Code = @p OR @p IS NULL); END");
 
         var finding = Assert.Single(findings);
-        Assert.Equal("Region", finding.ColumnName);
+        Assert.Equal("Code", finding.ColumnName);
     }
 
     [Fact]
@@ -440,7 +465,7 @@ public sealed class CatchAllPredicateScannerTests
     {
         var ddl =
             "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) COLLATE Latin1_General_CS_AS NOT NULL, INDEX IX_Customers_Code (Code));"
-            + "CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, Code VARCHAR(20) NOT NULL);";
+            + "CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, Code VARCHAR(20) NOT NULL, INDEX IX_Orders_Code (Code));";
 
         var findings = ScanWithDdl(
             ddl,

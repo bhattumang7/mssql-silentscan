@@ -28,6 +28,10 @@ internal static class CatchAllParameter
             subsequent call - regardless of its own @p value - reuses that same cached plan until it's
             evicted or the statement is recompiled.
 
+            This finding is only reported for a column that leads an index, since that is the seek
+            the idiom forfeits; a column that leads no index scans either way, with or without
+            OPTION (RECOMPILE), so there is nothing to lose.
+
             This finding is suppressed when the statement carries OPTION (RECOMPILE) or the
             enclosing procedure is created WITH RECOMPILE, because both force the optimizer to
             compile a fresh plan against the real, current value of @p on every single execution -

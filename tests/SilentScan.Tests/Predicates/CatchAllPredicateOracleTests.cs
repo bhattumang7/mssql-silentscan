@@ -113,6 +113,19 @@ public sealed class CatchAllPredicateOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task CatchAllShape_OnUnindexedColumn_ScansWithAndWithoutRecompile()
+    {
+        var withoutRecompile = await CaptureRealExecutionPlanAsync(
+            "DECLARE @p INT = 5; SELECT Region FROM dbo.Customers WHERE (Id = @p OR @p IS NULL);");
+        var withRecompile = await CaptureRealExecutionPlanAsync(
+            "DECLARE @p INT = 5; SELECT Region FROM dbo.Customers WHERE (Id = @p OR @p IS NULL) OPTION (RECOMPILE);");
+
+        Assert.Contains("PhysicalOp=\"Table Scan\"", withoutRecompile);
+        Assert.Contains("PhysicalOp=\"Table Scan\"", withRecompile);
+        Assert.DoesNotContain("PhysicalOp=\"Index Seek\"", withRecompile);
+    }
+
+    [Fact]
     public async Task CatchAllShape_WithOptionRecompile_RestoresTheSeek()
     {
         var planXml = await CaptureRealExecutionPlanAsync(
