@@ -26,6 +26,10 @@ internal static class StringConcatNull
             runs with it OFF genuinely does not exhibit the NULL-propagation behavior described
             here.
 
+            A chain inside a scalar subquery whose result is the non-final argument of ISNULL or
+            COALESCE is not reported either: a NULL from the concatenation is replaced there, so
+            the enclosing expression never sees it.
+
             One idiom is deliberately not reported: a `+` expression selected by a query that ends
             in `FOR XML PATH`, the classic string-aggregation pattern (`SELECT ',' + Name ... FOR XML
             PATH('')`). There the NULL operand removes that row's whole contribution, delimiter

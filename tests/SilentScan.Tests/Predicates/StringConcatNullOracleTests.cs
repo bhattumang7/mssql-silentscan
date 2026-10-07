@@ -140,6 +140,24 @@ public sealed class StringConcatNullOracleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task NullConcatenationInScalarSubquery_IsReplacedByAnEnclosingIsnullOrCoalesce_ButNotWhenTheSubqueryIsTheFallback()
+    {
+        var replacedByIsnull = await ScalarAsync(
+            $"SELECT ISNULL((SELECT 'a' + p.Name FROM {People} WHERE p.Id = 2), 'none');");
+        var replacedByCoalesce = await ScalarAsync(
+            $"SELECT COALESCE((SELECT 'a' + p.Name FROM {People} WHERE p.Id = 2), 'none');");
+        var bare = await ScalarAsync(
+            $"SELECT (SELECT 'a' + p.Name FROM {People} WHERE p.Id = 2);");
+        var asFallback = await ScalarAsync(
+            $"SELECT COALESCE(CAST(NULL AS VARCHAR(5)), (SELECT 'a' + p.Name FROM {People} WHERE p.Id = 2));");
+
+        Assert.Equal("none", replacedByIsnull);
+        Assert.Equal("none", replacedByCoalesce);
+        Assert.Equal(DBNull.Value, bare);
+        Assert.Equal(DBNull.Value, asFallback);
+    }
+
+    [Fact]
     public async Task ConcatenationFeedingForXmlPath_DropsTheNullRowWithItsDelimiter_WhileAGuardedOperandLeavesAStrayDelimiter()
     {
         var unguarded = await ScalarAsync(

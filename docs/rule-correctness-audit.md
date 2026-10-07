@@ -27,6 +27,16 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: NULL guarded one scope above the reported expression.**
+  `predicate/plus-operator-null-propagation` inspected the select list of a
+  scalar subquery on its own, so a concatenation whose NULL result is replaced
+  by an enclosing `ISNULL`/`COALESCE` around the subquery was reported. Oracle:
+  the wrapped subquery returns the replacement for a NULL operand, while the
+  bare subquery and one used as the final fallback still return NULL. Fixed by
+  collecting scalar subqueries that sit in a replaced position and not
+  inspecting their select lists. Sibling sweep: other scanners that inspect
+  subquery select lists (`not-in-nullable-subquery`) concern NOT IN semantics,
+  not value replacement, and are unaffected.
 - **Category: intended NULL-dropping idiom reported as a NULL bug.**
   `predicate/plus-operator-null-propagation` reported `',' + col` inside a
   `FOR XML PATH('')` string aggregation, roughly half of the High findings in a

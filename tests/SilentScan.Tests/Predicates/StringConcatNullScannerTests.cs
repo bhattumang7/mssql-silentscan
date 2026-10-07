@@ -103,6 +103,25 @@ public sealed class StringConcatNullScannerTests
         Assert.Equal("MiddleName", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("SELECT COALESCE((SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1), 'none');")]
+    [InlineData("SELECT ISNULL((SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1), 'none');")]
+    [InlineData("SELECT COALESCE((SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1), (SELECT 'x'), 'none');")]
+    public void ConcatenationInScalarSubqueryWhoseNullResultIsReplaced_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT (SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1);")]
+    [InlineData("SELECT COALESCE('a', (SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1));")]
+    [InlineData("SELECT ISNULL('a', (SELECT FirstName + MiddleName FROM dbo.Person WHERE Id = 1));")]
+    public void ConcatenationInScalarSubqueryWhoseNullResultIsNotReplaced_StillFires(string sql)
+    {
+        var finding = Assert.Single(Scan(sql));
+        Assert.Equal("MiddleName", finding.ColumnName);
+    }
+
     [Fact]
     public void ConcatenationFeedingForXmlPathAggregation_NeverFires()
     {

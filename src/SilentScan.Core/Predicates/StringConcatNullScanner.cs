@@ -23,7 +23,7 @@ public static class StringConcatNullScanner
     return Harvest(rule);
     }
     internal static Rule CreateRule(string sourcePath, DatabaseCatalog catalog, TSqlFragment fragment) =>
-        new(sourcePath, catalog, ConcatNullYieldsNullFlowResolver.Resolve(fragment));
+        new(sourcePath, catalog, ConcatNullYieldsNullFlowResolver.Resolve(fragment), NullReplacedSubqueryCollector.Collect(fragment));
 
     internal static IReadOnlyList<StringConcatNullFinding> Harvest(Rule rule) =>
             [
@@ -47,7 +47,54 @@ public static class StringConcatNullScanner
 
     private readonly record struct Leaf(LeafKind Kind, bool IsNullableColumn, string? TableQualifiedName, string? ColumnName, string? ReferenceKey = null, IReadOnlyList<string>? FallbackKeys = null);
 
-    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<TSqlStatement, bool> concatNullYieldsNullOffByStatement) : IModuleRule
+    private sealed class NullReplacedSubqueryCollector : TSqlFragmentVisitor
+    {
+        private readonly HashSet<QuerySpecification> _specifications = [];
+
+        public static HashSet<QuerySpecification> Collect(TSqlFragment fragment)
+        {
+            var collector = new NullReplacedSubqueryCollector();
+            fragment.Accept(collector);
+            return collector._specifications;
+        }
+
+        public override void ExplicitVisit(FunctionCall node)
+        {
+            if (string.Equals(node.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase) && node.Parameters.Count == 2)
+            {
+                Add(node.Parameters[0]);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(CoalesceExpression node)
+        {
+            foreach (var expression in node.Expressions.Take(node.Expressions.Count - 1))
+            {
+                Add(expression);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        private void Add(ScalarExpression expression)
+        {
+            while (expression is ParenthesisExpression parenthesis)
+            {
+                expression = parenthesis.Expression;
+            }
+
+            if (expression is ScalarSubquery { QueryExpression: QuerySpecification specification })
+            {
+                _specifications.Add(specification);
+            }
+        }
+    }
+
+    internal sealed class Rule(
+        string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<TSqlStatement, bool> concatNullYieldsNullOffByStatement,
+        IReadOnlySet<QuerySpecification> nullReplacedSubqueries) : IModuleRule
     {
         public List<StringConcatNullFinding> Findings { get; } = [];
 
@@ -69,7 +116,7 @@ public static class StringConcatNullScanner
                 [node.WhereClause?.SearchCondition, node.HavingClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(node.FromClause)]);
             _enclosingQueries.Push(new QueryScope(nullRejected, DeclaredAliases(node.FromClause)));
 
-            if (_concatNullYieldsNullOff)
+            if (_concatNullYieldsNullOff || nullReplacedSubqueries.Contains(node))
             {
                 return;
             }
