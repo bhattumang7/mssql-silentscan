@@ -27,6 +27,20 @@ correctness bugs found; 0 remain open below.
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
 
+- **Category: positional INSERT mapped onto columns the engine does not fill from the value list.**
+  `write-loss/*` (all kinds extracted by `TypedPredicateExtractor`) paired the
+  values of an `INSERT` with no column list against every column of the target
+  table, so an IDENTITY or computed column shifted every value one slot and a
+  float was reported as written into an integer column it never reached.
+  Oracle: a positional insert into a table with an IDENTITY or computed column
+  stores the first value in the first non-identity, non-computed column, while
+  the sibling that really sends a float to the first integer column still
+  truncates. Fixed by resolving the implicit target list without identity and
+  computed columns. Sibling sweep: `ProcCallTableValuedArgumentMismatchScanner`
+  also builds an implicit list from every column but only analyses rows whose
+  value count equals that list, so a skipped column makes it skip the row rather
+  than misalign; no other scanner maps insert values to columns positionally.
+
 - **Category: NULL guarded one scope above the reported expression.**
   `predicate/plus-operator-null-propagation` inspected the select list of a
   scalar subquery on its own, so a concatenation whose NULL result is replaced

@@ -849,4 +849,26 @@ public sealed class WriteLossExtractionTests
 
         Assert.Empty(result.WriteLossFindings);
     }
+
+    [Fact]
+    public void Extract_PositionalInsertValuesIntoIdentityTable_SkipsIdentityColumn_NoMisalignedFinding()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (Id INT IDENTITY, Seq INT NULL, Lon FLOAT NULL);",
+            "DECLARE @seq INT = 5; DECLARE @lon FLOAT = 1.9; INSERT INTO dbo.T VALUES (@seq, @lon);");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void Extract_PositionalInsertValuesIntoIdentityTable_FloatIntoFirstNonIdentityInt_FlagsThatColumn()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (Id INT IDENTITY, Seq INT NULL, Lon FLOAT NULL);",
+            "DECLARE @lon FLOAT = 1.9; INSERT INTO dbo.T VALUES (@lon, @lon);");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.ApproximateToExactTruncation, finding.Kind);
+        Assert.Equal("Seq", finding.ColumnName);
+    }
 }

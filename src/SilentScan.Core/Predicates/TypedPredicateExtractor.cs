@@ -695,7 +695,7 @@ public static class TypedPredicateExtractor
         {
             if (spec.Columns.Count == 0)
             {
-                return [.. table.Columns];
+                return [.. table.Columns.Where(column => column is { IsIdentity: false, IsComputed: false })];
             }
 
             var resolved = new List<CatalogColumn?>(spec.Columns.Count);
