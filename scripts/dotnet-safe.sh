@@ -98,10 +98,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+group_launcher=()
+if command -v setsid >/dev/null 2>&1; then
+    group_launcher=(setsid)
+fi
+
 max_attempts=2
 attempt=1
 while :; do
-    setsid timeout --kill-after=30s "${timeout_seconds}s" dotnet "$@" > "$log_file" 2>&1 &
+    "${group_launcher[@]}" timeout --kill-after=30s "${timeout_seconds}s" dotnet "$@" > "$log_file" 2>&1 &
     group_pid=$!
     wait "$group_pid"
     exit_code=$?
