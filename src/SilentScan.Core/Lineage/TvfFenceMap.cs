@@ -49,6 +49,8 @@ public static class TvfFenceMap
         var (functionRefs, namedRefs) = TvfReferenceWalker.CollectFromClauses(view.SelectStatement, context.Catalog.IdentifierComparer);
         var found = functionRefs.Select(f => TryResolveFunctionReference(view, f, context)).FirstOrDefault(o => o is not null)
             ?? namedRefs.Select(n => TryResolveNamedReference(n, context)).FirstOrDefault(o => o is not null);
+        var isPlain = SingleSourceQuery.IsPlain(view.SelectStatement);
+        found = found is null ? null : found with { SoleRowSource = found.SoleRowSource && isPlain };
 
         context.InProgress.Remove(view.QualifiedName);
         context.Resolved[view.QualifiedName] = found;
@@ -65,7 +67,7 @@ public static class TvfFenceMap
 
         if (kind is TableValuedFunctionKind.MultiStatement or TableValuedFunctionKind.Clr)
         {
-            return new TvfFenceOrigin(qualifiedName, kind, view.SourcePath, functionRef.Reference.StartLine, Depth: 1);
+            return new TvfFenceOrigin(qualifiedName, kind, view.SourcePath, functionRef.Reference.StartLine, Depth: 1, SoleRowSource: true);
         }
 
         return context.ViewsByName.TryGetValue(qualifiedName, out var inlineTvfDefinition)

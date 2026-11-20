@@ -65,6 +65,71 @@ public sealed class TvfFenceScannerTests
         Assert.Empty(findings);
     }
 
+    private const string SoleSourceSetup = """
+        CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
+        GO
+        CREATE FUNCTION dbo.fn_Tier(@CustomerId INT)
+        RETURNS @Tier TABLE (CustomerId INT, TierName VARCHAR(20))
+        AS
+        BEGIN
+            INSERT INTO @Tier (CustomerId, TierName) SELECT @CustomerId, 'Gold';
+            RETURN;
+        END;
+        GO
+        CREATE VIEW dbo.vw_Tier AS SELECT CustomerId, TierName FROM dbo.fn_Tier(1);
+        GO
+        CREATE VIEW dbo.vw_TierOuter AS SELECT CustomerId, TierName FROM dbo.vw_Tier;
+        GO
+        CREATE VIEW dbo.vw_TierJoined AS SELECT o.OrderId, t.TierName FROM dbo.Orders o JOIN dbo.fn_Tier(1) t ON t.CustomerId = o.CustomerId;
+        GO
+        CREATE FUNCTION dbo.itvf_Tier(@CustomerId INT) RETURNS TABLE AS RETURN (SELECT CustomerId, TierName FROM dbo.fn_Tier(@CustomerId));
+        GO
+
+        """;
+
+    private static List<TvfFenceFinding> ScanText(string sql)
+    {
+        var result = SqlScriptParser.ParseText("test.sql", SoleSourceSetup + sql);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+
+        var catalog = CatalogBuilder.Build([result]);
+        var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
+        var fenceMap = TvfFenceMap.Build(views, catalog);
+        return TvfFenceScanner.Scan(result, catalog, fenceMap).Where(f => f.Kind == TvfFenceFindingKind.NestedUnderViewOrTvf).ToList();
+    }
+
+    [Theory]
+    [InlineData("SELECT TierName FROM dbo.vw_Tier;")]
+    [InlineData("SELECT TierName FROM dbo.vw_Tier WHERE CustomerId = 3;")]
+    [InlineData("SELECT TierName FROM dbo.vw_TierOuter;")]
+    [InlineData("SELECT * FROM dbo.itvf_Tier(5);")]
+    [InlineData("DECLARE @t VARCHAR(20); SELECT @t = TierName FROM dbo.vw_Tier;")]
+    [InlineData("IF EXISTS (SELECT 1 FROM dbo.vw_Tier WHERE TierName = 'Gold') PRINT 'x';")]
+    [InlineData("DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT TierName FROM dbo.vw_Tier;")]
+    public void NestedUnderViewOrTvf_CallerReadsTheFenceAsItsOnlyRowSource_DoesNotFire(string sql)
+    {
+        Assert.Empty(ScanText(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT o.OrderId FROM dbo.Orders o JOIN dbo.vw_Tier t ON t.CustomerId = o.CustomerId;")]
+    [InlineData("SELECT o.OrderId FROM dbo.Orders o CROSS APPLY dbo.itvf_Tier(o.CustomerId) t;")]
+    [InlineData("SELECT OrderId FROM dbo.Orders o WHERE EXISTS (SELECT 1 FROM dbo.vw_Tier t WHERE t.CustomerId = o.CustomerId);")]
+    [InlineData("SELECT DISTINCT TierName FROM dbo.vw_Tier;")]
+    [InlineData("SELECT TierName FROM dbo.vw_Tier ORDER BY TierName;")]
+    [InlineData("SELECT TierName, COUNT(*) FROM dbo.vw_Tier GROUP BY TierName;")]
+    [InlineData("SELECT TOP (5) TierName FROM dbo.vw_Tier;")]
+    [InlineData("SELECT TierName INTO #x FROM dbo.vw_Tier;")]
+    [InlineData("DECLARE @t TABLE (N VARCHAR(20)); INSERT INTO @t SELECT TierName FROM dbo.vw_Tier;")]
+    [InlineData("SELECT TierName FROM dbo.vw_Tier UNION ALL SELECT TierName FROM dbo.vw_Tier;")]
+    [InlineData("WITH c AS (SELECT TierName FROM dbo.vw_Tier) SELECT TierName FROM c;")]
+    [InlineData("SELECT TierName FROM dbo.vw_Tier WHERE CustomerId IN (SELECT CustomerId FROM dbo.Orders);")]
+    [InlineData("SELECT OrderId FROM dbo.vw_TierJoined;")]
+    public void NestedUnderViewOrTvf_AnotherOperatorCanConsumeTheFixedEstimate_Fires(string sql)
+    {
+        Assert.NotEmpty(ScanText(sql));
+    }
+
     [Fact]
     public void NestedUnderViewOrTvf_ViewWrapsCorrelatedFence_FiresAtOuterCallSite()
     {

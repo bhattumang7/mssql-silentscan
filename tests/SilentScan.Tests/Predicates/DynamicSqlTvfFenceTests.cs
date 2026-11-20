@@ -44,7 +44,7 @@ public sealed class DynamicSqlTvfFenceTests
             "CREATE PROCEDURE dbo.usp_Find\n" +
             "AS\n" +
             "BEGIN\n" +
-            "    EXEC('SELECT Id FROM dbo.itvf_Wrapper()');\n" +
+            "    EXEC('SELECT w.Id FROM dbo.itvf_Wrapper() w CROSS JOIN (VALUES (1)) d(x)');\n" +
             "END\n";
         var parseResult = SqlScriptParser.ParseText("app.sql", appSql);
         Assert.False(parseResult.HasErrors, string.Join("; ", parseResult.Errors.Select(e => e.Message)));

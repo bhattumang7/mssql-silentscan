@@ -7,4 +7,5 @@ public sealed record TvfFenceOrigin(
     TableValuedFunctionKind FunctionKind,
     string OriginSourcePath,
     int OriginLine,
-    int Depth);
+    int Depth,
+    bool SoleRowSource = false);
