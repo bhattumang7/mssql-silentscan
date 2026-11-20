@@ -8,6 +8,34 @@ namespace SilentScan.Tests.Reporting;
 
 public sealed class ScanReportBuilderFindingAssemblyTests
 {
+    [Fact]
+    public void MinimumConfidence_FiltersEachFindingByItsOwnConfidence_NotAllOrNothing()
+    {
+        const string Sql = """
+            CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, Col INT NOT NULL);
+            GO
+            CREATE VIEW dbo.VHundredPercent AS SELECT TOP (100) PERCENT Id, Col FROM dbo.T ORDER BY Col;
+            GO
+            CREATE VIEW dbo.VTopRows AS SELECT TOP (5) Id, Col FROM dbo.T ORDER BY Col;
+            """;
+
+        var result = SqlScriptParser.ParseText("confidence.sql", Sql);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        var catalog = CatalogBuilder.Build([result]);
+
+        var defaultReport = ScanReportBuilder.BuildFromParseResults([result], catalog);
+
+        var defaultFinding = Assert.Single(defaultReport.Find<ViewOrderingFinding>("ViewOrderingScanner"));
+        Assert.Equal(ViewOrderingFindingKind.TopPercentOrderByNeverLimits, defaultFinding.Kind);
+        Assert.Equal(FindingConfidence.High, defaultFinding.Confidence);
+
+        var lowConfidenceReport = ScanReportBuilder.BuildFromParseResults([result], catalog, FindingConfidence.Low);
+
+        var lowConfidenceFindings = lowConfidenceReport.Find<ViewOrderingFinding>("ViewOrderingScanner");
+        Assert.Equal(2, lowConfidenceFindings.Count);
+        Assert.Contains(lowConfidenceFindings, f => f.Kind == ViewOrderingFindingKind.TopPercentOrderByNeverLimits && f.Confidence == FindingConfidence.High);
+        Assert.Contains(lowConfidenceFindings, f => f.Kind == ViewOrderingFindingKind.OrderByNotGuaranteedToConsumer && f.Confidence == FindingConfidence.Low);
+    }
 
     [Fact]
     public void SeekPreservedAndUnknownVerdicts_AreExcludedFromTypedFindingsButStillCountedInSummary()
