@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SilentScan.Core.Diagnostics;
+using SilentScan.Core.Predicates;
 using SilentScan.Core.Reporting;
+using SilentScan.Core.Reporting.Readable;
 using SilentScan.Core.Reporting.Sarif;
 using SilentScan.Live;
 
@@ -142,34 +144,19 @@ public static class ScanDbCommand
             return await RunConnectivityCheckAsync(connectionString, stdout, stderr, cancellationToken);
         }
 
-        if (!ReportOutput.TryParseFormat(options.Format, out var reportFormat))
+        if (await TryParseOptionsAsync(options, stderr) is not { } parsed)
         {
-            await stderr.WriteLineAsync(ReportOutput.UnknownFormatMessage(options.Format));
             return 1;
         }
 
-        if (!ReportOutput.TryParseConfidence(options.Confidence, out var minimumConfidence))
-        {
-            await stderr.WriteLineAsync(ReportOutput.UnknownConfidenceMessage(options.Confidence));
-            return 1;
-        }
-
-        if (!ReportOutput.TryParseVerbosity(options.Verbosity, out var verbosity))
-        {
-            await stderr.WriteLineAsync(ReportOutput.UnknownVerbosityMessage(options.Verbosity));
-            return 1;
-        }
+        var (reportFormat, minimumConfidence, verbosity) = parsed;
 
         FindingBaseline? baseline = null;
         if (flags.BaselinePath is { } baselinePath)
         {
-            try
+            baseline = await TryLoadBaselineAsync(baselinePath, stderr, cancellationToken);
+            if (baseline is null)
             {
-                baseline = FindingBaseline.FromJson(await File.ReadAllTextAsync(baselinePath, cancellationToken));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
-            {
-                await stderr.WriteLineAsync($"error: could not read --baseline '{baselinePath}': {ex.Message}");
                 return 1;
             }
         }
@@ -191,25 +178,13 @@ public static class ScanDbCommand
 
         await WarnOnParseHealthAsync(result, stderr);
 
-        if (flags.WriteBaselinePath is { } writeBaselinePath)
+        if (flags.WriteBaselinePath is { } writeBaselinePath
+            && !await TryWriteBaselineAsync(writeBaselinePath, result.Report, stderr, cancellationToken))
         {
-            try
-            {
-                await File.WriteAllTextAsync(writeBaselinePath, FindingBaseline.Capture(result.Report).ToJson(), cancellationToken);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                await stderr.WriteLineAsync($"error: could not write --write-baseline '{writeBaselinePath}': {ex.Message}");
-                return 1;
-            }
+            return 1;
         }
 
-        if (baseline is not null)
-        {
-            var applied = baseline.Apply(result.Report);
-            result = result with { Report = applied.Report };
-            await stderr.WriteLineAsync($"baseline: suppressed {applied.Suppressed} known finding(s).");
-        }
+        result = await ApplyBaselineAsync(baseline, result, stderr);
 
         string content;
         using (var renderStage = progress.Begin("rendering report"))
@@ -236,6 +211,70 @@ public static class ScanDbCommand
         }
 
         return flags.Strict && ReportOutput.HasCoverageGaps(result.Report) ? 1 : 0;
+    }
+
+    private readonly record struct ParsedOptions(ReportFormat Format, FindingConfidence Confidence, ReadableVerbosity Verbosity);
+
+    private static async Task<ParsedOptions?> TryParseOptionsAsync(ReportOptions options, TextWriter stderr)
+    {
+        if (!ReportOutput.TryParseFormat(options.Format, out var format))
+        {
+            await stderr.WriteLineAsync(ReportOutput.UnknownFormatMessage(options.Format));
+            return null;
+        }
+
+        if (!ReportOutput.TryParseConfidence(options.Confidence, out var confidence))
+        {
+            await stderr.WriteLineAsync(ReportOutput.UnknownConfidenceMessage(options.Confidence));
+            return null;
+        }
+
+        if (!ReportOutput.TryParseVerbosity(options.Verbosity, out var verbosity))
+        {
+            await stderr.WriteLineAsync(ReportOutput.UnknownVerbosityMessage(options.Verbosity));
+            return null;
+        }
+
+        return new ParsedOptions(format, confidence, verbosity);
+    }
+
+    private static async Task<LiveScanResult> ApplyBaselineAsync(FindingBaseline? baseline, LiveScanResult result, TextWriter stderr)
+    {
+        if (baseline is null)
+        {
+            return result;
+        }
+
+        var applied = baseline.Apply(result.Report);
+        await stderr.WriteLineAsync($"baseline: suppressed {applied.Suppressed} known finding(s).");
+        return result with { Report = applied.Report };
+    }
+
+    private static async Task<FindingBaseline?> TryLoadBaselineAsync(string path, TextWriter stderr, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return FindingBaseline.FromJson(await File.ReadAllTextAsync(path, cancellationToken));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            await stderr.WriteLineAsync($"error: could not read --baseline '{path}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private static async Task<bool> TryWriteBaselineAsync(string path, ScanReport report, TextWriter stderr, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await File.WriteAllTextAsync(path, FindingBaseline.Capture(report).ToJson(), cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await stderr.WriteLineAsync($"error: could not write --write-baseline '{path}': {ex.Message}");
+            return false;
+        }
     }
 
     private static async Task<int> RunConnectivityCheckAsync(string connectionString, TextWriter stdout, TextWriter stderr, CancellationToken cancellationToken)

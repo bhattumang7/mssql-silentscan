@@ -36,13 +36,13 @@ public static class ModuleReachableObjectWalker
 
         if (catalog.Find(qualifiedName) is { } table)
         {
-            foreach (var index in table.Indexes.Where(i => i.IsFiltered && i.FilterDefinition is not null))
+            var restated = table.Indexes.FirstOrDefault(i =>
+                i.IsFiltered && i.FilterDefinition is not null
+                && ModuleRestatesFilter(i.FilterDefinition, table.QualifiedName, catalog, statements));
+            if (restated is not null)
             {
-                if (ModuleRestatesFilter(index.FilterDefinition!, table.QualifiedName, catalog, statements))
-                {
-                    touch = new Touch(qualifiedName, index.Name, IsIndexedView: false);
-                    return true;
-                }
+                touch = new Touch(qualifiedName, restated.Name, IsIndexedView: false);
+                return true;
             }
         }
 
@@ -78,7 +78,7 @@ public static class ModuleReachableObjectWalker
 
             var satisfied = required.All(need => statement.Conjuncts.Any(have =>
                 have.Text == need.Text
-                && have.Qualifiers.All(q => aliases.Any(a => catalog.IdentifierComparer.Equals(a, q)))));
+                && have.Qualifiers.All(q => aliases.Contains(q, catalog.IdentifierComparer))));
             if (satisfied)
             {
                 return true;
@@ -103,18 +103,20 @@ public static class ModuleReachableObjectWalker
 
         var text = new System.Text.StringBuilder();
         var qualifiers = new List<string>();
-        for (var i = 0; i < significant.Count; i++)
+        var position = 0;
+        while (position < significant.Count)
         {
-            var token = significant[i];
+            var token = significant[position];
             var isName = token.TokenType is TSqlTokenType.Identifier or TSqlTokenType.QuotedIdentifier;
-            if (isName && i + 1 < significant.Count && significant[i + 1].TokenType == TSqlTokenType.Dot)
+            if (isName && position + 1 < significant.Count && significant[position + 1].TokenType == TSqlTokenType.Dot)
             {
                 qualifiers.Add(Unquote(token.Text));
-                i++;
+                position += 2;
                 continue;
             }
 
             text.Append(isName ? Unquote(token.Text) : token.Text).Append(' ');
+            position++;
         }
 
         return new NormalizedPredicate(text.ToString().ToUpperInvariant(), qualifiers);

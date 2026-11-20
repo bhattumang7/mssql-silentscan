@@ -389,28 +389,6 @@ public static class TriggerCorrectnessScanner
                 && identifierComparer.Equals(last.Value, columnName);
         }
 
-        private sealed class FunctionCallCollector(string functionName) : TSqlFragmentVisitor
-        {
-            public bool Found { get; private set; }
-
-            public override void ExplicitVisit(FunctionCall node)
-            {
-                if (string.Equals(node.FunctionName.Value, functionName, StringComparison.OrdinalIgnoreCase))
-                {
-                    Found = true;
-                }
-
-                base.ExplicitVisit(node);
-            }
-        }
-
-        private sealed class RollbackCollector : TSqlFragmentVisitor
-        {
-            public bool Found { get; private set; }
-
-            public override void ExplicitVisit(RollbackTransactionStatement node) => Found = true;
-        }
-
         private void InspectDirectRecursion(string triggerQualifiedName, TriggerStatementBody node, SchemaObjectName targetTableName, StatementList? statementList)
         {
             if (catalog.IsRecursiveTriggersEnabled != true || statementList is null)

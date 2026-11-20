@@ -66,26 +66,28 @@ internal sealed class NumericValueRangeSet
             return false;
         }
 
-        foreach (var range in _ranges)
+        return _ranges.All(range => RangeIntegersAreIn(range, values, maxSpan));
+    }
+
+    private static bool RangeIntegersAreIn(Range range, IReadOnlySet<decimal> values, int maxSpan)
+    {
+        if (range.Lower is not { } lower || range.Upper is not { } upper)
         {
-            if (range.Lower is not { } lower || range.Upper is not { } upper)
+            return false;
+        }
+
+        var first = range.LowerInclusive ? Math.Ceiling(lower) : Math.Floor(lower) + 1;
+        var last = range.UpperInclusive ? Math.Floor(upper) : Math.Ceiling(upper) - 1;
+        if (last - first + 1 > maxSpan)
+        {
+            return false;
+        }
+
+        for (var value = first; value <= last; value++)
+        {
+            if (!values.Contains(value))
             {
                 return false;
-            }
-
-            var first = range.LowerInclusive ? Math.Ceiling(lower) : Math.Floor(lower) + 1;
-            var last = range.UpperInclusive ? Math.Floor(upper) : Math.Ceiling(upper) - 1;
-            if (last - first + 1 > maxSpan)
-            {
-                return false;
-            }
-
-            for (var value = first; value <= last; value++)
-            {
-                if (!values.Contains(value))
-                {
-                    return false;
-                }
             }
         }
 

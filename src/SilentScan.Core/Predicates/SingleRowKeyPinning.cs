@@ -24,8 +24,8 @@ internal static class SingleRowKeyPinning
         {
             if (conjunct is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
             {
-                AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries, comparer);
-                AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries, comparer);
+                AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries);
+                AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries);
             }
         }
 
@@ -81,8 +81,7 @@ internal static class SingleRowKeyPinning
         List<ColumnEquality> equalities,
         ScalarExpression columnSide,
         ScalarExpression boundSide,
-        Dictionary<string, CatalogTable> entries,
-        StringComparer comparer)
+        Dictionary<string, CatalogTable> entries)
     {
         if (columnSide is not ColumnReferenceExpression { MultiPartIdentifier: { } identifier }
             || ReferencedAlias(identifier, entries) is not { } alias)
