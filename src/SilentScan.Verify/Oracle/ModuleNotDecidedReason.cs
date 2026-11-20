@@ -6,6 +6,8 @@ public enum ModuleNotDecidedReason
 
     ModuleKindNotPlannable,
 
+    ModuleDoesNotCompile,
+
     PlanRequestFailed,
 
     StatementNotLocated,

@@ -52,6 +52,8 @@ public sealed class ModulePlanCaptureTests : IAsyncLifetime
             GO
             CREATE FUNCTION dbo.fMatch (@p INT) RETURNS TABLE AS RETURN SELECT a.Id + @p AS V FROM dbo.T a JOIN dbo.T b ON a.Code = b.Code;
             GO
+            CREATE FUNCTION dbo.fParam (@p NVARCHAR(20)) RETURNS TABLE AS RETURN SELECT a.Id FROM dbo.T a WHERE a.Code = @p;
+            GO
             CREATE FUNCTION dbo.ScalarCount (@p NVARCHAR(20)) RETURNS INT AS
             BEGIN
                 DECLARE @r INT;
@@ -160,6 +162,15 @@ public sealed class ModulePlanCaptureTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CaptureAsync_InlineTableFunctionWithAParameterPredicate_KeepsTheColumnConversionInsteadOfFoldingItAway()
+    {
+        var plan = await CaptureOkAsync("dbo.fParam", PlannableModuleKind.InlineTableFunction);
+
+        var conversion = Assert.Single(ColumnConversions(Assert.Single(Statements(plan))));
+        Assert.Equal("Code", conversion.Column);
+    }
+
+    [Fact]
     public async Task CaptureAsync_NestedExec_ExposesTheCalleeStatementsInsideTheCallingStatement()
     {
         var plan = await CaptureOkAsync("dbo.OuterProc", PlannableModuleKind.Procedure);
@@ -204,12 +215,12 @@ public sealed class ModulePlanCaptureTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CaptureAsync_ModuleReferencingAMissingObject_ReturnsPlanRequestFailedWithTheEngineMessage()
+    public async Task CaptureAsync_ModuleReferencingAMissingObject_ReturnsModuleDoesNotCompileWithTheEngineMessage()
     {
         var result = await _capture.CaptureAsync(DatabaseName, "dbo.MissingObject", PlannableModuleKind.Procedure);
 
         Assert.Null(result.PlanXml);
-        Assert.Equal(ModuleNotDecidedReason.PlanRequestFailed, result.Reason);
+        Assert.Equal(ModuleNotDecidedReason.ModuleDoesNotCompile, result.Reason);
         Assert.Contains("NoSuchTable", result.Detail, StringComparison.Ordinal);
     }
 }

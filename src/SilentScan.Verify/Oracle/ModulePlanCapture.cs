@@ -27,6 +27,10 @@ public sealed class ModulePlanCapture
             var planXml = await new PlanXmlCapture(_options).CaptureAsync(database, request.Statement, cancellationToken);
             return new ModulePlanCaptureResult(planXml, ModuleNotDecidedReason.None, null);
         }
+        catch (SqlException ex) when (ex.Class is >= 11 and <= 16)
+        {
+            return new ModulePlanCaptureResult(null, ModuleNotDecidedReason.ModuleDoesNotCompile, ex.Message);
+        }
         catch (Exception ex) when (ex is SqlException or InvalidOperationException)
         {
             return new ModulePlanCaptureResult(null, ModuleNotDecidedReason.PlanRequestFailed, ex.Message);
@@ -48,6 +52,7 @@ public sealed class ModulePlanCapture
                     return (null, "The function's parameter types could not be rendered.");
                 }
 
+                var declarations = new List<string>(types.Count);
                 var arguments = new List<string>(types.Count);
                 foreach (var type in types)
                 {
@@ -57,10 +62,13 @@ public sealed class ModulePlanCapture
                         return (null, "A function parameter type could not be rendered.");
                     }
 
-                    arguments.Add($"CAST(NULL AS {syntax})");
+                    var variable = string.Create(CultureInfo.InvariantCulture, $"@arg{declarations.Count}");
+                    declarations.Add($"{variable} {syntax}");
+                    arguments.Add(variable);
                 }
 
-                return ($"SELECT * FROM {bracketedName}({string.Join(", ", arguments)});", null);
+                var declare = declarations.Count == 0 ? string.Empty : $"DECLARE {string.Join(", ", declarations)}; ";
+                return ($"{declare}SELECT * FROM {bracketedName}({string.Join(", ", arguments)});", null);
 
             case PlannableModuleKind.Procedure:
                 return await BuildProcedureRequestAsync(database, bracketedName, cancellationToken);
