@@ -2,9 +2,14 @@
 
 Static analyser for SQL Server code.
 
-**Scope: if it's decidable from the code and from SQL Server's own
-configuration/catalog data, it's in scope.** That's the whole rule — nothing
-else restricts what SilentScan can detect or how it detects it.
+**Scope: a rule is in scope only if its finding is one of:**
+- a performance consequence (plan shape, lost seek, per-row work, forced serial, bad estimate);
+- a silently wrong result;
+- silent data loss (truncation, rounding, precision or offset dropped).
+
+Style, formatting, metrics, naming, duplication, dead code and general design
+advice are out of scope. Do not add a rule outside these three, and do not add
+any new rule while a published rule has unmeasured precision.
 
 **Tool-first.** The tool (`silentscan scan-db`, JSON + SARIF
 findings) is the deliverable. **Precision beats recall everywhere** — one false
@@ -68,8 +73,6 @@ effect. Fixtures that only show the scanner firing do not count. Tag it
 `Rule` trait for each rule the test backs). `RuleOracleCoverageTests` fails
 listing every published rule with no such test. If the claim cannot be backed
 by a real-database test, delete the rule rather than exempting it.
-The formatting/, metrics/, dead-code/, duplication/, `deprecated-syntax/task-comment-` and
-`control-flow/goto-usage` style families are exempt.
 
 ## To do list
 `docs/detection-tasklist.md` has the list of to do items. Read it only if asked.
