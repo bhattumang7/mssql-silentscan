@@ -1340,7 +1340,9 @@ public static class SarifReportWriter
         var normalized = sourcePath.Replace('\\', '/');
         if (Path.IsPathRooted(sourcePath))
         {
-            return new Uri(normalized).AbsoluteUri;
+            return Uri.TryCreate(normalized, UriKind.Absolute, out var absolute)
+                ? absolute.AbsoluteUri
+                : "file://" + string.Join('/', normalized.Split('/').Select(Uri.EscapeDataString));
         }
 
         return string.Join('/', normalized.Split('/').Select(Uri.EscapeDataString));

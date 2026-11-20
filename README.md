@@ -4,7 +4,7 @@ Static analyzer for SQL Server / T-SQL. It reads your code and your
 database's real catalog — no execution plan needed — and finds the bugs that
 compile, run, return the right rows on test data, and are still wrong.
 
-**190 rules** — implicit conversions that silently kill an
+**159 rules** — implicit conversions that silently kill an
 index seek, DML that truncates or rounds data with no engine error, unsafe
 dynamic SQL, missing indexes, dangerous triggers, and more. Every rule that
 makes a plan-shape or runtime claim is verified against a real SQL Server
@@ -50,7 +50,7 @@ dotnet run --project src/SilentScan.Cli -- scan-db <connection-string> \
 
 Connects to a live SQL Server database, reads its catalog straight from
 engine metadata, and runs every readable view, procedure, function and
-trigger through all 190 rules in one read-only pass — no DDL or DML is ever
+trigger through all 159 rules in one read-only pass — no DDL or DML is ever
 executed against the database you point it at.
 
 * `--format text` (default) — a readable report, grouped and explained.
@@ -103,7 +103,7 @@ flowchart TD
         CAT --> PARSE["Parsing<br/>ScriptDom parse of every module"]
         PARSE --> LIN["Lineage<br/>LineageResolver, TVF fences,<br/>scalar-UDF map, view expansion"]
         LIN --> TYPE["TypeInference<br/>ExpressionTypeInferencer"]
-        TYPE --> PRED["Predicates<br/>76 TSqlFragmentVisitor scanners<br/>(one Finding+Scanner pair per rule family)"]
+        TYPE --> PRED["Predicates<br/>69 TSqlFragmentVisitor scanners<br/>(one Finding+Scanner pair per rule family)"]
         PRED --> RULES["Rules<br/>Verdict / TypePairMatrix classifiers"]
         RULES --> SRB["Reporting<br/>ScanReportBuilder → ScanReport"]
     end

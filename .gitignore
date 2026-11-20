@@ -36,3 +36,4 @@ local-test-database.md
 # Cross-reference from docs/detection-tasklist.md checkbox items back to
 # vendor/sql2025 internal method names - local-only, never committed.
 gap-survey-checklist-xref.md
+.dotnet-safe.lock/

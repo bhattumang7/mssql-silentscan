@@ -184,6 +184,7 @@ public static class ScanDbCommand
             return 1;
         }
 
+        result = result with { Report = RulePrecisionLedger.ApplyDefaultVisibility(result.Report, minimumConfidence) };
         result = await ApplyBaselineAsync(baseline, result, stderr);
 
         string content;

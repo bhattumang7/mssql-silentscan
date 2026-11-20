@@ -82,11 +82,28 @@ wait_for_stray_build_processes() {
     return 0
 }
 
+lock_dir="${DOTNET_SAFE_LOCK:-$(dirname "$0")/../.dotnet-safe.lock}"
+lock_wait=0
+until mkdir "$lock_dir" 2>/dev/null; do
+    if [[ -f "$lock_dir/pid" ]] && ! kill -0 "$(cat "$lock_dir/pid" 2>/dev/null)" 2>/dev/null; then
+        rm -rf "$lock_dir"
+        continue
+    fi
+    lock_wait=$((lock_wait + 5))
+    if [[ "$lock_wait" -ge "${DOTNET_SAFE_LOCK_WAIT:-1800}" ]]; then
+        echo "timed out waiting for another dotnet-safe run to finish" >&2
+        exit 3
+    fi
+    sleep 5
+done
+echo $$ > "$lock_dir/pid"
+
 dotnet build-server shutdown >/dev/null 2>&1 || true
 wait_for_stray_build_processes
 
 group_pid=""
 cleanup() {
+    rm -rf "$lock_dir"
     if [[ -n "$group_pid" ]]; then
         kill -TERM -- "-$group_pid" >/dev/null 2>&1 || true
         sleep 1

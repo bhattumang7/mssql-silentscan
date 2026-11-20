@@ -15,7 +15,9 @@ internal static class UnqualifiedTableReference
             per database user, defaulting to dbo unless configured otherwise) and on which schemas
             in that database actually contain an object named Orders. That resolution happens at
             compile time, and it's session-context-dependent rather than a fixed property of the
-            query text alone.
+            query text alone. Inside a stored procedure, function, view or trigger body the
+            module's own schema is used instead and one plan is shared across callers, so this
+            rule reports only ad-hoc and dynamic SQL text.
 
             Because the resolved object can differ by caller context, the plan cache can't safely
             treat two calls of the same unqualified query text as interchangeable just because the
@@ -45,22 +47,18 @@ internal static class UnqualifiedTableReference
         Examples:
         [
             new RuleDocExample(
-                Title: "An unqualified table reference at a query site",
+                Title: "An unqualified table reference in dynamic SQL",
                 NoncompliantSql: """
                     CREATE SCHEMA sales;
                     GO
                     CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
                     CREATE TABLE sales.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount DECIMAL(10,2) NOT NULL);
 
-                    SELECT OrderId, Amount
-                    FROM Orders
-                    WHERE Amount > 100;
+                    EXEC (N'SELECT OrderId, Amount FROM Orders WHERE Amount > 100');
                     """,
-                NoncompliantExplanation: "Which Orders table this resolves to depends on the calling session's default schema - a user defaulting to dbo gets dbo.Orders, a user defaulting to sales gets sales.Orders, and each distinct resolution context gets its own plan-cache entry for what looks like identical query text.",
+                NoncompliantExplanation: "The dynamic batch runs in the caller's context, so which Orders table it resolves to depends on the calling session's default schema - a user defaulting to dbo gets dbo.Orders, a user defaulting to sales gets sales.Orders, and each distinct resolution context gets its own plan-cache entry for what looks like identical query text.",
                 CompliantSql: """
-                    SELECT OrderId, Amount
-                    FROM dbo.Orders
-                    WHERE Amount > 100;
+                    EXEC (N'SELECT OrderId, Amount FROM dbo.Orders WHERE Amount > 100');
                     """,
                 CompliantExplanation: "dbo.Orders is fully identified by the text alone - resolution doesn't depend on the caller's default schema, and every caller shares one plan-cache entry."),
         ]);

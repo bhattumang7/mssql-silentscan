@@ -148,7 +148,7 @@ public sealed class ScanProgressTests
             stage.Advance(4);
         }
 
-        Assert.DoesNotContain('\r', writer.ToString());
+        Assert.DoesNotContain('\r', writer.ToString().Replace(Environment.NewLine, "\n"));
     }
 
     [Fact]
