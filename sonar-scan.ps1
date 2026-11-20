@@ -60,6 +60,13 @@ $ErrorActionPreference = 'Stop'
 $RootDir  = $PSScriptRoot
 $Solution = Join-Path $RootDir 'SilentScan.slnx'
 $IsVerbose = $VerbosePreference -eq 'Continue'
+$TimeoutExe = 'timeout'
+$OnWindows = $IsWindows -or $env:OS -eq 'Windows_NT'
+if ($OnWindows) {
+    $env:MSYS2_ARG_CONV_EXCL = '*'
+    $gnuTimeout = Join-Path $env:ProgramFiles 'Git\usr\bin\timeout.exe'
+    if (Test-Path $gnuTimeout) { $TimeoutExe = $gnuTimeout }
+}
 
 # Runs an external command under a hard wall-clock cap, capturing its combined
 # output. Streamed live only under -Verbose; otherwise captured silently and
@@ -97,6 +104,13 @@ $env:MSBUILDDISABLENODEREUSE = '1'
 function Wait-ForStrayBuildProcesses {
     $pattern = 'VBCSCompiler|MSBuild\.dll.*nodemode'
     $maxWaitSeconds = 10
+    if ($OnWindows) {
+        for ($waited = 0; $waited -le $maxWaitSeconds; $waited++) {
+            if (-not (Get-Process -Name VBCSCompiler -ErrorAction SilentlyContinue)) { return }
+            Start-Sleep -Seconds 1
+        }
+        return
+    }
     $uid = (& id -u)
     for ($waited = 0; $waited -le $maxWaitSeconds; $waited++) {
         & pgrep -u $uid -f $pattern *> $null
@@ -120,12 +134,16 @@ function Invoke-Step {
         [Parameter(Mandatory)] [int]$TimeoutSeconds
     )
     Write-Verbose "=== $Label (timeout ${TimeoutSeconds}s) ==="
+    if ($OnWindows -and $FilePath.EndsWith('.sh')) {
+        $ArgumentList = @($FilePath) + $ArgumentList
+        $FilePath = 'bash'
+    }
     $timeoutArgs = @('--kill-after=10', "${TimeoutSeconds}s", $FilePath) + $ArgumentList
     if ($IsVerbose) {
-        & timeout @timeoutArgs
+        & $TimeoutExe @timeoutArgs
         $exit = $LASTEXITCODE
     } else {
-        $output = & timeout @timeoutArgs 2>&1
+        $output = & $TimeoutExe @timeoutArgs 2>&1
         $exit = $LASTEXITCODE
         if ($exit -ne 0) {
             Write-Host ""
@@ -150,7 +168,7 @@ if (-not (Get-Command dotnet-sonarscanner -ErrorAction SilentlyContinue)) {
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     throw "java not found on PATH. SonarScanner for .NET requires a Java 17+ runtime."
 }
-if (-not (Get-Command timeout -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command $TimeoutExe -ErrorAction SilentlyContinue)) {
     throw "timeout (GNU coreutils) not found on PATH. Required to bound every external dotnet/sonarscanner call - see Invoke-Step."
 }
 try {
