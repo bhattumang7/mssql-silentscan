@@ -24,33 +24,39 @@ default-on only at 95% true positives over enough decided samples; every other r
 including every unmeasured one, is opt-in (`--confidence medium`). Re-measure a rule
 after changing it and update its entry.
 
+A finding is a false positive only when the code or schema rules the claimed effect out.
+Table size and the values stored today never make a finding false: data grows, so a
+consequence the code allows counts as true.
+
 False-positive shapes to remove before a rule can return to default-on:
 - function-wrapped-column, column-arithmetic, cast-or-convert-on-column, date-function-on-column,
-  case-fold-on-column, expression-derived-column: the wrapped column is not indexed, or a
-  sargable predicate on another column drives the access, or the wrapped side is the
-  probe side of a join.
-- max-typed-column: the MAX column is only stored or returned, never filtered, joined or sorted on.
-- unicode-to-non-unicode: nvarchar from a split over numeric ids or identifier names.
-- catch-all-parameter: the catch-all conjunct is residual behind a selective sargable predicate.
-- case-expression-missing-else: the CASE is exhaustive over a bounded domain or already filtered.
-- nested-under-view-or-tvf (tvf-fence): the TVF is the only row source, so no join is misled.
-- fast-forward-cursor, count-star-variable-existence-check, multi-referenced-cte: the cursor
-  query or CTE is trivially small.
-- heap-with-nonclustered-indexes, filter-column-not-in-index, post-expansion-join-width,
-  non-persisted-computed-column: the claim states no engine consequence by itself.
-- plus-operator-null-propagation: delimiter prefix inside FOR XML PATH, or an operand
-  already guarded.
-- Unlabelled for lack of source or a decidable claim: unassigned-output-parameter,
-  unresolved-transaction, unindexed-foreign-key, check-constraint-null-not-handled,
-  scalar-udf/nested-under-view-or-tvf, write-loss/length-truncation,
-  write-loss/temporal-precision-loss, verdict/range-seek.
+  expression-derived-column, scan-forced, composite-leading-column-unconstrained: a sargable
+  predicate on the same or another column drives the access, the wrapped side is the outer
+  side of a join, or the comparison is against another column of the same row.
+- key-lookup-prone: the equality covers every key column of a unique or clustered index.
+- max-typed-column: the MAX column is never filtered, joined or sorted on.
+- unicode-to-non-unicode: varchar text round-trips through an nvarchar function back to varchar.
+- float-equality: a stored float compared to a same-typed value with no arithmetic.
+- case-expression-missing-else: the CASE is exhaustive over a domain bounded by DATEPART, an
+  IN filter or the statement's own WHERE.
+- unresolved-transaction: BEGIN and COMMIT guarded by the same trancount flag, or a reported
+  exit that cannot leave the transaction open.
+- argument-type-mismatch, length-truncation, under-length-parameter,
+  isnull-replacement-value-truncation, approximate-to-exact-truncation, temporal-precision-loss:
+  the value's declared source already fits the target (narrow temp-table column, short
+  constant, same parameter written to the column, integer-only or date-typed source).
+- scalar-udf/nested-under-view-or-tvf: the UDF sits in a view column the caller never projects.
+- scalar-udf/in-computed-column-or-constraint: the UDF is only in a DEFAULT constraint.
+- dml/self-referencing: the statement is bounded to one row by a key.
+- equals-null-comparison: the `= NULL` is in a dead OR branch against NOT NULL columns.
+- outer-join-predicate-collapse: the outer-joined side is reached through a non-nullable
+  foreign key, so no unmatched rows exist.
+- tvf-fence/nested-under-view-or-tvf: the TVF is the only row source.
+- filter-column-not-in-index: the filtered index is unique and exists to enforce uniqueness.
+- check-constraint-null-not-handled: NULL is handled through COALESCE or a validating function.
+- post-expansion-join-width: the claim states no engine consequence by itself.
 
 Medium and low confidence findings have not been sampled.
-
-Lost coverage to restore: `ScanReportBuilder` minimum-confidence filtering had one
-test (`MinimumConfidence_FiltersEachFindingByItsOwnConfidence_NotAllOrNothing`)
-built on a Low-confidence task-comment finding; rewrite it on a surviving
-Low-confidence rule.
 
 ### Detections
 
