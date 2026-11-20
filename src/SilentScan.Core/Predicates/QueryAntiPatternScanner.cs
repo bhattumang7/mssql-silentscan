@@ -34,7 +34,9 @@ public static class QueryAntiPatternScanner
         parseResult.Fragment.Accept(cteNameCollector);
         var estimateSensitiveFromClauses = new EstimateSensitiveFromClauseCollector();
         parseResult.Fragment.Accept(estimateSensitiveFromClauses);
-        return new Rule(parseResult.SourcePath, catalog, cteNameCollector.Names, estimateSensitiveFromClauses.FromClauses);
+        var moduleDetector = new Rule.ModuleBodyDetector();
+        parseResult.Fragment.Accept(moduleDetector);
+        return new Rule(parseResult.SourcePath, catalog, cteNameCollector.Names, estimateSensitiveFromClauses.FromClauses, moduleDetector.Found);
     }
 
     internal static IReadOnlyList<QueryAntiPatternFinding> Harvest(Rule rule) =>
@@ -50,7 +52,7 @@ public static class QueryAntiPatternScanner
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
     internal sealed class Rule(
-        string sourcePath, DatabaseCatalog catalog, HashSet<string> cteNames, HashSet<FromClause> estimateSensitiveFromClauses) : IModuleRule
+        string sourcePath, DatabaseCatalog catalog, HashSet<string> cteNames, HashSet<FromClause> estimateSensitiveFromClauses, bool insideModule) : IModuleRule
     {
         public List<QueryAntiPatternFinding> Findings { get; } = [];
 
@@ -213,6 +215,17 @@ public static class QueryAntiPatternScanner
             }
         }
 
+        internal sealed class ModuleBodyDetector : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void Visit(ProcedureStatementBodyBase node) => Found = true;
+
+            public override void Visit(ViewStatementBody node) => Found = true;
+
+            public override void Visit(TriggerStatementBody node) => Found = true;
+        }
+
         internal sealed class CteNameCollector(StringComparer identifierComparer) : TSqlFragmentVisitor
         {
             public HashSet<string> Names { get; } = new(identifierComparer);
@@ -234,7 +247,8 @@ public static class QueryAntiPatternScanner
 
         private void InspectUnqualifiedReference(NamedTableReference named)
         {
-            if (named.SchemaObject.SchemaIdentifier is not null
+            if (insideModule
+                || named.SchemaObject.SchemaIdentifier is not null
                 || named.SchemaObject.BaseIdentifier.Value.StartsWith('#')
                 || cteNames.Contains(named.SchemaObject.BaseIdentifier.Value))
             {

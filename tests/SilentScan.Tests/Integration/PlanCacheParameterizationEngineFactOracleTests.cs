@@ -47,6 +47,11 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         CREATE TABLE s1.Q (Id INT);
         CREATE TABLE s2.Q (Id INT);
         CREATE TABLE dbo.QualifiedT (Id INT);
+        CREATE TABLE dbo.Q (Id INT);
+        GO
+        CREATE PROCEDURE dbo.UnqualifiedInModule AS SELECT Id FROM Q /*tagmod*/;
+        GO
+        GRANT EXECUTE ON dbo.UnqualifiedInModule TO u1, u2;
         GO
         """;
 
@@ -187,5 +192,16 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
 
         Assert.Equal(2, await CachedPlanCountAsync("%FROM Q /*tagunq*/%"));
         Assert.Equal(1, await CachedPlanCountAsync("%FROM dbo.QualifiedT /*tagqual*/%"));
+    }
+
+    [Fact]
+    [Trait("Rule", "silentscan/query/unqualified-table-reference")]
+    public async Task UnqualifiedTableReference_InsideProcedureBody_SharesOnePlanAcrossDefaultSchemas()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC dbo.UnqualifiedInModule; REVERT;");
+        await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC dbo.UnqualifiedInModule; REVERT;");
+
+        Assert.Equal(1, await CachedPlanCountAsync("%FROM Q /*tagmod*/%"));
     }
 }

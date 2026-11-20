@@ -427,6 +427,18 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Equal(FindingConfidence.Medium, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("CREATE PROCEDURE dbo.P AS SELECT Id FROM Big WHERE Id = 1;")]
+    [InlineData("CREATE FUNCTION dbo.F() RETURNS TABLE AS RETURN (SELECT Id FROM Big);")]
+    [InlineData("CREATE VIEW dbo.V AS SELECT Id FROM Big;")]
+    [InlineData("CREATE TRIGGER dbo.T ON dbo.A AFTER INSERT AS SELECT Id FROM Big;")]
+    public void UnqualifiedTableReferenceInsideModuleBody_NeverFires(string sql)
+    {
+        var findings = Scan(sql);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnqualifiedTableReference);
+    }
+
     [Fact]
     public void QualifiedTableReference_NeverFiresUnqualified()
     {
