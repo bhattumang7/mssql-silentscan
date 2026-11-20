@@ -4,7 +4,6 @@ using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Rules;
-using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -30,42 +29,9 @@ public static class IsNullReplacementValueTruncationScanner
                 .ThenBy(f => f.Column),
         ];
 
-    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
+    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : VariableTrackingModuleRule(catalog), IModuleRule
     {
         public List<IsNullReplacementValueTruncationFinding> Findings { get; } = [];
-
-        private readonly Dictionary<string, SqlType?> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
-
-        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => SeedOwnParameters(walker);
-
-        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnLeaveTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _variableTypes.Clear();
-
-        private void SeedOwnParameters(ModuleWalker walker)
-        {
-            _variableTypes.Clear();
-            if (walker.CurrentProcScope is { } scope && catalog.TryGetProcedureParameters(scope, out var ownFormalParameters))
-            {
-                foreach (var parameter in ownFormalParameters)
-                {
-                    _variableTypes[parameter.Name] = parameter.Type;
-                }
-            }
-        }
-
-        public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
-        {
-            foreach (var declaration in node.Declarations)
-            {
-                _variableTypes[declaration.VariableName.Value] =
-                    SqlTypeReferenceResolver.Resolve(declaration.DataType, columnCollation: null, catalog.TypeAliases);
-            }
-        }
 
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
@@ -86,7 +52,7 @@ public static class IsNullReplacementValueTruncationScanner
                 return;
             }
 
-            var context = new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog, _variableTypes);
+            var context = new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, Catalog.TypeAliases, Catalog, VariableTypes);
             var checkExpressionType = ScalarExpressionResolver.ResolveScalarType(checkExpression, scopeChain, sourcePath, context);
             var replacementValueType = ScalarExpressionResolver.ResolveScalarType(replacementValue, scopeChain, sourcePath, context);
 
@@ -109,7 +75,7 @@ public static class IsNullReplacementValueTruncationScanner
 
         private bool AllReferencedColumnsResolveDirectly(ScalarExpression parameter, ScopeChain scopeChain)
         {
-            var guard = new DirectColumnGuardVisitor(sourcePath, scopeChain, catalog);
+            var guard = new DirectColumnGuardVisitor(sourcePath, scopeChain, Catalog);
             parameter.Accept(guard);
             return guard.AllDirect;
         }

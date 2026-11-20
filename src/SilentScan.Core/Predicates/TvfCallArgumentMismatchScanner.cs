@@ -4,7 +4,6 @@ using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Rules;
-using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -30,42 +29,9 @@ public static class TvfCallArgumentMismatchScanner
                 .ThenBy(f => f.Column),
         ];
 
-    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
+    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : VariableTrackingModuleRule(catalog), IModuleRule
     {
         public List<TvfCallArgumentMismatchFinding> Findings { get; } = [];
-
-        private readonly Dictionary<string, SqlType?> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
-
-        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => SeedOwnParameters(walker);
-
-        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _variableTypes.Clear();
-
-        public void OnLeaveTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _variableTypes.Clear();
-
-        private void SeedOwnParameters(ModuleWalker walker)
-        {
-            _variableTypes.Clear();
-            if (walker.CurrentProcScope is { } scope && catalog.TryGetProcedureParameters(scope, out var ownFormalParameters))
-            {
-                foreach (var parameter in ownFormalParameters)
-                {
-                    _variableTypes[parameter.Name] = parameter.Type;
-                }
-            }
-        }
-
-        public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
-        {
-            foreach (var declaration in node.Declarations)
-            {
-                _variableTypes[declaration.VariableName.Value] =
-                    Parsing.SqlTypeReferenceResolver.Resolve(declaration.DataType, columnCollation: null, catalog.TypeAliases);
-            }
-        }
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
@@ -96,9 +62,9 @@ public static class TvfCallArgumentMismatchScanner
 
         private void VisitFunctionReference(SchemaObjectFunctionTableReference function, ModuleWalker walker)
         {
-            var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(function.SchemaObject));
-            if (!catalog.TryGetTableValuedFunctionKind(qualifiedName, out var kind) || kind != TableValuedFunctionKind.Inline
-                || !catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
+            var qualifiedName = Catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(function.SchemaObject));
+            if (!Catalog.TryGetTableValuedFunctionKind(qualifiedName, out var kind) || kind != TableValuedFunctionKind.Inline
+                || !Catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
             {
                 return;
             }
@@ -115,7 +81,7 @@ public static class TvfCallArgumentMismatchScanner
                 var argumentExpression = function.Parameters[i];
                 var argumentType = ScalarExpressionResolver.ResolveScalarType(
                     argumentExpression, [], sourcePath,
-                    new ScalarExpressionResolver.ScalarTypeContext(null, catalog.TypeAliases, catalog, _variableTypes));
+                    new ScalarExpressionResolver.ScalarTypeContext(null, Catalog.TypeAliases, Catalog, VariableTypes));
 
                 if (WriteLossClassifier.Classify(formalType, argumentType, argumentExpression, isVariableTarget: true) is not { } kindResult)
                 {

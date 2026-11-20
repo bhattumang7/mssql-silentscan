@@ -58,32 +58,8 @@ public static class RegexpDefaultCaseSensitiveOnCiColumnScanner
             Inspect(name!.ToUpperInvariant(), node.Parameters[0], node.Parameters[1], flags, node.StartLine, node.StartColumn, walker);
         }
 
-        public void OnEnterFromClause(FromClause node, ModuleWalker walker)
-        {
-            foreach (var tableReference in node.TableReferences)
-            {
-                InspectTableReference(tableReference, walker);
-            }
-        }
-
-        private void InspectTableReference(TableReference tableReference, ModuleWalker walker)
-        {
-            switch (tableReference)
-            {
-                case JoinTableReference join:
-                    InspectTableReference(join.FirstTableReference, walker);
-                    InspectTableReference(join.SecondTableReference, walker);
-                    break;
-
-                case JoinParenthesisTableReference parenthesis:
-                    InspectTableReference(parenthesis.Join, walker);
-                    break;
-
-                case GlobalFunctionTableReference function:
-                    InspectTvfReference(function, walker);
-                    break;
-            }
-        }
+        public void OnEnterFromClause(FromClause node, ModuleWalker walker) =>
+            RegexpTableReferenceWalker.ForEachFunctionReference(node, function => InspectTvfReference(function, walker));
 
         private void InspectTvfReference(GlobalFunctionTableReference function, ModuleWalker walker)
         {

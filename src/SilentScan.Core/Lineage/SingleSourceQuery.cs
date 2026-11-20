@@ -11,9 +11,6 @@ internal static class SingleSourceQuery
         && Unwrap(statement.QueryExpression) is QuerySpecification spec
         && IsPlain(spec);
 
-    private static QueryExpression Unwrap(QueryExpression expression) =>
-        expression is QueryParenthesisExpression parenthesis ? Unwrap(parenthesis.QueryExpression) : expression;
-
     public static bool IsPlain(QuerySpecification spec)
     {
         if (spec is not
@@ -35,6 +32,9 @@ internal static class SingleSourceQuery
         spec.Accept(inspector);
         return inspector.HasPlainShape;
     }
+
+    private static QueryExpression Unwrap(QueryExpression expression) =>
+        expression is QueryParenthesisExpression parenthesis ? Unwrap(parenthesis.QueryExpression) : expression;
 
     private sealed class PlainShapeInspector : TSqlFragmentVisitor
     {

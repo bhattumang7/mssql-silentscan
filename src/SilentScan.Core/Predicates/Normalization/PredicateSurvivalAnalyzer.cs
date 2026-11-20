@@ -1,6 +1,6 @@
-using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Common;
+using static SilentScan.Core.Predicates.Normalization.NumericLiteralFolding;
 
 namespace SilentScan.Core.Predicates.Normalization;
 
@@ -386,22 +386,6 @@ public static class PredicateSurvivalAnalyzer
         return firstIsColumn ? bin.FirstExpression : bin.SecondExpression;
     }
 
-    private static decimal? TryGetNumericLiteral(ScalarExpression expr) => expr switch
-    {
-        IntegerLiteral lit => ParseDecimal(lit.Value),
-        NumericLiteral lit => ParseDecimal(lit.Value),
-        MoneyLiteral lit => ParseDecimal(lit.Value),
-
-        UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative } unary =>
-            TryGetNumericLiteral(unary.Expression) is { } v ? -v : null,
-        UnaryExpression { UnaryExpressionType: UnaryExpressionType.Positive } unary =>
-            TryGetNumericLiteral(unary.Expression),
-        _ => null,
-    };
-
-    private static decimal? ParseDecimal(string value) =>
-        decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
-
     private static string? TryGetStringLiteral(ScalarExpression expr) =>
         expr is StringLiteral lit ? lit.Value : null;
 
@@ -551,17 +535,6 @@ public static class PredicateSurvivalAnalyzer
 
         return (required, excluded);
     }
-
-    private static NumericValueRangeSet ToRangeSet(CmpOp op, decimal value) => op switch
-    {
-        CmpOp.Eq => NumericValueRangeSet.ForEquals(value),
-        CmpOp.Ne => NumericValueRangeSet.ForNotEquals(value),
-        CmpOp.Lt => NumericValueRangeSet.ForLessThan(value),
-        CmpOp.Le => NumericValueRangeSet.ForLessThanOrEqual(value),
-        CmpOp.Gt => NumericValueRangeSet.ForGreaterThan(value),
-        CmpOp.Ge => NumericValueRangeSet.ForGreaterThanOrEqual(value),
-        _ => NumericValueRangeSet.Universal,
-    };
 
     private readonly record struct GroupedLeaf(bool IsNull, bool IsNotNull, LiteralConstraint? Constraint, ColumnReferenceExpression ColumnRef);
 

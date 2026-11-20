@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SilentScan.Core.Predicates.Normalization;
@@ -70,7 +69,7 @@ internal static class CheckConstraintDomainFolder
         }
 
         var effectiveOp = literalOnRight ? op.Value : CmpOpHelper.Flip(op.Value);
-        return ToRangeSet(effectiveOp, literal.Value);
+        return NumericLiteralFolding.ToRangeSet(effectiveOp, literal.Value);
     }
 
     public static bool IsColumnReference(ScalarExpression expression, string columnName, StringComparer comparer)
@@ -84,38 +83,6 @@ internal static class CheckConstraintDomainFolder
             && comparer.Equals(identifiers[^1].Value, columnName);
     }
 
-    public static decimal? TryGetNumericLiteral(ScalarExpression expression)
-    {
-        while (expression is ParenthesisExpression parenthesis)
-        {
-            expression = parenthesis.Expression;
-        }
-
-        return expression switch
-        {
-            IntegerLiteral lit => ParseDecimal(lit.Value),
-            NumericLiteral lit => ParseDecimal(lit.Value),
-            MoneyLiteral lit => ParseDecimal(lit.Value),
-
-            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative } unary =>
-                TryGetNumericLiteral(unary.Expression) is { } v ? -v : null,
-            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Positive } unary =>
-                TryGetNumericLiteral(unary.Expression),
-            _ => null,
-        };
-    }
-
-    private static decimal? ParseDecimal(string value) =>
-        decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
-
-    private static NumericValueRangeSet ToRangeSet(CmpOp op, decimal value) => op switch
-    {
-        CmpOp.Eq => NumericValueRangeSet.ForEquals(value),
-        CmpOp.Ne => NumericValueRangeSet.ForNotEquals(value),
-        CmpOp.Lt => NumericValueRangeSet.ForLessThan(value),
-        CmpOp.Le => NumericValueRangeSet.ForLessThanOrEqual(value),
-        CmpOp.Gt => NumericValueRangeSet.ForGreaterThan(value),
-        CmpOp.Ge => NumericValueRangeSet.ForGreaterThanOrEqual(value),
-        _ => NumericValueRangeSet.Universal,
-    };
+    public static decimal? TryGetNumericLiteral(ScalarExpression expression) =>
+        NumericLiteralFolding.TryGetNumericLiteral(expression, skipParentheses: true);
 }

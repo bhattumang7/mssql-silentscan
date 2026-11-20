@@ -1,10 +1,10 @@
-using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Common;
 using SilentScan.Core.Predicates.Normalization;
+using static SilentScan.Core.Predicates.Normalization.NumericLiteralFolding;
 
 namespace SilentScan.Core.Predicates;
 
@@ -220,32 +220,6 @@ public static class CartesianJoinScanner
         private static bool MatchesColumn((string Qualifier, string Column) candidate, string qualifier, string column) =>
             string.Equals(candidate.Qualifier, qualifier, StringComparison.OrdinalIgnoreCase)
             && string.Equals(candidate.Column, column, StringComparison.OrdinalIgnoreCase);
-
-        private static decimal? TryGetNumericLiteral(ScalarExpression expr) => expr switch
-        {
-            IntegerLiteral lit => ParseDecimal(lit.Value),
-            NumericLiteral lit => ParseDecimal(lit.Value),
-            MoneyLiteral lit => ParseDecimal(lit.Value),
-            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative } unary =>
-                TryGetNumericLiteral(unary.Expression) is { } v ? -v : null,
-            UnaryExpression { UnaryExpressionType: UnaryExpressionType.Positive } unary =>
-                TryGetNumericLiteral(unary.Expression),
-            _ => null,
-        };
-
-        private static decimal? ParseDecimal(string value) =>
-            decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
-
-        private static NumericValueRangeSet ToRangeSet(CmpOp op, decimal value) => op switch
-        {
-            CmpOp.Eq => NumericValueRangeSet.ForEquals(value),
-            CmpOp.Ne => NumericValueRangeSet.ForNotEquals(value),
-            CmpOp.Lt => NumericValueRangeSet.ForLessThan(value),
-            CmpOp.Le => NumericValueRangeSet.ForLessThanOrEqual(value),
-            CmpOp.Gt => NumericValueRangeSet.ForGreaterThan(value),
-            CmpOp.Ge => NumericValueRangeSet.ForGreaterThanOrEqual(value),
-            _ => NumericValueRangeSet.Universal,
-        };
 
         private void ReportExplicitCrossJoinGaps(
             IList<TableReference> topLevel, AliasUnionFind unionFind, string sourcePath)

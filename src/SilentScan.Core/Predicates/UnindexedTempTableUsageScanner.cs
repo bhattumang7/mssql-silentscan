@@ -77,21 +77,33 @@ public static class UnindexedTempTableUsageScanner
                 continue;
             }
 
-            var temp = catalog.Find(declaration.TempQualifiedName, declaration.Scope);
-            if (temp is null || temp.Indexes.Count != 0)
-            {
-                continue;
-            }
-
-            findings.Add(new UnindexedTempTableUsageFinding(
-                usage.Kind,
-                declaration.TempQualifiedName,
-                parseResult.SourcePath,
-                declaration.Line,
-                usage.Line,
-                usage.Column));
+            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage);
         }
 
+        return OrderFindings(findings);
+    }
+
+    private static void AddFindingIfUnindexed(
+        List<UnindexedTempTableUsageFinding> findings, SqlParseResult parseResult, DatabaseCatalog catalog,
+        Declaration declaration, Usage usage)
+    {
+        var temp = catalog.Find(declaration.TempQualifiedName, declaration.Scope);
+        if (temp is null || temp.Indexes.Count != 0)
+        {
+            return;
+        }
+
+        findings.Add(new UnindexedTempTableUsageFinding(
+            usage.Kind,
+            declaration.TempQualifiedName,
+            parseResult.SourcePath,
+            declaration.Line,
+            usage.Line,
+            usage.Column));
+    }
+
+    private static IReadOnlyList<UnindexedTempTableUsageFinding> OrderFindings(List<UnindexedTempTableUsageFinding> findings)
+    {
         return
         [
             .. findings
@@ -116,27 +128,10 @@ public static class UnindexedTempTableUsageScanner
                 continue;
             }
 
-            var temp = catalog.Find(declaration.TempQualifiedName, declaration.Scope);
-            if (temp is null || temp.Indexes.Count != 0)
-            {
-                continue;
-            }
-
-            findings.Add(new UnindexedTempTableUsageFinding(
-                usage.Kind,
-                declaration.TempQualifiedName,
-                parseResult.SourcePath,
-                declaration.Line,
-                usage.Line,
-                usage.Column));
+            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage);
         }
 
-        return
-        [
-            .. findings
-                .OrderBy(f => f.SourcePath, StringComparer.Ordinal)
-                .ThenBy(f => f.DeclarationLine),
-        ];
+        return OrderFindings(findings);
     }
 
     public sealed record Declaration(string TempTableName, string TempQualifiedName, string? Scope, int Line);
