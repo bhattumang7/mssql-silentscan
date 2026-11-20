@@ -92,7 +92,7 @@ public static class PlanStatementLocator
             nested.Remove();
         }
 
-        return ConvertImplicitDetector.FindColumnConversions(scoped.ToString());
+        return ConvertImplicitDetector.FindColumnConversionsIncludingUnattributed(scoped.ToString());
     }
 
     private static int LineOf(string text, int index)

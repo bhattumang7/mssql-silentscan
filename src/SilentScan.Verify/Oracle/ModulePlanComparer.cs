@@ -43,6 +43,12 @@ public static class ModulePlanComparer
 
             var statement = statements[index];
             var converted = statement.Conversions.Any(c => Matches(c, schema, table, column));
+            if (!converted && statement.Conversions.Any(c => c.Table is null && string.Equals(c.Column, column, StringComparison.OrdinalIgnoreCase)))
+            {
+                AddNotDecided(ModuleNotDecidedReason.ConversionNotAttributable, "the plan converts a column of this name but does not say which table it belongs to");
+                continue;
+            }
+
             var outcome = converted ? ModuleComparisonOutcome.Agree : ModuleComparisonOutcome.ToolOnly;
             if (seen.Add((index, table.ToUpperInvariant(), column.ToUpperInvariant(), outcome)))
             {
@@ -51,7 +57,7 @@ public static class ModulePlanComparer
 
             void AddNotDecided(ModuleNotDecidedReason reason, string? detail)
             {
-                var key = (reason == ModuleNotDecidedReason.DynamicSql ? -1 : -2, table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
+                var key = (reason == ModuleNotDecidedReason.DynamicSql ? -1 : reason == ModuleNotDecidedReason.ConversionNotAttributable ? -3 : -2, table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
                 if (seen.Add(key))
                 {
                     rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim, detail));
@@ -105,7 +111,7 @@ public static class ModulePlanComparer
 
     private static bool Matches(ConvertImplicitFinding conversion, string? schema, string table, string column) =>
         string.Equals(conversion.Table, table, StringComparison.OrdinalIgnoreCase)
-        && (schema is null || string.Equals(conversion.Schema, schema, StringComparison.OrdinalIgnoreCase))
+        && (schema is null || conversion.Schema is null || string.Equals(conversion.Schema, schema, StringComparison.OrdinalIgnoreCase))
         && string.Equals(conversion.Column, column, StringComparison.OrdinalIgnoreCase);
 
     private static (string? Schema, string Table) SplitQualifiedName(string qualifiedName)

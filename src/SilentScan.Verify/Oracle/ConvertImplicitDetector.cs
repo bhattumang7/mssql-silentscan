@@ -8,7 +8,13 @@ public static class ConvertImplicitDetector
 
     private const string TableAttributeName = "Table";
 
-    public static IReadOnlyList<ConvertImplicitFinding> FindColumnConversions(string planXml)
+    public static IReadOnlyList<ConvertImplicitFinding> FindColumnConversions(string planXml) =>
+        FindColumnConversionsCore(planXml, includeUnattributed: false);
+
+    public static IReadOnlyList<ConvertImplicitFinding> FindColumnConversionsIncludingUnattributed(string planXml) =>
+        FindColumnConversionsCore(planXml, includeUnattributed: true);
+
+    private static List<ConvertImplicitFinding> FindColumnConversionsCore(string planXml, bool includeUnattributed)
     {
         var doc = XDocument.Parse(planXml);
 
@@ -19,7 +25,10 @@ public static class ConvertImplicitDetector
                 Convert = convert,
 
                 ColumnRef = convert.Descendants(ShowPlanNs + "ColumnReference")
-                    .FirstOrDefault(c => !string.IsNullOrEmpty((string?)c.Attribute(TableAttributeName))),
+                    .FirstOrDefault(c => !string.IsNullOrEmpty((string?)c.Attribute(TableAttributeName)))
+                    ?? (includeUnattributed
+                        ? convert.Descendants(ShowPlanNs + "ColumnReference").FirstOrDefault(IsNamedColumn)
+                        : null),
             })
             .Where(x => x.ColumnRef is not null)
             .Select(x => new ConvertImplicitFinding(
@@ -40,6 +49,12 @@ public static class ConvertImplicitDetector
 
     private static string ContextOf(XElement convert) =>
         convert.Ancestors().Select(a => a.Name.LocalName).FirstOrDefault(ContextNames.Contains) ?? "Other";
+
+    private static bool IsNamedColumn(XElement columnRef)
+    {
+        var name = (string?)columnRef.Attribute("Column");
+        return !string.IsNullOrEmpty(name) && name[0] != '@' && !name.StartsWith("Expr", StringComparison.Ordinal);
+    }
 
     private static string? TrimBrackets(string? bracketedIdentifier) =>
         bracketedIdentifier?.Trim('[', ']');

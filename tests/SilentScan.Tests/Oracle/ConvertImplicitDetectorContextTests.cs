@@ -41,4 +41,29 @@ public sealed class ConvertImplicitDetectorContextTests
 
         Assert.Equal("Other", Assert.Single(ConvertImplicitDetector.FindColumnConversions(plan)).Context);
     }
+
+    private const string ConvertOnColumnWithoutATable = """
+        <Convert DataType="int" Implicit="1"><ScalarOperator><Identifier>
+          <ColumnReference Column="RowKey" />
+        </Identifier></ScalarOperator></Convert>
+        """;
+
+    [Fact]
+    public void FindColumnConversions_ColumnReferenceWithoutATable_IsLeftOutOfTheAttributedList()
+    {
+        var plan = Plan($"<Filter><Predicate><ScalarOperator><Compare>{ConvertOnColumnWithoutATable}</Compare></ScalarOperator></Predicate></Filter>");
+
+        Assert.Empty(ConvertImplicitDetector.FindColumnConversions(plan));
+    }
+
+    [Fact]
+    public void FindColumnConversionsIncludingUnattributed_ColumnReferenceWithoutATable_IsReportedWithANullTable()
+    {
+        var plan = Plan($"<Filter><Predicate><ScalarOperator><Compare>{ConvertOnColumnWithoutATable}</Compare></ScalarOperator></Predicate></Filter>");
+
+        var conversion = Assert.Single(ConvertImplicitDetector.FindColumnConversionsIncludingUnattributed(plan));
+        Assert.Null(conversion.Table);
+        Assert.Equal("RowKey", conversion.Column);
+        Assert.Equal("Predicate", conversion.Context);
+    }
 }

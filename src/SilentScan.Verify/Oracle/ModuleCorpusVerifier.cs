@@ -44,7 +44,7 @@ public sealed class ModuleCorpusVerifier
     }
 
     private static PlannedStatement WholeModuleStatement(string definition, string planXml) =>
-        new(definition, 1, definition.Count(c => c == '\n') + 1, ConvertImplicitDetector.FindColumnConversions(planXml));
+        new(definition, 1, definition.Count(c => c == '\n') + 1, ConvertImplicitDetector.FindColumnConversionsIncludingUnattributed(planXml));
 
     private static PlannableModuleKind? KindOf(string objectTypeCode) => objectTypeCode switch
     {

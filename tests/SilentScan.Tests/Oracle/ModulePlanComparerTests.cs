@@ -203,4 +203,42 @@ public sealed class ModulePlanComparerTests
 
         Assert.Equal("Predicate", Assert.Single(rows).Context);
     }
+
+    [Theory]
+    [InlineData("dbo.Split", "Split", "value")]
+    [InlineData("@Ids", "@Ids", "RowKey")]
+    [InlineData("#work", "#work", "StopKey")]
+    public void Compare_ObjectThePlanReportsWithoutASchema_StillAgrees(string findingTable, string planTable, string column)
+    {
+        var finding = Finding(Verdict.ScanForced, line: 5, table: findingTable, column: column);
+        var conversion = new ConvertImplicitFinding("db", null, planTable, column, "int", RangeSeekBound: false);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, conversion)]);
+
+        Assert.Equal(ModuleComparisonOutcome.Agree, Assert.Single(rows).Outcome);
+    }
+
+    [Fact]
+    public void Compare_ClaimWhoseColumnIsConvertedButNotAttributableToATable_IsNotDecided()
+    {
+        var finding = Finding(Verdict.ScanForced, line: 5, table: "@Ids", column: "RowKey");
+        var unattributed = new ConvertImplicitFinding("db", null, null, "RowKey", "int", RangeSeekBound: false);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, unattributed)]);
+
+        var row = Assert.Single(rows);
+        Assert.Equal(ModuleComparisonOutcome.NotDecided, row.Outcome);
+        Assert.Equal(ModuleNotDecidedReason.ConversionNotAttributable, row.Reason);
+    }
+
+    [Fact]
+    public void Compare_UnattributedConversionOnADifferentColumn_LeavesTheClaimToolOnly()
+    {
+        var finding = Finding(Verdict.ScanForced, line: 5, table: "@Ids", column: "RowKey");
+        var unattributed = new ConvertImplicitFinding("db", null, null, "Other", "int", RangeSeekBound: false);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, unattributed)]);
+
+        Assert.Equal(ModuleComparisonOutcome.ToolOnly, Assert.Single(rows).Outcome);
+    }
 }

@@ -12,5 +12,7 @@ public enum ModuleNotDecidedReason
 
     StatementNotLocated,
 
+    ConversionNotAttributable,
+
     DynamicSql,
 }
