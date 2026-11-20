@@ -9,9 +9,11 @@ public sealed class CorpusFindingVerifier
     private readonly PlanXmlCapture _planXmlCapture;
     private readonly IndexDeploymentChecker _indexChecker;
     private readonly FunctionParameterReader _functionParameterReader;
+    private readonly bool _allowScratchIndex;
 
-    public CorpusFindingVerifier(SqlServerOptions options)
+    public CorpusFindingVerifier(SqlServerOptions options, bool allowScratchIndex = true)
     {
+        _allowScratchIndex = allowScratchIndex;
         _planXmlCapture = new PlanXmlCapture(options);
         _indexChecker = new IndexDeploymentChecker(options);
         _functionParameterReader = new FunctionParameterReader(options);
@@ -60,7 +62,7 @@ public sealed class CorpusFindingVerifier
 
         if (!columnConverts)
         {
-            return new CorpusFindingResult(finding, CorpusFindingOutcome.NotConfirmed, DescribeMismatch(finding.Verdict, columnConverts: false, planXml, conversions));
+            return new CorpusFindingResult(finding, CorpusFindingOutcome.NotConfirmed, DescribeMismatch(finding.Verdict, columnConverts: false, planXml, conversions), ColumnConverted: false);
         }
 
         if (finding.Verdict is not (Verdict.ScanForced or Verdict.RangeSeek))
@@ -73,7 +75,9 @@ public sealed class CorpusFindingVerifier
             database, finding.Column.TableQualifiedName, finding.Column.ColumnName, cancellationToken);
         if (!hasIndex)
         {
-            var scratchResult = await TryConfirmViaScratchIndexAsync(database, finding, probe, cancellationToken);
+            var scratchResult = _allowScratchIndex
+                ? await TryConfirmViaScratchIndexAsync(database, finding, probe, cancellationToken)
+                : null;
             return scratchResult ?? new CorpusFindingResult(
                 finding, CorpusFindingOutcome.ConfirmedUnindexed,
                 $"CONVERT_IMPLICIT confirmed on '{finding.Column.ColumnName}', but no deployed index has it as its leading key on {finding.Column.TableQualifiedName} - the {finding.Verdict} shape distinction could not be verified.");
@@ -84,7 +88,8 @@ public sealed class CorpusFindingVerifier
         return new CorpusFindingResult(
             finding,
             confirmed ? CorpusFindingOutcome.Confirmed : CorpusFindingOutcome.NotConfirmed,
-            Detail: confirmed ? null : DescribeMismatch(finding.Verdict, columnConverts, planXml, conversions));
+            Detail: confirmed ? null : DescribeMismatch(finding.Verdict, columnConverts, planXml, conversions),
+            ColumnConverted: true);
     }
 
     private async Task<CorpusFindingResult?> TryConfirmViaScratchIndexAsync(
@@ -108,7 +113,8 @@ public sealed class CorpusFindingVerifier
                 confirmed ? CorpusFindingOutcome.ConfirmedViaScratchIndex : CorpusFindingOutcome.NotConfirmed,
                 confirmed
                     ? "Confirmed against a scratch index deployed for this probe only - the corpus's own DDL does not index this column."
-                    : DescribeMismatch(finding.Verdict, columnConverts: true, planXmlWithIndex, conversions));
+                    : DescribeMismatch(finding.Verdict, columnConverts: true, planXmlWithIndex, conversions),
+                ColumnConverted: true);
         }
         catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
         {

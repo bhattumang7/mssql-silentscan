@@ -307,6 +307,52 @@ public sealed class CorpusFindingVerifierTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task VerifyAsync_ScratchIndexNotAllowed_ConfirmsUnindexedColumnWithoutCreatingAnyIndex()
+    {
+        var finding = new TypedPredicateFinding(
+            Verdict.ScanForced,
+            ColumnOperand("dbo.Unindexed", "UnindexedCode", new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"))),
+            new PredicateOperand.Value(new SqlType(SqlTypeCategory.NVarChar, Length: 20), IsLiteral: true, LiteralText: "N'ABC'"),
+            "=",
+            "file.sql",
+            1,
+            1);
+        var readOnlyVerifier = new CorpusFindingVerifier(_options, allowScratchIndex: false);
+
+        var result = await readOnlyVerifier.VerifyAsync(DatabaseName, finding);
+
+        Assert.Equal(CorpusFindingOutcome.ConfirmedUnindexed, result.Outcome);
+        Assert.Equal(0, await CountScratchIndexesAsync());
+    }
+
+    [Fact]
+    public async Task VerifyAsync_ScratchIndexNotAllowed_StillRefutesAColumnThatDoesNotConvert()
+    {
+        var finding = new TypedPredicateFinding(
+            Verdict.ScanForced,
+            ColumnOperand("dbo.Orders", "OrderCode", new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS")), indexed: true),
+            new PredicateOperand.Value(new SqlType(SqlTypeCategory.VarChar, Length: 20), IsLiteral: true, LiteralText: "'ABC'"),
+            "=",
+            "file.sql",
+            1,
+            1);
+        var readOnlyVerifier = new CorpusFindingVerifier(_options, allowScratchIndex: false);
+
+        var result = await readOnlyVerifier.VerifyAsync(DatabaseName, finding);
+
+        Assert.Equal(CorpusFindingOutcome.NotConfirmed, result.Outcome);
+    }
+
+    private async Task<int> CountScratchIndexesAsync()
+    {
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(_options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sys.indexes WHERE name LIKE 'IX_SilentScanScratch_%';";
+        return (int)(await command.ExecuteScalarAsync())!;
+    }
+
+    [Fact]
     public async Task VerifyAsync_ScanForcedColumnTypeCannotBeIndexed_FallsBackToConfirmedUnindexed()
     {
 

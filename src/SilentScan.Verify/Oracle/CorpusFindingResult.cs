@@ -5,4 +5,5 @@ namespace SilentScan.Verify.Oracle;
 public sealed record CorpusFindingResult(
     TypedPredicateFinding Finding,
     CorpusFindingOutcome Outcome,
-    string? Detail);
+    string? Detail,
+    bool? ColumnConverted = null);
