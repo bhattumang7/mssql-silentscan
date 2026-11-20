@@ -28,6 +28,12 @@
     A hardcoded default is acceptable only because this script is gitignored
     (see .gitignore) and never committed. Override with -Password if it changes.
 
+.PARAMETER SkipTests
+    Import the coverage and test results already in TestResults/ instead of
+    running the test suite inside the scan. Run `dotnet test` with the same
+    `--collect 'XPlat Code Coverage;Format=opencover' --logger trx
+    --results-directory TestResults` arguments first.
+
 .PARAMETER WithCoverage
     Also run the .NET test suite and import coverage. On by default per
     CLAUDE.md's 99% coverage target; pass -WithCoverage:$false to skip for a
@@ -45,6 +51,7 @@ param(
     [string]$HostUrl      = 'http://localhost:9010',
     [string]$ProjectKey   = 'silentscan',
     [switch]$WithCoverage = $true,
+    [switch]$SkipTests,
     # Per-step wall-clock ceilings (seconds). See Invoke-Step's remarks for why these exist at
     # all. Generous defaults: `test` in particular deploys and drops real Docker SQL Server
     # databases per Oracle-tagged fixture (docs/local-dev.md), which is legitimately slow, not
@@ -93,38 +100,6 @@ if ($OnWindows) {
 # ran and killed dotnet invocations directly (see docs/local-dev.md). Exported here so every
 # `dotnet` child this script launches inherits it.
 $env:MSBUILDDISABLENODEREUSE = '1'
-
-# Same root cause scripts/dotnet-safe.sh's own wait_for_stray_build_processes closes, reproduced
-# directly in THIS script (2026-08-04): `dotnet build-server shutdown` only requests a shutdown,
-# it does not block until the VBCSCompiler/MSBuild node-mode processes have actually exited - the
-# [3/4] Build step below can start while a PRIOR invocation's server is still mid-teardown (this
-# script's own earlier run, or scripts/dotnet-safe.sh's, or an editor's language server attached
-# to the repo) and hit the documented 0x80131506 crash. Only ever targets those two process
-# names by name, never a language server's own long-lived BuildHost process.
-function Wait-ForStrayBuildProcesses {
-    $pattern = 'VBCSCompiler|MSBuild\.dll.*nodemode'
-    $maxWaitSeconds = 10
-    if ($OnWindows) {
-        for ($waited = 0; $waited -le $maxWaitSeconds; $waited++) {
-            if (-not (Get-Process -Name VBCSCompiler -ErrorAction SilentlyContinue)) { return }
-            Start-Sleep -Seconds 1
-        }
-        return
-    }
-    $uid = (& id -u)
-    for ($waited = 0; $waited -le $maxWaitSeconds; $waited++) {
-        & pgrep -u $uid -f $pattern *> $null
-        if ($LASTEXITCODE -ne 0) { return }
-        if ($waited -eq $maxWaitSeconds) {
-            & pkill -KILL -u $uid -f $pattern 2>$null
-            return
-        }
-        Start-Sleep -Seconds 1
-    }
-}
-
-& dotnet build-server shutdown *> $null
-Wait-ForStrayBuildProcesses
 
 function Invoke-Step {
     param(
@@ -242,7 +217,9 @@ Push-Location $RootDir
 try {
     # -- [1/4] Clean ---------------------------------------------------------
     Remove-Item -Recurse -Force (Join-Path $RootDir '.sonarqube')   -ErrorAction SilentlyContinue
-    Remove-Item -Recurse -Force (Join-Path $RootDir 'TestResults')  -ErrorAction SilentlyContinue
+    if (-not $SkipTests) {
+        Remove-Item -Recurse -Force (Join-Path $RootDir 'TestResults')  -ErrorAction SilentlyContinue
+    }
 
     # -- [2/4] Begin ---------------------------------------------------------
     # Notes:
@@ -276,8 +253,8 @@ try {
     )
     if ($WithCoverage) {
         $beginArgs += @(
-            "/d:sonar.cs.opencover.reportsPaths=$RootDir/TestResults/**/*.opencover.xml"
-            "/d:sonar.cs.vstest.reportsPaths=$RootDir/TestResults/**/*.trx"
+            "/d:sonar.cs.opencover.reportsPaths=$($RootDir -replace '\\', '/')/TestResults/**/*.opencover.xml"
+            "/d:sonar.cs.vstest.reportsPaths=$($RootDir -replace '\\', '/')/TestResults/**/*.trx"
         )
     }
     $exit = Invoke-Step "sonarscanner begin" "dotnet" (@('sonarscanner', 'begin') + $beginArgs) $BeginTimeoutSeconds
@@ -301,7 +278,7 @@ try {
         Write-Warning "Build reported errors. Projects that failed to compile are NOT analyzed - their C# results will be missing. Continuing so the rest of the scan still uploads."
     }
 
-    if ($WithCoverage) {
+    if ($WithCoverage -and -not $SkipTests) {
         $env:DOTNET_SAFE_TIMEOUT = "$TestTimeoutSeconds"
         $exit = Invoke-Step "test" (Join-Path $RootDir 'scripts/dotnet-safe.sh') @(
             'test', $Solution, '--no-build',
@@ -380,8 +357,6 @@ finally {
         $LockStream.Close()
         Remove-Item -Force $LockPath -ErrorAction SilentlyContinue
     }
-    & dotnet build-server shutdown *> $null
-    Wait-ForStrayBuildProcesses
 }
 
 if ($buildFailed)      { Write-Warning "Build did not fully succeed - some C# files were not analyzed." }
