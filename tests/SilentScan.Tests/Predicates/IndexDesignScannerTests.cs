@@ -201,6 +201,45 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
+    public void SameKeyWithDifferentIncludedColumns_NeverFiresDuplicate()
+    {
+        var catalog = new DatabaseCatalog();
+        var a = new CatalogIndex("IX_A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], ["Status"]);
+        var b = new CatalogIndex("IX_B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], ["OrderDate"]);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("Status", IntType), Column("OrderDate", IntType)], [a, b]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Fact]
+    public void SameKeyAndSameIncludedColumnsInDifferentOrder_StillFiresDuplicate()
+    {
+        var catalog = new DatabaseCatalog();
+        var a = new CatalogIndex("IX_A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], ["Status", "OrderDate"]);
+        var b = new CatalogIndex("IX_B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], ["OrderDate", "Status"]);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("Status", IntType), Column("OrderDate", IntType)], [a, b]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Fact]
+    public void SameKeyWithOppositeSortDirection_NeverFiresDuplicate()
+    {
+        var catalog = new DatabaseCatalog();
+        var ascending = new CatalogIndex("IX_A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], KeyColumnIsDescendingRaw: [false]);
+        var descending = new CatalogIndex("IX_B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], KeyColumnIsDescendingRaw: [true]);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType)], [ascending, descending]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Fact]
     public void DifferentUniquenessOrKind_NeverFiresDuplicate()
     {
 

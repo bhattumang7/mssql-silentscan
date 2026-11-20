@@ -151,13 +151,15 @@ public static class IndexDesignScanner
 
         if (a.KeyColumns.Count == b.KeyColumns.Count)
         {
-            if (KeyColumnsEqual(a.KeyColumns, b.KeyColumns, identifierComparer))
+            if (KeyColumnsEqual(a.KeyColumns, b.KeyColumns, identifierComparer)
+                && IncludedColumnsEqual(a.IncludedColumns, b.IncludedColumns, identifierComparer)
+                && SortDirectionsEqual(a, b))
             {
                 findings.Add(new IndexDesignFinding(
                     IndexDesignFindingKind.DuplicateIndex,
                     table.QualifiedName,
                     b.Name,
-                    $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}), the same uniqueness, and the same index kind - exact duplicates. One is pure write amplification and wasted space with zero query benefit over the other.",
+                    $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}) with the same sort directions, the same included columns, the same uniqueness, and the same index kind - exact duplicates. One is pure write amplification and wasted space with zero query benefit over the other.",
                     table.SourcePath,
                     table.SourceLine));
             }
@@ -181,6 +183,24 @@ public static class IndexDesignScanner
 
     private static bool KeyColumnsEqual(IReadOnlyList<string> a, IReadOnlyList<string> b, StringComparer identifierComparer) =>
         a.SequenceEqual(b, identifierComparer);
+
+    private static bool IncludedColumnsEqual(IReadOnlyList<string> a, IReadOnlyList<string> b, StringComparer identifierComparer) =>
+        a.Count == b.Count && a.All(c => b.Contains(c, identifierComparer));
+
+    private static bool SortDirectionsEqual(CatalogIndex a, CatalogIndex b)
+    {
+        for (var k = 0; k < a.KeyColumns.Count; k++)
+        {
+            var aDescending = k < a.KeyColumnIsDescending.Count && a.KeyColumnIsDescending[k];
+            var bDescending = k < b.KeyColumnIsDescending.Count && b.KeyColumnIsDescending[k];
+            if (aDescending != bDescending)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool IsProperPrefix(IReadOnlyList<string> shorter, IReadOnlyList<string> longer, StringComparer identifierComparer)
     {

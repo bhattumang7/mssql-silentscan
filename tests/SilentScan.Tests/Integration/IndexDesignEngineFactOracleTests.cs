@@ -162,6 +162,17 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    [Trait("Rule", "silentscan/index-design/duplicate-index")]
+    public async Task SameKeyIndexes_ServeAQueryOnlyWhenTheirIncludesCoverIt()
+    {
+        var covered = await PlanInSessionAsync(string.Empty, "SELECT A FROM dbo.Mg WITH (INDEX(IX_Mg_A)) WHERE K = 7;");
+        var uncovered = await PlanInSessionAsync(string.Empty, "SELECT A FROM dbo.Mg WITH (INDEX(IX_Mg_B)) WHERE K = 7;");
+
+        Assert.False(ShowPlan.HasKeyLookup(covered));
+        Assert.True(ShowPlan.HasKeyLookup(uncovered));
+    }
+
+    [Fact]
     [Trait("Rule", "silentscan/index-design/heap-with-nonclustered-indexes")]
     public async Task HeapRowsForwardAndChangeLocationWhenRebuilt_ClusteredControlHasNeither()
     {

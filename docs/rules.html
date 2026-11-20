@@ -230,7 +230,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <section class="family-section">
     <h2>index-design</h2>
     <ul class="rule-list">
-      <li><a class="id" href="rules/index-design-duplicate-index.html">Duplicate Index</a> <code class="rule-key">silentscan/index-design/duplicate-index</code><span class="snippet">Two active indexes on the same table share an identical key list, uniqueness, and index kind.</span></li>
+      <li><a class="id" href="rules/index-design-duplicate-index.html">Duplicate Index</a> <code class="rule-key">silentscan/index-design/duplicate-index</code><span class="snippet">Two active indexes on the same table share an identical key list with the same sort directions, the same included columns, uniqueness, and index kind.</span></li>
       <li><a class="id" href="rules/index-design-filter-column-not-in-index.html">Filter Column Not In Index</a> <code class="rule-key">silentscan/index-design/filter-column-not-in-index</code><span class="snippet">A filtered index&#x27;s own filter predicate references a column not in its own key/INCLUDE list.</span></li>
       <li><a class="id" href="rules/index-design-float-or-real-index-key-column.html">Float Or Real Index Key Column</a> <code class="rule-key">silentscan/index-design/float-or-real-index-key-column</code><span class="snippet">An index&#x27;s key carries a float/real (approximate) column.</span></li>
       <li><a class="id" href="rules/index-design-heap-with-nonclustered-indexes.html">Heap With Nonclustered Indexes</a> <code class="rule-key">silentscan/index-design/heap-with-nonclustered-indexes</code><span class="snippet">A table has no clustered index anywhere but carries one or more nonclustered indexes.</span></li>

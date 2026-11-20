@@ -10,7 +10,8 @@ internal static class DuplicateIndex
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
             Two active (non-disabled) indexes on the same table whose ordered key-column lists are
-            exactly identical, with the same uniqueness and index kind between them, are real,
+            exactly identical, with the same sort direction on every key column, the same set of
+            included columns, the same uniqueness and the same index kind, are real,
             deterministic duplicates - not merely similar indexes, genuinely redundant objects. One
             of the pair serves no query the other doesn't already serve equally well; it exists
             purely as write amplification (every INSERT/UPDATE/DELETE maintains both copies) and
@@ -21,7 +22,8 @@ internal static class DuplicateIndex
             index IS filtered, not the filter predicate's own text - two filtered indexes can never
             be confirmed identical here, so they're excluded rather than falsely matched. Neither is
             a columnstore index ever compared, since it has no ordered B-tree key the same way a
-            rowstore index does.
+            rowstore index does. Two indexes with the same key but different included columns are
+            not duplicates: each covers queries the other would need a key lookup for.
             """,
         HowToFixIt: """
             Drop one of the two exact-duplicate indexes.
