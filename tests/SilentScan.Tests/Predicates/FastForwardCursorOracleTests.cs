@@ -143,4 +143,54 @@ public sealed class FastForwardCursorOracleTests : OracleTestFixture
 
         Assert.DoesNotContain("NonParallelPlanReason=\"NoParallelFastForwardCursor\"", planXml);
     }
+
+    private async Task<IReadOnlyList<string>> CapturePlansAsync(string batch)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        var plans = new List<string>();
+        await using var command = new SqlCommand(batch, connection) { CommandTimeout = 300 };
+        await using var reader = await command.ExecuteReaderAsync();
+        do
+        {
+            while (await reader.ReadAsync())
+            {
+                if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string))
+                {
+                    var value = reader.GetString(0);
+                    if (value.Contains("ShowPlanXML", StringComparison.Ordinal))
+                    {
+                        plans.Add(value);
+                    }
+                }
+            }
+        }
+        while (await reader.NextResultAsync());
+
+        return plans;
+    }
+
+    [Fact]
+    public async Task BareTableVariableScan_NeverGoesParallel_WhileAFilteredScanOfTheSameTableVariableDoes()
+    {
+        var plans = await CapturePlansAsync(
+            """
+            SET NOCOUNT ON;
+            DECLARE @t TABLE (a INT PRIMARY KEY, b INT, c VARCHAR(50));
+            INSERT @t
+            SELECT TOP (1500000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1, REPLICATE('x', 40)
+            FROM sys.all_objects x, sys.all_objects y, sys.all_objects z;
+            SET STATISTICS XML ON;
+            SELECT a, b, c FROM @t OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'));
+            SELECT a FROM @t OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'));
+            SELECT a FROM @t WHERE b % 7 = 3 AND c LIKE '%y%';
+            SET STATISTICS XML OFF;
+            """);
+
+        Assert.Equal(3, plans.Count);
+        Assert.DoesNotContain("<Parallelism", plans[0], StringComparison.Ordinal);
+        Assert.DoesNotContain("<Parallelism", plans[1], StringComparison.Ordinal);
+        Assert.Contains("<Parallelism", plans[2], StringComparison.Ordinal);
+    }
 }

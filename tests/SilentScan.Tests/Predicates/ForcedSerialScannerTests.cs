@@ -154,6 +154,31 @@ public sealed class ForcedSerialScannerTests
         Assert.Empty(Scan("DECLARE @c CURSOR; SET @c = CURSOR FAST_FORWARD FOR SELECT name FROM sys.tables; OPEN @c; CLOSE @c; DEALLOCATE @c;"));
     }
 
+    [Theory]
+    [InlineData("SELECT a FROM @t")]
+    [InlineData("SELECT g.a, g.b FROM @t g")]
+    [InlineData("SELECT * FROM @t")]
+    public void Cursor_FastForward_OverABareTableVariableScan_NeverFires(string query)
+    {
+        Assert.Empty(Scan($"DECLARE @t TABLE (a INT, b INT); DECLARE c CURSOR LOCAL FAST_FORWARD FOR {query}; OPEN c; CLOSE c; DEALLOCATE c;"));
+    }
+
+    [Theory]
+    [InlineData("SELECT a FROM @t WHERE b % 7 = 3")]
+    [InlineData("SELECT DISTINCT a FROM @t")]
+    [InlineData("SELECT a FROM @t ORDER BY b")]
+    [InlineData("SELECT b, COUNT(*) FROM @t GROUP BY b")]
+    [InlineData("SELECT a FROM @t x JOIN @t y ON x.a = y.b")]
+    [InlineData("SELECT a + b FROM @t")]
+    [InlineData("SELECT TOP (5) a FROM @t")]
+    [InlineData("SELECT Id FROM dbo.T")]
+    public void Cursor_FastForward_OverAShapeThatCanGoParallel_Fires(string query)
+    {
+        var findings = Scan($"DECLARE @t TABLE (a INT, b INT); DECLARE c CURSOR LOCAL FAST_FORWARD FOR {query}; OPEN c; CLOSE c; DEALLOCATE c;");
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void Cursor_Dynamic_NeverFires()
     {

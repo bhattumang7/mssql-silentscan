@@ -191,9 +191,23 @@ public static class ForcedSerialScanner
                 ? variableRef.Variable.Name
                 : null;
 
+        private static bool IsBareTableVariableScan(QueryExpression query) =>
+            query is QuerySpecification
+            {
+                FromClause.TableReferences: [VariableTableReference],
+                WhereClause: null,
+                GroupByClause: null,
+                HavingClause: null,
+                TopRowFilter: null,
+                OrderByClause: null,
+                WindowClause: null,
+                UniqueRowFilter: UniqueRowFilter.NotSpecified,
+            } spec
+            && spec.SelectElements.All(e => e is SelectStarExpression || e is SelectScalarExpression { Expression: ColumnReferenceExpression });
+
         private void InspectCursorDefinition(CursorDefinition definition, string cursorName)
         {
-            if (ReadsSystemCatalogView(definition.Select))
+            if (ReadsSystemCatalogView(definition.Select) || IsBareTableVariableScan(definition.Select.QueryExpression))
             {
                 return;
             }
