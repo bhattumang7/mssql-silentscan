@@ -87,21 +87,26 @@ exited, and repeated kill-instead-of-exit across sessions left thousands of
 orphaned `/tmp/MSBuildTemp*` directories. `scripts/dotnet-safe.sh` sets
 `MSBUILDDISABLENODEREUSE=1` (so there is no worker process left to hold a
 pipe open in the first place), always redirects to a real log file instead
-of a pipe, wraps the run in a hard `timeout` as a backstop, and shuts down
-any build server on exit regardless of outcome. It prints the last 60 lines
-and the full log path; read the log file directly for more.
+of a pipe, and wraps the run in a hard `timeout` as a backstop. It prints the
+last 60 lines and the full log path; read the log file directly for more.
+
+Roslyn's shared compiler server (VBCSCompiler) is left running between
+invocations so each build reuses a warm compiler instead of starting a cold
+one. The script shuts the build servers down only when a run crashes, times
+out or is interrupted; a run that finishes, passing or failing, leaves the
+server alone.
 
 `Directory.Build.props` treats warnings as errors and enables recommended
 analyzers solution-wide; a red build is a real defect, not noise to suppress.
-It also disables Roslyn's shared compiler server (`UseSharedCompilation`) -
-reproduced directly that two `dotnet build` invocations against this
-checkout racing the same server process can crash it outright ("Internal CLR
-error 0x80131506"). That doesn't make concurrent builds SAFE by itself
-(they can still race writing the same obj/bin output, MSB3026/MSB3030) -
-never run two `dotnet build`/`dotnet test` invocations against this checkout
-at the same time; `sonar-scan.ps1` guards itself against this with its own
-build lock (`.sonar-scan.lock`), but a manually-run `dotnet build` or
-`dotnet test` you launch yourself isn't covered by it.
+Two `dotnet build` invocations against this checkout racing the shared
+compiler server as it starts or stops can crash it outright ("Internal CLR
+error 0x80131506"), and they can also race writing the same obj/bin output
+(MSB3026/MSB3030) - never run two `dotnet build`/`dotnet test` invocations
+against this checkout at the same time. `scripts/dotnet-safe.sh` serialises
+its own runs with a lock (`.dotnet-safe.lock`) and retries once on that exact
+crash; `sonar-scan.ps1` builds through it and holds its own lock
+(`.sonar-scan.lock`). A manually-run `dotnet build` or `dotnet test` you
+launch yourself isn't covered by either.
 
 `tests/SilentScan.Tests/xunit.runner.json` pins `maxParallelThreads` to 6,
 overriding xUnit's own default of "one thread per logical CPU"
