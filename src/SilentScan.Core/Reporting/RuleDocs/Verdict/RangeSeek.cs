@@ -10,7 +10,7 @@ internal static class RangeSeek
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
             This verdict covers a narrower, less severe case than ScanForced: an implicit
-            conversion is still happening on the column side, but for this particular pair of
+            conversion is still happening (on the column side for numeric pairs), but for this particular pair of
             types the engine can still generate a dynamic range seek rather than degrading all the
             way to a full scan. This typically happens with numeric type mismatches - an INT
             column compared against a REAL value, for example - where the conversion
@@ -18,6 +18,12 @@ internal static class RangeSeek
             as tightly or as cheaply as a same-type comparison would. It's real, measurable
             overhead, but it is not the same class of problem as a predicate that degrades to a
             full scan - the index is still being used, just less efficiently than it could be.
+
+            The same verdict also covers a bounded string column compared with a max-length string
+            value, such as a VARCHAR(20) column against a VARCHAR(MAX) parameter. There the plan
+            shows no conversion on the column at all: the value is converted to the max-length type
+            and the engine seeks through a dynamic range (GetRangeWithMismatchedTypes) instead of a
+            direct seek, which a same-length parameter does not need.
 
             This verdict exists specifically so this tool's own output doesn't lump every implicit
             conversion into one severity bucket: a conversion that still lets the engine seek is a

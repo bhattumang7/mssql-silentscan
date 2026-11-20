@@ -417,7 +417,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <section class="family-section">
     <h2>verdict</h2>
     <ul class="rule-list">
-      <li><a class="id" href="rules/verdict-range-seek.html">Range Seek</a> <code class="rule-key">silentscan/verdict/range-seek</code><span class="snippet">An implicit type conversion on the column side permits only a dynamic range seek, not a direct seek.</span></li>
+      <li><a class="id" href="rules/verdict-range-seek.html">Range Seek</a> <code class="rule-key">silentscan/verdict/range-seek</code><span class="snippet">A type difference between the column and the value permits only a dynamic range seek, not a direct seek; the conversion is on the column for numeric pairs and on the value for a bounded string against a max-length string.</span></li>
       <li><a class="id" href="rules/verdict-scan-forced.html">Scan Forced</a> <code class="rule-key">silentscan/verdict/scan-forced</code><span class="snippet">The column is implicitly converted to the other side&#x27;s type on every row, so an index on it cannot be seeked directly.</span></li>
       <li><a class="id" href="rules/verdict-seek-preserved.html">Seek Preserved</a> <code class="rule-key">silentscan/verdict/seek-preserved</code><span class="snippet">A predicate compares types where the seek is preserved (reported for completeness; not filtered into ScanReportBuilder&#x27;s actionable findings).</span></li>
     </ul>
