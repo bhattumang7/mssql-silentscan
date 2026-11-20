@@ -20,6 +20,45 @@ public sealed class ScanDbCommandTests
     }
 
     [Fact]
+    public async Task RunAsync_MissingBaselineFile_ReturnsOneAndWritesErrorWithoutConnecting()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        var options = new ReportOptions("text", "high", null, "brief");
+        var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "baseline.json");
+
+        var exitCode = await ScanDbCommand.RunAsync(
+            "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false, BaselinePath: missing), options, stdout, stderr, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("could not read --baseline", stderr.ToString());
+        Assert.Equal(string.Empty, stdout.ToString());
+    }
+
+    [Fact]
+    public async Task RunAsync_MalformedBaselineFile_ReturnsOneAndWritesErrorWithoutConnecting()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        var options = new ReportOptions("text", "high", null, "brief");
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+        await File.WriteAllTextAsync(path, "not json");
+
+        try
+        {
+            var exitCode = await ScanDbCommand.RunAsync(
+                "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false, BaselinePath: path), options, stdout, stderr, CancellationToken.None);
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("could not read --baseline", stderr.ToString());
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_UnknownConfidence_ReturnsOneAndWritesErrorWithoutConnecting()
     {
         var stdout = new StringWriter();

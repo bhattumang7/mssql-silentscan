@@ -27,6 +27,12 @@ internal static class ReportOutput
     internal const string VerbosityOptionDescription =
         "How much detail the text/markdown report gives for sections about what could NOT be established (parse errors, unresolvable dynamic SQL, ambiguous types, stale metadata): brief (default - each such section states its count only) or full (every row, as the JSON carries it). Never affects json/sarif output, and never hides an actual finding - only these coverage/caveat sections.";
 
+    internal const string BaselineOptionDescription =
+        "Suppress findings already recorded in this baseline file (written earlier with --write-baseline), so only findings that are new since then are reported. Findings are matched by rule and module, not by line number, so edits that only move code do not resurface them.";
+
+    internal const string WriteBaselineOptionDescription =
+        "Write every finding of this scan to this file as a baseline for later --baseline runs. The parent directory must exist.";
+
     internal const string StrictOptionDescription =
         "Fail the command (non-zero exit code) when the scan could not fully look at the code: parse errors, dropped/unanalyzed batches, skipped constructs, unanalyzable dynamic SQL, or predicates that could not be classified. Off by default - the same coverage gaps are always reported (stderr warnings, SARIF notifications), this flag only changes whether they also affect the exit code.";
 

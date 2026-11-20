@@ -3,12 +3,19 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SilentScan.Core.Diagnostics;
+using SilentScan.Core.Reporting;
 using SilentScan.Core.Reporting.Sarif;
 using SilentScan.Live;
 
 namespace SilentScan.Cli.Commands;
 
-public readonly record struct ScanFlags(bool IncludePlanCacheEvidence, bool FetchSqlFromTables, bool Strict, bool CheckConnectivity = false);
+public readonly record struct ScanFlags(
+    bool IncludePlanCacheEvidence,
+    bool FetchSqlFromTables,
+    bool Strict,
+    bool CheckConnectivity = false,
+    string? BaselinePath = null,
+    string? WriteBaselinePath = null);
 
 public static class ScanDbCommand
 {
@@ -72,7 +79,17 @@ public static class ScanDbCommand
             DefaultValueFactory = _ => false,
         };
 
-        var description = "Connect to a live SQL Server database, read its catalog from engine metadata, and scan every readable module across all 234 rules in 11 families: conversions and silent write loss, sargability, lineage metrics, catalog and constraint state, plan shape, control flow and transactions, dynamic SQL, code quality and security, index design, query anti-patterns, triggers and cross-module correctness.\n\nOptions:\n"
+        var baselineOption = new Option<string?>("--baseline")
+        {
+            Description = ReportOutput.BaselineOptionDescription,
+        };
+
+        var writeBaselineOption = new Option<string?>("--write-baseline")
+        {
+            Description = ReportOutput.WriteBaselineOptionDescription,
+        };
+
+        var description = "Connect to a live SQL Server database, read its catalog from engine metadata, and scan every readable module for performance problems, silent data loss and silently wrong results.\n\nOptions:\n"
             + $"  --format <format> (default: text) - {ReportOutput.FormatOptionDescription}\n"
             + $"  --confidence <confidence> (default: high) - {ReportOutput.ConfidenceOptionDescription}\n"
             + $"  --plan-cache-evidence (default: off) - {ReportOutput.PlanCacheEvidenceOptionDescription}\n"
@@ -80,6 +97,8 @@ public static class ScanDbCommand
             + $"  --verbosity <verbosity> (default: brief) - {ReportOutput.VerbosityOptionDescription}\n"
             + $"  --strict (default: off) - {ReportOutput.StrictOptionDescription}\n"
             + $"  --check-connectivity (default: off) - {ReportOutput.CheckConnectivityOptionDescription}\n"
+            + $"  --baseline <file> - {ReportOutput.BaselineOptionDescription}\n"
+            + $"  --write-baseline <file> - {ReportOutput.WriteBaselineOptionDescription}\n"
             + $"  --output <output> - {ReportOutput.OutputOptionDescription}";
 
         var command = new Command("scan-db", description)
@@ -92,6 +111,8 @@ public static class ScanDbCommand
             verbosityOption,
             strictOption,
             checkConnectivityOption,
+            baselineOption,
+            writeBaselineOption,
             outputOption,
         };
 
@@ -107,7 +128,7 @@ public static class ScanDbCommand
                 parseResult.GetValue(confidenceOption)!,
                 parseResult.GetValue(outputOption),
                 parseResult.GetValue(verbosityOption)!);
-            return await RunAsync(connectionString, new ScanFlags(planCacheEvidence, fetchSqlFromTables, strict, checkConnectivity), options, Console.Out, Console.Error, cancellationToken);
+            return await RunAsync(connectionString, new ScanFlags(planCacheEvidence, fetchSqlFromTables, strict, checkConnectivity, parseResult.GetValue(baselineOption), parseResult.GetValue(writeBaselineOption)), options, Console.Out, Console.Error, cancellationToken);
         });
 
         return command;
@@ -139,6 +160,20 @@ public static class ScanDbCommand
             return 1;
         }
 
+        FindingBaseline? baseline = null;
+        if (flags.BaselinePath is { } baselinePath)
+        {
+            try
+            {
+                baseline = FindingBaseline.FromJson(await File.ReadAllTextAsync(baselinePath, cancellationToken));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                await stderr.WriteLineAsync($"error: could not read --baseline '{baselinePath}': {ex.Message}");
+                return 1;
+            }
+        }
+
         var isInteractive = ReferenceEquals(stderr, Console.Error) && !Console.IsErrorRedirected;
         var progress = new TextWriterScanProgress(stderr, isInteractive);
         var overall = Stopwatch.StartNew();
@@ -155,6 +190,26 @@ public static class ScanDbCommand
         }
 
         await WarnOnParseHealthAsync(result, stderr);
+
+        if (flags.WriteBaselinePath is { } writeBaselinePath)
+        {
+            try
+            {
+                await File.WriteAllTextAsync(writeBaselinePath, FindingBaseline.Capture(result.Report).ToJson(), cancellationToken);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                await stderr.WriteLineAsync($"error: could not write --write-baseline '{writeBaselinePath}': {ex.Message}");
+                return 1;
+            }
+        }
+
+        if (baseline is not null)
+        {
+            var applied = baseline.Apply(result.Report);
+            result = result with { Report = applied.Report };
+            await stderr.WriteLineAsync($"baseline: suppressed {applied.Suppressed} known finding(s).");
+        }
 
         string content;
         using (var renderStage = progress.Begin("rendering report"))
