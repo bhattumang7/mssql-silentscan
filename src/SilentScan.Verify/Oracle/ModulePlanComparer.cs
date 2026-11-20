@@ -10,6 +10,7 @@ public static class ModulePlanComparer
         IReadOnlyList<TypedPredicateFinding> moduleFindings, IReadOnlyList<PlannedStatement> statements)
     {
         var claims = moduleFindings.Where(f => f.Verdict is Verdict.ScanForced or Verdict.RangeSeek).ToList();
+        var otherVerdictFindings = moduleFindings.Where(f => f.Verdict is not (Verdict.ScanForced or Verdict.RangeSeek) && f.DynamicSqlCallSite is null).ToList();
         var rows = new List<ModuleComparisonRow>();
         var locatedCount = statements.Count(s => s.StartLine is not null && s.EndLine is not null);
         var seen = new HashSet<(int Statement, string Table, string Column, ModuleComparisonOutcome Outcome)>();
@@ -84,13 +85,21 @@ public static class ModulePlanComparer
                 if (!claimed && seen.Add((i, (conversion.Schema + "." + conversion.Table).ToUpperInvariant(), conversion.Column.ToUpperInvariant(), ModuleComparisonOutcome.EngineOnly)))
                 {
                     rows.Add(new ModuleComparisonRow(
-                        ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, conversion.Table, conversion.Column, statements[i].StartLine, Finding: null, conversion.ConvertedToDataType, conversion.Context));
+                        ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, conversion.Table, conversion.Column, statements[i].StartLine, OtherVerdictFindingFor(otherVerdictFindings, statements[i], conversion), conversion.ConvertedToDataType, conversion.Context));
                 }
             }
         }
 
         return rows;
     }
+
+    private static TypedPredicateFinding? OtherVerdictFindingFor(
+        List<TypedPredicateFinding> findings, PlannedStatement statement, ConvertImplicitFinding conversion) =>
+        findings.FirstOrDefault(f =>
+        {
+            var (schema, table) = SplitQualifiedName(f.Column.TableQualifiedName);
+            return f.Line >= statement.StartLine && f.Line <= statement.EndLine && Matches(conversion, schema, table, f.Column.ColumnName);
+        });
 
     private static int FindStatement(IReadOnlyList<PlannedStatement> statements, int line)
     {

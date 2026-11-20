@@ -169,11 +169,13 @@ public sealed class ModulePlanComparerTests
     [Fact]
     public void Compare_SeekPreservedFindingWithEngineConversion_IsEngineOnly()
     {
-        var rows = ModulePlanComparer.Compare([Finding(Verdict.SeekPreserved, line: 5)], [Statement(4, 6, Conversion())]);
+        var finding = Finding(Verdict.SeekPreserved, line: 5);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, Conversion())]);
 
         var row = Assert.Single(rows);
         Assert.Equal(ModuleComparisonOutcome.EngineOnly, row.Outcome);
-        Assert.Null(row.Finding);
+        Assert.Same(finding, row.Finding);
     }
 
     [Fact]
@@ -240,5 +242,23 @@ public sealed class ModulePlanComparerTests
         var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, unattributed)]);
 
         Assert.Equal(ModuleComparisonOutcome.ToolOnly, Assert.Single(rows).Outcome);
+    }
+
+    [Fact]
+    public void Compare_EngineOnlyRowWithAFindingOfAnotherVerdictOnADifferentColumn_DoesNotAttachIt()
+    {
+        var rows = ModulePlanComparer.Compare([Finding(Verdict.Unknown, line: 5, column: "Other")], [Statement(4, 6, Conversion())]);
+
+        Assert.Null(Assert.Single(rows).Finding);
+    }
+
+    [Fact]
+    public void Compare_EngineOnlyRowWithAnUnknownVerdictFindingOnTheSameColumn_CarriesIt()
+    {
+        var finding = Finding(Verdict.Unknown, line: 5);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(4, 6, Conversion())]);
+
+        Assert.Same(finding, Assert.Single(rows).Finding);
     }
 }

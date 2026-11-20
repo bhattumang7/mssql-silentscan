@@ -43,6 +43,22 @@ internal static class ModuleComparisonSummary
             {
                 builder.AppendLine(CultureInfo.InvariantCulture, $"  {group.Key}: {group.Count()}");
             }
+
+            var predicateEngineOnly = engineOnly.Where(r => r.Context is "Predicate" or "SeekPredicates" or "SeekPredicateNew" or "SeekPredicate" or "Residual" or "ProbeResidual").ToList();
+            if (predicateEngineOnly.Count > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine("engine only inside a predicate, by what the tool said about that column in that statement:");
+                foreach (var verdictGroup in predicateEngineOnly
+                    .GroupBy(r => r.Finding is null ? "no finding" : r.Finding.Verdict.ToString())
+                    .OrderByDescending(g => g.Count())
+                    .ThenBy(g => g.Key, StringComparer.Ordinal))
+                {
+                    builder.AppendLine(CultureInfo.InvariantCulture, $"  {verdictGroup.Key}: {verdictGroup.Count()}");
+                }
+
+                builder.AppendLine();
+            }
         }
 
         var toolOnly = rows

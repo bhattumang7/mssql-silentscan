@@ -160,4 +160,22 @@ public sealed class ModuleComparisonSummaryTests
         Assert.Contains("  Predicate: 2", text, StringComparison.Ordinal);
         Assert.Contains("  DefinedValue: 1", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Render_BreaksPredicateEngineOnlyRowsDownByWhatTheToolSaidAboutThatColumn()
+    {
+        var seekPreserved = Finding(Verdict.SeekPreserved, SqlTypeCategory.VarChar, SqlTypeCategory.VarChar);
+        IReadOnlyList<ModuleComparisonRow> rows =
+        [
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "C", 1, null, "int", "Predicate"),
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "D", 1, seekPreserved, "int", "Predicate"),
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "E", 1, null, "int", "DefinedValue"),
+        ];
+
+        var text = ModuleComparisonSummary.Render(rows, toolOnlyLimit: 25);
+
+        Assert.Contains("engine only inside a predicate, by what the tool said about that column in that statement:", text, StringComparison.Ordinal);
+        Assert.Contains("  no finding: 1", text, StringComparison.Ordinal);
+        Assert.Contains("  SeekPreserved: 1", text, StringComparison.Ordinal);
+    }
 }

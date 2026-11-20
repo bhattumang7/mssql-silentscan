@@ -97,18 +97,18 @@ public static class VerifyCorpusCommand
         }
 
         var scan = await LiveScanRunner.RunAsync(connectionString, cancellationToken: cancellationToken);
-        var findings = scan.Report.FindingsByRuleId.Values
+        var typedFindings = scan.Report.FindingsByRuleId.Values
             .SelectMany(f => f)
             .OfType<TypedPredicateFinding>()
-            .Where(f => f.Verdict is Verdict.ScanForced or Verdict.RangeSeek)
             .ToList();
+        var findings = typedFindings.Where(f => f.Verdict is Verdict.ScanForced or Verdict.RangeSeek).ToList();
         await stderr.WriteLineAsync($"verifying {findings.Count} findings (scratch index {(allowScratchIndex ? "allowed" : "not allowed")})");
 
         var modules = (await new LiveModuleReader(connectionString).ReadAsync(cancellationToken: cancellationToken))
             .Modules.ToDictionary(m => m.QualifiedName, StringComparer.OrdinalIgnoreCase);
         var moduleVerifier = new ModuleCorpusVerifier(options);
         var rows = new ConcurrentBag<ModuleComparisonRow>();
-        var groups = findings.GroupBy(f => f.SourcePath, StringComparer.OrdinalIgnoreCase).ToList();
+        var groups = typedFindings.GroupBy(f => f.SourcePath, StringComparer.OrdinalIgnoreCase).ToList();
         await Parallel.ForEachAsync(
             groups,
             new ParallelOptions { MaxDegreeOfParallelism = PlanParallelism, CancellationToken = cancellationToken },
