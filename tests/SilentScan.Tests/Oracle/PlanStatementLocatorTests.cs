@@ -25,6 +25,36 @@ public sealed class PlanStatementLocatorTests
 
     private static string Encode(string text) => text.Replace("\r", "&#13;", StringComparison.Ordinal).Replace("\n", "&#10;", StringComparison.Ordinal);
 
+    private static string LongStatement() =>
+        "INSERT INTO #t SELECT\n" + string.Join("\n", Enumerable.Repeat(new string('a', 100), 60));
+
+    [Fact]
+    public void Locate_StatementTextCutShortByThePlan_ReachesTheLineBeforeTheNextLocatedStatement()
+    {
+        var real = LongStatement();
+        var definition = "SELECT 1;\n" + real + ";\nSELECT 2;";
+        var plan = Plan(Simple("SELECT 1") + Simple(real[..3999]) + Simple("SELECT 2"));
+
+        var result = PlanStatementLocator.Locate(definition, plan);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(2, result[1].StartLine);
+        Assert.Equal(result[2].StartLine - 1, result[1].EndLine);
+        Assert.True(result[1].EndLine > 40);
+    }
+
+    [Fact]
+    public void Locate_StatementTextCutShortByThePlanAsTheLastStatement_ReachesTheEndOfTheDefinition()
+    {
+        var real = LongStatement();
+        var definition = "SELECT 1;\n" + real;
+        var plan = Plan(Simple("SELECT 1") + Simple(real[..3999]));
+
+        var result = PlanStatementLocator.Locate(definition, plan);
+
+        Assert.Equal(definition.Count(c => c == '\n') + 1, result[1].EndLine);
+    }
+
     [Fact]
     public void Locate_IdenticalStatements_MapToSuccessiveLineRanges()
     {

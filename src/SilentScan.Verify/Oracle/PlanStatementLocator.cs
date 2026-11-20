@@ -12,6 +12,8 @@ public static class PlanStatementLocator
     private const string StatementTypeAttribute = "StatementType";
     private const string ExecuteProcStatementType = "EXECUTE PROC";
 
+    private const int CutShortTextLength = 3990;
+
     private static readonly char[] LeadingTrimChars = [' ', '\t', '\r', '\n', ';'];
 
     public static IReadOnlyList<PlannedStatement> Locate(string moduleDefinition, string planXml)
@@ -23,11 +25,13 @@ public static class PlanStatementLocator
             .ToList();
 
         var results = new List<PlannedStatement>(statements.Count);
+        var cutShort = new HashSet<int>();
         var searchFrom = 0;
 
         foreach (var statement in statements)
         {
-            var body = ((string)statement.Attribute(StatementTextAttribute)!).TrimStart(LeadingTrimChars).TrimEnd();
+            var rawText = (string)statement.Attribute(StatementTextAttribute)!;
+            var body = rawText.TrimStart(LeadingTrimChars).TrimEnd();
             var index = body.Length == 0 ? -1 : moduleDefinition.IndexOf(body, searchFrom, StringComparison.Ordinal);
 
             if (index < 0)
@@ -37,6 +41,11 @@ public static class PlanStatementLocator
             }
 
             searchFrom = index + body.Length;
+            if (rawText.Length >= CutShortTextLength)
+            {
+                cutShort.Add(results.Count);
+            }
+
             results.Add(new PlannedStatement(
                 body,
                 LineOf(moduleDefinition, index),
@@ -44,7 +53,26 @@ public static class PlanStatementLocator
                 ConversionsOf(statement)));
         }
 
+        foreach (var position in cutShort)
+        {
+            results[position] = results[position] with { EndLine = LastLineBeforeNextLocated(results, position, LineOf(moduleDefinition, moduleDefinition.Length)) };
+        }
+
         return results;
+    }
+
+    private static int LastLineBeforeNextLocated(List<PlannedStatement> statements, int position, int lastLine)
+    {
+        var start = statements[position].StartLine!.Value;
+        for (var next = position + 1; next < statements.Count; next++)
+        {
+            if (statements[next].StartLine is { } nextStart)
+            {
+                return Math.Max(start, nextStart - 1);
+            }
+        }
+
+        return lastLine;
     }
 
     private static bool IsBodyStatement(XElement element) =>
