@@ -106,7 +106,6 @@ public static class MetamorphicSweepRunner
 
             var scanResult = await LiveScanRunner.RunAsync(
                 options.BuildConnectionString(databaseName),
-                minimumConfidence: FindingConfidence.Low,
                 cancellationToken: cancellationToken);
             return (true, ScanReportRuleIds.Extract(scanResult.Report));
         }

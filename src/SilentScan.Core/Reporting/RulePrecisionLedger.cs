@@ -4,18 +4,10 @@ namespace SilentScan.Core.Reporting;
 
 public sealed record RulePrecisionEntry(string RuleId, int HighFindings, int TruePositives, int FalsePositives, int Undecided)
 {
-    public const double RequiredPrecision = 0.95;
-
-    public const int MinimumDecided = 5;
-
     public int Decided => TruePositives + FalsePositives;
 
     public double Precision => Decided == 0 ? 0 : (double)TruePositives / Decided;
 
-    public bool IsDefaultOn =>
-        Decided > 0
-        && Precision >= RequiredPrecision
-        && (Decided >= MinimumDecided || Decided == HighFindings);
 }
 
 public static class RulePrecisionLedger
@@ -92,33 +84,4 @@ public static class RulePrecisionLedger
         new("silentscan/write-loss/temporal-precision-loss", 111, 10, 10, 0),
         new("silentscan/write-loss/unicode-to-non-unicode", 421, 1, 19, 0),
     ];
-
-    private static readonly HashSet<string> DefaultOn =
-        [.. Entries.Where(e => e.IsDefaultOn).Select(e => e.RuleId)];
-
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, System.Reflection.PropertyInfo?> RuleIdProperties = new();
-
-    public static bool IsDefaultOn(string ruleId) => DefaultOn.Contains(ruleId);
-
-    public static ScanReport ApplyDefaultVisibility(ScanReport report, FindingConfidence minimumConfidence)
-    {
-        if (minimumConfidence != FindingConfidence.High)
-        {
-            return report;
-        }
-
-        var visible = new Dictionary<string, IReadOnlyList<IFinding>>(StringComparer.Ordinal);
-        foreach (var (key, findings) in report.FindingsByRuleId)
-        {
-            visible[key] = [.. findings.Where(IsVisibleByDefault)];
-        }
-
-        return report with { FindingsByRuleId = visible };
-    }
-
-    private static bool IsVisibleByDefault(IFinding finding)
-    {
-        var property = RuleIdProperties.GetOrAdd(finding.GetType(), type => type.GetProperty("RuleId", typeof(string)));
-        return property?.GetValue(finding) is not string ruleId || IsDefaultOn(ruleId);
-    }
 }

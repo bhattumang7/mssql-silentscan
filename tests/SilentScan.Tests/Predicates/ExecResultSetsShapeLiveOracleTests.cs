@@ -22,8 +22,7 @@ public sealed class ExecResultSetsShapeLiveOracleTests
             BEGIN
                 EXEC dbo.usp_Callee WITH RESULT SETS ((Id INT NOT NULL, Name VARCHAR(3) NOT NULL));
             END;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<ExecResultSetsShapeFinding>("ExecResultSetsShapeScanner"));
         Assert.Equal(ExecResultSetsShapeFindingKind.ColumnTypeMismatch, finding.Kind);
@@ -47,8 +46,7 @@ public sealed class ExecResultSetsShapeLiveOracleTests
             BEGIN
                 EXEC dbo.usp_Callee WITH RESULT SETS ((Id INT NOT NULL, Name VARCHAR(50) NOT NULL));
             END;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<ExecResultSetsShapeFinding>("ExecResultSetsShapeScanner"));
     }
@@ -67,8 +65,7 @@ public sealed class ExecResultSetsShapeLiveOracleTests
             BEGIN
                 EXEC dbo.usp_Callee;
             END;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<ExecResultSetsShapeFinding>("ExecResultSetsShapeScanner"));
     }

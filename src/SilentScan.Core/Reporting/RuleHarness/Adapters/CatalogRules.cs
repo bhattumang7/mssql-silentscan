@@ -41,7 +41,6 @@ internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
 {
     public string Id => "MemoryOptimizedSchemaOnlyDurabilityScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public bool ApplyConfidenceFilter => false;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedSchemaOnlyDurabilityScanner.Scan(context.Catalog);
 }
 
@@ -70,7 +69,6 @@ internal sealed class SecurityPredicateIndexRule : ICatalogRule
 {
     public string Id => "SecurityPredicateIndexScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public bool ApplyConfidenceFilter => false;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => SecurityPredicateIndexScanner.Scan(context.Catalog);
 }
 

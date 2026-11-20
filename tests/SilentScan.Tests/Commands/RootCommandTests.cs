@@ -40,7 +40,7 @@ public sealed class RootCommandTests
         Assert.Equal("scan-db", command.Name);
         Assert.Contains(command.Arguments, a => a.Name == "connection-string");
         Assert.Contains(command.Options, o => o.Name == "--format");
-        Assert.Contains(command.Options, o => o.Name == "--confidence");
+        Assert.DoesNotContain(command.Options, o => o.Name == "--confidence");
         Assert.Contains(command.Options, o => o.Name == "--verbosity");
         Assert.Contains(command.Options, o => o.Name == "--output");
         Assert.Contains(command.Options, o => o.Name == "--plan-cache-evidence");

@@ -62,7 +62,6 @@ public static class RuleRunner
         IReadOnlyList<IRule> rules,
         IReadOnlyList<SqlParseResult> parseResults,
         RuleContext context,
-        FindingConfidence minimumConfidence,
         IScanProgress progress)
     {
         var resultsByRuleId = new Dictionary<string, IReadOnlyList<IFinding>>(StringComparer.Ordinal);
@@ -84,17 +83,16 @@ public static class RuleRunner
                 _ => throw new InvalidOperationException($"Rule '{rule.Id}' does not implement IPerFileRule, ICatalogRule, or ICrossModuleRule."),
             };
 
-            resultsByRuleId[rule.Id] = FinalizeRule(rule, raw, minimumConfidence);
+            resultsByRuleId[rule.Id] = FinalizeRule(rule, raw);
         }
 
         return new RuleRunResult(resultsByRuleId, crashes);
     }
 
-    public static IReadOnlyList<IFinding> FinalizeRule(IRule rule, IEnumerable<IFinding> raw, FindingConfidence minimumConfidence)
+    public static IReadOnlyList<IFinding> FinalizeRule(IRule rule, IEnumerable<IFinding> raw)
     {
         var comparer = (rule as IPerFileRule)?.Comparer ?? DefaultLocationComparer.Instance;
-        var filtered = rule.ApplyConfidenceFilter ? raw.Where(f => f.Confidence <= minimumConfidence) : raw;
-        return [.. filtered.OrderBy(f => f, comparer)];
+        return [.. raw.OrderBy(f => f, comparer)];
     }
 
     private sealed record BatchState(

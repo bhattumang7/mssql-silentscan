@@ -97,8 +97,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT SUM(Amount * 2) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
         Assert.Equal("dbo.Measurements", finding.TableQualifiedName);
@@ -117,8 +116,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT SUM(CAST(Quantity AS FLOAT)) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
         Assert.Equal("Quantity", finding.ColumnName);
@@ -135,8 +133,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT SUM(Quantity + 1.5e0) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
         Assert.Equal("Quantity", finding.ColumnName);
@@ -153,8 +150,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT SUM(CAST(Amount AS DECIMAL(18, 4))) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
     }
@@ -174,8 +170,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT {aggregateFunction}(Quantity) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
         Assert.Equal("Quantity", finding.ColumnName);
@@ -193,8 +188,7 @@ public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
             BEGIN
                 SELECT SUM(Quantity + 1) FROM dbo.Measurements;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"));
     }

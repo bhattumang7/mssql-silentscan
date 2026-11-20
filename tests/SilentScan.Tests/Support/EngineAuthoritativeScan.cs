@@ -12,13 +12,13 @@ public static class EngineAuthoritativeScan
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDocker;
 
-    public static async Task<ScanReport> ScanAsync(string sql, string? collation = null, FindingConfidence minimumConfidence = FindingConfidence.High, CancellationToken cancellationToken = default)
+    public static async Task<ScanReport> ScanAsync(string sql, string? collation = null, CancellationToken cancellationToken = default)
     {
-        var result = await RunAsync(sql, collation, minimumConfidence, cancellationToken);
+        var result = await RunAsync(sql, collation, cancellationToken);
         return result.Report;
     }
 
-    public static async Task<LiveScanResult> RunAsync(string sql, string? collation = null, FindingConfidence minimumConfidence = FindingConfidence.High, CancellationToken cancellationToken = default)
+    public static async Task<LiveScanResult> RunAsync(string sql, string? collation = null, CancellationToken cancellationToken = default)
     {
         var databaseName = $"SilentScanTest_{Guid.NewGuid():N}";
         var provisioner = new DatabaseProvisioner(Options);
@@ -26,7 +26,7 @@ public static class EngineAuthoritativeScan
         try
         {
             await new ScriptDeployer(Options).DeployAsync(WrapBareStatementsInProcedures(sql), databaseName, cancellationToken);
-            return await LiveScanRunner.RunAsync(Options.BuildConnectionString(databaseName), cancellationToken: cancellationToken, minimumConfidence: minimumConfidence);
+            return await LiveScanRunner.RunAsync(Options.BuildConnectionString(databaseName), cancellationToken: cancellationToken);
         }
         finally
         {
@@ -93,9 +93,9 @@ public static class EngineAuthoritativeScan
             && !name.StartsWith("Drop", StringComparison.Ordinal);
     }
 
-    public static async Task<ScanReport> ScanFilesAsync(IReadOnlyList<string> sqlFilePaths, string? collation = null, FindingConfidence minimumConfidence = FindingConfidence.High, CancellationToken cancellationToken = default)
+    public static async Task<ScanReport> ScanFilesAsync(IReadOnlyList<string> sqlFilePaths, string? collation = null, CancellationToken cancellationToken = default)
     {
         var combined = string.Join("\nGO\n", sqlFilePaths.Select(SqlScriptParser.DecodeFile));
-        return await ScanAsync(combined, collation, minimumConfidence, cancellationToken);
+        return await ScanAsync(combined, collation, cancellationToken);
     }
 }

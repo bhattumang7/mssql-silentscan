@@ -49,7 +49,7 @@ public sealed class RuleRunnerContainmentTests
         var context = BuildEmptyContext();
 
         var result = RuleRunner.Run(
-            [new ThrowingRule(), new BenignRule()], [parseResult], context, FindingConfidence.Low, NullScanProgress.Instance);
+            [new ThrowingRule(), new BenignRule()], [parseResult], context, NullScanProgress.Instance);
 
         Assert.Empty(result.For<FakeFinding>("ThrowingTestRule"));
         Assert.Single(result.For<FakeFinding>("BenignTestRule"));

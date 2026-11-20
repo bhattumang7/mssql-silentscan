@@ -123,8 +123,7 @@ public sealed class SecondSweepGLiveOracleTests
             BEGIN
                 SELECT TOP (5) Id, Name FROM dbo.BareTopTarget;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner"));
         Assert.Equal(FindingConfidence.Medium, finding.Confidence);
@@ -141,8 +140,7 @@ public sealed class SecondSweepGLiveOracleTests
             BEGIN
                 SELECT TOP (5) Id, Name FROM dbo.BareTopClean ORDER BY Id;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner"));
     }
@@ -158,8 +156,7 @@ public sealed class SecondSweepGLiveOracleTests
             BEGIN
                 SELECT TOP (100.0) PERCENT Id, Name FROM dbo.BareTopDecimalHundred;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner"));
     }
@@ -173,8 +170,7 @@ public sealed class SecondSweepGLiveOracleTests
             GO
             CREATE VIEW dbo.v_ViewOrderingDecimalHundred AS
             SELECT TOP (100.0) PERCENT Id, Amt FROM dbo.ViewOrderingDecimalHundred ORDER BY Amt DESC;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<ViewOrderingFinding>("ViewOrderingScanner"));
         Assert.Equal(ViewOrderingFindingKind.TopPercentOrderByNeverLimits, finding.Kind);
@@ -196,8 +192,7 @@ public sealed class SecondSweepGLiveOracleTests
             SELECT Id, Amt FROM dbo.ViewOrderingUnionB
             ORDER BY Amt DESC
             OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<ViewOrderingFinding>("ViewOrderingScanner"));
         Assert.Equal(ViewOrderingFindingKind.OrderByNotGuaranteedToConsumer, finding.Kind);
@@ -217,8 +212,7 @@ public sealed class SecondSweepGLiveOracleTests
             (SELECT TOP (100) PERCENT Id, Amt FROM dbo.ViewOrderingUnionNestedA ORDER BY Amt)
             UNION ALL
             SELECT Id, Amt FROM dbo.ViewOrderingUnionNestedB;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<ViewOrderingFinding>("ViewOrderingScanner"));
     }
@@ -237,8 +231,7 @@ public sealed class SecondSweepGLiveOracleTests
             UNION ALL
             SELECT TOP (1) Id, Amt FROM dbo.ViewOrderingUnionBranchTopB
             ORDER BY Amt DESC;
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<ViewOrderingFinding>("ViewOrderingScanner"));
     }

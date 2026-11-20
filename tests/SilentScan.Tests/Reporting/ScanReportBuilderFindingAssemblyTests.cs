@@ -9,7 +9,7 @@ namespace SilentScan.Tests.Reporting;
 public sealed class ScanReportBuilderFindingAssemblyTests
 {
     [Fact]
-    public void MinimumConfidence_FiltersEachFindingByItsOwnConfidence_NotAllOrNothing()
+    public void EveryFinding_IsReportedWithItsOwnConfidence()
     {
         const string Sql = """
             CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, Col INT NOT NULL);
@@ -23,18 +23,12 @@ public sealed class ScanReportBuilderFindingAssemblyTests
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         var catalog = CatalogBuilder.Build([result]);
 
-        var defaultReport = ScanReportBuilder.BuildFromParseResults([result], catalog);
+        var report = ScanReportBuilder.BuildFromParseResults([result], catalog);
 
-        var defaultFinding = Assert.Single(defaultReport.Find<ViewOrderingFinding>("ViewOrderingScanner"));
-        Assert.Equal(ViewOrderingFindingKind.TopPercentOrderByNeverLimits, defaultFinding.Kind);
-        Assert.Equal(FindingConfidence.High, defaultFinding.Confidence);
-
-        var lowConfidenceReport = ScanReportBuilder.BuildFromParseResults([result], catalog, FindingConfidence.Low);
-
-        var lowConfidenceFindings = lowConfidenceReport.Find<ViewOrderingFinding>("ViewOrderingScanner");
-        Assert.Equal(2, lowConfidenceFindings.Count);
-        Assert.Contains(lowConfidenceFindings, f => f.Kind == ViewOrderingFindingKind.TopPercentOrderByNeverLimits && f.Confidence == FindingConfidence.High);
-        Assert.Contains(lowConfidenceFindings, f => f.Kind == ViewOrderingFindingKind.OrderByNotGuaranteedToConsumer && f.Confidence == FindingConfidence.Low);
+        var findings = report.Find<ViewOrderingFinding>("ViewOrderingScanner");
+        Assert.Equal(2, findings.Count);
+        Assert.Contains(findings, f => f.Kind == ViewOrderingFindingKind.TopPercentOrderByNeverLimits && f.Confidence == FindingConfidence.High);
+        Assert.Contains(findings, f => f.Kind == ViewOrderingFindingKind.OrderByNotGuaranteedToConsumer && f.Confidence == FindingConfidence.Low);
     }
 
     [Fact]

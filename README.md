@@ -45,7 +45,7 @@ repeated invocations.
 
 ```
 dotnet run --project src/SilentScan.Cli -- scan-db <connection-string> \
-  [--format text|markdown|json|sarif] [--confidence high|medium|low] [--output <file>]
+  [--format text|markdown|json|sarif] [--output <file>]
 ```
 
 Connects to a live SQL Server database, reads its catalog straight from

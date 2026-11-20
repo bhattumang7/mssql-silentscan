@@ -94,26 +94,6 @@ public sealed class ReportOutputTests : IDisposable
         Assert.Contains("'full'", message);
     }
 
-    [Theory]
-    [InlineData("high", true)]
-    [InlineData("extreme", false)]
-    public void TryParseConfidence_DelegatesToFindingConfidenceParsing(string input, bool expectedOk)
-    {
-        var ok = ReportOutput.TryParseConfidence(input, out var parsed);
-
-        Assert.Equal(expectedOk, ok);
-        if (expectedOk)
-        {
-            Assert.Equal(FindingConfidence.High, parsed);
-        }
-    }
-
-    [Fact]
-    public void UnknownConfidenceMessage_DelegatesToFindingConfidenceParsing()
-    {
-        Assert.Equal(FindingConfidenceParsing.UnknownConfidenceMessage("extreme"), ReportOutput.UnknownConfidenceMessage("extreme"));
-    }
-
     [Fact]
     public void Emit_NullOutputPath_WritesToStdoutOnlyAndReturnsTrue()
     {

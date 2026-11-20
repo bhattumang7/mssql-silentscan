@@ -8,8 +8,6 @@ public interface IRule
     string Id { get; }
 
     DynamicSqlApplicability DynamicSql { get; }
-
-    bool ApplyConfidenceFilter => true;
 }
 
 public interface IPerFileRule : IRule

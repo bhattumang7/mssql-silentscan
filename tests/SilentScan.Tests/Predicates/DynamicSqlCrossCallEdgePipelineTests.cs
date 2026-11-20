@@ -8,9 +8,9 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Category", "Oracle")]
 public sealed class DynamicSqlCrossCallEdgePipelineTests
 {
-    private static async Task<ScanReport> Scan(string sql, FindingConfidence minimumConfidence = FindingConfidence.High)
+    private static async Task<ScanReport> Scan(string sql)
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS", minimumConfidence: minimumConfidence);
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS");
         foreach (var file in report.ParseHealth.Files)
         {
             Assert.Empty(file.Errors);
@@ -101,7 +101,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
     }
 
     [Fact]
-    public async Task NoKnownCaller_QuotedPlaceholderPosition_MediumConfidenceScanForced_ExcludedByDefault()
+    public async Task NoKnownCaller_QuotedPlaceholderPosition_IsReportedAtMediumConfidence()
     {
 
         const string sql = """
@@ -114,11 +114,8 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             END;
             """;
 
-        var defaultReport = await Scan(sql);
-        Assert.DoesNotContain(defaultReport.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Status");
-
-        var mediumReport = await Scan(sql, FindingConfidence.Medium);
-        var finding = Assert.Single(mediumReport.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Status");
+        var report = await Scan(sql);
+        var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Status");
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
         Assert.True(finding.Column.Indexed);
         Assert.Equal(FindingConfidence.Medium, finding.Confidence);
@@ -190,7 +187,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
                     N' AS lt WHERE o.Status = N''' + @Status + N'''';
                 EXEC(@sql);
             END;
-            """, FindingConfidence.Medium);
+            """);
 
         Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Status");
@@ -213,7 +210,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
                     N'SELECT Name FROM dbo.Customers WHERE Name = N''y'';';
                 EXEC(@sql);
             END;
-            """, FindingConfidence.Medium);
+            """);
 
         Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.ColumnName == "Name");
@@ -236,7 +233,7 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             BEGIN
                 EXEC dbo.usp_FindByStatus @Status = @IncomingStatus;
             END;
-            """, FindingConfidence.Medium);
+            """);
 
         Assert.Contains(report.Find<DynamicSqlFinding>("DynamicSqlScanner"), f => f.Outcome == DynamicSqlOutcome.Unanalyzable);
         Assert.Empty(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"));
@@ -262,11 +259,9 @@ public sealed class DynamicSqlCrossCallEdgePipelineTests
             """;
 
         var viaDefault = await Scan(
-            body.Replace("{0}", " = N'dbo.Small'", StringComparison.Ordinal).Replace("{1}", string.Empty, StringComparison.Ordinal),
-            minimumConfidence: FindingConfidence.Low);
+            body.Replace("{0}", " = N'dbo.Small'", StringComparison.Ordinal).Replace("{1}", string.Empty, StringComparison.Ordinal));
         var viaLiteralArgument = await Scan(
-            body.Replace("{0}", string.Empty, StringComparison.Ordinal).Replace("{1}", " @Table = N'dbo.Small'", StringComparison.Ordinal),
-            minimumConfidence: FindingConfidence.Low);
+            body.Replace("{0}", string.Empty, StringComparison.Ordinal).Replace("{1}", " @Table = N'dbo.Small'", StringComparison.Ordinal));
 
         static IReadOnlyList<string> TypedShape(Core.Reporting.ScanReport report) =>
             [.. report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Select(f => $"{f.Column.TableQualifiedName}.{f.Column.ColumnName}:{f.Verdict}:{f.Confidence}")];

@@ -16,7 +16,6 @@ public static class LiveScanRunner
     public static async Task<LiveScanResult> RunAsync(
         string connectionString,
         bool includePlanCacheEvidence = false,
-        FindingConfidence minimumConfidence = FindingConfidence.High,
         IScanProgress? progress = null,
         bool fetchSqlFromTables = false,
         CancellationToken cancellationToken = default)
@@ -107,13 +106,13 @@ public static class LiveScanRunner
             await fetchConnection.OpenAsync(cancellationToken);
             var rowValueFetcher = new LiveTableRowValueFetcher(fetchConnection);
             report = ScanReportBuilder.BuildFromParseResults(
-                parsedForPredicateScan, catalog: catalog, minimumConfidence: minimumConfidence, resolvedLineage: lineage, progress: progress,
+                parsedForPredicateScan, catalog: catalog, resolvedLineage: lineage, progress: progress,
                 rowValueFetcher: rowValueFetcher);
         }
         else
         {
             report = ScanReportBuilder.BuildFromParseResults(
-                parsedForPredicateScan, catalog: catalog, minimumConfidence: minimumConfidence, resolvedLineage: lineage, progress: progress);
+                parsedForPredicateScan, catalog: catalog, resolvedLineage: lineage, progress: progress);
         }
 
 
@@ -128,7 +127,7 @@ public static class LiveScanRunner
                 })
                 .ToList();
             tempTableExecShape = await new TempTableExecShapeChecker(connectionString).CheckAsync(candidates, tempTableStage, cancellationToken);
-            var filteredTempTableFindings = tempTableExecShape.Findings.Where(f => f.Confidence <= minimumConfidence).ToList();
+            var filteredTempTableFindings = tempTableExecShape.Findings.ToList();
             report = report.WithFindings("TempTableExecShapeScanner", filteredTempTableFindings);
             tempTableStage.Complete($"{filteredTempTableFindings.Count:N0} findings, {tempTableExecShape.Unanalyzed.Count:N0} unanalyzed");
         }
@@ -145,7 +144,7 @@ public static class LiveScanRunner
                 })
                 .ToList();
             execResultSetsShape = await new ExecResultSetsShapeChecker(connectionString).CheckAsync(candidates, execResultSetsStage, cancellationToken);
-            var filteredExecResultSetsFindings = execResultSetsShape.Findings.Where(f => f.Confidence <= minimumConfidence).ToList();
+            var filteredExecResultSetsFindings = execResultSetsShape.Findings.ToList();
             report = report.WithFindings("ExecResultSetsShapeScanner", filteredExecResultSetsFindings);
             execResultSetsStage.Complete($"{filteredExecResultSetsFindings.Count:N0} findings, {execResultSetsShape.Unanalyzed.Count:N0} unanalyzed");
         }
@@ -154,7 +153,7 @@ public static class LiveScanRunner
         using (var databaseConfigStage = progress.Begin("reading database-level configuration flags"))
         {
             var databaseConfigFindings = (await new DatabaseConfigurationReader(connectionString).ReadAsync(cancellationToken))
-                .Where(f => f.Confidence <= minimumConfidence).ToList();
+                .ToList();
             report = report.WithFindings("DatabaseConfigurationScanner", databaseConfigFindings);
             databaseConfigStage.Complete($"{databaseConfigFindings.Count:N0} findings");
         }
@@ -164,7 +163,7 @@ public static class LiveScanRunner
             var isParameterizationForced = await new DatabaseConfigurationReader(connectionString)
                 .ReadIsParameterizationForcedAsync(cancellationToken);
             var forcedParameterizationFindings = isParameterizationForced
-                ? ForcedParameterizationScanner.Scan(parseResultSource(forcedParamStage), forcedParamStage).Where(f => f.Confidence <= minimumConfidence).ToList()
+                ? ForcedParameterizationScanner.Scan(parseResultSource(forcedParamStage), forcedParamStage).ToList()
                 : [];
             report = report.WithFindings("ForcedParameterizationScanner", forcedParameterizationFindings);
             forcedParamStage.Complete($"{forcedParameterizationFindings.Count:N0} findings");
@@ -173,7 +172,7 @@ public static class LiveScanRunner
         using (var indexDesignStage = progress.Begin("checking clustered/heap index design"))
         {
 
-            var indexDesignFindings = IndexDesignScanner.Scan(catalog, indexDesignStage).Where(f => f.Confidence <= minimumConfidence).ToList();
+            var indexDesignFindings = IndexDesignScanner.Scan(catalog, indexDesignStage).ToList();
             report = report.WithFindings("IndexDesignScanner", indexDesignFindings);
             indexDesignStage.Complete($"{indexDesignFindings.Count:N0} findings");
         }
@@ -181,7 +180,7 @@ public static class LiveScanRunner
         using (var staleSelectStarViewStage = progress.Begin("checking SELECT * view staleness against base tables"))
         {
             var (views, _) = ViewDefinitionExtractor.Extract(parseResultSource(staleSelectStarViewStage), catalog.DefaultCollation, catalog.TypeAliases, ledger: null, staleSelectStarViewStage);
-            var staleSelectStarViewFindings = StaleSelectStarViewScanner.Scan(views, catalog, staleSelectStarViewStage).Where(f => f.Confidence <= minimumConfidence).ToList();
+            var staleSelectStarViewFindings = StaleSelectStarViewScanner.Scan(views, catalog, staleSelectStarViewStage).ToList();
             report = report.WithFindings("StaleSelectStarViewScanner", staleSelectStarViewFindings);
             staleSelectStarViewStage.Complete($"{staleSelectStarViewFindings.Count:N0} findings");
         }

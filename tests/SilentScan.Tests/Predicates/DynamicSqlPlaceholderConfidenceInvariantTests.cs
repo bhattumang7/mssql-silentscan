@@ -68,7 +68,7 @@ public sealed class DynamicSqlPlaceholderConfidenceInvariantTests
     [MemberData(nameof(PlaceholderBearingScenarios))]
     public async Task NoFindingOfAnyKindReportsHighConfidence(string scenarioName, string sql)
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS", minimumConfidence: FindingConfidence.Low);
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS");
         foreach (var file in report.ParseHealth.Files)
         {
             Assert.Empty(file.Errors);

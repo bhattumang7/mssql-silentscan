@@ -87,8 +87,7 @@ public sealed class IsNullReplacementValueTruncationScannerLiveOracleTests
             BEGIN
                 SELECT ISNULL(ShortCode, LongCode) FROM dbo.T;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<IsNullReplacementValueTruncationFinding>("IsNullReplacementValueTruncationScanner"));
         Assert.Equal(WriteLossKind.LengthTruncation, finding.Kind);
@@ -105,8 +104,7 @@ public sealed class IsNullReplacementValueTruncationScannerLiveOracleTests
             BEGIN
                 SELECT ISNULL(SmallDecimal, BigDecimal) FROM dbo.T;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<IsNullReplacementValueTruncationFinding>("IsNullReplacementValueTruncationScanner"));
         Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
@@ -123,8 +121,7 @@ public sealed class IsNullReplacementValueTruncationScannerLiveOracleTests
             BEGIN
                 SELECT COALESCE(ShortCode, LongCode) FROM dbo.T;
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<IsNullReplacementValueTruncationFinding>("IsNullReplacementValueTruncationScanner"));
     }

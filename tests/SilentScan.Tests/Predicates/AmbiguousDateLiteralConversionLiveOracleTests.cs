@@ -15,8 +15,7 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync(
             """
             SELECT CAST('03/04/2026' AS date);
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner"));
         Assert.Equal("03/04/2026", finding.LiteralText);
@@ -28,8 +27,7 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync(
             """
             SELECT CONVERT(date, '03/04/2026', 103);
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner"));
     }
@@ -40,8 +38,7 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync(
             """
             SELECT CAST('20260304' AS date);
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner"));
     }
@@ -52,8 +49,7 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync(
             """
             SELECT CAST('2026-04-03' AS datetime);
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner"));
         Assert.Equal("2026-04-03", finding.LiteralText);
@@ -65,8 +61,7 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync(
             """
             SELECT CAST('2026-04-03' AS date);
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner"));
     }

@@ -22,8 +22,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task WhereEqualityOnMaskedColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total = 100;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total = 100;");
 
         var finding = Assert.Single(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -37,8 +36,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task WhereOnNonMaskedColumn_NeverFires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Region = 'West';",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Region = 'West';");
 
         Assert.Empty(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)));
     }
@@ -47,8 +45,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task WhereBetweenOnMaskedColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total BETWEEN 1 AND 100;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total BETWEEN 1 AND 100;");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -59,8 +56,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task WhereInListOnMaskedColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total IN (100, 200);",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total IN (100, 200);");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -78,8 +74,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             GO
             CREATE PROCEDURE dbo.GetOrder AS
                 SELECT o.OrderId FROM dbo.MaskedOrders o JOIN dbo.MaskedOrderTotals t ON o.Total = t.Total;
-            """,
-            minimumConfidence: FindingConfidence.Medium);
+            """);
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -90,8 +85,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task GroupByMaskedColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total, COUNT(*) FROM dbo.MaskedOrders GROUP BY Total;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total, COUNT(*) FROM dbo.MaskedOrders GROUP BY Total;");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -102,8 +96,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task OrderByMaskedColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders ORDER BY Total;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders ORDER BY Total;");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -114,8 +107,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task IsNullCheckOnMaskedColumn_NeverFires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total IS NOT NULL;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.MaskedOrders WHERE Total IS NOT NULL;");
 
         Assert.DoesNotContain(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -126,8 +118,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task SelectMaskedColumnDirectly_NeverFires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total FROM dbo.MaskedOrders;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total FROM dbo.MaskedOrders;");
 
         Assert.Empty(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)));
     }
@@ -136,8 +127,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task ArithmeticOverMaskedColumnInSelectList_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total + 1 AS AdjustedTotal FROM dbo.MaskedOrders;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT Total + 1 AS AdjustedTotal FROM dbo.MaskedOrders;");
 
         var finding = Assert.Single(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -149,8 +139,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task AggregateOverMaskedColumnInSelectList_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT SUM(Total) AS GrandTotal FROM dbo.MaskedOrders;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT SUM(Total) AS GrandTotal FROM dbo.MaskedOrders;");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -161,8 +150,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
     public async Task DateAddOverMaskedColumnInSelectList_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync(
-            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT DATEADD(day, 1, Placed) AS NextDay FROM dbo.MaskedOrders;",
-            minimumConfidence: FindingConfidence.Medium);
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT DATEADD(day, 1, Placed) AS NextDay FROM dbo.MaskedOrders;");
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -179,8 +167,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             ALTER TABLE dbo.LegacyOrders ALTER COLUMN Total ADD MASKED WITH (FUNCTION = 'default()');
             GO
             CREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.LegacyOrders WHERE Total = 100;
-            """,
-            minimumConfidence: FindingConfidence.Medium);
+            """);
 
         Assert.Contains(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
@@ -197,8 +184,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             ALTER TABLE dbo.UnmaskedOrders ALTER COLUMN Total DROP MASKED;
             GO
             CREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.UnmaskedOrders WHERE Total = 100;
-            """,
-            minimumConfidence: FindingConfidence.Medium);
+            """);
 
         Assert.Empty(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)));
     }
@@ -213,8 +199,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             ALTER TABLE dbo.SensorReadings ALTER COLUMN Value ADD MASKED WITH (FUNCTION = 'default()');
             GO
             CREATE PROCEDURE dbo.GetTotal AS SELECT SUM(Value) AS Total FROM dbo.SensorReadings;
-            """,
-            minimumConfidence: FindingConfidence.Medium);
+            """);
 
         Assert.Contains(
             report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner"),
@@ -231,8 +216,7 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             ALTER TABLE dbo.WideningOrders ALTER COLUMN Total INT NOT NULL;
             GO
             CREATE PROCEDURE dbo.GetOrder AS SELECT OrderId FROM dbo.WideningOrders WHERE Total = 100;
-            """,
-            minimumConfidence: FindingConfidence.Medium);
+            """);
 
         Assert.DoesNotContain(
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),

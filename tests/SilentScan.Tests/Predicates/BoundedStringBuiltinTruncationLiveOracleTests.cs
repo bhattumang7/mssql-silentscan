@@ -18,8 +18,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLICATE('abcdefghij', 900);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
         Assert.Equal(BoundedStringBuiltinTruncationFindingKind.ReplicateResultTruncated, finding.Kind);
@@ -38,8 +37,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLICATE(N'ab', 3000);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
         Assert.Equal(BoundedStringBuiltinTruncationFindingKind.ReplicateResultTruncated, finding.Kind);
@@ -56,8 +54,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLICATE('abcdefghij', 100);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -71,8 +68,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLICATE(CAST('abcdefghij' AS VARCHAR(MAX)), 900);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -87,8 +83,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
                 DECLARE @Count INT = 900;
                 SELECT REPLICATE('abcdefghij', @Count);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -102,8 +97,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLACE('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'x', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
         Assert.Equal(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated, finding.Kind);
@@ -121,8 +115,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLACE(CAST('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' AS VARCHAR(MAX)), 'x', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -136,8 +129,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLACE('abcabcabc', 'abc', 'x');
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -151,8 +143,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT REPLACE('abc', '', 'X');
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
@@ -166,8 +157,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT SPACE(9000);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         var finding = Assert.Single(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
         Assert.Equal(BoundedStringBuiltinTruncationFindingKind.SpaceResultTruncated, finding.Kind);
@@ -185,8 +175,7 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
             BEGIN
                 SELECT SPACE(100);
             END
-            """,
-            minimumConfidence: FindingConfidence.Low);
+            """);
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }

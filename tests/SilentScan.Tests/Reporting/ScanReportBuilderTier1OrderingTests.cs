@@ -19,7 +19,7 @@ public sealed class ScanReportBuilderTier1OrderingTests
     [Fact]
     public async Task IndexedColumnFinding_RanksBeforeUnindexedColumnFinding()
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(Sql, minimumConfidence: FindingConfidence.Medium);
+        var report = await EngineAuthoritativeScan.ScanAsync(Sql);
 
         Assert.True(report.Find<SargabilityFinding>("NonSargablePredicateScanner").Count >= 2);
         var firstIndexedPosition = report.Find<SargabilityFinding>("NonSargablePredicateScanner").ToList().FindIndex(f => f.Indexed == true);

@@ -27,7 +27,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "medium", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -39,25 +39,11 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task RunAsync_DefaultConfidence_HidesFindingsOfRulesWithoutMeasuredPrecision()
-    {
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "brief");
-
-        var exitCode = await ScanDbCommand.RunAsync(
-            Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
-
-        Assert.Equal(0, exitCode);
-        Assert.DoesNotContain("usp_FindWidget", stdout.ToString());
-    }
-
-    [Fact]
     public async Task RunAsync_JsonFormat_ReturnsZeroAndWritesParseableJsonWithModuleCount()
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("json", "high", null, "brief");
+        var options = new ReportOptions("json", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -72,7 +58,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("sarif", "high", null, "brief");
+        var options = new ReportOptions("sarif", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -91,7 +77,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
         {
             var stdout = new StringWriter();
             var stderr = new StringWriter();
-            var options = new ReportOptions("text", "medium", outputPath, "brief");
+            var options = new ReportOptions("text", outputPath, "brief");
 
             var exitCode = await ScanDbCommand.RunAsync(
                 Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -117,7 +103,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
         var outputPath = Path.Combine(Path.GetTempPath(), $"silentscan-scan-db-missing-{Guid.NewGuid():N}", "out.txt");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", outputPath, "brief");
+        var options = new ReportOptions("text", outputPath, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -132,7 +118,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "medium", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(true, false, false), options, stdout, stderr, CancellationToken.None);
@@ -146,7 +132,7 @@ public sealed class ScanDbCommandOracleTests : OracleTestFixture
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             Options.BuildConnectionString(DatabaseName), new ScanFlags(false, false, false, CheckConnectivity: true), options, stdout, stderr, CancellationToken.None);

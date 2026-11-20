@@ -12,7 +12,7 @@ internal enum ReportFormat
     Sarif,
 }
 
-internal readonly record struct ReportOptions(string Format, string Confidence, string? OutputPath, string Verbosity);
+internal readonly record struct ReportOptions(string Format, string? OutputPath, string Verbosity);
 
 internal static class ReportOutput
 {
@@ -21,8 +21,6 @@ internal static class ReportOutput
 
     internal const string OutputOptionDescription =
         "Write the report to this file instead of standard output. The parent directory must exist.";
-
-    internal const string ConfidenceOptionDescription = FindingConfidenceParsing.OptionDescription;
 
     internal const string VerbosityOptionDescription =
         "How much detail the text/markdown report gives for sections about what could NOT be established (parse errors, unresolvable dynamic SQL, ambiguous types, stale metadata): brief (default - each such section states its count only) or full (every row, as the JSON carries it). Never affects json/sarif output, and never hides an actual finding - only these coverage/caveat sections.";
@@ -52,12 +50,6 @@ internal static class ReportOutput
         || report.DynamicSqlSummary.InnerParseFailedCount > 0
         || report.DynamicSqlSummary.PartiallyAnalyzedCount > 0
         || report.TypedPredicateSummary.UnknownCount > 0;
-
-    internal static bool TryParseConfidence(string confidence, out FindingConfidence parsed) =>
-        FindingConfidenceParsing.TryParse(confidence, out parsed);
-
-    internal static string UnknownConfidenceMessage(string confidence) =>
-        FindingConfidenceParsing.UnknownConfidenceMessage(confidence);
 
     internal static bool TryParseFormat(string format, out ReportFormat parsed)
     {

@@ -9,7 +9,7 @@ public sealed class ScanDbCommandTests
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("xml", "high", null, "brief");
+        var options = new ReportOptions("xml", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -24,7 +24,7 @@ public sealed class ScanDbCommandTests
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
         var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "baseline.json");
 
         var exitCode = await ScanDbCommand.RunAsync(
@@ -40,7 +40,7 @@ public sealed class ScanDbCommandTests
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
         await File.WriteAllTextAsync(path, "not json");
 
@@ -59,25 +59,11 @@ public sealed class ScanDbCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_UnknownConfidence_ReturnsOneAndWritesErrorWithoutConnecting()
-    {
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
-        var options = new ReportOptions("text", "extreme", null, "brief");
-
-        var exitCode = await ScanDbCommand.RunAsync(
-            "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
-
-        Assert.Equal(1, exitCode);
-        Assert.Contains("unknown --confidence", stderr.ToString());
-    }
-
-    [Fact]
     public async Task RunAsync_UnknownVerbosity_ReturnsOneAndWritesErrorWithoutConnecting()
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "verbose");
+        var options = new ReportOptions("text", null, "verbose");
 
         var exitCode = await ScanDbCommand.RunAsync(
             "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
@@ -91,7 +77,7 @@ public sealed class ScanDbCommandTests
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("text", "high", null, "brief");
+        var options = new ReportOptions("text", null, "brief");
 
         var exitCode = await ScanDbCommand.RunAsync(
             "Server=127.0.0.1,1;Database=db;Connect Timeout=1;TrustServerCertificate=true",
@@ -106,7 +92,7 @@ public sealed class ScanDbCommandTests
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
-        var options = new ReportOptions("not-a-real-format", "not-a-real-confidence", null, "not-a-real-verbosity");
+        var options = new ReportOptions("not-a-real-format", null, "not-a-real-verbosity");
 
         var exitCode = await ScanDbCommand.RunAsync(
             "Server=127.0.0.1,1;Database=db;Connect Timeout=1;TrustServerCertificate=true",

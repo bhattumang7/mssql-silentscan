@@ -67,7 +67,6 @@ public static class BehaviorSweepRunner
 
             var scanResult = await LiveScanRunner.RunAsync(
                 options.BuildConnectionString(databaseName),
-                minimumConfidence: FindingConfidence.Low,
                 cancellationToken: cancellationToken);
             var firedRuleIds = ScanReportRuleIds.Extract(scanResult.Report);
             var ownRuleFired = firedRuleIds.Any(id => IsSameRule(id, @case.RuleId));

@@ -7,9 +7,9 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Category", "Oracle")]
 public sealed class Tier1TriggerScopeTests
 {
-    private static async Task<ScanReport> Scan(string sql, FindingConfidence minimumConfidence = FindingConfidence.High)
+    private static async Task<ScanReport> Scan(string sql)
     {
-        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS", minimumConfidence);
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS");
         foreach (var file in report.ParseHealth.Files)
         {
             Assert.Empty(file.Errors);
@@ -28,7 +28,7 @@ public sealed class Tier1TriggerScopeTests
             BEGIN
                 SELECT 1 FROM inserted WHERE UPPER(Code) = 'X';
             END;
-            """, FindingConfidence.Medium);
+            """);
 
         var finding = Assert.Single(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
         Assert.Equal("dbo.Orders", finding.TableQualifiedName);

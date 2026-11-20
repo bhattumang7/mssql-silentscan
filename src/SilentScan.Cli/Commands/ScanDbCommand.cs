@@ -51,12 +51,6 @@ public static class ScanDbCommand
             DefaultValueFactory = _ => false,
         };
 
-        var confidenceOption = new Option<string>("--confidence")
-        {
-            Description = ReportOutput.ConfidenceOptionDescription,
-            DefaultValueFactory = _ => "high",
-        };
-
         var fetchSqlFromTablesOption = new Option<bool>("--fetch-sql-from-tables")
         {
             Description = ReportOutput.FetchSqlFromTablesOptionDescription,
@@ -93,7 +87,6 @@ public static class ScanDbCommand
 
         var description = "Connect to a live SQL Server database, read its catalog from engine metadata, and scan every readable module for performance problems, silent data loss and silently wrong results.\n\nOptions:\n"
             + $"  --format <format> (default: text) - {ReportOutput.FormatOptionDescription}\n"
-            + $"  --confidence <confidence> (default: high) - {ReportOutput.ConfidenceOptionDescription}\n"
             + $"  --plan-cache-evidence (default: off) - {ReportOutput.PlanCacheEvidenceOptionDescription}\n"
             + $"  --fetch-sql-from-tables (default: off) - {ReportOutput.FetchSqlFromTablesOptionDescription}\n"
             + $"  --verbosity <verbosity> (default: brief) - {ReportOutput.VerbosityOptionDescription}\n"
@@ -108,7 +101,6 @@ public static class ScanDbCommand
             connectionStringArgument,
             formatOption,
             planCacheEvidenceOption,
-            confidenceOption,
             fetchSqlFromTablesOption,
             verbosityOption,
             strictOption,
@@ -127,7 +119,6 @@ public static class ScanDbCommand
             var checkConnectivity = parseResult.GetValue(checkConnectivityOption);
             var options = new ReportOptions(
                 parseResult.GetValue(formatOption)!,
-                parseResult.GetValue(confidenceOption)!,
                 parseResult.GetValue(outputOption),
                 parseResult.GetValue(verbosityOption)!);
             return await RunAsync(connectionString, new ScanFlags(planCacheEvidence, fetchSqlFromTables, strict, checkConnectivity, parseResult.GetValue(baselineOption), parseResult.GetValue(writeBaselineOption)), options, Console.Out, Console.Error, cancellationToken);
@@ -149,7 +140,7 @@ public static class ScanDbCommand
             return 1;
         }
 
-        var (reportFormat, minimumConfidence, verbosity) = parsed;
+        var (reportFormat, verbosity) = parsed;
 
         FindingBaseline? baseline = null;
         if (flags.BaselinePath is { } baselinePath)
@@ -168,7 +159,7 @@ public static class ScanDbCommand
         LiveScanResult result;
         try
         {
-            result = await LiveScanRunner.RunAsync(connectionString, flags.IncludePlanCacheEvidence, minimumConfidence, progress, flags.FetchSqlFromTables, cancellationToken);
+            result = await LiveScanRunner.RunAsync(connectionString, flags.IncludePlanCacheEvidence, progress, flags.FetchSqlFromTables, cancellationToken);
         }
         catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
         {
@@ -184,7 +175,6 @@ public static class ScanDbCommand
             return 1;
         }
 
-        result = result with { Report = RulePrecisionLedger.ApplyDefaultVisibility(result.Report, minimumConfidence) };
         result = await ApplyBaselineAsync(baseline, result, stderr);
 
         string content;
@@ -214,7 +204,7 @@ public static class ScanDbCommand
         return flags.Strict && ReportOutput.HasCoverageGaps(result.Report) ? 1 : 0;
     }
 
-    private readonly record struct ParsedOptions(ReportFormat Format, FindingConfidence Confidence, ReadableVerbosity Verbosity);
+    private readonly record struct ParsedOptions(ReportFormat Format, ReadableVerbosity Verbosity);
 
     private static async Task<ParsedOptions?> TryParseOptionsAsync(ReportOptions options, TextWriter stderr)
     {
@@ -224,19 +214,13 @@ public static class ScanDbCommand
             return null;
         }
 
-        if (!ReportOutput.TryParseConfidence(options.Confidence, out var confidence))
-        {
-            await stderr.WriteLineAsync(ReportOutput.UnknownConfidenceMessage(options.Confidence));
-            return null;
-        }
-
         if (!ReportOutput.TryParseVerbosity(options.Verbosity, out var verbosity))
         {
             await stderr.WriteLineAsync(ReportOutput.UnknownVerbosityMessage(options.Verbosity));
             return null;
         }
 
-        return new ParsedOptions(format, confidence, verbosity);
+        return new ParsedOptions(format, verbosity);
     }
 
     private static async Task<LiveScanResult> ApplyBaselineAsync(FindingBaseline? baseline, LiveScanResult result, TextWriter stderr)

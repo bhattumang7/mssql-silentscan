@@ -13,7 +13,6 @@ public static class ScanReportBuilder
     public static ScanReport BuildFromParseResults(
         IEnumerable<SqlParseResult> allParseResults,
         DatabaseCatalog catalog,
-        FindingConfidence minimumConfidence = FindingConfidence.High,
         LineageCatalog? resolvedLineage = null,
         IScanProgress? progress = null,
         ILiveRowValueFetcher? rowValueFetcher = null)
@@ -85,7 +84,7 @@ public static class ScanReportBuilder
             catalog, lineage, new SkipLedger(), procCallGraph,
             tvfFenceMap, scalarUdfMap, viewExpansionMap, viewDefinitions,
             selectStarViewCandidates, callerScopeByCalleeScope);
-        var ruleResults = RuleHarness.RuleRunner.Run(RuleHarness.RuleRegistry.All, usableParseResults, ruleContext, minimumConfidence, progress);
+        var ruleResults = RuleHarness.RuleRunner.Run(RuleHarness.RuleRegistry.All, usableParseResults, ruleContext, progress);
         var ruleCrashes = ruleResults.Crashes;
 
         List<(List<SargabilityFinding> Findings, List<TemporalBoundaryPrecisionFinding> TemporalBoundaryFindings, IReadOnlyList<SkippedConstruct> Skipped)> tier1PerFile;
@@ -170,7 +169,6 @@ public static class ScanReportBuilder
         skippedConstructs.AddRange(dynamicSqlResult.SkippedConstructs);
 
         var unparameterizedDynamicSqlFindings = dynamicSqlResult.UnparameterizedFindings
-            .Where(f => f.Confidence <= minimumConfidence)
             .OrderBy(f => f.SourcePath, StringComparer.Ordinal)
             .ThenBy(f => f.Line)
             .ThenBy(f => f.Column)
@@ -181,12 +179,7 @@ public static class ScanReportBuilder
 
         var dynamicSqlSummary = DynamicSqlSummary.From(dynamicSqlFindings);
 
-        typedFindings = [.. typedFindings.Where(f => f.Verdict is not (Verdict.SeekPreserved or Verdict.Unknown or Verdict.OperandClash) && f.Confidence <= minimumConfidence)];
-        tier1Findings = [.. tier1Findings.Where(f => f.Confidence <= minimumConfidence)];
-        expressionDerivedFindings = [.. expressionDerivedFindings.Where(f => f.Confidence <= minimumConfidence)];
-        writeLossFindings = [.. writeLossFindings.Where(f => f.Confidence <= minimumConfidence)];
-        tvfFenceFindings = [.. tvfFenceFindings.Where(f => f.Confidence <= minimumConfidence)];
-        scalarUdfFindings = [.. scalarUdfFindings.Where(f => f.Confidence <= minimumConfidence)];
+        typedFindings = [.. typedFindings.Where(f => f.Verdict is not (Verdict.SeekPreserved or Verdict.Unknown or Verdict.OperandClash))];
 
         tier1Findings = [.. tier1Findings
             .OrderBy(f => f.Indexed switch { true => 0, null => 1, false => 2 })
@@ -230,11 +223,6 @@ public static class ScanReportBuilder
             .ThenBy(s => s.Column)
             .ToList();
 
-        temporalBoundaryFindings = [.. temporalBoundaryFindings.Where(f => f.Confidence <= minimumConfidence)];
-        underLengthParameterFindings = [.. underLengthParameterFindings.Where(f => f.Confidence <= minimumConfidence)];
-        ansiPaddingMismatchFindings = [.. ansiPaddingMismatchFindings.Where(f => f.Confidence <= minimumConfidence)];
-        localVariablePredicateFindings = [.. localVariablePredicateFindings.Where(f => f.Confidence <= minimumConfidence)];
-        filteredIndexParameterMismatchFindings = [.. filteredIndexParameterMismatchFindings.Where(f => f.Confidence <= minimumConfidence)];
 
         var findingsByRuleId = new Dictionary<string, IReadOnlyList<IFinding>>(ruleResults.AllFindings, StringComparer.Ordinal)
         {
@@ -262,7 +250,7 @@ public static class ScanReportBuilder
                 var combined = findingsByRuleId.TryGetValue(ruleId, out var existing)
                     ? existing.Concat(findings)
                     : findings;
-                findingsByRuleId[ruleId] = RuleHarness.RuleRunner.FinalizeRule(rule, combined, minimumConfidence);
+                findingsByRuleId[ruleId] = RuleHarness.RuleRunner.FinalizeRule(rule, combined);
             }
         }
 
