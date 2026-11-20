@@ -8,4 +8,6 @@ public sealed record ModuleComparisonRow(
     string Table,
     string Column,
     int? StatementStartLine,
-    TypedPredicateFinding? Finding);
+    TypedPredicateFinding? Finding,
+    string? Detail = null,
+    string? Context = null);

@@ -31,6 +31,20 @@ internal static class ModuleComparisonSummary
             }
         }
 
+        var engineOnly = rows.Where(r => r.Outcome == ModuleComparisonOutcome.EngineOnly).ToList();
+        if (engineOnly.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("engine only by where in the plan the conversion sits:");
+            foreach (var group in engineOnly
+                .GroupBy(r => r.Context ?? "Unknown")
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key, StringComparer.Ordinal))
+            {
+                builder.AppendLine(CultureInfo.InvariantCulture, $"  {group.Key}: {group.Count()}");
+            }
+        }
+
         var toolOnly = rows
             .Where(r => r.Outcome == ModuleComparisonOutcome.ToolOnly && r.Finding is not null)
             .ToList();
@@ -74,6 +88,8 @@ internal static class ModuleComparisonSummary
                 SourcePath = finding?.SourcePath,
                 Line = finding?.Line,
                 Verdict = finding?.Verdict.ToString(),
+                row.Detail,
+                row.Context,
             };
         }
     }

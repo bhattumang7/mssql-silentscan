@@ -6,4 +6,5 @@ public sealed record ConvertImplicitFinding(
     string? Table,
     string? Column,
     string ConvertedToDataType,
-    bool RangeSeekBound);
+    bool RangeSeekBound,
+    string? Context = null);

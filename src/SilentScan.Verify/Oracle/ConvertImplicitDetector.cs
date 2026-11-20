@@ -28,9 +28,18 @@ public static class ConvertImplicitDetector
                 Table: TrimBrackets((string?)x.ColumnRef.Attribute(TableAttributeName)),
                 Column: (string?)x.ColumnRef.Attribute("Column"),
                 ConvertedToDataType: (string?)x.Convert.Attribute("DataType") ?? "unknown",
-                RangeSeekBound: IsRangeSeekBound(x.Convert, x.ColumnRef)))
+                RangeSeekBound: IsRangeSeekBound(x.Convert, x.ColumnRef),
+                Context: ContextOf(x.Convert)))
             .ToList();
     }
+
+    private static readonly HashSet<string> ContextNames = new(StringComparer.Ordinal)
+    {
+        "Predicate", "SeekPredicates", "SeekPredicateNew", "SeekPredicate", "Residual", "ProbeResidual", "DefinedValue",
+    };
+
+    private static string ContextOf(XElement convert) =>
+        convert.Ancestors().Select(a => a.Name.LocalName).FirstOrDefault(ContextNames.Contains) ?? "Other";
 
     private static string? TrimBrackets(string? bracketedIdentifier) =>
         bracketedIdentifier?.Trim('[', ']');

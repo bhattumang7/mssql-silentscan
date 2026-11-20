@@ -175,4 +175,32 @@ public sealed class ModulePlanComparerTests
         Assert.Equal(ModuleComparisonOutcome.EngineOnly, row.Outcome);
         Assert.Null(row.Finding);
     }
+
+    [Fact]
+    public void Compare_EngineOnlyRow_NamesTheTypeTheColumnWasConvertedTo()
+    {
+        var rows = ModulePlanComparer.Compare([], [Statement(4, 6, Conversion(column: "Other"))]);
+
+        Assert.Equal("int", Assert.Single(rows).Detail);
+    }
+
+    [Fact]
+    public void Compare_StatementNotLocated_ReportsTheFindingLineAndHowManyStatementsWereLocated()
+    {
+        var finding = Finding(Verdict.ScanForced, line: 40);
+
+        var rows = ModulePlanComparer.Compare([finding], [Statement(1, 3), Statement(null, null), Statement(null, null)]);
+
+        Assert.Equal("finding line 40; 1 of 3 plan statements located", Assert.Single(rows).Detail);
+    }
+
+    [Fact]
+    public void Compare_EngineOnlyRow_CarriesWhereInThePlanTheConversionSits()
+    {
+        var conversion = new ConvertImplicitFinding("db", "dbo", "Orders", "Other", "int", RangeSeekBound: false, Context: "Predicate");
+
+        var rows = ModulePlanComparer.Compare([], [Statement(4, 6, conversion)]);
+
+        Assert.Equal("Predicate", Assert.Single(rows).Context);
+    }
 }

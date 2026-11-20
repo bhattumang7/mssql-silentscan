@@ -143,4 +143,21 @@ public sealed class ModuleComparisonSummaryTests
         Assert.Contains("\"SourcePath\":\"f.sql\"", json, StringComparison.Ordinal);
         Assert.Contains("\"Line\":1", json, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Render_GroupsEngineOnlyRowsByWhereTheConversionSits()
+    {
+        IReadOnlyList<ModuleComparisonRow> rows =
+        [
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "C", 1, null, "int", "Predicate"),
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "D", 1, null, "int", "Predicate"),
+            new(ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, "dbo.T", "E", 1, null, "int", "DefinedValue"),
+        ];
+
+        var text = ModuleComparisonSummary.Render(rows, toolOnlyLimit: 25);
+
+        Assert.Contains("engine only by where in the plan the conversion sits:", text, StringComparison.Ordinal);
+        Assert.Contains("  Predicate: 2", text, StringComparison.Ordinal);
+        Assert.Contains("  DefinedValue: 1", text, StringComparison.Ordinal);
+    }
 }

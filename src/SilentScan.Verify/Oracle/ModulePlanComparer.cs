@@ -1,3 +1,4 @@
+using System.Globalization;
 using SilentScan.Core.Predicates;
 using SilentScan.Core.Rules;
 
@@ -10,6 +11,7 @@ public static class ModulePlanComparer
     {
         var claims = moduleFindings.Where(f => f.Verdict is Verdict.ScanForced or Verdict.RangeSeek).ToList();
         var rows = new List<ModuleComparisonRow>();
+        var locatedCount = statements.Count(s => s.StartLine is not null && s.EndLine is not null);
         var seen = new HashSet<(int Statement, string Table, string Column, ModuleComparisonOutcome Outcome)>();
         var claimsByStatement = new Dictionary<int, List<(string? Schema, string Table, string Column)>>();
 
@@ -20,14 +22,14 @@ public static class ModulePlanComparer
 
             if (claim.DynamicSqlCallSite is not null)
             {
-                AddNotDecided(ModuleNotDecidedReason.DynamicSql);
+                AddNotDecided(ModuleNotDecidedReason.DynamicSql, null);
                 continue;
             }
 
             var index = FindStatement(statements, claim.Line);
             if (index < 0)
             {
-                AddNotDecided(ModuleNotDecidedReason.StatementNotLocated);
+                AddNotDecided(ModuleNotDecidedReason.StatementNotLocated, string.Create(CultureInfo.InvariantCulture, $"finding line {claim.Line}; {locatedCount} of {statements.Count} plan statements located"));
                 continue;
             }
 
@@ -47,12 +49,12 @@ public static class ModulePlanComparer
                 rows.Add(new ModuleComparisonRow(outcome, ModuleNotDecidedReason.None, table, column, statement.StartLine, claim));
             }
 
-            void AddNotDecided(ModuleNotDecidedReason reason)
+            void AddNotDecided(ModuleNotDecidedReason reason, string? detail)
             {
                 var key = (reason == ModuleNotDecidedReason.DynamicSql ? -1 : -2, table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
                 if (seen.Add(key))
                 {
-                    rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim));
+                    rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim, detail));
                 }
             }
         }
@@ -76,7 +78,7 @@ public static class ModulePlanComparer
                 if (!claimed && seen.Add((i, (conversion.Schema + "." + conversion.Table).ToUpperInvariant(), conversion.Column.ToUpperInvariant(), ModuleComparisonOutcome.EngineOnly)))
                 {
                     rows.Add(new ModuleComparisonRow(
-                        ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, conversion.Table, conversion.Column, statements[i].StartLine, Finding: null));
+                        ModuleComparisonOutcome.EngineOnly, ModuleNotDecidedReason.None, conversion.Table, conversion.Column, statements[i].StartLine, Finding: null, conversion.ConvertedToDataType, conversion.Context));
                 }
             }
         }
