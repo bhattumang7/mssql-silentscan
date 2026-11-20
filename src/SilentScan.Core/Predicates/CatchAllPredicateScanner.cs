@@ -138,9 +138,74 @@ public static class CatchAllPredicateScanner
 
             var dead = PredicateSurvivalAnalyzer.FindDeadComparisons(searchCondition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain));
 
+            var drivenTables = FindTablesDrivenBySargableConjunct(searchCondition, scopeChain);
+
             foreach (var orClause in FlattenOr(searchCondition))
             {
-                InspectOrClause(orClause, scopeChain, dead);
+                InspectOrClause(orClause, scopeChain, dead, drivenTables);
+            }
+        }
+
+        private HashSet<string> FindTablesDrivenBySargableConjunct(BooleanExpression searchCondition, ScopeChain scopeChain)
+        {
+            var tables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var conjunct in FlattenAnd(searchCondition))
+            {
+                if (conjunct is not BooleanComparisonExpression comparison
+                    || comparison.ComparisonType is not (BooleanComparisonType.Equals or BooleanComparisonType.LessThan
+                        or BooleanComparisonType.GreaterThan or BooleanComparisonType.LessThanOrEqualTo
+                        or BooleanComparisonType.GreaterThanOrEqualTo))
+                {
+                    continue;
+                }
+
+                var column = comparison.FirstExpression as ColumnReferenceExpression;
+                var other = comparison.SecondExpression;
+                if (column is null)
+                {
+                    column = comparison.SecondExpression as ColumnReferenceExpression;
+                    other = comparison.FirstExpression;
+                }
+
+                if (column is null || other is not (VariableReference or Literal))
+                {
+                    continue;
+                }
+
+                var provenance = ScalarExpressionResolver.ResolveColumnReference(column, scopeChain, sourcePath, ledger: null, catalog);
+                if (provenance is ColumnProvenance.BaseColumn { Depth: 0 } baseColumn
+                    && catalog.Find(baseColumn.TableQualifiedName)?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) == true)
+                {
+                    tables.Add(baseColumn.TableQualifiedName);
+                }
+            }
+
+            return tables;
+        }
+
+        private static IEnumerable<BooleanExpression> FlattenAnd(BooleanExpression expression)
+        {
+            switch (expression)
+            {
+                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } and:
+                    foreach (var leaf in FlattenAnd(and.FirstExpression).Concat(FlattenAnd(and.SecondExpression)))
+                    {
+                        yield return leaf;
+                    }
+
+                    break;
+
+                case BooleanParenthesisExpression paren:
+                    foreach (var leaf in FlattenAnd(paren.Expression))
+                    {
+                        yield return leaf;
+                    }
+
+                    break;
+
+                default:
+                    yield return expression;
+                    break;
             }
         }
 
@@ -212,7 +277,8 @@ public static class CatchAllPredicateScanner
         private void InspectOrClause(
             IReadOnlyList<BooleanExpression> orLeaves,
             ScopeChain scopeChain,
-            IReadOnlySet<TSqlFragment> dead)
+            IReadOnlySet<TSqlFragment> dead,
+            IReadOnlySet<string> drivenTables)
         {
 
             var isNullVariables = orLeaves
@@ -225,14 +291,15 @@ public static class CatchAllPredicateScanner
 
             foreach (var equality in orLeaves.OfType<BooleanComparisonExpression>().Where(c => c.ComparisonType == BooleanComparisonType.Equals && !dead.Contains(c)))
             {
-                TryMatchCatchAllPair(equality.FirstExpression, equality.SecondExpression, isNullVariables, scopeChain, equality);
-                TryMatchCatchAllPair(equality.SecondExpression, equality.FirstExpression, isNullVariables, scopeChain, equality);
+                TryMatchCatchAllPair(equality.FirstExpression, equality.SecondExpression, isNullVariables, scopeChain, drivenTables, equality);
+                TryMatchCatchAllPair(equality.SecondExpression, equality.FirstExpression, isNullVariables, scopeChain, drivenTables, equality);
             }
         }
 
         private void TryMatchCatchAllPair(
             ScalarExpression columnSide, ScalarExpression variableSide, HashSet<string> isNullVariables,
             ScopeChain scopeChain,
+            IReadOnlySet<string> drivenTables,
             TSqlFragment node)
         {
             if (columnSide is not ColumnReferenceExpression columnRef
@@ -244,7 +311,8 @@ public static class CatchAllPredicateScanner
             }
 
             var provenance = ScalarExpressionResolver.ResolveColumnReference(columnRef, scopeChain, sourcePath, ledger: null, catalog);
-            if (provenance is not ColumnProvenance.BaseColumn { Depth: 0 } baseColumn)
+            if (provenance is not ColumnProvenance.BaseColumn { Depth: 0 } baseColumn
+                || drivenTables.Contains(baseColumn.TableQualifiedName))
             {
                 return;
             }

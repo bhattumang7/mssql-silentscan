@@ -119,12 +119,24 @@ public static partial class WriteLossClassifier
                 when call.FunctionName.Value.Equals("QUOTENAME", StringComparison.OrdinalIgnoreCase) && call.CallTarget is null:
                 return IsProvablyRepresentable(target, call.Parameters[0], operandType)
                     && (call.Parameters.Count == 1 || call.Parameters[1] is StringLiteral { Value: { Length: 1 } quote } && quote[0] <= 127);
+            case CastCall { Parameter: { } castOperand } cast when IsUnicodeStringCast(cast.DataType):
+                return IsAsciiOnlyTextRendering(castOperand, operandType);
+            case ConvertCall { Parameter: { } convertOperand } convert when IsUnicodeStringCast(convert.DataType):
+                return IsAsciiOnlyTextRendering(convertOperand, operandType);
             case ColumnReferenceExpression or VariableReference when operandType?.Invoke(expression) is { IsNonUnicodeString: true } leaf:
                 return SameCodePage(leaf, target);
             default:
                 return false;
         }
     }
+
+    private static bool IsUnicodeStringCast(DataTypeReference dataType) =>
+        dataType is SqlDataTypeReference { SqlDataTypeOption: SqlDataTypeOption.NVarChar or SqlDataTypeOption.NChar };
+
+    private static bool IsAsciiOnlyTextRendering(ScalarExpression operand, Func<ScalarExpression, SqlType?>? operandType) =>
+        Unwrap(operand) is { } inner
+        && operandType?.Invoke(inner) is { } type
+        && (type.IsNumericFamily || type.Category is SqlTypeCategory.Bit or SqlTypeCategory.UniqueIdentifier);
 
     private static bool SameCodePage(SqlType leaf, SqlType target)
     {

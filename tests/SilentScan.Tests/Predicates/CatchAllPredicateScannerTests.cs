@@ -388,4 +388,29 @@ public sealed class CatchAllPredicateScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("Code = @c AND (Region = @p OR @p IS NULL)")]
+    [InlineData("(Region = @p OR @p IS NULL) AND Code > @c")]
+    [InlineData("Code = 'A' AND (Region = @p OR @p IS NULL)")]
+    public void CatchAllConjunct_ResidualBehindSargablePredicateOnIndexedLeadingColumn_DoesNotFire(string where)
+    {
+        var findings = Scan(
+            $"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20), @c VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE {where}; END");
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
+    [InlineData("Region = @c AND (Code = @p OR @p IS NULL)")]
+    [InlineData("(Code = @c OR Region = @c) AND (Region = @p OR @p IS NULL)")]
+    [InlineData("Code = Region AND (Region = @p OR @p IS NULL)")]
+    [InlineData("UPPER(Code) = @c AND (Region = @p OR @p IS NULL)")]
+    public void CatchAllConjunct_WithoutASargableIndexedSibling_StillFires(string where)
+    {
+        var findings = Scan(
+            $"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20), @c VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE {where}; END");
+
+        Assert.Single(findings);
+    }
 }

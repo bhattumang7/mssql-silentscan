@@ -178,4 +178,37 @@ public sealed class WriteLossOracleTests : OracleTestFixture
         var exception = await Assert.ThrowsAsync<SqlException>(() => insertCommand.ExecuteNonQueryAsync());
         Assert.Contains("truncated", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task NvarcharCastFromNumericBitOrGuid_RoundTripsThroughVarcharExactly_WhileNvarcharTextDoesNot()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM (VALUES (CAST(-12345 AS BIGINT)), (9223372036854775807), (0)) AS t(v)
+                    WHERE CAST(CAST(v AS NVARCHAR(40)) AS VARCHAR(40)) <> CAST(v AS NVARCHAR(40))),
+                (SELECT COUNT(*) FROM (VALUES (CAST(1.5E300 AS FLOAT)), (-0.000123), (3.14159)) AS t(v)
+                    WHERE CAST(CAST(v AS NVARCHAR(40)) AS VARCHAR(40)) <> CAST(v AS NVARCHAR(40))),
+                (SELECT COUNT(*) FROM (VALUES (CAST(-1234.5678 AS DECIMAL(18,4))), (CAST(0.01 AS DECIMAL(18,4)))) AS t(v)
+                    WHERE CAST(CAST(v AS NVARCHAR(40)) AS VARCHAR(40)) <> CAST(v AS NVARCHAR(40))),
+                (SELECT COUNT(*) FROM (VALUES (CAST(1 AS BIT)), (CAST(0 AS BIT))) AS t(v)
+                    WHERE CAST(CAST(v AS NVARCHAR(40)) AS VARCHAR(40)) <> CAST(v AS NVARCHAR(40))),
+                (SELECT COUNT(*) FROM (VALUES (CAST('6F9619FF-8B86-D011-B42D-00C04FC964FF' AS UNIQUEIDENTIFIER)), (CAST('00000000-0000-0000-0000-000000000000' AS UNIQUEIDENTIFIER))) AS t(v)
+                    WHERE CAST(CAST(v AS NVARCHAR(40)) AS VARCHAR(40)) <> CAST(v AS NVARCHAR(40))),
+                (SELECT COUNT(*) FROM (VALUES (CAST(N'日本語' AS NVARCHAR(40)))) AS t(v)
+                    WHERE CAST(CAST(v AS VARCHAR(40)) AS NVARCHAR(40)) <> v);
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+
+        Assert.Equal(0, reader.GetInt32(0));
+        Assert.Equal(0, reader.GetInt32(1));
+        Assert.Equal(0, reader.GetInt32(2));
+        Assert.Equal(0, reader.GetInt32(3));
+        Assert.Equal(0, reader.GetInt32(4));
+        Assert.Equal(1, reader.GetInt32(5));
+    }
 }

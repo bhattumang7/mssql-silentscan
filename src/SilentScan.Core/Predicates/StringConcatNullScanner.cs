@@ -45,7 +45,7 @@ public static class StringConcatNullScanner
         Guarded,
     }
 
-    private readonly record struct Leaf(LeafKind Kind, bool IsNullableColumn, string? TableQualifiedName, string? ColumnName);
+    private readonly record struct Leaf(LeafKind Kind, bool IsNullableColumn, string? TableQualifiedName, string? ColumnName, string? ReferenceKey = null);
 
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<TSqlStatement, bool> concatNullYieldsNullOffByStatement) : IModuleRule
     {
@@ -68,9 +68,16 @@ public static class StringConcatNullScanner
                 return;
             }
 
+            if (node.ForClause is XmlForClause { Options: { } xmlOptions }
+                && xmlOptions.Any(o => o.OptionKind == XmlForClauseOptions.Path))
+            {
+                return;
+            }
+
+            var nullRejected = CollectNullRejectedColumns(node.WhereClause?.SearchCondition);
             foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
             {
-                InspectTopLevel(element.Expression, scopeChain);
+                InspectTopLevel(element.Expression, scopeChain, nullRejected);
             }
         }
 
@@ -84,11 +91,12 @@ public static class StringConcatNullScanner
             }
 
             var spec = node.UpdateSpecification;
+            var nullRejected = CollectNullRejectedColumns(spec.WhereClause?.SearchCondition);
             foreach (var setClause in spec.SetClauses.OfType<AssignmentSetClause>())
             {
                 if (setClause.NewValue is ScalarExpression newValue)
                 {
-                    InspectTopLevel(newValue, scopeChain);
+                    InspectTopLevel(newValue, scopeChain, nullRejected);
                 }
             }
         }
@@ -98,19 +106,21 @@ public static class StringConcatNullScanner
 
         private void InspectTopLevel(
             ScalarExpression root,
-            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain)
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+            IReadOnlySet<string> nullRejected)
         {
             var collector = new ConcatChainRootCollector();
             root.Accept(collector);
             foreach (var chainRoot in collector.Roots)
             {
-                InspectChain(chainRoot, scopeChain);
+                InspectChain(chainRoot, scopeChain, nullRejected);
             }
         }
 
         private void InspectChain(
             BinaryExpression chainRoot,
-            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain)
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+            IReadOnlySet<string> nullRejected)
         {
             var leaves = new List<Leaf>();
             FlattenAddChain(chainRoot, scopeChain, leaves);
@@ -127,7 +137,7 @@ public static class StringConcatNullScanner
                 return;
             }
 
-            var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn);
+            var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn && !(l.ReferenceKey is { } key && nullRejected.Contains(key)));
             if (nullableLeaf.TableQualifiedName is null)
             {
                 return;
@@ -171,7 +181,7 @@ public static class StringConcatNullScanner
                     }
 
                     var isNullable = catalog.Find(r.TableQualifiedName)?.FindColumn(r.ColumnName, catalog.IdentifierComparer)?.IsNullable ?? false;
-                    return new Leaf(LeafKind.String, isNullable, r.TableQualifiedName, r.ColumnName);
+                    return new Leaf(LeafKind.String, isNullable, r.TableQualifiedName, r.ColumnName, ReferenceKeyOf(columnRef));
 
                 case FunctionCall { FunctionName.Value: var name } call
                     when string.Equals(name, "ISNULL", StringComparison.OrdinalIgnoreCase):
@@ -200,6 +210,56 @@ public static class StringConcatNullScanner
 
                 default:
                     return new Leaf(LeafKind.Unknown, false, null, null);
+            }
+        }
+
+        private static string ReferenceKeyOf(ColumnReferenceExpression columnRef) =>
+            columnRef.MultiPartIdentifier is { } parts
+                ? string.Join('.', parts.Identifiers.Select(i => i.Value)).ToUpperInvariant()
+                : string.Empty;
+
+        private static HashSet<string> CollectNullRejectedColumns(BooleanExpression? condition)
+        {
+            var keys = new HashSet<string>();
+            Collect(condition);
+            return keys;
+
+            void Collect(BooleanExpression? expression)
+            {
+                switch (expression)
+                {
+                    case BooleanParenthesisExpression paren:
+                        Collect(paren.Expression);
+                        break;
+                    case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } and:
+                        Collect(and.FirstExpression);
+                        Collect(and.SecondExpression);
+                        break;
+                    case BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression column }:
+                        keys.Add(ReferenceKeyOf(column));
+                        break;
+                    case BooleanComparisonExpression comparison:
+                        AddIfColumn(comparison.FirstExpression);
+                        AddIfColumn(comparison.SecondExpression);
+                        break;
+                    case LikePredicate { NotDefined: false } like:
+                        AddIfColumn(like.FirstExpression);
+                        AddIfColumn(like.SecondExpression);
+                        break;
+                    case InPredicate { NotDefined: false } inPredicate:
+                        AddIfColumn(inPredicate.Expression);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            void AddIfColumn(ScalarExpression expression)
+            {
+                if (Unwrap(expression) is ColumnReferenceExpression column)
+                {
+                    keys.Add(ReferenceKeyOf(column));
+                }
             }
         }
 

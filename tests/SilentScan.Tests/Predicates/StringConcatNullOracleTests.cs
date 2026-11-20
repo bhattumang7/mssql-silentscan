@@ -77,4 +77,42 @@ public sealed class StringConcatNullOracleTests : IAsyncLifetime
             Assert.Equal("b", secondBatchResult);
         }
     }
+
+    [Fact]
+    public async Task ForXmlPathDelimiterPrefix_NullOperandOmitsTheWholeElementWhilePlainSelectYieldsNull()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand(
+            """
+            SELECT
+                (SELECT ',' + v FROM (VALUES ('a'), (CAST(NULL AS VARCHAR(5))), ('c')) AS t(v) FOR XML PATH('')),
+                (SELECT COUNT(*) FROM (VALUES ('a'), (CAST(NULL AS VARCHAR(5))), ('c')) AS t(v) WHERE ',' + v IS NULL);
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+
+        Assert.Equal(",a,c", reader.GetString(0));
+        Assert.Equal(1, reader.GetInt32(1));
+    }
+
+    [Fact]
+    public async Task WhereClauseRejectingNull_LeavesNoNullConcatResult_WhileUnfilteredQueryYieldsOne()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM (VALUES ('a'), (CAST(NULL AS VARCHAR(5))), ('c')) AS t(v) WHERE v <> '' AND 'x' + v IS NULL),
+                (SELECT COUNT(*) FROM (VALUES ('a'), (CAST(NULL AS VARCHAR(5))), ('c')) AS t(v) WHERE 'x' + v IS NULL);
+            """, connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+
+        Assert.Equal(0, reader.GetInt32(0));
+        Assert.Equal(1, reader.GetInt32(1));
+    }
 }

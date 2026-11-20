@@ -177,4 +177,20 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         Assert.Equal(2, distinct);
         Assert.Equal(2, uniqueJoin);
     }
+
+    [Fact]
+    [Trait("Rule", "silentscan/control-flow/case-expression-missing-else")]
+    public async Task SimpleCaseWithoutElse_NeverYieldsNullOverTheWhereRestrictedOrBitDomain_ButDoesOverAnUnrestrictedOne()
+    {
+        const string rows = "(VALUES (1, CAST(0 AS BIT)), (2, CAST(1 AS BIT)), (3, CAST(1 AS BIT))) AS t(d, f)";
+
+        Assert.Equal(0, await ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {rows} WHERE d IN (1, 2) AND CASE d WHEN 1 THEN 'a' WHEN 2 THEN 'b' END IS NULL;"));
+        Assert.Equal(1, await ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {rows} WHERE CASE d WHEN 1 THEN 'a' WHEN 2 THEN 'b' END IS NULL;"));
+        Assert.Equal(0, await ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {rows} WHERE CASE f | f WHEN 0 THEN 'a' WHEN 1 THEN 'b' END IS NULL;"));
+        Assert.Equal(2, await ScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {rows} WHERE CASE f | f WHEN 0 THEN 'a' END IS NULL;"));
+    }
 }

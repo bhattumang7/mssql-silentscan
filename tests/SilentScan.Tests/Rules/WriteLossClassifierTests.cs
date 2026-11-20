@@ -213,4 +213,45 @@ public sealed class WriteLossClassifierTests
 
         Assert.Null(kind);
     }
+
+    private static ScalarExpression ParseExpression(string sql)
+    {
+        var result = SilentScan.Core.Parsing.SqlScriptParser.ParseText("test.sql", $"SELECT {sql}");
+        Assert.False(result.HasErrors, string.Join(';', result.Errors.Select(e => e.Message)));
+        var script = Assert.IsType<TSqlScript>(result.Fragment);
+        var select = Assert.IsType<SelectStatement>(script.Batches[0].Statements[0]);
+        var querySpec = Assert.IsType<QuerySpecification>(select.QueryExpression);
+        return Assert.IsType<SelectScalarExpression>(querySpec.SelectElements[0]).Expression;
+    }
+
+    [Theory]
+    [InlineData("CAST(@v AS NVARCHAR(10))", SqlTypeCategory.Int, null)]
+    [InlineData("N'id:' + CONVERT(NVARCHAR(20), @v)", SqlTypeCategory.Decimal, null)]
+    [InlineData("CONVERT(NVARCHAR(40), @v)", SqlTypeCategory.UniqueIdentifier, null)]
+    [InlineData("CAST(@v AS NVARCHAR(5))", SqlTypeCategory.Bit, null)]
+    [InlineData("CAST(@v AS NVARCHAR(30))", SqlTypeCategory.Float, null)]
+    [InlineData("CAST(@v AS NVARCHAR(10))", SqlTypeCategory.NVarChar, WriteLossKind.UnicodeToNonUnicodeReplacement)]
+    [InlineData("CAST(@v AS NVARCHAR(30))", SqlTypeCategory.DateTime, WriteLossKind.UnicodeToNonUnicodeReplacement)]
+    public void UnicodeReplacement_CastOfNonTextSource_IsProvablyAscii(string expression, SqlTypeCategory operandCategory, WriteLossKind? expected)
+    {
+        var target = new SqlType(SqlTypeCategory.VarChar, Length: 50);
+        var source = new SqlType(SqlTypeCategory.NVarChar, Length: 40);
+
+        var kind = WriteLossClassifier.Classify(
+            target, source, ParseExpression(expression), isVariableTarget: true,
+            operandType: e => e is VariableReference ? new SqlType(operandCategory, Length: 10) : null);
+
+        Assert.Equal(expected, kind);
+    }
+
+    [Fact]
+    public void UnicodeReplacement_CastWhoseOperandTypeIsUnknown_StillFlags()
+    {
+        var target = new SqlType(SqlTypeCategory.VarChar, Length: 50);
+        var source = new SqlType(SqlTypeCategory.NVarChar, Length: 40);
+
+        var kind = WriteLossClassifier.Classify(target, source, ParseExpression("CAST(@v AS NVARCHAR(10))"), isVariableTarget: true);
+
+        Assert.Equal(WriteLossKind.UnicodeToNonUnicodeReplacement, kind);
+    }
 }

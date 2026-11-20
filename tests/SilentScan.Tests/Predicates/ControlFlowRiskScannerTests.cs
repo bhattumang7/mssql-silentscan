@@ -295,4 +295,67 @@ public sealed class ControlFlowRiskScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
     }
+
+    [Theory]
+    [InlineData("D IN (1,2)")]
+    [InlineData("D = 1")]
+    [InlineData("D IN (1,2) AND Name = 'a'")]
+    [InlineData("D BETWEEN 1 AND 2")]
+    [InlineData("(Name = 'a' AND (D = 2))")]
+    public void SimpleCaseWhoseWhenValuesCoverTheWhereRestrictedValues_NeverFiresMissingElse(string where)
+    {
+        var findings = Scan(
+            $"CREATE PROCEDURE dbo.P AS BEGIN SELECT CASE D WHEN 1 THEN 'x' WHEN 2 THEN 'x' END FROM dbo.Cal WHERE {where}; END",
+            CalendarCatalog(null));
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("D IN (1,2,3)")]
+    [InlineData("D = 1 OR D = 2")]
+    [InlineData("D IN (1,2) OR Name = 'a'")]
+    [InlineData("D NOT IN (3)")]
+    [InlineData("D > 0")]
+    [InlineData("D BETWEEN 1 AND 3")]
+    [InlineData("Name = 'a'")]
+    public void SimpleCaseWhoseWhenValuesDoNotCoverTheWhereRestriction_StillFiresMissingElse(string where)
+    {
+        var findings = Scan(
+            $"CREATE PROCEDURE dbo.P AS BEGIN SELECT CASE D WHEN 1 THEN 'x' WHEN 2 THEN 'x' END FROM dbo.Cal WHERE {where}; END",
+            CalendarCatalog(null));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Fact]
+    public void SimpleCaseInASubquery_IsNotRestrictedByTheOuterWhere()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.P AS BEGIN SELECT (SELECT CASE c2.D WHEN 1 THEN 'x' END FROM dbo.Cal c2) FROM dbo.Cal c WHERE c.D = 1; END",
+            CalendarCatalog(null));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("Flag | Flag")]
+    [InlineData("(Flag & Flag)")]
+    [InlineData("Flag ^ (Flag | Flag)")]
+    public void SimpleCaseOverBitwiseCombinationOfBitColumns_NeverFiresMissingElse(string input)
+    {
+        var findings = Scan(CalendarCase(input, "0,1"), CalendarCatalog(null));
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
+
+    [Theory]
+    [InlineData("Flag | D")]
+    [InlineData("D | D")]
+    public void SimpleCaseOverBitwiseCombinationWithANonBitOperand_StillFiresMissingElse(string input)
+    {
+        var findings = Scan(CalendarCase(input, "0,1"), CalendarCatalog(null));
+
+        Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
+    }
 }

@@ -14,6 +14,10 @@ public sealed class CatchAllPredicateOracleTests : OracleTestFixture
         GO
         CREATE INDEX IX_Customers_Region ON dbo.Customers(Region);
         GO
+        CREATE TABLE dbo.Ledger (Id INT NOT NULL, Region VARCHAR(20) NOT NULL, Note VARCHAR(20) NOT NULL DEFAULT 'x');
+        GO
+        CREATE UNIQUE INDEX IX_Ledger_Id ON dbo.Ledger(Id);
+        GO
         """;
 
     public override async Task InitializeAsync()
@@ -30,6 +34,11 @@ public sealed class CatchAllPredicateOracleTests : OracleTestFixture
                    'R' + CAST(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS VARCHAR(10))
             FROM sys.all_objects a CROSS JOIN sys.all_objects b;
             UPDATE STATISTICS dbo.Customers WITH FULLSCAN;
+            INSERT INTO dbo.Ledger (Id, Region)
+            SELECT TOP (2000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)),
+                   'R' + CAST(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS VARCHAR(10))
+            FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+            UPDATE STATISTICS dbo.Ledger WITH FULLSCAN;
             """, connection);
         await seedCommand.ExecuteNonQueryAsync();
     }
@@ -111,5 +120,19 @@ public sealed class CatchAllPredicateOracleTests : OracleTestFixture
             "DECLARE @p VARCHAR(20) = 'R5'; SELECT Id FROM dbo.Customers WHERE (Region = @p OR @p IS NULL) OPTION (RECOMPILE);");
 
         Assert.Contains("PhysicalOp=\"Index Seek\"", planXml);
+    }
+
+    [Fact]
+    public async Task CatchAllShape_ResidualBehindSelectiveSargableConjunct_SeeksOnTheOtherPredicate_WhileBareCatchAllScans()
+    {
+        var withSibling = await CaptureRealExecutionPlanAsync(
+            "DECLARE @p VARCHAR(20) = 'R5'; DECLARE @i INT = 5; SELECT Note FROM dbo.Ledger WHERE Id = @i AND (Region = @p OR @p IS NULL);");
+        var bare = await CaptureRealExecutionPlanAsync(
+            "DECLARE @p VARCHAR(20) = 'R5'; SELECT Note FROM dbo.Ledger WHERE (Region = @p OR @p IS NULL);");
+
+        Assert.Contains("PhysicalOp=\"Index Seek\"", withSibling);
+        Assert.Contains("IX_Ledger_Id", withSibling);
+        Assert.DoesNotContain("PhysicalOp=\"Table Scan\"", withSibling);
+        Assert.Contains("PhysicalOp=\"Table Scan\"", bare);
     }
 }

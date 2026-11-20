@@ -223,4 +223,63 @@ public sealed class StringConcatNullScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("MiddleName IS NOT NULL")]
+    [InlineData("MiddleName <> ''")]
+    [InlineData("MiddleName LIKE 'A%'")]
+    [InlineData("Age > 3 AND MiddleName = @m")]
+    public void NullableOperandRejectedAsNullByTheSameQuerysWhere_NeverFires(string where)
+    {
+        var findings = Scan($"DECLARE @m VARCHAR(50) = 'x'; SELECT FirstName + ' ' + MiddleName FROM dbo.Person WHERE {where};");
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
+    [InlineData("MiddleName IS NULL")]
+    [InlineData("Age > 3 OR MiddleName IS NOT NULL")]
+    [InlineData("NOT (MiddleName IS NOT NULL)")]
+    [InlineData("Age > 3")]
+    [InlineData("ISNULL(MiddleName, '') <> ''")]
+    public void NullableOperandNotRejectedAsNullByTheWhere_StillFires(string where)
+    {
+        var findings = Scan($"SELECT FirstName + ' ' + MiddleName FROM dbo.Person WHERE {where};");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void QualifiedNullableOperandRejectedByQualifiedWhere_NeverFires()
+    {
+        var findings = Scan("SELECT FirstName + ' ' + p.MiddleName FROM dbo.Person p WHERE p.MiddleName IS NOT NULL;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void DelimiterPrefixInsideForXmlPath_NeverFires()
+    {
+        var findings = Scan("SELECT ',' + MiddleName FROM dbo.Person FOR XML PATH('');");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SubqueryWithForXmlPath_DoesNotSilenceTheOuterSelect()
+    {
+        var findings = Scan(
+            "SELECT FirstName + ' ' + MiddleName, (SELECT ',' + Label FROM dbo.Other FOR XML PATH('')) FROM dbo.Person;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("MiddleName", finding.ColumnName);
+    }
+
+    [Fact]
+    public void ForXmlRawConcatenation_StillFires()
+    {
+        var findings = Scan("SELECT FirstName + ' ' + MiddleName FROM dbo.Person FOR XML RAW;");
+
+        Assert.Single(findings);
+    }
 }
