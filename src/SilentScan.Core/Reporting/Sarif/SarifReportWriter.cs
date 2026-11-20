@@ -1306,6 +1306,7 @@ public static class SarifReportWriter
         WriteLossKind.LengthTruncation => "characters/bytes past the target's declared length are silently dropped",
         WriteLossKind.TemporalScaleNarrowing => "fractional-second digits past the target's declared scale are silently rounded away",
         WriteLossKind.TemporalOffsetDropped => "the UTC offset is silently dropped, keeping the local date/time digits unchanged",
+        WriteLossKind.SmallDateTimeRounding => "the seconds and fractional seconds are silently rounded to the nearest minute",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled WriteLossKind."),
     };
 

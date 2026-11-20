@@ -15,4 +15,6 @@ public enum WriteLossKind
     TemporalScaleNarrowing,
 
     TemporalOffsetDropped,
+
+    SmallDateTimeRounding,
 }

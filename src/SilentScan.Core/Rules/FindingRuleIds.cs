@@ -11,6 +11,7 @@ public static class FindingRuleIds
     public const string WriteLossLengthTruncationRuleId = "silentscan/write-loss/length-truncation";
     public const string WriteLossTemporalScaleNarrowingRuleId = "silentscan/write-loss/temporal-scale-narrowing";
     public const string WriteLossTemporalOffsetDroppedRuleId = "silentscan/write-loss/temporal-offset-dropped";
+    public const string WriteLossSmallDateTimeRoundingRuleId = "silentscan/write-loss/smalldatetime-rounding";
     public const string TvfFenceCorrelatedApplyRuleId = "silentscan/tvf-fence/correlated-apply";
     public const string TvfFenceNestedUnderViewOrTvfRuleId = "silentscan/tvf-fence/nested-under-view-or-tvf";
     public const string ScalarUdfPredicateInvocationRuleId = "silentscan/scalar-udf/in-predicate";
@@ -317,6 +318,7 @@ public static class FindingRuleIds
         WriteLossKind.LengthTruncation => WriteLossLengthTruncationRuleId,
         WriteLossKind.TemporalScaleNarrowing => WriteLossTemporalScaleNarrowingRuleId,
         WriteLossKind.TemporalOffsetDropped => WriteLossTemporalOffsetDroppedRuleId,
+        WriteLossKind.SmallDateTimeRounding => WriteLossSmallDateTimeRoundingRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled WriteLossKind."),
     };
     public static string Tier1RuleId(SargabilityFindingKind kind) => kind switch

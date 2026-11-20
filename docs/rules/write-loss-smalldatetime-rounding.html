@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smalldatetime Rounding - SilentScan rules</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --accent: #0a5cff;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --fires-bg: #fff5f5;
+  --fires-border: #e0a0a0;
+  --clean-bg: #f2fbf3;
+  --clean-border: #9fcfa6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #4993ff;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --fires-bg: #1e1315;
+    --fires-border: #6e3b3b;
+    --clean-bg: #131e14;
+    --clean-border: #3b6e42;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+}
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+h2 { font-size: 1.3rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+h3 { font-size: 1.05rem; margin-top: 1.75rem; }
+.tagline { color: var(--muted); font-size: 1.1rem; margin-top: 0; margin-bottom: 2.5rem; }
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  border-radius: 6px;
+}
+code { padding: 0.15em 0.4em; font-size: 0.9em; }
+pre { padding: 0.9rem 1rem; overflow-x: auto; font-size: 0.85em; margin: 0.5rem 0; }
+a { color: var(--accent); }
+.back-link { display: inline-block; margin-bottom: 1.5rem; }
+.rule { border-top: 1px solid var(--border); padding: 1.5rem 0; }
+.rule:first-of-type { border-top: none; }
+.rule-id { font-size: 1rem; margin: 0 0 0.5rem; }
+.rationale { margin: 0.5rem 0; }
+.fix { margin: 0.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); }
+.fix-label { font-weight: 600; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.example { margin: 0.5rem 0; font-size: 0.9em; color: var(--muted); }
+.example-path { font-size: 0.8em; color: var(--muted); margin: 0 0 0.3rem; }
+.example-label { font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1rem 0 0.3rem; }
+.example-explanation { font-size: 0.9em; color: var(--muted); margin: 0.3rem 0 0.5rem; }
+.fires-block pre { background: var(--fires-bg); border: 1px solid var(--fires-border); }
+.clean-block pre { background: var(--clean-bg); border: 1px solid var(--clean-border); }
+.fires-label { color: #c14040; }
+.clean-label { color: #2f8f42; }
+.family-section { margin-top: 2rem; }
+.rule-list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.rule-list li { padding: 0.5rem 0; border-top: 1px solid var(--border); }
+.rule-list li:first-child { border-top: none; }
+.rule-list .id { font-weight: 600; }
+.rule-list .snippet { display: block; color: var(--muted); font-size: 0.9em; margin-top: 0.15rem; }
+.rule-key { color: var(--muted); font-size: 0.8em; margin: 0 0 1.5rem; }
+.rule-key code { padding: 0.1em 0.35em; }
+footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back-link" href="../rules.html">&larr; All rules</a>
+  <h1>Smalldatetime Rounding</h1>
+  <p class="rule-key"><code>silentscan/write-loss/smalldatetime-rounding</code></p>
+  <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
+  <h2>Why is this an issue?</h2>
+  <p class="rationale">An INSERT/UPDATE or SET variable assignment assigns a DATETIME or DATETIME2 value (or a string literal with a seconds component) to a SMALLDATETIME target - SMALLDATETIME stores whole minutes only, so the seconds and fractional seconds are silently rounded to the nearest minute (30 seconds or more rounds up), with no error.</p>
+  <p class="rationale">SMALLDATETIME stores whole minutes only, with an accuracy of one minute. When a DATETIME or DATETIME2 value, or a string with a seconds component, is assigned into a SMALLDATETIME target, SQL Server does not raise an error. It rounds the value to the nearest minute: 30 seconds or more rounds up, less than 30 seconds rounds down. A value of 10:20:45.500 is stored as 10:21:00, and 10:20:29 is stored as 10:20:00.</p>
+  <p class="rationale">The change is small enough to go unnoticed, but it is real. Two events a few seconds apart can collapse into the same stored value, an event can end up recorded a minute later than it happened, and a later comparison against the original value no longer matches. The same rounding applies to variable assignment and to INSERT or UPDATE into a table column.</p>
+  <h2>How can I fix it?</h2>
+  <p class="rationale">Declare the target as DATETIME2 with the precision the data needs if the seconds matter. If whole minutes are genuinely intended, round explicitly, for example with DATEADD(MINUTE, DATEDIFF(MINUTE, 0, value), 0), so the loss is a visible decision in the query text instead of a side effect of the target&#x27;s declared type.</p>
+  <h3>A DATETIME2 value written into a SMALLDATETIME column</h3>
+  <p class="example-label fires-label">Noncompliant code example</p>
+  <div class="fires-block"><pre><code>CREATE TABLE dbo.Slot (Id INT NOT NULL, StartsAt SMALLDATETIME NOT NULL);&#xA;&#xA;CREATE PROCEDURE dbo.AddSlot (@id INT)&#xA;AS&#xA;BEGIN&#xA;    INSERT INTO dbo.Slot (Id, StartsAt) VALUES (@id, SYSDATETIME());&#xA;END;</code></pre></div>
+  <p class="example-explanation">SYSDATETIME() returns a DATETIME2 value with seconds; StartsAt is SMALLDATETIME, so the stored value is silently rounded to the nearest minute.</p>
+  <p class="example-label clean-label">Compliant solution</p>
+  <div class="clean-block"><pre><code>CREATE TABLE dbo.Slot (Id INT NOT NULL, StartsAt DATETIME2(0) NOT NULL);&#xA;&#xA;CREATE PROCEDURE dbo.AddSlot (@id INT)&#xA;AS&#xA;BEGIN&#xA;    INSERT INTO dbo.Slot (Id, StartsAt) VALUES (@id, SYSDATETIME());&#xA;END;</code></pre></div>
+  <p class="example-explanation">StartsAt is now DATETIME2(0), which keeps the seconds, so nothing is rounded away.</p>
+  <footer>
+    Generated by <code>silentscan rules-doc</code> from RuleCatalog/RuleDocs - do not hand-edit.
+  </footer>
+</main>
+</body>
+</html>

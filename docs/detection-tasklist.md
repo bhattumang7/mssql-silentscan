@@ -17,18 +17,17 @@ Competitor tools are referred to generically; real identities are in
 
 ## Open work
 
-### Precision gate
+### Precision
 
-`RulePrecisionLedger` records the labelled sample of every default-on rule. A rule is
-default-on only at 95% true positives over enough decided samples; every other rule,
-including every unmeasured one, is opt-in (`--confidence medium`). Re-measure a rule
-after changing it and update its entry.
+`RulePrecisionLedger` records the labelled sample of each measured rule. Every finding is
+reported; its confidence label is information, not a filter. Re-measure a rule after
+changing it and update its entry.
 
 A finding is a false positive only when the code or schema rules the claimed effect out.
 Table size and the values stored today never make a finding false: data grows, so a
 consequence the code allows counts as true.
 
-False-positive shapes to remove before a rule can return to default-on:
+False-positive shapes still to remove:
 - function-wrapped-column, column-arithmetic, cast-or-convert-on-column, date-function-on-column,
   expression-derived-column, scan-forced, composite-leading-column-unconstrained: a sargable
   predicate on the same or another column drives the access, the wrapped side is the outer
@@ -56,25 +55,8 @@ False-positive shapes to remove before a rule can return to default-on:
 - check-constraint-null-not-handled: NULL is handled through COALESCE or a validating function.
 - post-expansion-join-width: the claim states no engine consequence by itself.
 
-Medium and low confidence findings have not been sampled.
-
 ### Detections
 
-- Write-loss: DATETIME/DATETIME2/string-literal assignment into SMALLDATETIME
-  is unhandled — engine rounds to the nearest minute (seconds >= 30 round up),
-  confirmed via CAST probe, but WriteLossClassifier only checks
-  IsFractionalSecondsFamily targets (Time/DateTime2/DateTimeOffset) and
-  target == Date, never SmallDateTime. Needs a new WriteLossKind plus an
-  oracle test before shipping.
-- Write-loss: DECIMAL-to-DECIMAL narrowing only compares scale
-  (NumericFamilyNarrowing ranks Decimal by Scale alone), so a target with
-  fewer integer digits than the source at equal scale — e.g. DECIMAL(4,2)
-  vs. DECIMAL(5,2) — isn't flagged even though it risks an overflow on
-  assignment. Two now-orphaned helpers for this comparison
-  (IsDecimalPrecisionNarrowed, IsDecimalIntegerDigitCapacityNarrowed) were
-  removed from NumericFamilyNarrowing.cs as dead code; the underlying gap
-  is real and needs a proper Classify() rank that accounts for integer
-  digit capacity, plus an oracle test, before shipping.
 - CASE/COALESCE/IIF type-merge: nullability isn't modeled on SqlType at all
   (the real engine merges a not-nullable flag across CASE branches into the
   result type), but no current rule consumes SqlType nullability — revisit

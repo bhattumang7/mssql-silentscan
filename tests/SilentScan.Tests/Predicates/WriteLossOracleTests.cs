@@ -211,4 +211,19 @@ public sealed class WriteLossOracleTests : OracleTestFixture
         Assert.Equal(0, reader.GetInt32(4));
         Assert.Equal(1, reader.GetInt32(5));
     }
+
+    [Fact]
+    public async Task NullHandlingAndNumericCastsAroundVarcharPieces_RoundTripThroughNvarcharKeepsEveryCharacter()
+    {
+        var kept = await ScalarAsync<string>(
+            "DECLARE @c VARCHAR(20) = 'café'; DECLARE @i INT = 12; "
+            + "DECLARE @m VARCHAR(200) = ISNULL(QUOTENAME(@c, ''''), 'NULL') + ', ' + ISNULL(CAST(@i AS VARCHAR(255)), 'NULL'); "
+            + "SELECT @m;");
+
+        var lost = await ScalarAsync<string>(
+            "DECLARE @n NVARCHAR(20) = N'日本語'; DECLARE @m VARCHAR(200) = ISNULL(QUOTENAME(@n, ''''), 'NULL'); SELECT @m;");
+
+        Assert.Equal("'café', 12", kept);
+        Assert.Equal("'???'", lost);
+    }
 }

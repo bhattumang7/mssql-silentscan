@@ -726,7 +726,7 @@ public static class TypedPredicateExtractor
             }
 
             var verdict = VerdictClassifier.Classify(column.Type, otherType, operatorText: "IN");
-            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), "IN", sourcePath, node.StartLine, node.StartColumn, Confidence: TypedPredicateFinding.ConfidenceFor(column)));
+            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), "IN", sourcePath, node.StartLine, node.StartColumn));
         }
 
         public void OnSubqueryComparisonPredicate(SubqueryComparisonPredicate node, ModuleWalker walker)
@@ -780,7 +780,7 @@ public static class TypedPredicateExtractor
             }
 
             var verdict = VerdictClassifier.Classify(column.Type, otherType, operatorText: "IN");
-            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), "IN", sourcePath, node.StartLine, node.StartColumn, Confidence: TypedPredicateFinding.ConfidenceFor(column)));
+            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), "IN", sourcePath, node.StartLine, node.StartColumn));
         }
 
         private static string? ToOperatorText(BooleanComparisonType comparisonType) => comparisonType switch
@@ -916,8 +916,7 @@ public static class TypedPredicateExtractor
                 verdict, column, other, operatorText, sourcePath, node.StartLine, node.StartColumn,
                 UnknownReason: unknownReason,
                 PredicateFragmentText: _currentPredicateFragment is { } fragment ? Common.FragmentTextRenderer.Render(fragment) : null,
-                Fingerprint: TypedPredicateFindingIdentity.ComputeFingerprint(column, other, operatorText),
-                Confidence: TypedPredicateFinding.ConfidenceFor(column)));
+                Fingerprint: TypedPredicateFindingIdentity.ComputeFingerprint(column, other, operatorText)));
 
             TryAddUnderLengthParameterFinding(column, other, otherIsLiteral, operatorText, node);
             TryAddAnsiPaddingMismatchFinding(column, other, operatorText, node, walker);

@@ -47,6 +47,11 @@ public static partial class WriteLossClassifier
             return Predicates.WriteLossKind.TemporalScaleNarrowing;
         }
 
+        if (IsSmallDateTimeRoundingRisk(target, source, literal) && !IsProvablyMidnight(sourceExpression, operandType))
+        {
+            return Predicates.WriteLossKind.SmallDateTimeRounding;
+        }
+
         if (isVariableTarget && IsLengthTruncationRisk(target, source))
         {
             return Predicates.WriteLossKind.LengthTruncation;
@@ -87,6 +92,11 @@ public static partial class WriteLossClassifier
         target.IsFractionalSecondsFamily && source.IsFractionalSecondsFamily
         && target.Scale is { } targetScale && source.Scale is { } sourceScale && targetScale < sourceScale;
 
+    private static bool IsSmallDateTimeRoundingRisk(SqlType target, SqlType source, Literal? literal) =>
+        target.Category == SqlTypeCategory.SmallDateTime
+        && (source.Category is SqlTypeCategory.DateTime or SqlTypeCategory.DateTime2
+            || source.IsStringFamily && literal is StringLiteral stringLiteral && SecondsComponentRegex().IsMatch(stringLiteral.Value));
+
     private static bool IsLengthTruncationRisk(SqlType target, SqlType source) =>
         (target.IsStringFamily && source.IsStringFamily || target.IsBinaryFamily && source.IsBinaryFamily)
         && !target.IsMax && !source.IsMax
@@ -112,6 +122,13 @@ public static partial class WriteLossClassifier
                 return IsProvablyRepresentable(target, paren.Expression, operandType);
             case StringLiteral stringLiteral:
                 return IsRepresentableInTargetCodePage(target, stringLiteral);
+            case NullLiteral:
+                return true;
+            case FunctionCall { Parameters.Count: 2 } nullHandling
+                when nullHandling.CallTarget is null && nullHandling.FunctionName.Value.Equals("ISNULL", StringComparison.OrdinalIgnoreCase):
+                return nullHandling.Parameters.All(parameter => IsProvablyRepresentable(target, parameter, operandType));
+            case CoalesceExpression coalesce:
+                return coalesce.Expressions.All(item => IsProvablyRepresentable(target, item, operandType));
             case BinaryExpression { BinaryExpressionType: BinaryExpressionType.Add } add:
                 return IsProvablyRepresentable(target, add.FirstExpression, operandType)
                     && IsProvablyRepresentable(target, add.SecondExpression, operandType);
@@ -119,9 +136,9 @@ public static partial class WriteLossClassifier
                 when call.FunctionName.Value.Equals("QUOTENAME", StringComparison.OrdinalIgnoreCase) && call.CallTarget is null:
                 return IsProvablyRepresentable(target, call.Parameters[0], operandType)
                     && (call.Parameters.Count == 1 || call.Parameters[1] is StringLiteral { Value: { Length: 1 } quote } && quote[0] <= 127);
-            case CastCall { Parameter: { } castOperand } cast when IsUnicodeStringCast(cast.DataType):
+            case CastCall { Parameter: { } castOperand } cast when IsStringCast(cast.DataType):
                 return IsAsciiOnlyTextRendering(castOperand, operandType);
-            case ConvertCall { Parameter: { } convertOperand } convert when IsUnicodeStringCast(convert.DataType):
+            case ConvertCall { Parameter: { } convertOperand } convert when IsStringCast(convert.DataType):
                 return IsAsciiOnlyTextRendering(convertOperand, operandType);
             case ColumnReferenceExpression or VariableReference when operandType?.Invoke(expression) is { IsNonUnicodeString: true } leaf:
                 return SameCodePage(leaf, target);
@@ -130,8 +147,8 @@ public static partial class WriteLossClassifier
         }
     }
 
-    private static bool IsUnicodeStringCast(DataTypeReference dataType) =>
-        dataType is SqlDataTypeReference { SqlDataTypeOption: SqlDataTypeOption.NVarChar or SqlDataTypeOption.NChar };
+    private static bool IsStringCast(DataTypeReference dataType) =>
+        dataType is SqlDataTypeReference { SqlDataTypeOption: SqlDataTypeOption.NVarChar or SqlDataTypeOption.NChar or SqlDataTypeOption.VarChar or SqlDataTypeOption.Char };
 
     private static bool IsAsciiOnlyTextRendering(ScalarExpression operand, Func<ScalarExpression, SqlType?>? operandType) =>
         Unwrap(operand) is { } inner
@@ -206,6 +223,10 @@ public static partial class WriteLossClassifier
     [System.Text.RegularExpressions.GeneratedRegex(
         @"[T ]00:00(:00)?(\.0+)?$", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]
     private static partial System.Text.RegularExpressions.Regex MidnightTimeOfDayRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"[T ]\d{1,2}:\d{2}:(?:0[1-9]|[1-9]\d|00\.\d*[1-9])", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]
+    private static partial System.Text.RegularExpressions.Regex SecondsComponentRegex();
 
     private static readonly HashSet<string> WholeDateDatePartNames = new(StringComparer.OrdinalIgnoreCase)
     {

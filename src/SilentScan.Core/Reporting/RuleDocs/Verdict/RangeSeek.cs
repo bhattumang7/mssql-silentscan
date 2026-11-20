@@ -24,9 +24,8 @@ internal static class RangeSeek
             genuinely different, less urgent finding than one that forces a scan, and conflating
             them would waste a reader's time chasing a scan-level fix for a range-seek-level cost.
 
-            The finding is reported at High confidence only when the converted column is the
-            leading key of an active, non-filtered index; on a column that leads no index there is
-            no seek of either kind to degrade, so the finding drops to Medium confidence.
+            The finding states the conversion itself, which the plan shows whenever the two types
+            differ in this way, whether or not the column is indexed today.
             """,
         HowToFixIt: """
             The fix is the same shape as ScanForced's: match the comparison value's declared type

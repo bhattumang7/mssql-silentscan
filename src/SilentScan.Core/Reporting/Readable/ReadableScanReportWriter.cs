@@ -397,6 +397,7 @@ public static class ReadableScanReportWriter
         WriteLossKind.LengthTruncation => "characters/bytes past the target's length silently dropped",
         WriteLossKind.TemporalScaleNarrowing => "fractional-second digits silently rounded away",
         WriteLossKind.TemporalOffsetDropped => "UTC offset silently dropped",
+        WriteLossKind.SmallDateTimeRounding => "seconds silently rounded to the nearest minute",
         _ => kind.ToString(),
     };
 

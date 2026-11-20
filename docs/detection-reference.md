@@ -1883,9 +1883,9 @@ rule for any of these shapes.
   Likewise `AlwaysEncryptedUnsupportedColumnRuleId` (unsupported data type,
   Msg 33280; IDENTITY column, Msg 2749) - both also confirmed atomic across
   every DDL path - has been removed for the same reason.
-* **Confidence stays.** Load-bearing in the `--confidence` filter, the SARIF
-  tier, and `DynamicSqlPipeline`'s downgrade of findings that rest on an
-  assumption.
+* **Confidence stays as a label.** It feeds the SARIF tier and
+  `DynamicSqlPipeline`'s downgrade of findings that rest on an assumption. There is no
+  confidence filter: every finding is reported.
 * **Source-context classification** (migration script vs hot-path module) —
   dropped. No signal precise enough to avoid suppressing real findings.
 * **The incumbent survey is closed.** §7.9–7.11.
@@ -2653,3 +2653,13 @@ rule for any of these shapes.
   convention over cross-rule sharing) but fires unconditionally on an
   `IsAccentInsensitive` collation regardless of any `match_type` argument,
   since none can suppress it.
+
+* **DECIMAL-to-DECIMAL narrowing with fewer integer digits in the target - killed,
+  a loud error.** Assigning a `DECIMAL(5,2)` value that does not fit a `DECIMAL(4,2)`
+  target raises Msg 8115 (arithmetic overflow) in a variable assignment, so it
+  is a hard error the engine already reports, not a silent loss. Only a scale
+  difference (digits rounded away without an error) is in scope, and
+  `NumericFamilyNarrowing` already covers it.
+* **Writing a longer value into a shorter table column is an error, not a silent
+  loss; only a shorter variable or parameter truncates silently.** `length-truncation`
+  therefore fires for variable and parameter targets only.

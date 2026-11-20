@@ -560,4 +560,57 @@ public sealed class WriteLossExtractionTests
         Assert.Equal("@v", finding.ColumnName);
         Assert.Equal(20, finding.SourceType.Length);
     }
+
+    [Theory]
+    [InlineData("DECLARE @t DATETIME = GETDATE(); DECLARE @s SMALLDATETIME = @t;")]
+    [InlineData("DECLARE @t DATETIME2(3) = SYSDATETIME(); DECLARE @s SMALLDATETIME = @t;")]
+    [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15 13:45:30';")]
+    [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15 13:45:00.500';")]
+    public void Extract_SourceThatMayCarrySeconds_IntoSmallDateTime_FlagsSmallDateTimeRounding(string statement)
+    {
+        var finding = Assert.Single(Extract(statement));
+
+        Assert.Equal(WriteLossKind.SmallDateTimeRounding, finding.Kind);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15 13:45';")]
+    [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15 13:45:00';")]
+    [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15';")]
+    [InlineData("DECLARE @t SMALLDATETIME = '2024-01-15 13:45'; DECLARE @s SMALLDATETIME = @t;")]
+    [InlineData("DECLARE @t DATE = GETDATE(); DECLARE @s SMALLDATETIME = @t;")]
+    [InlineData("DECLARE @s SMALLDATETIME = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()), 0);")]
+    public void Extract_SourceThatCannotCarrySeconds_IntoSmallDateTime_NoFinding(string statement)
+    {
+        Assert.DoesNotContain(Extract(statement), f => f.Kind == WriteLossKind.SmallDateTimeRounding);
+    }
+
+    [Fact]
+    public void Extract_InsertDateTime2ColumnIntoSmallDateTimeColumn_FlagsSmallDateTimeRounding()
+    {
+        var finding = Assert.Single(Extract(
+            "CREATE TABLE dbo.Src (At DATETIME2(3) NOT NULL);",
+            "CREATE TABLE dbo.Dst (At SMALLDATETIME NOT NULL);",
+            "INSERT INTO dbo.Dst (At) SELECT At FROM dbo.Src;"));
+
+        Assert.Equal(WriteLossKind.SmallDateTimeRounding, finding.Kind);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @c VARCHAR(20) = 'x'; DECLARE @i INT = 1; DECLARE @m VARCHAR(4000) = ISNULL(QUOTENAME(@c, ''''), 'NULL') + ', ' + ISNULL(CAST(@i AS VARCHAR(255)), 'NULL');")]
+    [InlineData("DECLARE @i INT = 1; DECLARE @m VARCHAR(50) = COALESCE(CAST(@i AS NVARCHAR(20)), 'none');")]
+    [InlineData("DECLARE @c VARCHAR(20) = 'x'; DECLARE @m VARCHAR(50) = ISNULL(QUOTENAME(@c), NULL);")]
+    public void Extract_NullHandlingAroundRepresentableNvarcharPieces_IntoVarchar_NoUnicodeFinding(string statement)
+    {
+        Assert.DoesNotContain(Extract(statement), f => f.Kind == WriteLossKind.UnicodeToNonUnicodeReplacement);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @n NVARCHAR(20) = N'x'; DECLARE @m VARCHAR(50) = ISNULL(@n, 'NULL');")]
+    [InlineData("DECLARE @n NVARCHAR(20) = N'x'; DECLARE @m VARCHAR(50) = ISNULL(QUOTENAME(@n), 'NULL');")]
+    [InlineData("DECLARE @n NVARCHAR(20) = N'x'; DECLARE @m VARCHAR(50) = COALESCE(NULL, @n);")]
+    public void Extract_NullHandlingAroundGenuinelyUnicodePiece_IntoVarchar_FlagsUnicodeReplacement(string statement)
+    {
+        Assert.Contains(Extract(statement), f => f.Kind == WriteLossKind.UnicodeToNonUnicodeReplacement && f.ColumnName == "@m");
+    }
 }

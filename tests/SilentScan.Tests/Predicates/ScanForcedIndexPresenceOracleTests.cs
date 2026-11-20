@@ -4,6 +4,7 @@ using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Core.Rules;
 using SilentScan.Tests.Support;
+using SilentScan.Verify.Oracle;
 
 namespace SilentScan.Tests.Predicates;
 
@@ -61,25 +62,24 @@ public sealed class ScanForcedIndexPresenceOracleTests : OracleTestFixture
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
-    [Fact]
-    public async Task IntLiteralAgainstVarcharColumnOfNoIndex_PlanIsUnchangedByTheConversion_ScannerDoesNotReportItAtHighConfidence()
+    private async Task<bool> ConvertsColumnAsync(string query)
     {
-        const string Converted = "SELECT Id FROM dbo.Conv WHERE PlainV = 123;";
-        const string Matched = "SELECT Id FROM dbo.Conv WHERE PlainV = '123';";
-
-        Assert.False(await SeeksAsync(Matched));
-        Assert.False(await SeeksAsync(Converted));
-        Assert.DoesNotContain(Scan(Converted), f => f.Verdict == Verdict.ScanForced && f.Confidence == FindingConfidence.High);
+        var plan = await PlanInSessionAsync(string.Empty, query);
+        return ConvertImplicitDetector.FindColumnConversions(plan.ToString()).Any(c => c.Table == "Conv");
     }
 
-    [Fact]
-    public async Task IntLiteralAgainstVarcharColumnTrailingAnIndexKey_PlanIsUnchangedByTheConversion_ScannerDoesNotReportItAtHighConfidence()
+    [Theory]
+    [InlineData("PlainV")]
+    [InlineData("SecondV")]
+    public async Task IntLiteralAgainstVarcharColumnWithoutALeadingIndex_PlanConvertsTheColumn_ScannerReportsItAtHighConfidence(string column)
     {
-        const string Converted = "SELECT Id FROM dbo.Conv WHERE SecondV = 123;";
-        const string Matched = "SELECT Id FROM dbo.Conv WHERE SecondV = '123';";
+        var converted = $"SELECT Id FROM dbo.Conv WHERE {column} = 123;";
+        var matched = $"SELECT Id FROM dbo.Conv WHERE {column} = '123';";
 
-        Assert.False(await SeeksAsync(Matched));
-        Assert.False(await SeeksAsync(Converted));
-        Assert.DoesNotContain(Scan(Converted), f => f.Verdict == Verdict.ScanForced && f.Confidence == FindingConfidence.High);
+        Assert.False(await ConvertsColumnAsync(matched));
+        Assert.True(await ConvertsColumnAsync(converted));
+        Assert.DoesNotContain(Scan(matched), f => f.Verdict == Verdict.ScanForced);
+        var finding = Assert.Single(Scan(converted), f => f.Verdict == Verdict.ScanForced);
+        Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 }
