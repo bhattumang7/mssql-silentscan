@@ -14,8 +14,11 @@ public sealed record SqlServerOptions(string Host, int Port, string UserId, stri
         UserId: "sa",
         Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
 
+    public static SqlServerOptions WindowsLogin(string host, int port) => new(host, port, string.Empty, string.Empty);
+
     public string BuildConnectionString(string? database = null) =>
-        $"Server={Host},{Port};User Id={UserId};Password={Password};"
+        $"Server={Host},{Port};"
+        + (string.IsNullOrEmpty(UserId) ? "Integrated Security=True;" : $"User Id={UserId};Password={Password};")
         + $"{(database is null ? string.Empty : $"Database={database};")}"
         + "TrustServerCertificate=True;";
 }
