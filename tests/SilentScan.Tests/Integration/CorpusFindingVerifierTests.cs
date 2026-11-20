@@ -479,4 +479,41 @@ public sealed class CorpusFindingVerifierTests : IAsyncLifetime
 
         Assert.Equal(CorpusFindingOutcome.ConfirmedUnindexed, result.Outcome);
     }
+
+    [Fact]
+    public async Task VerifyAsync_BoundedVarcharColumnVsMaxVarcharValue_ShowsADynamicRangeSeekWithoutAColumnConversion()
+    {
+        var finding = new TypedPredicateFinding(
+            Verdict.RangeSeek,
+            ColumnOperand("dbo.Orders", "OrderCode", new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS")), indexed: true),
+            new PredicateOperand.Value(new SqlType(SqlTypeCategory.VarChar, IsMax: true, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"))),
+            "=",
+            "file.sql",
+            1,
+            1);
+
+        var result = await _verifier.VerifyAsync(DatabaseName, finding);
+
+        Assert.Equal(CorpusFindingOutcome.NotConfirmed, result.Outcome);
+        Assert.False(result.ColumnConverted);
+        Assert.True(result.DynamicRangeSeekObserved);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_BoundedVarcharColumnVsSameLengthVarcharValue_ShowsNeitherAColumnConversionNorADynamicRangeSeek()
+    {
+        var finding = new TypedPredicateFinding(
+            Verdict.RangeSeek,
+            ColumnOperand("dbo.Orders", "OrderCode", new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS")), indexed: true),
+            new PredicateOperand.Value(new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"))),
+            "=",
+            "file.sql",
+            1,
+            1);
+
+        var result = await _verifier.VerifyAsync(DatabaseName, finding);
+
+        Assert.False(result.ColumnConverted);
+        Assert.False(result.DynamicRangeSeekObserved);
+    }
 }

@@ -62,7 +62,7 @@ public sealed class CorpusFindingVerifier
 
         if (!columnConverts)
         {
-            return new CorpusFindingResult(finding, CorpusFindingOutcome.NotConfirmed, DescribeMismatch(finding.Verdict, columnConverts: false, planXml, conversions), ColumnConverted: false);
+            return new CorpusFindingResult(finding, CorpusFindingOutcome.NotConfirmed, DescribeMismatch(finding.Verdict, columnConverts: false, planXml, conversions), ColumnConverted: false, DynamicRangeSeekObserved: planXml.Contains("GetRange", StringComparison.Ordinal));
         }
 
         if (finding.Verdict is not (Verdict.ScanForced or Verdict.RangeSeek))

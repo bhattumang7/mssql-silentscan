@@ -69,4 +69,12 @@ public sealed class CorpusVerificationSummaryTests
 
         Assert.Equal(1, text.Split('\n').Count(l => l.StartsWith("miss ", StringComparison.Ordinal)));
     }
+
+    [Fact]
+    public void Classify_NotConfirmedWithoutColumnConversionButWithADynamicRangeSeek_IsItsOwnClass()
+    {
+        var result = Result(Verdict.RangeSeek, SqlTypeCategory.VarChar, SqlTypeCategory.VarChar, CorpusFindingOutcome.NotConfirmed, false) with { DynamicRangeSeekObserved = true };
+
+        Assert.Equal("NotConfirmed:dynamic-range-seek-without-column-conversion", CorpusVerificationSummary.Classify(result));
+    }
 }

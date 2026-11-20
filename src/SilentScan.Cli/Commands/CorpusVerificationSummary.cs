@@ -10,8 +10,20 @@ internal static class CorpusVerificationSummary
 {
     public static string Classify(CorpusFindingResult result) =>
         result.Outcome == CorpusFindingOutcome.NotConfirmed
-            ? (result.ColumnConverted == false ? "NotConfirmed:no-conversion" : "NotConfirmed:shape-mismatch")
+            ? ClassifyNotConfirmed(result)
             : result.Outcome.ToString();
+
+    private static string ClassifyNotConfirmed(CorpusFindingResult result)
+    {
+        if (result.ColumnConverted != false)
+        {
+            return "NotConfirmed:shape-mismatch";
+        }
+
+        return result.DynamicRangeSeekObserved
+            ? "NotConfirmed:dynamic-range-seek-without-column-conversion"
+            : "NotConfirmed:no-conversion";
+    }
 
     public static string DescribeTypePair(TypedPredicateFinding finding) =>
         $"{DescribeType(finding.Column.Type)} -> {(finding.OtherOperand is PredicateOperand.Value { Type: var other } ? DescribeType(other) : finding.OtherOperand is PredicateOperand.Column c ? DescribeType(c.Type) : "?")}";
