@@ -7,6 +7,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
+[Trait("Rule", "silentscan/lineage/expression-derived-column")]
 public sealed class ExpressionDerivedVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanExpressionDerivedVerifierTest";
@@ -133,5 +134,21 @@ public sealed class ExpressionDerivedVerifierTests : IAsyncLifetime
         var result = await _verifier.VerifyAsync(DatabaseName, finding);
 
         Assert.Equal(ExpressionDerivedOutcome.ProbeFailed, result.Outcome);
+    }
+
+    [Fact]
+    public async Task ViewColumnCastOverUnindexedColumn_PlanHasNoSeekEvenForTheBareColumn_WhileIndexedColumnLosesItsSeek()
+    {
+        var capture = new PlanXmlCapture(_options);
+
+        var bareUnindexed = await capture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.Orders WHERE UnindexedFlag = 5;");
+        var castUnindexed = await capture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.vw_OrdersStr WHERE FlagStr = '5';");
+        var bareIndexed = await capture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.Orders WHERE CustomerId = 5;");
+        var castIndexed = await capture.CaptureAsync(DatabaseName, "SELECT OrderId FROM dbo.vw_OrdersStr WHERE CustomerIdStr = '5';");
+
+        Assert.False(IndexAccessDetector.HasIndexSeek(bareUnindexed, "IX_Orders_CustomerId"));
+        Assert.False(IndexAccessDetector.HasIndexSeek(castUnindexed, "IX_Orders_CustomerId"));
+        Assert.True(IndexAccessDetector.HasIndexSeek(bareIndexed, "IX_Orders_CustomerId"));
+        Assert.False(IndexAccessDetector.HasIndexSeek(castIndexed, "IX_Orders_CustomerId"));
     }
 }

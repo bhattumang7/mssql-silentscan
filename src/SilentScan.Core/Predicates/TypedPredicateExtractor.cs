@@ -1271,7 +1271,8 @@ public static class TypedPredicateExtractor
                 columnName, sourcePath, columnRef.StartLine, columnRef.StartColumn, transformationChain, underlyingBaseColumns,
                 PredicateFragmentText: _currentPredicateFragment is { } fragment ? Common.FragmentTextRenderer.Render(fragment) : null,
                 ImmediateRelationQualifiedName: immediateRelation?.RelationQualifiedName,
-                ImmediateRelationAlias: immediateRelation is not null ? alias : null));
+                ImmediateRelationAlias: immediateRelation is not null ? alias : null,
+                Confidence: underlyingBaseColumns.Any(c => c.Indexed) ? FindingConfidence.High : FindingConfidence.Medium));
         }
     }
 }

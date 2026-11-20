@@ -56,6 +56,16 @@ public static class NonSargablePredicateScanner
 
         private HashSet<(string Table, string Column)> _equalityBound = [];
 
+        private ScalarExpression? _otherSide;
+
+        private enum OtherSideKind
+        {
+            ColumnFree,
+            SameRow,
+            BareIndexedKeyElsewhere,
+            Other,
+        }
+
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
             var where = node.WhereClause?.SearchCondition;
@@ -166,10 +176,80 @@ public static class NonSargablePredicateScanner
                 return FindingConfidence.Medium;
             }
 
-            return table.IsKeyColumnOfAnyIndex(baseColumn.ColumnName, catalog.IdentifierComparer)
+            if (!table.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer))
+            {
+                return FindingConfidence.Medium;
+            }
+
+            var otherDrivenAccess = _seekable.Any(s => catalog.IdentifierComparer.Equals(s.Table, baseColumn.TableQualifiedName)
+                && !catalog.IdentifierComparer.Equals(s.Column, baseColumn.ColumnName)
+                && table.IsIndexedColumn(s.Column, catalog.IdentifierComparer));
+            if (otherDrivenAccess)
+            {
+                return FindingConfidence.Medium;
+            }
+
+            return ClassifyOtherSide(columnRef, scopeChain, walker) == OtherSideKind.ColumnFree
                 ? FindingConfidence.High
                 : FindingConfidence.Medium;
         }
+
+        private bool IsSuppressedByOtherSide(ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker) =>
+            ClassifyOtherSide(columnRef, scopeChain, walker) is OtherSideKind.SameRow or OtherSideKind.BareIndexedKeyElsewhere;
+
+        private OtherSideKind ClassifyOtherSide(ColumnReferenceExpression wrapped, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (_otherSide is null)
+            {
+                return OtherSideKind.ColumnFree;
+            }
+
+            var other = UnwrapParentheses(_otherSide);
+            var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+            other.Accept(collector);
+            if (collector.References.Count == 0)
+            {
+                return OtherSideKind.ColumnFree;
+            }
+
+            var wrappedTable = ResolveIndexInfo(wrapped, scopeChain, walker).TableQualifiedName;
+            var allSameRow = collector.References.All(r => IsSameRelation(wrapped, wrappedTable, r, scopeChain, walker));
+            if (allSameRow)
+            {
+                return OtherSideKind.SameRow;
+            }
+
+            if (other is ColumnReferenceExpression bare
+                && ResolveIndexInfo(bare, scopeChain, walker) is { TableQualifiedName: { } otherTable, Indexed: true }
+                && !IsSameRelation(wrapped, wrappedTable, bare, scopeChain, walker)
+                && catalog.Find(otherTable, walker.CurrentProcScope) is not null)
+            {
+                return OtherSideKind.BareIndexedKeyElsewhere;
+            }
+
+            return OtherSideKind.Other;
+        }
+
+        private bool IsSameRelation(ColumnReferenceExpression wrapped, string? wrappedTable, ColumnReferenceExpression other, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            var wrappedQualifier = QualifierOf(wrapped);
+            var otherQualifier = QualifierOf(other);
+            if (wrappedQualifier is not null && otherQualifier is not null)
+            {
+                return catalog.IdentifierComparer.Equals(wrappedQualifier, otherQualifier);
+            }
+
+            if (wrappedQualifier is null && otherQualifier is null)
+            {
+                var otherTable = ResolveIndexInfo(other, scopeChain, walker).TableQualifiedName;
+                return wrappedTable is not null && otherTable is not null && catalog.IdentifierComparer.Equals(wrappedTable, otherTable);
+            }
+
+            return false;
+        }
+
+        private static string? QualifierOf(ColumnReferenceExpression columnRef) =>
+            columnRef.MultiPartIdentifier?.Identifiers is { Count: >= 2 } identifiers ? identifiers[^2].Value : null;
 
         private void InspectCondition(BooleanExpression condition, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -218,15 +298,19 @@ public static class NonSargablePredicateScanner
 
         private void InspectComparison(BooleanComparisonExpression node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            _otherSide = node.SecondExpression;
             if (!TryAddCharindexOrLeftFinding(node.FirstExpression, node.SecondExpression, node.ComparisonType, scopeChain, walker))
             {
                 InspectSide(node.FirstExpression, scopeChain, walker);
             }
 
+            _otherSide = node.FirstExpression;
             if (!TryAddCharindexOrLeftFinding(node.SecondExpression, node.FirstExpression, node.ComparisonType, scopeChain, walker))
             {
                 InspectSide(node.SecondExpression, scopeChain, walker);
             }
+
+            _otherSide = null;
         }
 
         private void InspectTernary(BooleanTernaryExpression node, ScopeChain scopeChain, ModuleWalker walker)
@@ -494,7 +578,7 @@ public static class NonSargablePredicateScanner
 
         private void Add(SargabilityFindingKind kind, string columnName, string? detail, TSqlFragment node, ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (IsResidualBesideBareSeek(columnRef, scopeChain))
+            if (IsResidualBesideBareSeek(columnRef, scopeChain) || IsSuppressedByOtherSide(columnRef, scopeChain, walker))
             {
                 return;
             }
@@ -611,7 +695,7 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (IsResidualBesideBareSeek(named.Ref, scopeChain))
+            if (IsResidualBesideBareSeek(named.Ref, scopeChain) || IsSuppressedByOtherSide(named.Ref, scopeChain, walker))
             {
                 return;
             }

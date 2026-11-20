@@ -179,7 +179,9 @@ public sealed class ReadableScanReportWriterTests
         const string Sql = """
             CREATE TABLE dbo.Users (Id INT NOT NULL, CreatedAt DATETIME NOT NULL, UpdatedAt DATETIME NOT NULL);
             GO
-            CREATE INDEX IX_Users_Dates ON dbo.Users(Id, CreatedAt, UpdatedAt);
+            CREATE INDEX IX_Users_Created ON dbo.Users(CreatedAt);
+            GO
+            CREATE INDEX IX_Users_Updated ON dbo.Users(UpdatedAt);
             GO
             CREATE PROCEDURE dbo.p @Year INT AS
             SELECT Id FROM dbo.Users WHERE YEAR(CreatedAt) = @Year AND YEAR(UpdatedAt) = @Year;
