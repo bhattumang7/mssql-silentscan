@@ -1061,6 +1061,37 @@ public sealed class QueryAntiPatternScannerTests
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck);
     }
 
+    [Theory]
+    [InlineData("IF @cnt > 0 SELECT 1; PRINT @cnt;")]
+    [InlineData("IF @cnt > 0 SELECT @cnt;")]
+    [InlineData("IF @cnt > 0 SELECT 1; SELECT @cnt AS N;")]
+    [InlineData("IF @cnt > 0 SELECT 1; EXEC dbo.Reader @cnt;")]
+    public void CountStarAssignedThenComparedToZeroButUsedAgain_NeverFires(string rest)
+    {
+        var findings = Scan(
+            $"CREATE PROCEDURE dbo.Reader @n INT AS SELECT @n;{Environment.NewLine}GO{Environment.NewLine}DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big; {rest}");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck);
+    }
+
+    [Fact]
+    public void CountStarIntoOutputParameterThenComparedToZero_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.Counter @cnt INT OUTPUT AS BEGIN SELECT @cnt = COUNT(*) FROM dbo.Big; IF @cnt > 0 SELECT 1; END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck);
+    }
+
+    [Fact]
+    public void CountStarVariableReassignedAndComparedAgain_FiresForEachCountAssignment()
+    {
+        var findings = Scan(
+            "DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big; IF @cnt > 0 SELECT 1; SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x'; IF @cnt = 0 SELECT 2;");
+
+        Assert.Equal(2, findings.Count(f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck));
+    }
+
     [Fact]
     public void HavingConditionWithNoColumnReferences_NeverFires()
     {

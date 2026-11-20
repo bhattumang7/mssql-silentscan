@@ -56,6 +56,7 @@ public static class QueryAntiPatternScanner
     {
         public List<QueryAntiPatternFinding> Findings { get; } = [];
 
+        private TSqlBatch? _currentBatch;
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
 
@@ -187,6 +188,7 @@ public static class QueryAntiPatternScanner
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
         {
+            _currentBatch = node;
             InspectCountStarExistenceSequence(node.Statements);
             InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
             _tableVariableNames.Clear();
@@ -652,13 +654,73 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
-                if (IsZeroExistenceComparison(NextStatementPredicate(statements[i + 1]), variableName))
+                if (IsZeroExistenceComparison(NextStatementPredicate(statements[i + 1]), variableName)
+                    && OnlyEverComparedToZero(variableName))
                 {
                     Findings.Add(new QueryAntiPatternFinding(
                         QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, sourcePath,
                         statements[i].StartLine, statements[i].StartColumn,
                         $"{variableName} = COUNT(*) then compared only to zero in the very next statement",
                         FindingConfidence.High));
+                }
+            }
+        }
+
+        private bool OnlyEverComparedToZero(string variableName)
+        {
+            if (_currentBatch is null)
+            {
+                return true;
+            }
+
+            var counter = new VariableUseCounter(variableName);
+            _currentBatch.Accept(counter);
+            return counter.Uses == 0;
+        }
+
+        private sealed class VariableUseCounter(string variableName) : TSqlFragmentVisitor
+        {
+            public int Uses { get; private set; }
+
+            public override void ExplicitVisit(VariableReference node)
+            {
+                if (string.Equals(node.Name, variableName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Uses++;
+                }
+            }
+
+            public override void ExplicitVisit(SelectSetVariable node) => node.Expression?.Accept(this);
+
+            public override void ExplicitVisit(SetVariableStatement node) => node.Expression?.Accept(this);
+
+            public override void ExplicitVisit(ProcedureParameter node)
+            {
+                if (node.Modifier == ParameterModifier.Output
+                    && string.Equals(node.VariableName.Value, variableName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Uses++;
+                }
+            }
+
+            public override void ExplicitVisit(IfStatement node)
+            {
+                VisitPredicate(node.Predicate);
+                node.ThenStatement?.Accept(this);
+                node.ElseStatement?.Accept(this);
+            }
+
+            public override void ExplicitVisit(WhileStatement node)
+            {
+                VisitPredicate(node.Predicate);
+                node.Statement?.Accept(this);
+            }
+
+            private void VisitPredicate(BooleanExpression predicate)
+            {
+                if (!IsZeroExistenceComparison(predicate, variableName))
+                {
+                    predicate.Accept(this);
                 }
             }
         }
