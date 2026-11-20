@@ -52,9 +52,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<NonUniqueUpdateSourceFinding>("NonUniqueUpdateSourceScanner").Select(ToResult));
         results.AddRange(report.Find<ForcedSerialFinding>("ForcedSerialScanner").Select(ToResult));
         results.AddRange(report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Select(ToResult));
-        results.AddRange(report.Find<CascadingForeignKeyFinding>("CascadingForeignKeyScanner").Select(ToResult));
         results.AddRange(report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Select(ToResult));
-        results.AddRange(report.Find<NestedViewDepthFinding>("NestedViewDepthScanner").Select(ToResult));
         results.AddRange(report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Select(ToResult));
         results.AddRange(report.Find<SelectStarViewFinding>("SelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<UnparameterizedDynamicSqlFinding>("DynamicSqlScanner").Select(ToResult));
@@ -69,13 +67,11 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner").Select(ToResult));
         results.AddRange(report.Find<WindowFrameFinding>("WindowFrameScanner").Select(ToResult));
         results.AddRange(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Select(ToResult));
-        results.AddRange(report.Find<WaitForFinding>("WaitForScanner").Select(ToResult));
         results.AddRange(report.Find<CursorCloseOnCommitFinding>("CursorCloseOnCommitScanner").Select(ToResult));
         results.AddRange(report.Find<ViewOrderingFinding>("ViewOrderingScanner").Select(ToResult));
         results.AddRange(report.Find<TransactionHygieneFinding>("TransactionHygieneScanner").Select(ToResult));
         results.AddRange(report.Find<CompositeIndexLeadingColumnFinding>("CompositeIndexLeadingColumnScanner").Select(ToResult));
         results.AddRange(report.Find<IndexHintFinding>("IndexHintScanner").Select(ToResult));
-        results.AddRange(report.Find<SessionDateSettingFinding>("SessionDateSettingScanner").Select(ToResult));
         results.AddRange(report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner").Select(ToResult));
         results.AddRange(report.Find<CartesianJoinFinding>("CartesianJoinScanner").Select(ToResult));
         results.AddRange(report.Find<TruncateSwallowedFinding>("TruncateSwallowedScanner").Select(ToResult));
@@ -83,15 +79,8 @@ public static class SarifReportWriter
         results.AddRange(report.Find<OutputParameterFinding>("OutputParameterScanner").Select(ToResult));
         results.AddRange(report.Find<DatabaseConfigurationFinding>("DatabaseConfigurationScanner").Select(ToResult));
         results.AddRange(report.Find<ParameterReassignmentPredicateFinding>("ParameterReassignmentPredicateScanner").Select(ToResult));
-        results.AddRange(report.Find<CodeMetricFinding>("CodeMetricScanner").Select(ToResult));
-        results.AddRange(report.Find<FormattingFinding>("FormattingScanner").Select(ToResult));
-        results.AddRange(report.Find<NamingFinding>("NamingScanner").Select(ToResult));
-        results.AddRange(report.Find<DeadCodeFinding>("DeadCodeScanner").Select(ToResult));
-        results.AddRange(report.Find<DuplicationFinding>("DuplicationScanner").Select(ToResult));
         results.AddRange(report.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner").Select(ToResult));
-        results.AddRange(report.Find<StatementShapeFinding>("StatementShapeScanner").Select(ToResult));
         results.AddRange(report.Find<ControlFlowRiskFinding>("ControlFlowRiskScanner").Select(ToResult));
-        results.AddRange(report.Find<SecurityFinding>("SecurityScanner").Select(ToResult));
         results.AddRange(report.Find<IndexDesignFinding>("IndexDesignScanner").Select(ToResult));
         results.AddRange(report.Find<ForcedParameterizationFinding>("ForcedParameterizationScanner").Select(ToResult));
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
@@ -105,7 +94,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<CrossModuleLockOrderFinding>("CrossModuleLockOrderScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintFinding>("CheckConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Select(ToResult));
-        results.AddRange(report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Select(ToResult));
         results.AddRange(report.Find<StringAggMissingOrderFinding>("StringAggMissingOrderScanner").Select(ToResult));
@@ -494,64 +482,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-    private static SarifResult ToResult(CodeMetricFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CodeMetricRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            CodeMetricFindingKind.LineTooLong =>
-                $"Line is {finding.MeasuredValue} characters long, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.ModuleTooLong =>
-                $"'{finding.ModuleQualifiedName}' has {finding.MeasuredValue} lines, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.RoutineTooLong =>
-                $"{finding.DetailText} '{finding.ModuleQualifiedName}' has {finding.MeasuredValue} lines of code, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.TooManyParameters =>
-                $"{finding.DetailText} '{finding.ModuleQualifiedName}' has {finding.MeasuredValue} parameters, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.NestingTooDeep =>
-                $"Control flow nests {finding.MeasuredValue} levels deep here, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.TooManyConditionalOperators =>
-                $"This condition chains {finding.MeasuredValue} AND/OR operators, which is greater than the {finding.Threshold} authorized.",
-            CodeMetricFindingKind.TooManyCaseBranches =>
-                $"This CASE expression has {finding.MeasuredValue} WHEN branches, which is greater than the {finding.Threshold} authorized.",
-            _ =>
-                $"This CASE WHEN branch spans {finding.MeasuredValue} lines, which is greater than the {finding.Threshold} authorized.",
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(FormattingFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.FormattingRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            FormattingFindingKind.TabCharacterUsed =>
-                "This line contains a tab character - replace it with spaces for consistent rendering across editors.",
-            FormattingFindingKind.MultipleStatementsOnSameLine =>
-                "This statement shares a physical source line with the previous one - put one statement per line.",
-            FormattingFindingKind.MultipleDeclarationsOnSameLine =>
-                $"'{finding.DetailText}' is declared on the same physical source line as the previous variable - declare each on its own line.",
-            FormattingFindingKind.MissingBeginEndBlock =>
-                "This conditional body is a single statement with no BEGIN...END - a later statement added here without braces silently falls outside the conditional.",
-            FormattingFindingKind.SingleLineConditionalBody =>
-                "This conditional body shares the same line as its own keyword with no BEGIN...END - easy to misread.",
-            FormattingFindingKind.DanglingStatementAfterUnbracedBody =>
-                "This statement is not actually part of the conditional/loop above it, even though its indentation makes it look like it is - the body above has no BEGIN...END.",
-            FormattingFindingKind.IfImmediatelyFollowingPriorBlockEnd =>
-                "This IF immediately follows the prior IF's own END on the same line - easy to misread as an ELSE IF continuation when it is really a separate, unconditional statement.",
-            FormattingFindingKind.RedundantParentheses =>
-                "These parentheses do not change grouping or precedence - remove them.",
-            _ =>
-                "This module's own definition does not begin with a comment before its first real statement.",
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
     private static SarifResult ToResult(ForcedParameterizationFinding finding)
     {
 
@@ -560,97 +490,11 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-    private static SarifResult ToResult(NamingFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NamingRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(DeadCodeFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DeadCodeRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            DeadCodeFindingKind.UnreachableCode =>
-                "This statement can never execute - control flow always ends the routine before reaching it on every path.",
-            DeadCodeFindingKind.UnusedLabel =>
-                $"Label \"{finding.DetailText}\" is never the target of a GOTO anywhere in this routine.",
-            DeadCodeFindingKind.UnusedLocalVariable =>
-                $"Local variable \"{finding.DetailText}\" is declared but never read - only ever assigned, or never referenced at all.",
-            DeadCodeFindingKind.UnusedParameter =>
-                $"Parameter \"{finding.DetailText}\" is never referenced anywhere in the routine body.",
-            DeadCodeFindingKind.RedundantJump =>
-                $"GOTO {finding.DetailText} jumps to the very next statement - control flow would already go there.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled DeadCodeFindingKind."),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(DuplicationFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DuplicationRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            DuplicationFindingKind.CommentedOutCode =>
-                "This comment's own content reparses as plausible T-SQL - remove the commented-out code or restore it.",
-            DuplicationFindingKind.DuplicatedStringLiteral =>
-                $"String literal {finding.DetailText} - define a constant or variable instead of repeating it.",
-            DuplicationFindingKind.SingleIterationLoop =>
-                "This WHILE loop's own body unconditionally exits on every path through the first iteration - it can never loop a second time.",
-            DuplicationFindingKind.SelfAssignment =>
-                $"\"{finding.DetailText}\" is assigned to itself - remove this no-op assignment or correct one side.",
-            DuplicationFindingKind.IdenticalBinaryOperands =>
-                $"The identical expression appears on both sides of \"{finding.DetailText}\" - correct one side or remove the redundant comparison.",
-            DuplicationFindingKind.RepeatedUnaryOperator =>
-                $"The \"{finding.DetailText}\" operator is applied twice in a row - simplify to a single application.",
-            DuplicationFindingKind.NegatedComparisonAsOpposite =>
-                $"Use the opposite operator (\"{finding.DetailText}\") instead of negating its complement.",
-            DuplicationFindingKind.DuplicateSiblingCondition =>
-                $"Condition \"{finding.DetailText}\" repeats an earlier sibling branch's own condition - this branch can never be reached.",
-            DuplicationFindingKind.IdenticalBranchBodies =>
-                "This branch's body is identical to another sibling branch's - either the conditional is partly pointless or a copy-paste mistake left this branch matching another.",
-            DuplicationFindingKind.AllBranchesIdentical =>
-                "Every branch of this conditional structure, including its ELSE, produces the same outcome - the structure itself is pointless.",
-            DuplicationFindingKind.RedundantAndCondition =>
-                $"This bound on \"{finding.DetailText}\" adds nothing once combined with a stricter sibling bound in the same AND-chain - remove it.",
-            DuplicationFindingKind.MutuallyExclusiveAndCondition =>
-                $"This bound on \"{finding.DetailText}\" can never hold at the same time as a sibling bound in the same AND-chain - the whole condition can never be true.",
-            DuplicationFindingKind.CollapsibleNestedIf =>
-                "This IF's entire body is a single nested IF with no ELSE at either level - combine both conditions with AND into one IF.",
-            DuplicationFindingKind.NestedConditionalExpression =>
-                $"This IIF call is nested inside another IIF's own {finding.DetailText} branch - extract it into an independent expression or statement.",
-            DuplicationFindingKind.AlwaysTrueOrFalseLiteralComparison =>
-                $"This comparison between two literal values is {finding.DetailText} regardless of any row's real data.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled DuplicationFindingKind."),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
     private static SarifResult ToResult(DeprecatedSyntaxFinding finding)
     {
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DeprecatedSyntaxRuleId(finding.Kind), finding.Confidence);
-        var baseLevel = finding.Kind is DeprecatedSyntaxFindingKind.TaskCommentTodo or DeprecatedSyntaxFindingKind.TaskCommentFixme
-            ? LevelNote
-            : LevelWarning;
-        var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
-
-        return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(StatementShapeFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.StatementShapeRuleId(finding.Kind), finding.Confidence);
-        var baseLevel = finding.Kind == StatementShapeFindingKind.BareSelectStar ? LevelNote : LevelWarning;
-        var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
 
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -659,21 +503,11 @@ public static class SarifReportWriter
     {
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ControlFlowRiskRuleId(finding.Kind), finding.Confidence);
-        var baseLevel = finding.Kind is ControlFlowRiskFindingKind.EmptyCatchBlock
-            or ControlFlowRiskFindingKind.CaseExpressionMissingElse
+        var baseLevel = finding.Kind is ControlFlowRiskFindingKind.CaseExpressionMissingElse
             or ControlFlowRiskFindingKind.NonDeterministicCaseInput
             ? LevelError
             : LevelWarning;
         var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
-
-        return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(SecurityFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SecurityRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
 
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -754,16 +588,6 @@ public static class SarifReportWriter
                 IdentityColumnCheckMessage(finding),
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled CheckConstraintFindingKind."),
         };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(DefaultNullableConstraintFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.DefaultNullableConstraintRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' carries a DEFAULT constraint ({finding.DefaultDefinitionText}) but is still nullable - a caller supplying NULL explicitly for this column bypasses the default entirely, silently, with no error.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
@@ -881,21 +705,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
 
-    private static SarifResult ToResult(CascadingForeignKeyFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CascadingForeignKeyRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var actions = string.Join(", ", new[]
-        {
-            finding.DeleteAction != ReferentialAction.NoAction ? $"ON DELETE {finding.DeleteAction}" : null,
-            finding.UpdateAction != ReferentialAction.NoAction ? $"ON UPDATE {finding.UpdateAction}" : null,
-        }.Where(a => a is not null));
-        var message = $"'{finding.ConstraintName}' ({finding.ParentTableQualifiedName} -> {finding.ReferencedTableQualifiedName}) carries {actions} - a DML statement against the referenced table silently cascades to the parent's dependent rows too.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
     private static SarifResult ToResult(TemporalTableHistoryIndexGapFinding finding)
     {
 
@@ -958,18 +767,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
-    private static SarifResult ToResult(WaitForFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.WaitForRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = finding.IsInsideTransaction
-            ? "WAITFOR DELAY/TIME holds this worker thread idle inside an open transaction - locks held by that transaction stay held for the full delay/until-time too."
-            : "WAITFOR DELAY/TIME holds this worker thread idle for the full delay/until-time, contributing to worker-pool exhaustion under load.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
     private static SarifResult ToResult(CursorCloseOnCommitFinding finding)
     {
 
@@ -1013,33 +810,18 @@ public static class SarifReportWriter
 
         var (ruleId, level, message) = finding.Kind switch
         {
-            DatabaseConfigurationFindingKind.PageVerifyNotChecksum => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
-                "PAGE_VERIFY is not CHECKSUM - silent storage-level page corruption can go undetected until a much later, harder-to-diagnose failure."),
             DatabaseConfigurationFindingKind.AutoShrinkOn => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 "AUTO_SHRINK is ON - a well-known, severe anti-pattern: the engine repeatedly shrinks the file and the workload immediately re-grows it, causing constant fragmentation churn for no durable space saving."),
             DatabaseConfigurationFindingKind.AutoCloseOn => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 "AUTO_CLOSE is ON - the database's connection/buffer-pool state is torn down after the last connection closes and rebuilt from scratch on the next one, adding real latency to whichever connection happens to be first."),
-            DatabaseConfigurationFindingKind.TargetRecoveryTimeUnset => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
-                "TARGET_RECOVERY_TIME is 0 (disabled) - indirect checkpoint is off, falling back to the legacy automatic-checkpoint mechanism instead of a bounded, predictable crash-recovery time; the engine's own modern default is 60 seconds."),
-            DatabaseConfigurationFindingKind.QueryStoreNotReadWrite => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelNote,
-                "Query Store is not actively running (actual state is not READ_WRITE) - the engine's own built-in plan-regression/history diagnostic is unavailable for this database. Informational: whether Query Store should be on is a real operational choice, not a universal anti-pattern."),
-            DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelNote,
-                "Query Store is running with a capture mode other than AUTO - informational only: ALL is a real, deliberate choice some teams prefer for active troubleshooting, not a mistake."),
             DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 "AUTO_CREATE_STATISTICS is OFF - the optimizer can no longer create a missing single-column statistics object on demand, so a predicate against an unstatted column compiles against a guessed cardinality instead of a real histogram."),
             DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 "AUTO_UPDATE_STATISTICS is OFF - statistics never refresh as the underlying data changes, so every plan compiled against them drifts further from reality the longer the database runs."),
-            DatabaseConfigurationFindingKind.CompatibilityLevelBehindEngineDefault => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
-                "The database's compatibility level is behind the connected engine instance's own current default (read live from the model system database) - it is silently kept on an older cardinality estimator and query-optimizer behavior nobody chose on purpose."),
             DatabaseConfigurationFindingKind.SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 $"{finding.AffectedObjectName} depends on {finding.Dependency}; SQL Server's own compatibility-change DMV reports that it will be disabled at compatibility level {finding.TargetCompatibilityLevel}."),
@@ -1086,20 +868,6 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(SessionDateSettingFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SessionDateSettingRuleId(finding.Kind), finding.Confidence);
-        var message = finding.Kind switch
-        {
-            SessionDateSettingKind.DateFormat =>
-                "SET DATEFORMAT changes how a string date literal is interpreted for the rest of this session - oracle-confirmed the identical ambiguous literal resolves to a different date depending on which value was set first.",
-            SessionDateSettingKind.DateFirst =>
-                "SET DATEFIRST changes what DATEPART(weekday, ...) returns for the rest of this session - oracle-confirmed the identical date returns a different weekday ordinal depending on which value was set first.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
-        };
-        return BuildResult(ruleId, FloorLevelForConfidence(LevelNote, finding.Confidence), message, finding.SourcePath, finding.Line, finding.Column);
     }
 
     private static SarifResult ToResult(AmbiguousDateLiteralConversionFinding finding)
@@ -1166,16 +934,6 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.MultiReferencedCteRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = $"CTE '{finding.CteName}' is referenced {finding.ReferenceCount} times downstream of its own WITH clause - each reference independently re-runs the CTE's own defining query, SQL Server does not materialize it once and reuse it.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(NestedViewDepthFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NestedViewDepthRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var chain = string.Join(" -> ", finding.Chain);
-        var message = $"'{finding.ViewQualifiedName}' nests {finding.Depth} view/TVF layers deep before reaching a base table: {chain} -> [{string.Join(", ", finding.BaseTables)}].";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
@@ -1327,11 +1085,9 @@ public static class SarifReportWriter
         {
             TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment => LevelError,
             TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml => LevelError,
-            TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation => LevelNote,
             TriggerCorrectnessFindingKind.DirectRecursiveTrigger => LevelWarning,
             TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath => LevelError,
             TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison => LevelWarning,
-            TriggerCorrectnessFindingKind.LogonTriggerHostNameGate => LevelError,
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled TriggerCorrectnessFindingKind."),
         };
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TriggerCorrectnessRuleId(finding.Kind), finding.Confidence);

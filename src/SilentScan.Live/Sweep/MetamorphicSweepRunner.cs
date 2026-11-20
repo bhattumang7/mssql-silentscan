@@ -72,8 +72,8 @@ public static class MetamorphicSweepRunner
 
     private static readonly Dictionary<string, string[]> CollateralRuleIdPrefixesByMutation = new()
     {
-        ["schema-qualification-remove"] = ["silentscan/query/unqualified-table-reference", "silentscan/naming/unqualified-create"],
-        ["schema-qualification-add"] = ["silentscan/query/unqualified-table-reference", "silentscan/naming/unqualified-create"],
+        ["schema-qualification-remove"] = ["silentscan/query/unqualified-table-reference"],
+        ["schema-qualification-add"] = ["silentscan/query/unqualified-table-reference"],
         ["derived-table-wrap"] = ["silentscan/statement-shape/bare-select-star", "silentscan/lineage/select-star-view"],
     };
 

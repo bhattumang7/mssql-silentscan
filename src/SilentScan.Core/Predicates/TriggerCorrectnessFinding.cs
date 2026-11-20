@@ -10,15 +10,12 @@ public enum TriggerCorrectnessFindingKind
 
     MultiRowUnsafeKeyedDml,
 
-    NoEarlyOutForEmptyInvocation,
-
     DirectRecursiveTrigger,
 
     InsteadOfInsertFilteredNoRejectPath,
 
     UpdateFunctionWithoutValueComparison,
 
-    LogonTriggerHostNameGate,
 }
 
 public sealed record TriggerCorrectnessFinding(

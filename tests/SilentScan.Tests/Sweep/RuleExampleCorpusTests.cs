@@ -12,7 +12,6 @@ public sealed class RuleExampleCorpusTests
     {
         var cases = RuleExampleCorpus.Build();
         var expectedNoncompliantCount = RuleDocCatalog.ByRuleId
-            .Where(entry => !StyleRuleFamilies.IsStyleRule(entry.Key))
             .Sum(entry => entry.Value.AllExamples.Count);
 
         Assert.Equal(expectedNoncompliantCount, cases.Count(c => c.Variant == RuleExampleVariant.Noncompliant));
@@ -23,7 +22,6 @@ public sealed class RuleExampleCorpusTests
     {
         var cases = RuleExampleCorpus.Build();
         var expectedCompliantCount = RuleDocCatalog.ByRuleId
-            .Where(entry => !StyleRuleFamilies.IsStyleRule(entry.Key))
             .SelectMany(entry => entry.Value.AllExamples)
             .Count(e => e.CompliantSql is not null);
 

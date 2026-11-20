@@ -5,31 +5,9 @@ namespace SilentScan.Core.Predicates;
 
 public enum DeprecatedSyntaxFindingKind
 {
-    TaskCommentTodo,
-
-    TaskCommentFixme,
-
-
     EqualsNullComparison,
 
     NotEqualsNullComparison,
-
-
-    LegacySystemCompatibilityView,
-
-    TableHintWithoutWith,
-
-    NumberedProcedureDefinition,
-
-    NumberedProcedureExecution,
-
-
-
-    DeprecatedSetRowcount,
-
-    LegacyLobStatement,
-
-    LegacyLobFunction,
 }
 
 public sealed record DeprecatedSyntaxFinding(

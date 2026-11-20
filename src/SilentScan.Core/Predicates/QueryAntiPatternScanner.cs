@@ -151,14 +151,12 @@ public static class QueryAntiPatternScanner
         {
             EnterStatementHints(node);
             InspectSiteIfNamedTable(node.UpdateSpecification.Target);
-            InspectUnboundedWrite(node.UpdateSpecification.WhereClause, node.UpdateSpecification.TopRowFilter, node);
         }
 
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             EnterStatementHints(node);
             InspectSiteIfNamedTable(node.DeleteSpecification.Target);
-            InspectUnboundedWrite(node.DeleteSpecification.WhereClause, node.DeleteSpecification.TopRowFilter, node);
         }
 
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
@@ -177,17 +175,6 @@ public static class QueryAntiPatternScanner
             }
 
             InspectRbarSingleRowLoopDml(node);
-        }
-
-        public void OnEnterDeclareCursorStatement(DeclareCursorStatement node, ModuleWalker walker) =>
-            InspectCursorGlobalness(node.CursorDefinition, node.Name.Value, node.StartLine, node.StartColumn);
-
-        public void OnEnterSetVariableStatement(SetVariableStatement node, ModuleWalker walker)
-        {
-            if (node.CursorDefinition is not null)
-            {
-                InspectCursorGlobalness(node.CursorDefinition, node.Variable.Name, node.StartLine, node.StartColumn);
-            }
         }
 
         public void OnEnterStatementList(StatementList node, ModuleWalker walker)
@@ -369,21 +356,6 @@ public static class QueryAntiPatternScanner
 
                     break;
             }
-        }
-
-        private void InspectUnboundedWrite(WhereClause? where, TopRowFilter? top, TSqlStatement node)
-        {
-            if (where is not null || top is not null)
-            {
-                return;
-            }
-
-            var verb = node is UpdateStatement ? "UPDATE" : "DELETE";
-            Findings.Add(new QueryAntiPatternFinding(
-                QueryAntiPatternFindingKind.UnboundedTableWrite, sourcePath,
-                node.StartLine, node.StartColumn,
-                $"{verb} with no WHERE clause and no TOP - a whole-table write with no row-limiting mechanism at all. A deliberate full-table maintenance statement is a legitimate reason this fires; verify intent before treating this as a bug.",
-                FindingConfidence.Medium));
         }
 
         private void InspectMergeHazards(MergeSpecification spec)
@@ -655,20 +627,6 @@ public static class QueryAntiPatternScanner
 
                 base.ExplicitVisit(node);
             }
-        }
-
-        private void InspectCursorGlobalness(CursorDefinition definition, string cursorName, int line, int column)
-        {
-            var kinds = definition.Options.Select(o => o.OptionKind).ToHashSet();
-            if (kinds.Contains(CursorOptionKind.Local))
-            {
-                return;
-            }
-
-            Findings.Add(new QueryAntiPatternFinding(
-                QueryAntiPatternFindingKind.GlobalCursorDeclaration, sourcePath, line, column,
-                $"{cursorName} ({(kinds.Contains(CursorOptionKind.Global) ? "explicit GLOBAL" : "no LOCAL/GLOBAL keyword, defaults to GLOBAL")})",
-                FindingConfidence.Low));
         }
 
         private void InspectCountStarExistenceSequence(IList<TSqlStatement> statements)

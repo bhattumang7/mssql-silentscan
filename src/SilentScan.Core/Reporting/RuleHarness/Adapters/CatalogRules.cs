@@ -74,30 +74,9 @@ internal sealed class SecurityPredicateIndexRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => SecurityPredicateIndexScanner.Scan(context.Catalog);
 }
 
-internal sealed class DefaultNullableConstraintRule : ICatalogRule
-{
-    public string Id => "DefaultNullableConstraintScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => DefaultNullableConstraintScanner.Scan(context.Catalog);
-}
-
-internal sealed class CascadingForeignKeyRule : ICatalogRule
-{
-    public string Id => "CascadingForeignKeyScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => CascadingForeignKeyScanner.Scan(context.Catalog);
-}
-
 internal sealed class TemporalTableHistoryIndexGapRule : ICatalogRule
 {
     public string Id => "TemporalTableHistoryIndexGapScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
     public IReadOnlyList<IFinding> Scan(RuleContext context) => TemporalTableHistoryIndexGapScanner.Scan(context.Catalog);
-}
-
-internal sealed class NestedViewDepthRule : ICatalogRule
-{
-    public string Id => "NestedViewDepthScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => NestedViewDepthScanner.Scan(context.ViewExpansionMap, context.ViewDefinitions, context.Catalog);
 }

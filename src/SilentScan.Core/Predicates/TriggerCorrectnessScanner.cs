@@ -57,17 +57,12 @@ public static class TriggerCorrectnessScanner
             if (topLevelStatements is not null)
             {
                 InspectMultiRowUnsafeAssignments(qualifiedName, topLevelStatements);
-                InspectMissingEarlyOut(qualifiedName, node, topLevelStatements);
                 InspectInsteadOfInsertFilteredReinsert(qualifiedName, node, triggerObject, topLevelStatements);
             }
 
             if (triggerObject.Name is { } targetTableName)
             {
                 InspectDirectRecursion(qualifiedName, node, targetTableName, statementList);
-            }
-            else if (statementList is not null && IsLogonTrigger(node))
-            {
-                InspectLogonTriggerHostNameGate(qualifiedName, statementList);
             }
 
             if (statementList is not null)
@@ -76,9 +71,6 @@ public static class TriggerCorrectnessScanner
             }
 
         }
-
-        private static bool IsLogonTrigger(TriggerStatementBody node) =>
-            node.TriggerActions is { } actions && actions.Any(a => a.TriggerActionType == TriggerActionType.LogOn);
 
         private void InspectMultiRowUnsafeAssignments(string triggerQualifiedName, IList<TSqlStatement> statements)
         {
@@ -182,56 +174,6 @@ public static class TriggerCorrectnessScanner
                     && string.Equals(v1.Name, variableName, StringComparison.OrdinalIgnoreCase))
                 || (cmp.SecondExpression is ColumnReferenceExpression && cmp.FirstExpression is VariableReference v2
                     && string.Equals(v2.Name, variableName, StringComparison.OrdinalIgnoreCase)));
-        }
-
-        private void InspectMissingEarlyOut(string triggerQualifiedName, TriggerStatementBody node, IList<TSqlStatement> statements)
-        {
-            var guardCollector = new EarlyOutGuardCollector();
-            foreach (var statement in statements)
-            {
-                statement.Accept(guardCollector);
-            }
-
-            if (guardCollector.Found)
-            {
-                return;
-            }
-
-            Findings.Add(new TriggerCorrectnessFinding(
-                TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation, triggerQualifiedName, sourcePath,
-                node.StartLine, node.StartColumn,
-                $"'{triggerQualifiedName}' has no IF NOT EXISTS(SELECT * FROM inserted/deleted)/IF @@ROWCOUNT = 0 RETURN-style guard - a well-documented convention to skip unnecessary work on an empty invocation, not a proven defect for this specific body.",
-                FindingConfidence.Low));
-        }
-
-        private sealed class EarlyOutGuardCollector : TSqlFragmentVisitor
-        {
-            public bool Found { get; private set; }
-
-            public override void ExplicitVisit(IfStatement node)
-            {
-                if (IsRowCountZeroCheck(node.Predicate) || IsNotExistsOverPseudoTable(node.Predicate))
-                {
-                    Found = true;
-                }
-
-                base.ExplicitVisit(node);
-            }
-
-            private static bool IsRowCountZeroCheck(BooleanExpression predicate) =>
-                predicate is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp
-                && ((IsRowCountFunction(cmp.FirstExpression) && cmp.SecondExpression is IntegerLiteral { Value: "0" })
-                    || (IsRowCountFunction(cmp.SecondExpression) && cmp.FirstExpression is IntegerLiteral { Value: "0" }));
-
-            private static bool IsRowCountFunction(ScalarExpression expression) =>
-                expression is GlobalVariableExpression global && string.Equals(global.Name, "@@ROWCOUNT", StringComparison.OrdinalIgnoreCase);
-
-            private static bool IsNotExistsOverPseudoTable(BooleanExpression predicate) =>
-                predicate is BooleanNotExpression not && ExistsOverPseudoTable(not.Expression);
-
-            private static bool ExistsOverPseudoTable(BooleanExpression expression) =>
-                expression is ExistsPredicate { Subquery.QueryExpression: QuerySpecification { FromClause.TableReferences: [NamedTableReference named, ..] } }
-                && PseudoTableNames.Contains(named.SchemaObject.BaseIdentifier.Value);
         }
 
         private void InspectInsteadOfInsertFilteredReinsert(string triggerQualifiedName, TriggerStatementBody node, TriggerObject triggerObject, IList<TSqlStatement> topLevelStatements)
@@ -445,50 +387,6 @@ public static class TriggerCorrectnessScanner
             private bool IsColumnNamed(ScalarExpression expression, string columnName) =>
                 expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } last] }
                 && identifierComparer.Equals(last.Value, columnName);
-        }
-
-        private void InspectLogonTriggerHostNameGate(string triggerQualifiedName, StatementList statementList)
-        {
-            var collector = new HostNameGateCollector();
-            statementList.Accept(collector);
-
-            foreach (var site in collector.Sites)
-            {
-                Findings.Add(new TriggerCorrectnessFinding(
-                    TriggerCorrectnessFindingKind.LogonTriggerHostNameGate, triggerQualifiedName, sourcePath,
-                    site.Line, site.Column,
-                    "Logon trigger denies/allows a connection based on HOST_NAME(), which is client-supplied via the connection string's own Workstation ID and unauthenticated - oracle-confirmed trivially spoofable, so this check does not actually control access.",
-                    FindingConfidence.High));
-            }
-        }
-
-        private sealed class HostNameGateCollector : TSqlFragmentVisitor
-        {
-            public List<(int Line, int Column)> Sites { get; } = [];
-
-            public override void ExplicitVisit(IfStatement node)
-            {
-                if (ContainsHostNameCall(node.Predicate) && (ContainsRollback(node.ThenStatement) || (node.ElseStatement is not null && ContainsRollback(node.ElseStatement))))
-                {
-                    Sites.Add((node.StartLine, node.StartColumn));
-                }
-
-                base.ExplicitVisit(node);
-            }
-
-            private static bool ContainsHostNameCall(TSqlFragment fragment)
-            {
-                var collector = new FunctionCallCollector("HOST_NAME");
-                fragment.Accept(collector);
-                return collector.Found;
-            }
-
-            private static bool ContainsRollback(TSqlFragment fragment)
-            {
-                var collector = new RollbackCollector();
-                fragment.Accept(collector);
-                return collector.Found;
-            }
         }
 
         private sealed class FunctionCallCollector(string functionName) : TSqlFragmentVisitor

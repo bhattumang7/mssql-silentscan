@@ -251,18 +251,6 @@ public sealed class LiveCatalogReaderTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task ReadAsync_CascadingForeignKey_CascadingForeignKeyScannerFires()
-    {
-        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        var findings = CascadingForeignKeyScanner.Scan(catalog);
-
-        var finding = Assert.Single(findings, f => f.ConstraintName == "FK_CascadeChildren_Parents");
-        Assert.Equal(ReferentialAction.Cascade, finding.DeleteAction);
-        Assert.Equal(ReferentialAction.SetNull, finding.UpdateAction);
-    }
-
-    [Fact]
     public async Task ReadAsync_TemporalTable_ReadsRealPairingFromSysTables()
     {
         var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();

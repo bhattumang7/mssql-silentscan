@@ -17,6 +17,29 @@ Competitor tools are referred to generically; real identities are in
 
 ## Open work
 
+### Scope reduction (performance, silent data loss, silently wrong results only)
+
+Done: formatting, metrics, naming, dead-code, duplication, security, statement-shape,
+the legacy deprecated-syntax rules, goto, wait-for, and every rule marked delete in the
+per-rule pass (database, index-design, session-date, catalog, control-flow, lineage,
+query and trigger groups).
+
+Lost coverage to restore: `ScanReportBuilder` minimum-confidence filtering had one
+test (`MinimumConfidence_FiltersEachFindingByItsOwnConfidence_NotAllOrNothing`)
+built on a Low-confidence task-comment finding; rewrite it on a surviving
+Low-confidence rule.
+
+Remaining checklist:
+- Oracle run of the whole suite against the Docker instances (never completed).
+- Sonar scan at zero issues and zero duplication.
+- `scripts/dotnet-safe.sh` needs a fallback where `setsid` is missing (Git Bash on Windows).
+- Precision ledger: scan real databases, label up to 20 findings per rule, fix or remove
+  rules under 95%, keep unmeasured rules opt-in.
+
+Core precision gate: every kept rule needs a labelled sample of real findings
+at 95% or better true positives before it is default-on; unmeasured rules ship
+opt-in only.
+
 ### Detections
 
 - Write-loss: DATETIME/DATETIME2/string-literal assignment into SMALLDATETIME

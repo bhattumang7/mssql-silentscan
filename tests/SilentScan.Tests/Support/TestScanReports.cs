@@ -35,9 +35,7 @@ public static class TestScanReports
         IReadOnlyList<NonUniqueUpdateSourceFinding>? NonUniqueUpdateSourceFindings = null,
         IReadOnlyList<ForcedSerialFinding>? ForcedSerialFindings = null,
         IReadOnlyList<UntrustedConstraintFinding>? UntrustedConstraintFindings = null,
-        IReadOnlyList<CascadingForeignKeyFinding>? CascadingForeignKeyFindings = null,
         IReadOnlyList<MultiReferencedCteFinding>? MultiReferencedCteFindings = null,
-        IReadOnlyList<NestedViewDepthFinding>? NestedViewDepthFindings = null,
         IReadOnlyList<PostExpansionJoinWidthFinding>? PostExpansionJoinWidthFindings = null,
         IReadOnlyList<SelectStarViewFinding>? SelectStarViewFindings = null,
         IReadOnlyList<UnparameterizedDynamicSqlFinding>? UnparameterizedDynamicSqlFindings = null,
@@ -48,13 +46,11 @@ public static class TestScanReports
         IReadOnlyList<TemporalTableHistoryIndexGapFinding>? TemporalTableHistoryIndexGapFindings = null,
         IReadOnlyList<ModuleCompileFlagFinding>? ModuleCompileFlagFindings = null,
         IReadOnlyList<WindowFrameFinding>? WindowFrameFindings = null,
-        IReadOnlyList<WaitForFinding>? WaitForFindings = null,
         IReadOnlyList<CursorCloseOnCommitFinding>? CursorCloseOnCommitFindings = null,
         IReadOnlyList<ViewOrderingFinding>? ViewOrderingFindings = null,
         IReadOnlyList<TransactionHygieneFinding>? TransactionHygieneFindings = null,
         IReadOnlyList<CompositeIndexLeadingColumnFinding>? CompositeIndexLeadingColumnFindings = null,
         IReadOnlyList<IndexHintFinding>? IndexHintFindings = null,
-        IReadOnlyList<SessionDateSettingFinding>? SessionDateSettingFindings = null,
         IReadOnlyList<AmbiguousDateLiteralConversionFinding>? AmbiguousDateLiteralConversionFindings = null,
         IReadOnlyList<CartesianJoinFinding>? CartesianJoinFindings = null,
         IReadOnlyList<TruncateSwallowedFinding>? TruncateSwallowedFindings = null,
@@ -62,15 +58,8 @@ public static class TestScanReports
         IReadOnlyList<OutputParameterFinding>? OutputParameterFindings = null,
         IReadOnlyList<DatabaseConfigurationFinding>? DatabaseConfigurationFindings = null,
         IReadOnlyList<ParameterReassignmentPredicateFinding>? ParameterReassignmentPredicateFindings = null,
-        IReadOnlyList<CodeMetricFinding>? CodeMetricFindings = null,
-        IReadOnlyList<FormattingFinding>? FormattingFindings = null,
-        IReadOnlyList<NamingFinding>? NamingFindings = null,
-        IReadOnlyList<DeadCodeFinding>? DeadCodeFindings = null,
-        IReadOnlyList<DuplicationFinding>? DuplicationFindings = null,
         IReadOnlyList<DeprecatedSyntaxFinding>? DeprecatedSyntaxFindings = null,
-        IReadOnlyList<StatementShapeFinding>? StatementShapeFindings = null,
         IReadOnlyList<ControlFlowRiskFinding>? ControlFlowRiskFindings = null,
-        IReadOnlyList<SecurityFinding>? SecurityFindings = null,
         IReadOnlyList<IndexDesignFinding>? IndexDesignFindings = null,
         IReadOnlyList<FloatEqualityFinding>? FloatEqualityFindings = null,
         IReadOnlyList<QueryAntiPatternFinding>? QueryAntiPatternFindings = null,
@@ -79,7 +68,6 @@ public static class TestScanReports
         IReadOnlyList<CrossModuleLockOrderFinding>? CrossModuleLockOrderFindings = null,
         IReadOnlyList<CheckConstraintFinding>? CheckConstraintFindings = null,
         IReadOnlyList<CheckConstraintPredicateContradictionFinding>? CheckConstraintPredicateContradictionFindings = null,
-        IReadOnlyList<DefaultNullableConstraintFinding>? DefaultNullableConstraintFindings = null,
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
         IReadOnlyList<BareTopNoOrderByFinding>? BareTopNoOrderByFindings = null,
         IReadOnlyList<StringAggMissingOrderFinding>? StringAggMissingOrderFindings = null,
@@ -129,7 +117,6 @@ public static class TestScanReports
         Set("DynamicSqlScanner", UnparameterizedDynamicSqlFindings);
         Set("TvfFenceScanner", TvfFenceFindings);
         Set("ScalarUdfScanner", ScalarUdfFindings);
-        Set("SecurityScanner", SecurityFindings);
         Set("AnsiPaddingOffColumnScanner", AnsiPaddingOffColumnFindings);
         Set("ProcCallArgumentMismatchScanner", ProcCallArgumentMismatchFindings);
         Set("TvfCallArgumentMismatchScanner", TvfCallArgumentMismatchFindings);
@@ -142,9 +129,7 @@ public static class TestScanReports
         Set("NonUniqueUpdateSourceScanner", NonUniqueUpdateSourceFindings);
         Set("ForcedSerialScanner", ForcedSerialFindings);
         Set("UntrustedConstraintScanner", UntrustedConstraintFindings);
-        Set("CascadingForeignKeyScanner", CascadingForeignKeyFindings);
         Set("MultiReferencedCteScanner", MultiReferencedCteFindings);
-        Set("NestedViewDepthScanner", NestedViewDepthFindings);
         Set("PostExpansionJoinWidthScanner", PostExpansionJoinWidthFindings);
         Set("SelectStarViewScanner", SelectStarViewFindings);
         Set("NonPersistedComputedColumnScanner", NonPersistedComputedColumnFindings);
@@ -154,13 +139,11 @@ public static class TestScanReports
         Set("TemporalTableHistoryIndexGapScanner", TemporalTableHistoryIndexGapFindings);
         Set("ModuleCompileFlagScanner", ModuleCompileFlagFindings);
         Set("WindowFrameScanner", WindowFrameFindings);
-        Set("WaitForScanner", WaitForFindings);
         Set("CursorCloseOnCommitScanner", CursorCloseOnCommitFindings);
         Set("ViewOrderingScanner", ViewOrderingFindings);
         Set("TransactionHygieneScanner", TransactionHygieneFindings);
         Set("CompositeIndexLeadingColumnScanner", CompositeIndexLeadingColumnFindings);
         Set("IndexHintScanner", IndexHintFindings);
-        Set("SessionDateSettingScanner", SessionDateSettingFindings);
         Set("AmbiguousDateLiteralConversionScanner", AmbiguousDateLiteralConversionFindings);
         Set("CartesianJoinScanner", CartesianJoinFindings);
         Set("TruncateSwallowedScanner", TruncateSwallowedFindings);
@@ -168,13 +151,7 @@ public static class TestScanReports
         Set("OutputParameterScanner", OutputParameterFindings);
         Set("DatabaseConfigurationScanner", DatabaseConfigurationFindings);
         Set("ParameterReassignmentPredicateScanner", ParameterReassignmentPredicateFindings);
-        Set("CodeMetricScanner", CodeMetricFindings);
-        Set("FormattingScanner", FormattingFindings);
-        Set("NamingScanner", NamingFindings);
-        Set("DeadCodeScanner", DeadCodeFindings);
-        Set("DuplicationScanner", DuplicationFindings);
         Set("DeprecatedSyntaxScanner", DeprecatedSyntaxFindings);
-        Set("StatementShapeScanner", StatementShapeFindings);
         Set("ControlFlowRiskScanner", ControlFlowRiskFindings);
         Set("IndexDesignScanner", IndexDesignFindings);
         Set("FloatEqualityPredicateScanner", FloatEqualityFindings);
@@ -184,7 +161,6 @@ public static class TestScanReports
         Set("CrossModuleLockOrderScanner", CrossModuleLockOrderFindings);
         Set("CheckConstraintScanner", CheckConstraintFindings);
         Set(nameof(CheckConstraintPredicateContradictionScanner), CheckConstraintPredicateContradictionFindings);
-        Set("DefaultNullableConstraintScanner", DefaultNullableConstraintFindings);
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
         Set("BareTopNoOrderByScanner", BareTopNoOrderByFindings);
         Set("StringAggMissingOrderScanner", StringAggMissingOrderFindings);

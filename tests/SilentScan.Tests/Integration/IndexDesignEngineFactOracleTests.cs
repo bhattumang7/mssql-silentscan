@@ -136,21 +136,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/mergeable-indexes-differing-include-only")]
-    public async Task MergedIndexServesBothOriginalQueriesWithoutLookup_SingleOriginalCannot()
-    {
-        var forA = await PlanInSessionAsync(string.Empty, "SELECT A FROM dbo.Mg WITH (INDEX(IX_Mg_Both)) WHERE K = 7;");
-        var forB = await PlanInSessionAsync(string.Empty, "SELECT B FROM dbo.Mg WITH (INDEX(IX_Mg_Both)) WHERE K = 7;");
-        var originalCannot = await PlanInSessionAsync(string.Empty, "SELECT A, B FROM dbo.Mg WITH (INDEX(IX_Mg_A)) WHERE K = 7;");
-
-        Assert.True(Seeks(forA, "Mg"));
-        Assert.False(ShowPlan.HasKeyLookup(forA));
-        Assert.True(Seeks(forB, "Mg"));
-        Assert.False(ShowPlan.HasKeyLookup(forB));
-        Assert.True(ShowPlan.HasKeyLookup(originalCannot));
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/index-design/subsumed-index")]
     public async Task WiderIndexServesNarrowLeadingKeySeek_TrailingOnlyControlCannotSeek()
     {
@@ -164,30 +149,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/hypothetical-index")]
-    public async Task HypotheticalIndex_IsFlaggedAndCannotBeUsed_RealIndexControlCan()
-    {
-        var flags = await RowsAsync("SELECT name, CAST(is_hypothetical AS INT) FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.Hy') AND name IN ('IX_Hyp', 'IX_Real');");
-
-        Assert.Equal(1, flags.Single(r => (string)r[0]! == "IX_Hyp")[1]);
-        Assert.Equal(0, flags.Single(r => (string)r[0]! == "IX_Real")[1]);
-        Assert.Equal(308, await SqlErrorNumberAsync("SELECT K FROM dbo.Hy WITH (INDEX(IX_Hyp)) WHERE K = 1;"));
-        Assert.Null(await SqlErrorNumberAsync("SELECT K FROM dbo.Hy WITH (INDEX(IX_Real)) WHERE K = 1;"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/disabled-index")]
-    public async Task DisabledIndex_BlocksSameNameCreateAndCannotBeHinted_RebuildRestoresIt()
-    {
-        Assert.Equal(1913, await SqlErrorNumberAsync("CREATE INDEX IX_Di ON dbo.Di(B);"));
-        Assert.Equal(315, await SqlErrorNumberAsync("SELECT A FROM dbo.Di WITH (INDEX(IX_Di)) WHERE A = 1;"));
-
-        await ExecuteAsync("ALTER INDEX IX_Di ON dbo.Di REBUILD;");
-
-        Assert.Null(await SqlErrorNumberAsync("SELECT A FROM dbo.Di WITH (INDEX(IX_Di)) WHERE A = 1;"));
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/index-design/duplicate-index")]
     public async Task DuplicateIndexes_EachReceiveEveryInsert_FilteredControlReceivesFewer()
     {
@@ -198,18 +159,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         Assert.Equal(1000L, Convert.ToInt64(rows.Single(r => (string)r[0]! == "IX_Du1")[1], System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal(1000L, Convert.ToInt64(rows.Single(r => (string)r[0]! == "IX_Du2")[1], System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal(500L, Convert.ToInt64(rows.Single(r => (string)r[0]! == "IX_Du3")[1], System.Globalization.CultureInfo.InvariantCulture));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/non-unique-clustered-index")]
-    public async Task NonUniqueClusteredKey_WidensNonclusteredLeafRecords()
-    {
-        const string sizeSql = "SELECT avg_record_size_in_bytes FROM sys.dm_db_index_physical_stats(DB_ID(), OBJECT_ID('{0}'), 2, NULL, 'DETAILED') WHERE index_level = 0;";
-
-        var nonUnique = await ScalarAsync<double>(sizeSql.Replace("{0}", "dbo.NuClustered", StringComparison.Ordinal));
-        var unique = await ScalarAsync<double>(sizeSql.Replace("{0}", "dbo.UqClustered", StringComparison.Ordinal));
-
-        Assert.True(nonUnique > unique, $"{nonUnique} vs {unique}");
     }
 
     [Fact]
@@ -228,16 +177,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         Assert.True(forwarded > 0);
         Assert.Equal(0, clusteredForwarded);
         Assert.NotEqual(before, after);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/heap-with-nonclustered-primary-key")]
-    public async Task NonclusteredPrimaryKey_LeavesAHeap_ClusteredPrimaryKeyControlDoesNot()
-    {
-        var types = await RowsAsync("SELECT OBJECT_NAME(object_id), type_desc FROM sys.indexes WHERE object_id IN (OBJECT_ID('dbo.PkNonClustered'), OBJECT_ID('dbo.PkClustered'));");
-
-        Assert.Contains(types, r => (string)r[0]! == "PkNonClustered" && (string)r[1]! == "HEAP");
-        Assert.DoesNotContain(types, r => (string)r[0]! == "PkClustered" && (string)r[1]! == "HEAP");
     }
 
     [Fact]
@@ -260,18 +199,5 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
 
         Assert.True(await ScalarAsync<int>(backwardsSql.Replace("{0}", "dbo.GuidKey", StringComparison.Ordinal)) > 0);
         Assert.Equal(0, await ScalarAsync<int>(backwardsSql.Replace("{0}", "dbo.IdentityKey", StringComparison.Ordinal)));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/non-aligned-partitioned-index")]
-    public async Task NonAlignedIndex_BlocksPartitionSwitch_DroppingItAllowsIt()
-    {
-        var blocked = await SqlErrorNumberAsync("ALTER TABLE dbo.Pt SWITCH PARTITION 1 TO dbo.Pstage;");
-        await ExecuteAsync("DROP INDEX IX_Pt_V ON dbo.Pt;");
-        var allowed = await SqlErrorNumberAsync("ALTER TABLE dbo.Pt SWITCH PARTITION 1 TO dbo.Pstage;");
-
-        Assert.NotNull(blocked);
-        Assert.Null(allowed);
-        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Pstage;"));
     }
 }

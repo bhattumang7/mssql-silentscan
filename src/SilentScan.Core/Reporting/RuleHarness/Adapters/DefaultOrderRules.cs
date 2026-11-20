@@ -3,15 +3,6 @@ using SilentScan.Core.Predicates;
 
 namespace SilentScan.Core.Reporting.RuleHarness.Adapters;
 
-internal sealed class WaitForRule : IPerFileRule
-{
-    public string Id => "WaitForScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => WaitForScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => WaitForScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => WaitForScanner.Harvest((WaitForScanner.Rule)moduleRule);
-}
-
 internal sealed class CursorCloseOnCommitRule : IPerFileRule
 {
     public string Id => "CursorCloseOnCommitScanner";
@@ -38,15 +29,6 @@ internal sealed class MissingStatisticsRule : IPerFileRule
     public IModuleRule? CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) =>
         context.Catalog.IsAutoCreateStatsOn != false ? null : MissingStatisticsScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => MissingStatisticsScanner.Harvest((MissingStatisticsScanner.Visitor)moduleRule);
-}
-
-internal sealed class SessionDateSettingRule : IPerFileRule
-{
-    public string Id => "SessionDateSettingScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SessionDateSettingScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SessionDateSettingScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SessionDateSettingScanner.Harvest((SessionDateSettingScanner.Rule)moduleRule);
 }
 
 internal sealed class AmbiguousDateLiteralConversionRule : IPerFileRule

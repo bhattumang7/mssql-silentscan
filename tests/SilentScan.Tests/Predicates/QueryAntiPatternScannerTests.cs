@@ -270,31 +270,6 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void CursorDeclaredWithoutLocal_Fires()
-    {
-        var findings = Scan("DECLARE cur CURSOR FOR SELECT Id FROM dbo.Big; OPEN cur; CLOSE cur; DEALLOCATE cur;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GlobalCursorDeclaration);
-        Assert.Equal(FindingConfidence.Low, finding.Confidence);
-    }
-
-    [Fact]
-    public void CursorDeclaredExplicitGlobal_Fires()
-    {
-        var findings = Scan("DECLARE cur CURSOR GLOBAL FOR SELECT Id FROM dbo.Big; OPEN cur; CLOSE cur; DEALLOCATE cur;");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GlobalCursorDeclaration);
-    }
-
-    [Fact]
-    public void CursorDeclaredLocal_NeverFires()
-    {
-        var findings = Scan("DECLARE cur CURSOR LOCAL FOR SELECT Id FROM dbo.Big; OPEN cur; CLOSE cur; DEALLOCATE cur;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.GlobalCursorDeclaration);
-    }
-
-    [Fact]
     public void CountStarAssignedThenComparedToZeroInNextStatement_Fires()
     {
         var findings = Scan(
@@ -537,39 +512,6 @@ public sealed class QueryAntiPatternScannerTests
             + "WHEN MATCHED AND s.AId > 0 THEN DELETE;");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeUnconditionalDelete);
-    }
-
-    [Fact]
-    public void UpdateWithNoWhereNoTop_Fires()
-    {
-        var findings = Scan("UPDATE dbo.Big SET Col = 'x';");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.UnboundedTableWrite);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void DeleteWithNoWhereNoTop_Fires()
-    {
-        var findings = Scan("DELETE FROM dbo.Big;");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.UnboundedTableWrite);
-    }
-
-    [Fact]
-    public void UpdateWithWhere_NeverFires()
-    {
-        var findings = Scan("UPDATE dbo.Big SET Col = 'x' WHERE Id = 1;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnboundedTableWrite);
-    }
-
-    [Fact]
-    public void DeleteWithTop_NeverFires()
-    {
-        var findings = Scan("DELETE TOP (10) FROM dbo.Big;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.UnboundedTableWrite);
     }
 
     private static DatabaseCatalog CatalogWithCouponTable(bool ignoreDupKey)
@@ -930,16 +872,6 @@ public sealed class QueryAntiPatternScannerTests
             compatibilityLevel: 130);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
-    }
-
-    [Fact]
-    public void SetVariableAssignedFromCursorDefinition_WithoutLocal_Fires()
-    {
-        var findings = Scan(
-            "DECLARE @c CURSOR; SET @c = CURSOR FOR SELECT Id FROM dbo.Big; OPEN @c; CLOSE @c; DEALLOCATE @c;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.GlobalCursorDeclaration);
-        Assert.Equal("@c (no LOCAL/GLOBAL keyword, defaults to GLOBAL)", finding.DetailText);
     }
 
     [Fact]

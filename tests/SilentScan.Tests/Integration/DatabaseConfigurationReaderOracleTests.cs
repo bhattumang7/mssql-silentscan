@@ -29,10 +29,6 @@ public sealed class DatabaseConfigurationReaderDefaultsOracleTests : OracleTestF
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", "silentscan/database/auto-shrink-on")]
-[Trait("Rule", "silentscan/database/page-verify-not-checksum")]
-[Trait("Rule", "silentscan/database/query-store-not-read-write")]
-[Trait("Rule", "silentscan/database/query-store-capture-mode-not-auto")]
-[Trait("Rule", "silentscan/database/target-recovery-time-unset")]
 public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderUnhealthyFlagsOracleTests);
@@ -40,55 +36,18 @@ public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : Oracl
     protected override string Ddl => """
         CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY);
         GO
-        ALTER DATABASE CURRENT SET PAGE_VERIFY NONE;
-        GO
         ALTER DATABASE CURRENT SET AUTO_SHRINK ON WITH NO_WAIT;
         GO
-        ALTER DATABASE CURRENT SET TARGET_RECOVERY_TIME = 0 SECONDS;
-        GO
-        ALTER DATABASE CURRENT SET QUERY_STORE = OFF;
-        GO
         """;
 
     [Fact]
-    public async Task MutatedFlags_EachFiresItsOwnKind()
-    {
-        var findings = await new DatabaseConfigurationReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        Assert.Equal(4, findings.Count);
-
-        var kinds = findings.Select(f => f.Kind).ToHashSet();
-        Assert.Contains(DatabaseConfigurationFindingKind.PageVerifyNotChecksum, kinds);
-        Assert.Contains(DatabaseConfigurationFindingKind.AutoShrinkOn, kinds);
-        Assert.Contains(DatabaseConfigurationFindingKind.TargetRecoveryTimeUnset, kinds);
-        Assert.Contains(DatabaseConfigurationFindingKind.QueryStoreNotReadWrite, kinds);
-
-        Assert.DoesNotContain(DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto, kinds);
-
-        Assert.All(findings, f => Assert.Equal(DatabaseName, f.DatabaseName));
-    }
-}
-
-[Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/query-store-capture-mode-not-auto")]
-public sealed class DatabaseConfigurationReaderQueryStoreCaptureModeOracleTests : OracleTestFixture
-{
-    protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderQueryStoreCaptureModeOracleTests);
-
-    protected override string Ddl => """
-        CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY);
-        GO
-        ALTER DATABASE CURRENT SET QUERY_STORE = ON (QUERY_CAPTURE_MODE = ALL);
-        GO
-        """;
-
-    [Fact]
-    public async Task QueryStoreOnButCaptureModeNotAuto_FiresOnlyTheCaptureModeKind()
+    public async Task AutoShrinkOn_FiresOnlyThatKind()
     {
         var findings = await new DatabaseConfigurationReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
 
         var finding = Assert.Single(findings);
-        Assert.Equal(DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto, finding.Kind);
+        Assert.Equal(DatabaseConfigurationFindingKind.AutoShrinkOn, finding.Kind);
+        Assert.Equal(DatabaseName, finding.DatabaseName);
     }
 }
 
@@ -142,28 +101,6 @@ public sealed class DatabaseConfigurationReaderStatisticsFlagsOracleTests : Orac
         var kinds = findings.Select(f => f.Kind).ToHashSet();
         Assert.Contains(DatabaseConfigurationFindingKind.AutoCreateStatisticsOff, kinds);
         Assert.Contains(DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff, kinds);
-    }
-}
-
-[Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/compatibility-level-behind-engine-default")]
-public sealed class DatabaseConfigurationReaderCompatibilityLevelOracleTests : OracleTestFixture
-{
-    protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderCompatibilityLevelOracleTests);
-
-    protected override string Ddl => """
-        CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY);
-        GO
-        ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 150;
-        GO
-        """;
-
-    [Fact]
-    public async Task CompatibilityLevelBehindModel_Fires()
-    {
-        var findings = await new DatabaseConfigurationReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        Assert.Contains(DatabaseConfigurationFindingKind.CompatibilityLevelBehindEngineDefault, findings.Select(f => f.Kind));
     }
 }
 

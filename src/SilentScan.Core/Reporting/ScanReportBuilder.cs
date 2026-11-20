@@ -119,7 +119,6 @@ public static class ScanReportBuilder
             schemaDependencyStage.Complete($"{schemaDependencyFindings.Count:N0} findings");
         }
 
-        var securityFindings = ruleResults.For<SecurityFinding>("SecurityScanner").ToList();
         PhaseMemory.ReleaseBetweenPhases();
 
         List<PredicateExtractionResult> extractionResults;
@@ -200,8 +199,6 @@ public static class ScanReportBuilder
             .ThenBy(f => f.Line)
             .ThenBy(f => f.Column)
             .ThenBy(f => f.Outcome)];
-        securityFindings = [.. securityFindings
-            .OrderBy(f => f.Kind).ThenBy(f => f.SourcePath, StringComparer.Ordinal).ThenBy(f => f.Line).ThenBy(f => f.Column)];
         typedFindings = [.. typedFindings
             .OrderBy(f => VerdictRank(f.Verdict))
             .ThenBy(f => f.Column.Indexed switch { true => 0, null => 1, false => 2 })
@@ -238,7 +235,6 @@ public static class ScanReportBuilder
         ansiPaddingMismatchFindings = [.. ansiPaddingMismatchFindings.Where(f => f.Confidence <= minimumConfidence)];
         localVariablePredicateFindings = [.. localVariablePredicateFindings.Where(f => f.Confidence <= minimumConfidence)];
         filteredIndexParameterMismatchFindings = [.. filteredIndexParameterMismatchFindings.Where(f => f.Confidence <= minimumConfidence)];
-        securityFindings = [.. securityFindings.Where(f => f.Confidence <= minimumConfidence)];
 
         var findingsByRuleId = new Dictionary<string, IReadOnlyList<IFinding>>(ruleResults.AllFindings, StringComparer.Ordinal)
         {
@@ -251,7 +247,6 @@ public static class ScanReportBuilder
             ["DynamicSqlScanner"] = [.. dynamicSqlFindings, .. unparameterizedDynamicSqlFindings],
             ["TvfFenceScanner"] = tvfFenceFindings,
             ["ScalarUdfScanner"] = scalarUdfFindings,
-            ["SecurityScanner"] = securityFindings,
         };
 
         if (dynamicSqlResult.HarnessFindings is { Count: > 0 } harnessFindings)

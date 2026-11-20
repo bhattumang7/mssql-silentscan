@@ -178,21 +178,6 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/naming/unqualified-create")]
-    public async Task UnqualifiedCreateProcedure_LandsInTheCallersDefaultSchema_QualifiedControlDoesNot()
-    {
-        await using var connection = await OpenConnectionAsync();
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC('CREATE PROCEDURE UnqProc AS SELECT 1'); EXEC('CREATE PROCEDURE dbo.QualProc AS SELECT 1'); REVERT;");
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC('CREATE PROCEDURE UnqProc AS SELECT 1'); REVERT;");
-
-        var unqualified = await RowsAsync(connection, "SELECT SCHEMA_NAME(schema_id) FROM sys.objects WHERE name = 'UnqProc' ORDER BY 1;");
-        var qualified = await ScalarAsync<string>(connection, "SELECT SCHEMA_NAME(schema_id) FROM sys.objects WHERE name = 'QualProc';");
-
-        Assert.Equal(["s1", "s2"], unqualified.Select(r => (string)r[0]!).ToArray());
-        Assert.Equal("dbo", qualified);
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/query/unqualified-table-reference")]
     public async Task UnqualifiedTableReference_CompilesOnePlanPerSchemaContext_QualifiedControlSharesOne()
     {

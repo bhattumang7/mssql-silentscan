@@ -121,22 +121,6 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/statement-shape/missing-set-nocount-on")]
-    public async Task WithoutNocount_EachInnerDmlReportsARowcountMessage_NocountControlDoesNot()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        var noisyProc = await StatementCompletedCountAsync(connection, "EXEC dbo.NoisyProc;");
-        var quietProc = await StatementCompletedCountAsync(connection, "EXEC dbo.QuietProc;");
-        var noisyTrigger = await StatementCompletedCountAsync(connection, "INSERT INTO dbo.NoisyBase VALUES (1);");
-        var quietTrigger = await StatementCompletedCountAsync(connection, "INSERT INTO dbo.QuietBase VALUES (1);");
-
-        Assert.True(noisyProc > quietProc, $"{noisyProc} vs {quietProc}");
-        Assert.True(noisyProc >= 2);
-        Assert.True(noisyTrigger > quietTrigger, $"{noisyTrigger} vs {quietTrigger}");
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/query/rbar-single-row-loop-dml")]
     public async Task SingleRowLoopUpdateExecutesOncePerIteration_SetBasedUpdateExecutesOnce()
     {

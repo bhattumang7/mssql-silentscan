@@ -105,9 +105,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(CheckConstraintPredicateContradiction(report, headingLevel, pathBase));
         blocks.AddRange(ForcedSerial(report, headingLevel, pathBase));
         blocks.AddRange(UntrustedConstraint(report, headingLevel, pathBase));
-        blocks.AddRange(CascadingForeignKey(report, headingLevel, pathBase));
         blocks.AddRange(MultiReferencedCte(report, headingLevel, pathBase));
-        blocks.AddRange(NestedViewDepth(report, headingLevel, pathBase));
         blocks.AddRange(PostExpansionJoinWidth(report, headingLevel, pathBase));
         blocks.AddRange(SelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(PartialCompositeForeignKeyJoin(report, headingLevel, pathBase));
@@ -121,14 +119,12 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ModuleCompileFlag(report, headingLevel, pathBase));
         blocks.AddRange(WindowFrame(report, headingLevel, pathBase));
         blocks.AddRange(BoundedStringBuiltinTruncation(report, headingLevel, pathBase));
-        blocks.AddRange(WaitFor(report, headingLevel, pathBase));
         blocks.AddRange(CursorCloseOnCommit(report, headingLevel, pathBase));
         blocks.AddRange(ViewOrdering(report, headingLevel, pathBase));
         blocks.AddRange(TransactionHygiene(report, headingLevel, pathBase));
         blocks.AddRange(CompositeIndexLeadingColumn(report, headingLevel, pathBase));
         blocks.AddRange(MissingStatistics(report, headingLevel, pathBase));
         blocks.AddRange(IndexHint(report, headingLevel, pathBase));
-        blocks.AddRange(SessionDateSetting(report, headingLevel, pathBase));
         blocks.AddRange(AmbiguousDateLiteralConversion(report, headingLevel, pathBase));
         blocks.AddRange(CartesianJoin(report, headingLevel, pathBase));
         blocks.AddRange(TruncateSwallowed(report, headingLevel, pathBase));
@@ -136,15 +132,8 @@ public static class ReadableScanReportWriter
         blocks.AddRange(OutputParameter(report, headingLevel, pathBase));
         blocks.AddRange(DatabaseConfiguration(report, headingLevel));
         blocks.AddRange(ParameterReassignmentPredicate(report, headingLevel, pathBase));
-        blocks.AddRange(CodeMetric(report, headingLevel, pathBase));
-        blocks.AddRange(Formatting(report, headingLevel, pathBase));
-        blocks.AddRange(Naming(report, headingLevel, pathBase));
-        blocks.AddRange(DeadCode(report, headingLevel, pathBase));
-        blocks.AddRange(Duplication(report, headingLevel, pathBase));
         blocks.AddRange(DeprecatedSyntax(report, headingLevel, pathBase));
-        blocks.AddRange(StatementShape(report, headingLevel, pathBase));
         blocks.AddRange(ControlFlowRisk(report, headingLevel, pathBase));
-        blocks.AddRange(Security(report, headingLevel, pathBase));
         blocks.AddRange(IndexDesign(report, headingLevel, pathBase));
         blocks.AddRange(ForcedParameterization(report, headingLevel, pathBase));
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
@@ -156,7 +145,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TriggerCorrectness(report, headingLevel, pathBase));
         blocks.AddRange(CrossModuleLockOrder(report, headingLevel, pathBase));
         blocks.AddRange(CheckConstraint(report, headingLevel, pathBase));
-        blocks.AddRange(DefaultNullableConstraint(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
         blocks.AddRange(StringAggMissingOrder(report, headingLevel, pathBase));
@@ -215,15 +203,8 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Predicates against a local variable (cardinality-estimate risk only)", report.Find<LocalVariablePredicateFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Filtered index matched only against a literal, query uses a parameter/variable", report.Find<FilteredIndexParameterMismatchFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Predicates against a reassigned formal parameter (sniffing defeated)", report.Find<ParameterReassignmentPredicateFinding>(nameof(ParameterReassignmentPredicateScanner)).Count);
-        AddCount(counts, "Size/complexity metric thresholds exceeded", report.Find<CodeMetricFinding>(nameof(CodeMetricScanner)).Count);
-        AddCount(counts, "Formatting and layout risks", report.Find<FormattingFinding>(nameof(FormattingScanner)).Count);
-        AddCount(counts, "Naming and identifier risks", report.Find<NamingFinding>(nameof(NamingScanner)).Count);
-        AddCount(counts, "Dead code and control-flow risks", report.Find<DeadCodeFinding>(nameof(DeadCodeScanner)).Count);
-        AddCount(counts, "Duplicated/redundant code shapes", report.Find<DuplicationFinding>(nameof(DuplicationScanner)).Count);
-        AddCount(counts, "Task comments and deprecated syntax", report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count);
-        AddCount(counts, "Statement-shape risks", report.Find<StatementShapeFinding>(nameof(StatementShapeScanner)).Count);
+        AddCount(counts, "Comparisons to NULL that never match", report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count);
         AddCount(counts, "Cursor and control-flow risks", report.Find<ControlFlowRiskFinding>(nameof(ControlFlowRiskScanner)).Count);
-        AddCount(counts, "Security", report.Find<SecurityFinding>(nameof(SecurityScanner)).Count);
         AddCount(counts, "Physical/schema index design (heap/clustered-key quality)", report.Find<IndexDesignFinding>(nameof(IndexDesignScanner)).Count);
         AddCount(counts, "Forced-parameterization-defeating query shapes", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
@@ -235,7 +216,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Trigger correctness", report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).Count);
         AddCount(counts, "Cross-module lock ordering", report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Count);
         AddCount(counts, "CHECK constraint text correctness (NULL handling, IDENTITY-column placement)", report.Find<CheckConstraintFinding>(nameof(CheckConstraintScanner)).Count);
-        AddCount(counts, "DEFAULT constraint on a still-nullable column", report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Count);
         AddCount(counts, "SELECT * view stale against base table's current shape", report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count);
         AddCount(counts, "Bare TOP with no ORDER BY", report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Count);
         AddCount(counts, "STRING_AGG with no WITHIN GROUP (ORDER BY ...)", report.Find<StringAggMissingOrderFinding>(nameof(StringAggMissingOrderScanner)).Count);
@@ -253,9 +233,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Predicates provably contradicting a trusted CHECK constraint or NOT NULL fact", report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Count);
         AddCount(counts, "Constructs that force a statement/query plan serial", report.Find<ForcedSerialFinding>(nameof(ForcedSerialScanner)).Count);
         AddCount(counts, "Untrusted FK/CHECK constraints", report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).Count);
-        AddCount(counts, "Foreign keys with a cascading ON DELETE/UPDATE action", report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Count);
         AddCount(counts, "CTEs referenced 2+ times downstream of their own WITH clause", report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Count);
-        AddCount(counts, "Views/inline TVFs nested 2+ view/TVF layers deep", report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Count);
         AddCount(counts, "Queries whose expanded join width exceeds their written FROM/JOIN count", report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count);
         AddCount(counts, "Consumers narrowing a nested SELECT * view's frozen column list", report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Count);
         AddCount(counts, "JOINs matching some but not all of a composite foreign key's columns", report.Find<PartialCompositeForeignKeyJoinFinding>(nameof(PartialCompositeForeignKeyJoinScanner)).Count);
@@ -269,14 +247,12 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Module compile flags (WITH RECOMPILE / TVF database-collation return)", report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count);
         AddCount(counts, "RANGE window-function frames", report.Find<WindowFrameFinding>(nameof(WindowFrameScanner)).Count);
         AddCount(counts, "REPLICATE/REPLACE/SPACE constant-provable result truncation", report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count);
-        AddCount(counts, "WAITFOR DELAY/TIME", report.Find<WaitForFinding>(nameof(WaitForScanner)).Count);
         AddCount(counts, "Cursors silently closed by CURSOR_CLOSE_ON_COMMIT then fetched", report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count);
         AddCount(counts, "View/inline TVF ordering not guaranteed", report.Find<ViewOrderingFinding>(nameof(ViewOrderingScanner)).Count);
         AddCount(counts, "Unresolved BEGIN TRANSACTION", report.Find<TransactionHygieneFinding>(nameof(TransactionHygieneScanner)).Count);
         AddCount(counts, "Composite index leading-column violations", report.Find<CompositeIndexLeadingColumnFinding>(nameof(CompositeIndexLeadingColumnScanner)).Count);
         AddCount(counts, "Predicate columns with no applicable statistic and auto-create disabled", report.Find<MissingStatisticsFinding>(nameof(MissingStatisticsScanner)).Count);
         AddCount(counts, "INDEX hints naming a nonexistent or non-seekable index", report.Find<IndexHintFinding>(nameof(IndexHintScanner)).Count);
-        AddCount(counts, "SET DATEFORMAT/DATEFIRST mid-module", report.Find<SessionDateSettingFinding>(nameof(SessionDateSettingScanner)).Count);
         AddCount(counts, "Ambiguous date literal cast/converted with no explicit style", report.Find<AmbiguousDateLiteralConversionFinding>(nameof(AmbiguousDateLiteralConversionScanner)).Count);
         AddCount(counts, "Cartesian and always-false joins", report.Find<CartesianJoinFinding>(nameof(CartesianJoinScanner)).Count);
         AddCount(counts, "TRUNCATE swallowed by an empty/non-rethrowing CATCH", report.Find<TruncateSwallowedFinding>(nameof(TruncateSwallowedScanner)).Count);
@@ -962,86 +938,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> CodeMetric(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CodeMetricFinding>(nameof(CodeMetricScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Size/complexity metric thresholds exceeded ({report.Find<CodeMetricFinding>(nameof(CodeMetricScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Purely a maintainability/readability signal - none of these eight metrics change a query's result or its plan. Every threshold is configurable; the defaults were calibrated against this codebase's own real corpus distribution, not invented arbitrarily.");
-
-        foreach (var group in report.Find<CodeMetricFinding>(nameof(CodeMetricScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CodeMetricRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, "Measured", "Threshold", DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.MeasuredValue.ToString(CultureInfo.InvariantCulture),
-                    f.Threshold.ToString(CultureInfo.InvariantCulture),
-                    f.DetailText ?? f.ModuleQualifiedName,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> Formatting(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<FormattingFinding>(nameof(FormattingScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Formatting and layout risks ({report.Find<FormattingFinding>(nameof(FormattingScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Purely a readability/maintainability signal for most of these - none change a query's result or its plan. Two kinds are a visual-ambiguity risk instead (a statement that looks like it belongs to a conditional/loop but structurally does not): the statement's own behavior is still unaffected, only a future edit relying on the misleading shape is at risk.");
-
-        foreach (var group in report.Find<FormattingFinding>(nameof(FormattingScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.FormattingRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText ?? f.ModuleQualifiedName,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> Naming(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NamingFinding>(nameof(NamingScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Naming and identifier risks ({report.Find<NamingFinding>(nameof(NamingScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A reserved keyword used as an identifier, a schema-scoped CREATE with no explicit schema qualifier, and a redundant \"dbo.\" qualifier on a type reference.");
-
-        foreach (var group in report.Find<NamingFinding>(nameof(NamingScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NamingRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText,
-                })]);
-        }
-    }
-
     private static IEnumerable<ReadableBlock> ForcedParameterization(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count == 0)
@@ -1068,58 +964,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> DeadCode(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<DeadCodeFinding>(nameof(DeadCodeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Dead code and control-flow risks ({report.Find<DeadCodeFinding>(nameof(DeadCodeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Unreachable code, an unused label, an unused local variable, an unused non-OUTPUT parameter, or a GOTO whose target is the very next statement. Purely a maintainability signal for every kind - the flagged code's own current behavior is unaffected.");
-
-        foreach (var group in report.Find<DeadCodeFinding>(nameof(DeadCodeScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DeadCodeRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText ?? f.ModuleQualifiedName,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> Duplication(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<DuplicationFinding>(nameof(DuplicationScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Duplicated/redundant code shapes ({report.Find<DuplicationFinding>(nameof(DuplicationScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Commented-out code, a duplicated string literal, a WHILE loop that can only run once, a self-assignment, identical operands either side of an operator, a repeated unary operator, a negated comparison written as the negation of its opposite, a duplicated or all-identical conditional branch, a redundant or mutually-exclusive AND-combined numeric bound, a collapsible nested IF, a nested IIF, or an always-true/always-false literal comparison. Purely a maintainability/readability signal for every kind - the flagged code's own current behavior is unaffected.");
-
-        foreach (var group in report.Find<DuplicationFinding>(nameof(DuplicationScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DuplicationRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText ?? f.ModuleQualifiedName,
-                })]);
-        }
-    }
-
     private static IEnumerable<ReadableBlock> DeprecatedSyntax(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count == 0)
@@ -1127,41 +971,15 @@ public static class ReadableScanReportWriter
             yield break;
         }
 
-        yield return new ReadableBlock.Heading(level, $"Task comments and deprecated syntax ({report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count})");
+        yield return new ReadableBlock.Heading(level, $"Comparisons to NULL that never match ({report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A TODO/FIXME comment, a non-ANSI comparison operator, the \"= NULL\"/\"<> NULL\" silent always-false trap, a wildcard-free LIKE pattern, a legacy system compatibility view, a table hint without WITH, a numbered-procedure-group definition/invocation, a string-literal column alias, a removed legacy security stored procedure, or SET ROWCOUNT. The two NULL-comparison kinds are a real silent correctness trap under the default ANSI_NULLS ON setting; every other kind is a maintainability/forward-compatibility signal.");
+            "Under the default ANSI_NULLS ON setting a comparison to the NULL literal with = or <> never matches any row, including a genuinely NULL value.");
 
         foreach (var group in report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
             yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DeprecatedSyntaxRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> StatementShape(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<StatementShapeFinding>(nameof(StatementShapeScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Statement-shape risks ({report.Find<StatementShapeFinding>(nameof(StatementShapeScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "An INSERT with no explicit column list, an ordinal ORDER BY, a base table with no PRIMARY KEY, a routine missing SET NOCOUNT ON, or a bare SELECT *. The first two are correctness-adjacent (silently wrong the moment the target's/source's own column shape changes); the rest are maintainability/cost signals.");
-
-        foreach (var group in report.Find<StatementShapeFinding>(nameof(StatementShapeScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.StatementShapeRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
@@ -1188,32 +1006,6 @@ public static class ReadableScanReportWriter
             var ordered = group.ToList();
             yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ControlFlowRiskRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, DetailHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.DetailText,
-                })]);
-        }
-    }
-
-    private static IEnumerable<ReadableBlock> Security(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SecurityFinding>(nameof(SecurityScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Security ({report.Find<SecurityFinding>(nameof(SecurityScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A credential-suggestive-named variable assigned a literal string, a hardcoded non-benign IP address, a HASHBYTES call naming a weak/deprecated algorithm (general use and, sharper, a security-sensitive context), and a dynamic SQL call site whose assembled text this tool cannot prove is free of runtime/external influence.");
-
-        foreach (var group in report.Find<SecurityFinding>(nameof(SecurityScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"{HumanizeKindName(group.Key.ToString())} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SecurityRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, DetailHeader],
                 [.. ordered.Select(f => new List<string>
@@ -1625,29 +1417,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> DefaultNullableConstraint(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"DEFAULT constraint on a still-nullable column ({report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A column carries a DEFAULT constraint but is still nullable. A DEFAULT only ever applies when the column is OMITTED from an INSERT's own column list; any caller that supplies NULL explicitly (a common ORM-generated full-column INSERT shape) bypasses the default entirely, silently, with no error.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.DefaultNullableConstraintRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, ColumnHeader, "Default"],
-            [.. report.Find<DefaultNullableConstraintFinding>(nameof(DefaultNullableConstraintScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.TableQualifiedName,
-                f.ColumnName,
-                f.DefaultDefinitionText,
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> StaleSelectStarView(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count == 0)
@@ -1905,31 +1674,6 @@ public static class ReadableScanReportWriter
             })]);
     }
 
-    private static IEnumerable<ReadableBlock> CascadingForeignKey(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Cascading FK actions ({report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A foreign key with a non-NO_ACTION ON DELETE/ON UPDATE action - a single DML statement against the referenced table silently touches every dependent row in the child table too, with no visible predicate change at the call site. Purely informational: this states the fact, not a proven cost - how many rows and how often depends on data this pass cannot see.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CascadingForeignKeyRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ConstraintHeader, "Parent", "Referenced", "Delete action", "Update action"],
-            [.. report.Find<CascadingForeignKeyFinding>(nameof(CascadingForeignKeyScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.ConstraintName,
-                f.ParentTableQualifiedName,
-                f.ReferencedTableQualifiedName,
-                f.DeleteAction.ToString(),
-                f.UpdateAction.ToString(),
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> MultiReferencedCte(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Count == 0)
@@ -1949,30 +1693,6 @@ public static class ReadableScanReportWriter
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CteName,
                 f.ReferenceCount.ToString(CultureInfo.InvariantCulture),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NestedViewDepth(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Nested-view depth ({report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            $"A view/inline TVF nested {NestedViewDepthScanner.DepthThreshold}+ view/TVF layers deep before reaching a base table - structural depth, not a claim the query is currently slow. A change to a base table now has to be traced through multiple independent view layers before its blast radius is understood, and each layer is a place a SELECT */column-list mismatch or silent type widening can hide. Catalog/lineage-only, reported once per view regardless of whether any scanned query calls it.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NestedViewDepthRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "View", "Depth", "Chain", "Base tables"],
-            [.. report.Find<NestedViewDepthFinding>(nameof(NestedViewDepthScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.ViewQualifiedName,
-                f.Depth.ToString(CultureInfo.InvariantCulture),
-                string.Join(" -> ", f.Chain),
-                string.Join(", ", f.BaseTables),
             })]);
     }
 
@@ -2235,27 +1955,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> WaitFor(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<WaitForFinding>(nameof(WaitForScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"WAITFOR DELAY/TIME ({report.Find<WaitForFinding>(nameof(WaitForScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "WAITFOR DELAY/WAITFOR TIME holds the calling worker thread idle for the full delay/until-time - a documented, unconditional cost, worse still when reached inside an open transaction, where any locks that transaction holds stay held for the same duration.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.WaitForRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Inside open transaction?"],
-            [.. report.Find<WaitForFinding>(nameof(WaitForScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.IsInsideTransaction ? "Yes" : "No",
-            })]);
-    }
-
     private static IEnumerable<ReadableBlock> CursorCloseOnCommit(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count == 0)
@@ -2417,32 +2116,6 @@ public static class ReadableScanReportWriter
         }
     }
 
-    private static IEnumerable<ReadableBlock> SessionDateSetting(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SessionDateSettingFinding>(nameof(SessionDateSettingScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"SET DATEFORMAT/DATEFIRST mid-module ({report.Find<SessionDateSettingFinding>(nameof(SessionDateSettingScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "SET DATEFORMAT/SET DATEFIRST inside a module body changes how a string date literal or DATEPART(weekday, ...) is interpreted for the rest of the session, independent of the caller's own settings - oracle-confirmed the identical literal/date silently means something different depending on which value was set first.");
-
-        foreach (var group in report.Find<SessionDateSettingFinding>(nameof(SessionDateSettingScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            var title = group.Key == SessionDateSettingKind.DateFormat ? "DATEFORMAT" : "DATEFIRST";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SessionDateSettingRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                })]);
-        }
-    }
-
     private static IEnumerable<ReadableBlock> AmbiguousDateLiteralConversion(ScanReport report, int level, string? pathBase)
     {
         if (report.Find<AmbiguousDateLiteralConversionFinding>(nameof(AmbiguousDateLiteralConversionScanner)).Count == 0)
@@ -2595,15 +2268,10 @@ public static class ReadableScanReportWriter
 
     private static string DatabaseConfigurationFlagLabel(DatabaseConfigurationFinding finding) => finding.Kind switch
     {
-        DatabaseConfigurationFindingKind.PageVerifyNotChecksum => "PAGE_VERIFY <> CHECKSUM",
         DatabaseConfigurationFindingKind.AutoShrinkOn => "AUTO_SHRINK = ON",
         DatabaseConfigurationFindingKind.AutoCloseOn => "AUTO_CLOSE = ON",
-        DatabaseConfigurationFindingKind.TargetRecoveryTimeUnset => "TARGET_RECOVERY_TIME unset (0)",
-        DatabaseConfigurationFindingKind.QueryStoreNotReadWrite => "Query Store not READ_WRITE",
-        DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto => "Query Store capture mode <> AUTO",
         DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => "AUTO_CREATE_STATISTICS = OFF",
         DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => "AUTO_UPDATE_STATISTICS = OFF",
-        DatabaseConfigurationFindingKind.CompatibilityLevelBehindEngineDefault => "Compatibility level behind engine default",
         DatabaseConfigurationFindingKind.SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange => $"{finding.AffectedObjectName} disabled at compatibility level {finding.TargetCompatibilityLevel} ({finding.Dependency})",
         DatabaseConfigurationFindingKind.PlanGuideAltersOptimization => $"Plan guide '{finding.AffectedObjectName}' enabled ({finding.PlanGuideScopeType}; hints: {finding.PlanGuideHints})",
         _ => finding.Kind.ToString(),

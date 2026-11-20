@@ -20,12 +20,3 @@ internal sealed class ScalarUdfRule : IPerFileRule
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ScalarUdfScanner.CreateRule(parseResult.SourcePath, context.Catalog, context.ScalarUdfMap);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ScalarUdfScanner.Harvest((ScalarUdfScanner.Rule)moduleRule);
 }
-
-internal sealed class SecurityRule : IPerFileRule
-{
-    public string Id => "SecurityScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => SecurityScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => SecurityScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => SecurityScanner.Harvest((SecurityScanner.Rule)moduleRule);
-}

@@ -112,31 +112,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/empty-catch-block")]
-    public async Task EmptyCatch_SwallowsErrorAndBatchContinues_UncaughtControlSurfacesError()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        Assert.Null(await SqlErrorNumberAsync(connection, "BEGIN TRY SELECT 1/0; END TRY BEGIN CATCH END CATCH"));
-        Assert.Equal(8134, await SqlErrorNumberAsync(connection, "SELECT 1/0;"));
-        Assert.Equal(5, await ScalarAsync<int>(connection, "DECLARE @r INT = 0; BEGIN TRY SET @r = 1/0; END TRY BEGIN CATCH END CATCH SELECT @r + 5;"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/query/global-cursor-declaration")]
-    public async Task GlobalCursor_SurvivesTheProcedure_LocalCursorDoesNot()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        await ExecuteAsync(connection, "EXEC dbo.LocalCursor;");
-        Assert.Equal(-3, await ScalarAsync<int>(connection, "SELECT CURSOR_STATUS('global', 'c');"));
-
-        await ExecuteAsync(connection, "EXEC dbo.GlobalCursor;");
-        Assert.Equal(1, await ScalarAsync<int>(connection, "SELECT CURSOR_STATUS('global', 'c');"));
-        await ExecuteAsync(connection, "CLOSE c; DEALLOCATE c;");
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/join/cartesian-comma-join")]
     [Trait("Rule", "silentscan/join/cartesian-cross-join")]
     public async Task CommaAndCrossJoinWithoutPredicate_ProduceFullProduct_PredicateControlDoesNot()
@@ -166,17 +141,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/unbounded-table-write")]
-    public async Task UpdateWithoutWhere_TouchesEveryRow_WhereControlTouchesOne()
-    {
-        await ExecuteAsync("UPDATE dbo.W SET V = 5 WHERE Id = 1;");
-        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.W WHERE V = 5;"));
-
-        await ExecuteAsync("UPDATE dbo.W SET V = 9;");
-        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.W WHERE V = 9;"));
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/query/non-aggregate-having-predicate")]
     public async Task NonAggregateHaving_EqualsWhereResult_AndPlansAreIdentical()
     {
@@ -191,37 +155,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         Assert.Equal(whereRows.Count, havingRows.Count);
         Assert.Equal(whereRows[0][1], havingRows[0][1]);
         Assert.Equal(whereOps, havingOps);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/statement-shape/insert-without-column-list")]
-    public async Task PositionalInsert_LandsInTheWrongColumnAfterTheTableIsRecreatedWithSwappedColumns()
-    {
-        await ExecuteAsync("CREATE TABLE dbo.S1 (A INT, B INT); INSERT INTO dbo.S1 VALUES (1, 2);");
-        var before = await ScalarAsync<int>("SELECT A FROM dbo.S1;");
-        await ExecuteAsync("DROP TABLE dbo.S1; CREATE TABLE dbo.S1 (B INT, A INT); INSERT INTO dbo.S1 VALUES (1, 2);");
-        var positional = await ScalarAsync<int>("SELECT A FROM dbo.S1;");
-        await ExecuteAsync("DELETE FROM dbo.S1; INSERT INTO dbo.S1 (A, B) VALUES (1, 2);");
-        var named = await ScalarAsync<int>("SELECT A FROM dbo.S1;");
-
-        Assert.Equal(1, before);
-        Assert.Equal(2, positional);
-        Assert.Equal(1, named);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/statement-shape/ordinal-order-by")]
-    public async Task OrdinalOrderBy_ChangesFirstRowWhenSelectListIsReordered_NamedControlDoesNot()
-    {
-        var ordinalXFirst = await RowsAsync("SELECT TOP 1 X, Y FROM dbo.O ORDER BY 2;");
-        var ordinalYFirst = await RowsAsync("SELECT TOP 1 Y, X FROM dbo.O ORDER BY 2;");
-        var namedXFirst = await RowsAsync("SELECT TOP 1 X, Y FROM dbo.O ORDER BY Y;");
-        var namedYFirst = await RowsAsync("SELECT TOP 1 Y, X FROM dbo.O ORDER BY Y;");
-
-        Assert.Equal(2, ordinalXFirst[0][0]);
-        Assert.Equal(1, ordinalYFirst[0][1]);
-        Assert.Equal(2, namedXFirst[0][0]);
-        Assert.Equal(2, namedYFirst[0][1]);
     }
 
     [Fact]

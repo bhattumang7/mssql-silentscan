@@ -14,7 +14,7 @@ public static class RuleExampleCorpus
     {
         var cases = new List<RuleExampleCase>();
 
-        foreach (var (ruleId, content) in catalog.Where(entry => !StyleRuleFamilies.IsStyleRule(entry.Key)))
+        foreach (var (ruleId, content) in catalog)
         {
             var exampleIndex = 0;
             foreach (var example in content.AllExamples)

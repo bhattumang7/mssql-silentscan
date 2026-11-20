@@ -47,7 +47,6 @@ public sealed class RuleOracleCoverageTests
         var unbacked = RuleCatalog.BaseRules
             .Select(rule => rule.Id)
             .Where(id => !claimed.Contains(id))
-            .Where(id => !StyleRuleFamilies.IsStyleRule(id))
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToList();
 

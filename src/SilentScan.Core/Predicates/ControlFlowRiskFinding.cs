@@ -5,18 +5,12 @@ namespace SilentScan.Core.Predicates;
 
 public enum ControlFlowRiskFindingKind
 {
-    EmptyCatchBlock,
-
-    TriggerEmitsOutput,
-
     DirtyReadIsolationHint,
 
     ReadCommittedLockRevertsRowVersioning,
 
 
     LegacyIdentityIntrinsic,
-
-    GotoUsage,
 
     CaseExpressionMissingElse,
 

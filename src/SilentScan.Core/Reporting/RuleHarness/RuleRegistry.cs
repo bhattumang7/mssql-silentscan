@@ -6,11 +6,9 @@ public static class RuleRegistry
 {
     public static IReadOnlyList<IRule> All { get; } =
     [
-        new WaitForRule(),
         new CursorCloseOnCommitRule(),
         new CompositeIndexLeadingColumnRule(),
         new MissingStatisticsRule(),
-        new SessionDateSettingRule(),
         new AmbiguousDateLiteralConversionRule(),
         new CartesianJoinRule(),
         new OuterJoinPredicateCollapseRule(),
@@ -44,11 +42,6 @@ public static class RuleRegistry
         new BoundedStringBuiltinTruncationRule(),
         new ViewOrderingRule(),
         new IndexHintRule(),
-        new CodeMetricRule(),
-        new FormattingRule(),
-        new NamingRule(),
-        new DeadCodeRule(),
-        new DuplicationRule(),
         new DeprecatedSyntaxRule(),
         new ControlFlowRiskRule(),
         new QueryAntiPatternRule(),
@@ -57,7 +50,6 @@ public static class RuleRegistry
         new SetOptionRule(),
 
         new PartialCompositeForeignKeyJoinRule(),
-        new StatementShapeRule(),
         new MultiReferencedCteRule(),
         new PostExpansionJoinWidthRule(),
         new SelectStarViewRule(),
@@ -75,15 +67,11 @@ public static class RuleRegistry
         new UntrustedConstraintRule(),
         new CheckConstraintRule(),
         new SecurityPredicateIndexRule(),
-        new DefaultNullableConstraintRule(),
-        new CascadingForeignKeyRule(),
         new TemporalTableHistoryIndexGapRule(),
-        new NestedViewDepthRule(),
 
         new CrossModuleLockOrderRule(),
 
         new TvfFenceRule(),
         new ScalarUdfRule(),
-        new SecurityRule(),
     ];
 }

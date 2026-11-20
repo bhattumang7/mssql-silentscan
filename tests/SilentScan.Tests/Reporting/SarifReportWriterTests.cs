@@ -30,16 +30,10 @@ public sealed class SarifReportWriterTests
             + report.Find<TvfFenceFinding>("TvfFenceScanner").Count + report.Find<ScalarUdfFinding>("ScalarUdfScanner").Count + report.Find<AnsiPaddingOffColumnFinding>("AnsiPaddingOffColumnScanner").Count + report.Find<ProcCallArgumentMismatchFinding>("ProcCallArgumentMismatchScanner").Count + report.Find<TemporalBoundaryPrecisionFinding>("NonSargablePredicateScanner").Count
             + report.Find<MaxTypedColumnFinding>("MaxTypedColumnScanner").Count + report.Find<UnderLengthParameterFinding>("TypedPredicateExtractor").Count + report.Find<AnsiPaddingMismatchFinding>("TypedPredicateExtractor").Count + report.Find<PartialCompositeForeignKeyJoinFinding>("PartialCompositeForeignKeyJoinScanner").Count + report.Find<SetOptionFinding>("SetOptionScanner").Count
             + report.Find<CatchAllPredicateFinding>("CatchAllPredicateScanner").Count + report.Find<LocalVariablePredicateFinding>("TypedPredicateExtractor").Count + report.Find<NotInNullableSubqueryFinding>("NotInNullableSubqueryScanner").Count + report.Find<NonUniqueUpdateSourceFinding>("NonUniqueUpdateSourceScanner").Count + report.Find<ForcedSerialFinding>("ForcedSerialScanner").Count
-            + report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Count + report.Find<CascadingForeignKeyFinding>("CascadingForeignKeyScanner").Count + report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Count
-            + report.Find<NestedViewDepthFinding>("NestedViewDepthScanner").Count + report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Count + report.Find<SelectStarViewFinding>("SelectStarViewScanner").Count
-            + report.Find<OutputParameterFinding>("OutputParameterScanner").Count
-            + report.Find<CodeMetricFinding>("CodeMetricScanner").Count + report.Find<FormattingFinding>("FormattingScanner").Count
-            + report.Find<NamingFinding>("NamingScanner").Count + report.Find<DeadCodeFinding>("DeadCodeScanner").Count + report.Find<DuplicationFinding>("DuplicationScanner").Count + report.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner").Count
-            + report.Find<StatementShapeFinding>("StatementShapeScanner").Count
+            + report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Count + report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Count + report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Count + report.Find<SelectStarViewFinding>("SelectStarViewScanner").Count
+            + report.Find<OutputParameterFinding>("OutputParameterScanner").Count + report.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner").Count
             + report.Find<ControlFlowRiskFinding>("ControlFlowRiskScanner").Count
-            + report.Find<SecurityFinding>("SecurityScanner").Count
             + report.Find<CheckConstraintFinding>("CheckConstraintScanner").Count
-            + report.Find<DefaultNullableConstraintFinding>("DefaultNullableConstraintScanner").Count
            
             + report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Count
             + report.Find<BareTopNoOrderByFinding>("BareTopNoOrderByScanner").Count
@@ -310,8 +304,8 @@ public sealed class SarifReportWriterTests
     public void Write_RelocatedFindingWithDynamicSqlCallSite_AnnotatesMessageWithOrigin()
     {
         var callSite = new SourceSpan("test.sql", 4, 5);
-        var report = TestScanReports.Build(WaitForFindings: [new WaitForFinding(
-            "test.sql", 10, 5, IsInsideTransaction: false, DynamicSqlCallSite: callSite)]);
+        var report = TestScanReports.Build(BareTopNoOrderByFindings: [new BareTopNoOrderByFinding(
+            "test.sql", 10, 5, DynamicSqlCallSite: callSite)]);
 
         var sarif = SarifReportWriter.Write(report);
         using var document = JsonDocument.Parse(sarif);
@@ -324,8 +318,8 @@ public sealed class SarifReportWriterTests
     [Fact]
     public void Write_FindingWithoutDynamicSqlCallSite_MessageHasNoOriginNote()
     {
-        var report = TestScanReports.Build(WaitForFindings: [new WaitForFinding(
-            "test.sql", 10, 5, IsInsideTransaction: false)]);
+        var report = TestScanReports.Build(BareTopNoOrderByFindings: [new BareTopNoOrderByFinding(
+            "test.sql", 10, 5)]);
 
         var sarif = SarifReportWriter.Write(report);
         using var document = JsonDocument.Parse(sarif);

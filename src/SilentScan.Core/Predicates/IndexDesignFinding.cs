@@ -8,10 +8,6 @@ public enum IndexDesignFindingKind
 {
     HeapWithNonclusteredIndexes,
 
-    HeapWithNonclusteredPrimaryKey,
-
-    NonUniqueClusteredIndex,
-
     RandomClusteredKeyGuidDefault,
 
     DuplicateIndex,
@@ -20,26 +16,14 @@ public enum IndexDesignFindingKind
 
     UnindexedForeignKey,
 
-    DisabledIndex,
-
-    HypotheticalIndex,
-
     FilterColumnNotInIndex,
-
-    DeprecatedLobColumnType,
 
     FloatOrRealIndexKeyColumn,
 
     NoRecomputeStatistics,
 
-    VariableLengthKeyColumnExceedsKeyLimit,
-
-    MergeableIndexesDifferingIncludeOnly,
-
 
     MonotonicClusteredKeyMissingSequentialOptimization,
-
-    NonAlignedPartitionedIndex,
 
     RowOrPageLockingDisabled,
 }

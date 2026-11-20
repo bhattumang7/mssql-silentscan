@@ -84,81 +84,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/default-constraint-on-nullable-column")]
-    public async Task ExplicitNullBypassesDefaultOnNullableColumn_ButNotNullControlRejectsIt()
-    {
-        await ExecuteAsync("INSERT INTO dbo.DfNullable (Id) VALUES (1); INSERT INTO dbo.DfNullable (Id, Status) VALUES (2, NULL);");
-
-        var rows = await RowsAsync("SELECT Id, Status FROM dbo.DfNullable ORDER BY Id;");
-
-        Assert.Equal(5, rows[0][1]);
-        Assert.Null(rows[1][1]);
-        Assert.Equal(515, await SqlErrorNumberAsync("INSERT INTO dbo.DfNotNull (Id, Status) VALUES (2, NULL);"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/catalog/default-constraint-on-nullable-column")]
-    public async Task ExplicitNullMatchesANullDefaultOnNullableColumn_ButANonNullDefaultDiffers()
-    {
-        await ExecuteAsync("INSERT INTO dbo.DfNullDefault (Id) VALUES (1); INSERT INTO dbo.DfNullDefault (Id, Status) VALUES (2, NULL);");
-        await ExecuteAsync("INSERT INTO dbo.DfNullable (Id) VALUES (11); INSERT INTO dbo.DfNullable (Id, Status) VALUES (12, NULL);");
-
-        var nullDefault = await RowsAsync("SELECT Status FROM dbo.DfNullDefault ORDER BY Id;");
-        var nonNullDefault = await RowsAsync("SELECT Status FROM dbo.DfNullable WHERE Id IN (11, 12) ORDER BY Id;");
-
-        Assert.Null(nullDefault[0][0]);
-        Assert.Null(nullDefault[1][0]);
-        Assert.Equal(5, nonNullDefault[0][0]);
-        Assert.Null(nonNullDefault[1][0]);
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/catalog/cascading-foreign-key")]
-    public async Task DeletingParentCascadesToChildRows_ButPlainForeignKeyControlBlocksTheDelete()
-    {
-        await ExecuteAsync("DELETE FROM dbo.ParCascade WHERE Id = 1;");
-
-        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascade;"));
-        Assert.Equal(547, await SqlErrorNumberAsync("DELETE FROM dbo.ParPlain WHERE Id = 1;"));
-        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdPlain;"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/catalog/cascading-foreign-key")]
-    public async Task DeletingParentDoesNotCascadeThroughDisabledForeignKey_EnabledCascadeControlDoes()
-    {
-        await ExecuteAsync("DELETE FROM dbo.ParCascadeOff WHERE Id = 1;");
-        await ExecuteAsync("DELETE FROM dbo.ParCascadeOn WHERE Id = 1;");
-
-        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascadeOff;"));
-        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChdCascadeOn;"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/deprecated-lob-column-type")]
-    public async Task TextColumnCannotBeIndexedOrIncluded_ButMaxColumnCanBeIncluded()
-    {
-        Assert.Equal(1919, await SqlErrorNumberAsync("CREATE INDEX IX_Lob_Key ON dbo.Lob(Body);"));
-        Assert.Equal(1999, await SqlErrorNumberAsync("CREATE INDEX IX_Lob_Incl ON dbo.Lob(Id) INCLUDE (Body);"));
-        Assert.Null(await SqlErrorNumberAsync("CREATE INDEX IX_Lob_Max ON dbo.Lob(Id) INCLUDE (BodyMax);"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/index-design/deprecated-lob-column-type")]
-    public async Task DeclaringATextColumn_IncrementsTheDeprecatedFeatureCounter()
-    {
-        const string counter = "SELECT ISNULL(SUM(cntr_value), 0) FROM sys.dm_os_performance_counters WHERE object_name LIKE '%Deprecated Features%' AND instance_name LIKE 'Data types: text%';";
-        var before = await ScalarAsync<long>(counter);
-        await ExecuteAsync("CREATE TABLE dbo.MaxProbe (Id INT, B VARCHAR(MAX));");
-        var afterMax = await ScalarAsync<long>(counter);
-        await ExecuteAsync("CREATE TABLE dbo.TextProbe (Id INT, B TEXT);");
-        var afterText = await ScalarAsync<long>(counter);
-
-        Assert.Equal(before, afterMax);
-        Assert.True(afterText >= afterMax + 1);
-    }
-
-    [Fact]
     [Trait("Rule", "silentscan/catalog/with-recompile")]
     public async Task WithRecompileProcedure_IsFlaggedAndLeavesNoCachedPlan_WhileControlIsCached()
     {
@@ -186,7 +111,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     [Fact]
     [Trait("Rule", "silentscan/catalog/stale-select-star-view")]
     [Trait("Rule", "silentscan/lineage/select-star-view")]
-    [Trait("Rule", "silentscan/statement-shape/bare-select-star")]
     public async Task SelectStarView_StaysFrozenAfterAlterTableAdd_UntilRefreshed()
     {
         await using var connection = await OpenConnectionAsync();
@@ -206,22 +130,5 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
 
         await ExecuteAsync(connection, "EXEC sp_refreshview 'dbo.VStar';");
         Assert.Equal(4, await ScalarAsync<int>(connection, "SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.VStar');"));
-    }
-
-    [Fact]
-    [Trait("Rule", "silentscan/lineage/nested-view-depth")]
-    public async Task NestedSelectStarViews_RefreshingOnlyTheOuterViewDoesNotSurfaceTheNewColumn()
-    {
-        await using var connection = await OpenConnectionAsync();
-        await ExecuteAsync(connection, "ALTER TABLE dbo.Base ADD E INT NULL;");
-
-        await ExecuteAsync(connection, "EXEC sp_refreshview 'dbo.VStarOuter';");
-        var afterOuterOnly = await ScalarAsync<int>(connection, "SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.VStarOuter');");
-
-        await ExecuteAsync(connection, "EXEC sp_refreshview 'dbo.VStar'; EXEC sp_refreshview 'dbo.VStarOuter';");
-        var afterBoth = await ScalarAsync<int>(connection, "SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.VStarOuter');");
-
-        Assert.Equal(3, afterOuterOnly);
-        Assert.Equal(4, afterBoth);
     }
 }

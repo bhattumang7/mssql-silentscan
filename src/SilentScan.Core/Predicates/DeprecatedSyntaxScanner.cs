@@ -8,17 +8,6 @@ namespace SilentScan.Core.Predicates;
 
 public static class DeprecatedSyntaxScanner
 {
-
-    private static readonly HashSet<string> LegacyCompatibilityViewNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sysaltfiles", "syscacheobjects", "syscharsets", "syscolumns", "syscomments", "sysconfigures",
-        "sysconstraints", "syscurconfigs", "sysdatabases", "sysdepends", "sysdevices", "sysfilegroups",
-        "sysfiles", "sysforeignkeys", "sysfulltextcatalogs", "sysindexes", "sysindexkeys", "syslanguages",
-        "syslockinfo", "syslogins", "sysmembers", "sysmessages", "sysobjects", "sysoledbusers",
-        "sysopentapes", "sysperfinfo", "syspermissions", "sysprocesses", "sysprotects", "sysreferences",
-        "sysremotelogins", "sysservers", "systypes", "sysusers",
-    };
-
     public static IReadOnlyList<DeprecatedSyntaxFinding> Scan(SqlParseResult parseResult, DatabaseCatalog? catalog = null)
     {
         var rule = CreateRule(parseResult, catalog);
@@ -44,7 +33,6 @@ public static class DeprecatedSyntaxScanner
     {
         var findings = new List<DeprecatedSyntaxFinding>();
 
-        ScanTaskComments(parseResult, findings);
         findings.AddRange(rule.Findings);
 
         var moduleQualifiedName = TryGetModuleQualifiedName(parseResult.Fragment);
@@ -62,59 +50,6 @@ public static class DeprecatedSyntaxScanner
                 .ThenBy(f => f.Line)
                 .ThenBy(f => f.Column),
         ];
-    }
-
-    private static void ScanTaskComments(SqlParseResult parseResult, List<DeprecatedSyntaxFinding> findings)
-    {
-        var fragment = parseResult.Fragment;
-        if (fragment.ScriptTokenStream is null || fragment.LastTokenIndex < fragment.FirstTokenIndex)
-        {
-            return;
-        }
-
-        var tokens = fragment.ScriptTokenStream;
-        for (var i = fragment.FirstTokenIndex; i <= fragment.LastTokenIndex; i++)
-        {
-            var token = tokens[i];
-            if (token.TokenType is not (TSqlTokenType.SingleLineComment or TSqlTokenType.MultilineComment)
-                || token.Text is not { } text)
-            {
-                continue;
-            }
-
-            if (ContainsWord(text, "TODO"))
-            {
-                findings.Add(new DeprecatedSyntaxFinding(
-                    DeprecatedSyntaxFindingKind.TaskCommentTodo, parseResult.SourcePath, parseResult.SourcePath,
-                    token.Line, 1, "Comment contains an untracked \"TODO\" marker.", FindingConfidence.Low));
-            }
-
-            if (ContainsWord(text, "FIXME"))
-            {
-                findings.Add(new DeprecatedSyntaxFinding(
-                    DeprecatedSyntaxFindingKind.TaskCommentFixme, parseResult.SourcePath, parseResult.SourcePath,
-                    token.Line, 1, "Comment contains an untracked \"FIXME\" marker.", FindingConfidence.Low));
-            }
-        }
-    }
-
-    private static bool ContainsWord(string text, string word)
-    {
-        var index = 0;
-        while ((index = text.IndexOf(word, index, StringComparison.OrdinalIgnoreCase)) >= 0)
-        {
-            var before = index == 0 || !char.IsLetterOrDigit(text[index - 1]);
-            var afterIndex = index + word.Length;
-            var after = afterIndex >= text.Length || !char.IsLetterOrDigit(text[afterIndex]);
-            if (before && after)
-            {
-                return true;
-            }
-
-            index += word.Length;
-        }
-
-        return false;
     }
 
     private static string? TryGetModuleQualifiedName(TSqlFragment fragment)
@@ -224,9 +159,7 @@ public static class DeprecatedSyntaxScanner
 
     private static DeprecatedSyntaxFinding BuildComparisonFinding(DeprecatedSyntaxFindingKind kind, TSqlFragment node, string detail, string sourcePath) =>
         new(kind, sourcePath, sourcePath, node.StartLine, node.StartColumn, detail,
-            kind is DeprecatedSyntaxFindingKind.EqualsNullComparison or DeprecatedSyntaxFindingKind.NotEqualsNullComparison
-                ? FindingConfidence.High
-                : FindingConfidence.Medium);
+            FindingConfidence.High);
 
     private sealed class ComparisonFindingVisitor(string sourcePath, bool ansiNullsIsOff) : TSqlFragmentVisitor
     {
@@ -268,109 +201,7 @@ public static class DeprecatedSyntaxScanner
             }
         }
 
-        public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker)
-        {
-            if (node.SchemaObject.SchemaIdentifier is null or { Value: "sys" or "dbo" }
-                && LegacyCompatibilityViewNames.Contains(node.SchemaObject.BaseIdentifier.Value))
-            {
-                Add(DeprecatedSyntaxFindingKind.LegacySystemCompatibilityView, node.SchemaObject,
-                    $"\"{node.SchemaObject.BaseIdentifier.Value}\" is a pre-SQL-Server-2005 system compatibility view - use the real sys.* catalog view instead.");
-            }
-
-            if (node.TableHints is { Count: > 0 } hints
-                && node.ScriptTokenStream is { } tokens
-                && !HasPrecedingWithKeyword(tokens, hints[0].FirstTokenIndex))
-            {
-                Add(DeprecatedSyntaxFindingKind.TableHintWithoutWith, node,
-                    "Table hint written without the \"WITH\" keyword - a deprecated syntax form.");
-            }
-        }
-
-        public void OnEnterCreateProcedureStatement(CreateProcedureStatement node, ModuleWalker walker)
-        {
-            if (node.ProcedureReference.Number is not null)
-            {
-                Add(DeprecatedSyntaxFindingKind.NumberedProcedureDefinition, node.ProcedureReference,
-                    $"\"{SchemaObjectNameHelper.Qualify(node.ProcedureReference.Name)}\" is defined as a numbered-procedure-group member - a deprecated T-SQL feature.");
-            }
-        }
-
-        public void OnEnterExecutableProcedureReference(ExecutableProcedureReference node, ModuleWalker walker)
-        {
-            if (node.ProcedureReference?.ProcedureReference is { Number: not null } procRef)
-            {
-                Add(DeprecatedSyntaxFindingKind.NumberedProcedureExecution, node,
-                    $"\"{SchemaObjectNameHelper.Qualify(procRef.Name)}\" invoked by its numbered-procedure-group number - a deprecated T-SQL feature.");
-            }
-        }
-
-        public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
-        {
-            if (node.CallTarget is not null || node.FunctionName?.Value is not { } functionName)
-            {
-                return;
-            }
-
-            if (functionName.Equals("TEXTPTR", StringComparison.OrdinalIgnoreCase)
-                || functionName.Equals("TEXTVALID", StringComparison.OrdinalIgnoreCase))
-            {
-                Add(DeprecatedSyntaxFindingKind.LegacyLobFunction, node,
-                    $"{functionName.ToUpperInvariant()}() is a legacy function tied to the deprecated text/ntext/image large-object types - migrate the column to VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX) so it is no longer needed.");
-            }
-        }
-
-        public void OnEnterSetRowCountStatement(SetRowCountStatement node, ModuleWalker walker)
-        {
-            Add(DeprecatedSyntaxFindingKind.DeprecatedSetRowcount, node,
-                "SET ROWCOUNT silently caps rows affected/returned by every subsequent statement in the session right now, not just in some future release - oracle-confirmed (a nonzero SET ROWCOUNT before a multi-row insert makes a later SELECT COUNT(*) return the capped count, not the true one). It is also deprecated - use TOP (n) instead; Microsoft documents it as not honored by INSERT/UPDATE/DELETE in a future release.");
-        }
-
-        public void OnEnterReadTextStatement(ReadTextStatement node, ModuleWalker walker)
-        {
-            Add(DeprecatedSyntaxFindingKind.LegacyLobStatement, node,
-                $"READTEXT against \"{QualifyColumn(node.Column)}\" is a legacy statement for the deprecated text/ntext/image large-object types - migrate the column to VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX) and use SUBSTRING() instead.");
-        }
-
-        public void OnEnterWriteTextStatement(WriteTextStatement node, ModuleWalker walker)
-        {
-            Add(DeprecatedSyntaxFindingKind.LegacyLobStatement, node,
-                $"WRITETEXT against \"{QualifyColumn(node.Column)}\" is a legacy statement for the deprecated text/ntext/image large-object types - migrate the column to VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX) and use UPDATE instead.");
-        }
-
-        public void OnEnterUpdateTextStatement(UpdateTextStatement node, ModuleWalker walker)
-        {
-            Add(DeprecatedSyntaxFindingKind.LegacyLobStatement, node,
-                $"UPDATETEXT against \"{QualifyColumn(node.Column)}\" is a legacy statement for the deprecated text/ntext/image large-object types - migrate the column to VARCHAR(MAX)/NVARCHAR(MAX)/VARBINARY(MAX) and use UPDATE/STUFF() instead.");
-        }
-
-        private static bool HasPrecedingWithKeyword(IList<TSqlParserToken> tokens, int hintFirstTokenIndex)
-        {
-            var index = SkipBackWhitespace(tokens, hintFirstTokenIndex - 1);
-            if (index < 0 || tokens[index].TokenType != TSqlTokenType.LeftParenthesis)
-            {
-                return false;
-            }
-
-            index = SkipBackWhitespace(tokens, index - 1);
-            return index >= 0 && tokens[index].TokenType == TSqlTokenType.With;
-        }
-
-        private static int SkipBackWhitespace(IList<TSqlParserToken> tokens, int index)
-        {
-            while (index >= 0 && tokens[index].TokenType == TSqlTokenType.WhiteSpace)
-            {
-                index--;
-            }
-
-            return index;
-        }
-
         private void Add(DeprecatedSyntaxFindingKind kind, TSqlFragment node, string detail) =>
             Findings.Add(BuildComparisonFinding(kind, node, detail, sourcePath));
-
-        private static string QualifyColumn(ColumnReferenceExpression? column) =>
-            column?.MultiPartIdentifier?.Identifiers is { Count: > 0 } identifiers
-                ? string.Join(".", identifiers.Select(i => i.Value))
-                : "<unknown column>";
     }
 }

@@ -66,56 +66,6 @@ internal sealed class IndexHintRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => IndexHintScanner.Harvest((IndexHintScanner.Rule)moduleRule);
 }
 
-internal sealed class CodeMetricRule : IPerFileRule
-{
-    public string Id => "CodeMetricScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => CodeMetricScanner.Scan(parseResult);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<CodeMetricFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => CodeMetricScanner.CreateRule(parseResult.SourcePath, CodeMetricThresholds.Default);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => CodeMetricScanner.Harvest(parseResult, CodeMetricThresholds.Default, (CodeMetricScanner.Rule)moduleRule);
-}
-
-internal sealed class FormattingRule : IPerFileRule
-{
-    public string Id => "FormattingScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => FormattingScanner.Scan(parseResult);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<FormattingFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => FormattingScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FormattingScanner.Harvest(parseResult, (FormattingScanner.Rule)moduleRule);
-}
-
-internal sealed class NamingRule : IPerFileRule
-{
-    public string Id => "NamingScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => NamingScanner.Scan(parseResult, context.Catalog);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<NamingFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => NamingScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => NamingScanner.Harvest((NamingScanner.Rule)moduleRule);
-}
-
-internal sealed class DeadCodeRule : IPerFileRule
-{
-    public string Id => "DeadCodeScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DeadCodeScanner.Scan(parseResult);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<DeadCodeFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DeadCodeScanner.CreateRule(parseResult.SourcePath);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => DeadCodeScanner.Harvest((DeadCodeScanner.Rule)moduleRule);
-}
-
-internal sealed class DuplicationRule : IPerFileRule
-{
-    public string Id => "DuplicationScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => DuplicationScanner.Scan(parseResult, context.Catalog);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<DuplicationFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => DuplicationScanner.CreateRule(parseResult.SourcePath, context.Catalog);
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => DuplicationScanner.Harvest(parseResult, context.Catalog, (DuplicationScanner.Rule)moduleRule);
-}
-
 internal sealed class DeprecatedSyntaxRule : IPerFileRule
 {
     public string Id => "DeprecatedSyntaxScanner";

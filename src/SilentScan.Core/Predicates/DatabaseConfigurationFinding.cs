@@ -3,23 +3,13 @@ namespace SilentScan.Core.Predicates;
 
 public enum DatabaseConfigurationFindingKind
 {
-    PageVerifyNotChecksum,
-
     AutoShrinkOn,
 
     AutoCloseOn,
 
-    TargetRecoveryTimeUnset,
-
-    QueryStoreNotReadWrite,
-
-    QueryStoreCaptureModeNotAuto,
-
     AutoCreateStatisticsOff,
 
     AutoUpdateStatisticsOff,
-
-    CompatibilityLevelBehindEngineDefault,
 
     SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange,
 

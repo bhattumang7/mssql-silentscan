@@ -14,8 +14,6 @@ public enum QueryAntiPatternFindingKind
 
     RbarSingleRowLoopDml,
 
-    GlobalCursorDeclaration,
-
     CountStarVariableExistenceCheck,
 
     NonAggregateHavingPredicate,
@@ -29,8 +27,6 @@ public enum QueryAntiPatternFindingKind
 
     MergeUnconditionalDelete,
 
-
-    UnboundedTableWrite,
 
 
     MultiRowInsertIgnoreDupKeyDrop,

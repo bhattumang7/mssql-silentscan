@@ -265,15 +265,10 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(DatabaseConfigurationFindingKind.PageVerifyNotChecksum, "warning", "PAGE_VERIFY is not CHECKSUM")]
     [InlineData(DatabaseConfigurationFindingKind.AutoShrinkOn, "warning", "AUTO_SHRINK is ON")]
     [InlineData(DatabaseConfigurationFindingKind.AutoCloseOn, "warning", "AUTO_CLOSE is ON")]
-    [InlineData(DatabaseConfigurationFindingKind.TargetRecoveryTimeUnset, "warning", "TARGET_RECOVERY_TIME is 0")]
-    [InlineData(DatabaseConfigurationFindingKind.QueryStoreNotReadWrite, "note", "Query Store is not actively running")]
-    [InlineData(DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto, "note", "capture mode other than AUTO")]
     [InlineData(DatabaseConfigurationFindingKind.AutoCreateStatisticsOff, "warning", "AUTO_CREATE_STATISTICS is OFF")]
     [InlineData(DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff, "warning", "AUTO_UPDATE_STATISTICS is OFF")]
-    [InlineData(DatabaseConfigurationFindingKind.CompatibilityLevelBehindEngineDefault, "warning", "compatibility level is behind")]
     public void Write_DatabaseConfigurationFinding_MapsKindToDistinctLevelAndMessage(DatabaseConfigurationFindingKind kind, string expectedLevel, string expectedSubstring)
     {
         var finding = new DatabaseConfigurationFinding(kind, "TestDb");
@@ -469,89 +464,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(CodeMetricFindingKind.LineTooLong, 120, 100, null, "Line is 120 characters long, which is greater than the 100 authorized.")]
-    [InlineData(CodeMetricFindingKind.ModuleTooLong, 900, 500, null, "'dbo.usp_Test' has 900 lines, which is greater than the 500 authorized.")]
-    [InlineData(CodeMetricFindingKind.NestingTooDeep, 6, 4, null, "Control flow nests 6 levels deep here, which is greater than the 4 authorized.")]
-    [InlineData(CodeMetricFindingKind.TooManyConditionalOperators, 8, 5, null, "This condition chains 8 AND/OR operators, which is greater than the 5 authorized.")]
-    [InlineData(CodeMetricFindingKind.TooManyCaseBranches, 20, 10, null, "This CASE expression has 20 WHEN branches, which is greater than the 10 authorized.")]
-    [InlineData(CodeMetricFindingKind.CaseBranchTooLong, 15, 8, null, "This CASE WHEN branch spans 15 lines, which is greater than the 8 authorized.")]
-    [InlineData(CodeMetricFindingKind.RoutineTooLong, 300, 150, "Procedure", "Procedure 'dbo.usp_Test' has 300 lines of code, which is greater than the 150 authorized.")]
-    [InlineData(CodeMetricFindingKind.TooManyParameters, 25, 15, "Procedure", "Procedure 'dbo.usp_Test' has 25 parameters, which is greater than the 15 authorized.")]
-    public void Write_CodeMetricFinding_MapsKindToExactMessageAndAlwaysNoteLevel(CodeMetricFindingKind kind, int measuredValue, int threshold, string? detailText, string expectedMessage)
-    {
-        var finding = new CodeMetricFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, measuredValue, threshold, detailText, FindingConfidence.High);
-        var report = TestScanReports.Build(CodeMetricFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal("note", result.GetProperty("level").GetString());
-        Assert.Equal(expectedMessage, result.GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_FormattingMultipleDeclarationsOnSameLine_InterpolatesVariableNameFromDetailText()
-    {
-        var finding = new FormattingFinding(FormattingFindingKind.MultipleDeclarationsOnSameLine, "dbo.usp_Test", "test.sql", 1, 1, DetailText: "@Second");
-        var report = TestScanReports.Build(FormattingFindings: [finding]);
-
-        Assert.Equal(
-            "'@Second' is declared on the same physical source line as the previous variable - declare each on its own line.",
-            FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_FormattingMissingFileHeaderCommentDefaultArm_UsesFixedModuleCommentMessage()
-    {
-        var finding = new FormattingFinding(FormattingFindingKind.MissingFileHeaderComment, "dbo.usp_Test", "test.sql", 1, 1);
-        var report = TestScanReports.Build(FormattingFindings: [finding]);
-
-        Assert.Equal(
-            "This module's own definition does not begin with a comment before its first real statement.",
-            FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_FormattingTabCharacterUsed_UsesFixedTabMessage()
-    {
-        var finding = new FormattingFinding(FormattingFindingKind.TabCharacterUsed, "dbo.usp_Test", "test.sql", 1, 1);
-        var report = TestScanReports.Build(FormattingFindings: [finding]);
-
-        Assert.Contains("contains a tab character", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Theory]
-    [InlineData(DuplicationFindingKind.CommentedOutCode, null, "reparses as plausible T-SQL")]
-    [InlineData(DuplicationFindingKind.DuplicatedStringLiteral, "'ACTIVE'", "String literal 'ACTIVE' -")]
-    [InlineData(DuplicationFindingKind.SelfAssignment, "@x = @x", "\"@x = @x\" is assigned to itself")]
-    [InlineData(DuplicationFindingKind.AlwaysTrueOrFalseLiteralComparison, "always false", "is always false regardless")]
-    [InlineData(DuplicationFindingKind.CollapsibleNestedIf, null, "combine both conditions with AND")]
-    [InlineData(DuplicationFindingKind.AllBranchesIdentical, null, "the structure itself is pointless")]
-    public void Write_DuplicationFinding_MapsKindToDistinctMessageAndWarningLevelAtHighConfidence(DuplicationFindingKind kind, string? detailText, string expectedSubstring)
-    {
-        var finding = new DuplicationFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, detailText, FindingConfidence.High);
-        var report = TestScanReports.Build(DuplicationFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal("warning", result.GetProperty("level").GetString());
-        Assert.Contains(expectedSubstring, result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData(DeadCodeFindingKind.UnreachableCode, null, "can never execute")]
-    [InlineData(DeadCodeFindingKind.UnusedLabel, "MyLabel", "Label \"MyLabel\" is never the target of a GOTO")]
-    [InlineData(DeadCodeFindingKind.UnusedLocalVariable, "@x", "Local variable \"@x\" is declared but never read")]
-    [InlineData(DeadCodeFindingKind.UnusedParameter, "@p", "Parameter \"@p\" is never referenced")]
-    [InlineData(DeadCodeFindingKind.RedundantJump, "NextStep", "GOTO NextStep jumps to the very next statement")]
-    public void Write_DeadCodeFinding_MapsKindToDistinctMessageAndWarningLevel(DeadCodeFindingKind kind, string? detailText, string expectedSubstring)
-    {
-        var finding = new DeadCodeFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, detailText, FindingConfidence.High);
-        var report = TestScanReports.Build(DeadCodeFindings: [finding]);
-
-        var result = FirstResult(report);
-        Assert.Equal("warning", result.GetProperty("level").GetString());
-        Assert.Contains(expectedSubstring, result.GetProperty("message").GetProperty("text").GetString()!, StringComparison.Ordinal);
-    }
-
-    [Theory]
     [InlineData(CheckConstraintFindingKind.NullNotHandled, "no IS NULL/IS NOT NULL test")]
     [InlineData(CheckConstraintFindingKind.ConstraintOnIdentityColumn, "references the IDENTITY column")]
     public void Write_CheckConstraintFinding_MapsKindToDistinctMessageAndErrorLevel(CheckConstraintFindingKind kind, string expectedSubstring)
@@ -567,11 +479,9 @@ public sealed class SarifReportWriterCoverageTests
     [Theory]
     [InlineData(TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment, "error")]
     [InlineData(TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml, "error")]
-    [InlineData(TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation, "note")]
     [InlineData(TriggerCorrectnessFindingKind.DirectRecursiveTrigger, "warning")]
     [InlineData(TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath, "error")]
     [InlineData(TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison, "warning")]
-    [InlineData(TriggerCorrectnessFindingKind.LogonTriggerHostNameGate, "error")]
     public void Write_TriggerCorrectnessFinding_MapsEachKindToItsOwnLevel(TriggerCorrectnessFindingKind kind, string expectedLevel)
     {
         var finding = new TriggerCorrectnessFinding(kind, "dbo.trg_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);
@@ -697,7 +607,6 @@ public sealed class SarifReportWriterCoverageTests
     [InlineData(QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, "error")]
     [InlineData(QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, "error")]
     [InlineData(QueryAntiPatternFindingKind.NonAggregateHavingPredicate, "warning")]
-    [InlineData(QueryAntiPatternFindingKind.GlobalCursorDeclaration, "warning")]
     public void Write_QueryAntiPatternFinding_MapsKindToItsOwnLevelBucket(QueryAntiPatternFindingKind kind, string expectedLevel)
     {
         var finding = new QueryAntiPatternFinding(kind, "test.sql", 1, 1, "detail", FindingConfidence.High);
@@ -753,17 +662,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(SessionDateSettingKind.DateFormat, "SET DATEFORMAT changes")]
-    [InlineData(SessionDateSettingKind.DateFirst, "SET DATEFIRST changes")]
-    public void Write_SessionDateSettingFinding_MapsKindToDistinctMessage(SessionDateSettingKind kind, string expectedSubstring)
-    {
-        var finding = new SessionDateSettingFinding(kind, "test.sql", 1, 1);
-        var report = TestScanReports.Build(SessionDateSettingFindings: [finding]);
-
-        Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Theory]
     [InlineData(IndexHintFindingKind.HintedIndexNotSeekable, "warning", "degrades the forced index to a full scan")]
     public void Write_IndexHintFinding_MapsKindToItsOwnLevelAndMessage(IndexHintFindingKind kind, string expectedLevel, string expectedSubstring)
     {
@@ -788,17 +686,6 @@ public sealed class SarifReportWriterCoverageTests
         var region = result.GetProperty("locations")[0].GetProperty("physicalLocation").GetProperty("region");
         Assert.Equal(9, region.GetProperty("startLine").GetInt32());
         Assert.Equal(4, region.GetProperty("startColumn").GetInt32());
-    }
-
-    [Theory]
-    [InlineData(true, "holds this worker thread idle inside an open transaction")]
-    [InlineData(false, "contributing to worker-pool exhaustion")]
-    public void Write_WaitForFinding_MapsInsideTransactionFlagToDistinctMessage(bool isInsideTransaction, string expectedSubstring)
-    {
-        var finding = new WaitForFinding("test.sql", 1, 1, isInsideTransaction);
-        var report = TestScanReports.Build(WaitForFindings: [finding]);
-
-        Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
     }
 
     [Fact]
@@ -898,22 +785,10 @@ public sealed class SarifReportWriterCoverageTests
         Assert.Contains(expectedSubstring, FirstResult(report).GetProperty("message").GetProperty("text").GetString());
     }
 
-    [Theory]
-    [InlineData(StatementShapeFindingKind.BareSelectStar, "note")]
-    [InlineData(StatementShapeFindingKind.TableWithNoPrimaryKey, "warning")]
-    public void Write_StatementShapeFinding_OnlyBareSelectStarIsDowngradedToNote(StatementShapeFindingKind kind, string expectedLevel)
-    {
-        var finding = new StatementShapeFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);
-        var report = TestScanReports.Build(StatementShapeFindings: [finding]);
-
-        Assert.Equal(expectedLevel, FirstResult(report).GetProperty("level").GetString());
-    }
 
     [Theory]
-    [InlineData(ControlFlowRiskFindingKind.EmptyCatchBlock, "error")]
     [InlineData(ControlFlowRiskFindingKind.CaseExpressionMissingElse, "error")]
     [InlineData(ControlFlowRiskFindingKind.NonDeterministicCaseInput, "error")]
-    [InlineData(ControlFlowRiskFindingKind.TriggerEmitsOutput, "warning")]
     public void Write_ControlFlowRiskFinding_OnlyTheThreeNamedKindsAreError(ControlFlowRiskFindingKind kind, string expectedLevel)
     {
         var finding = new ControlFlowRiskFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);
@@ -922,38 +797,6 @@ public sealed class SarifReportWriterCoverageTests
         Assert.Equal(expectedLevel, FirstResult(report).GetProperty("level").GetString());
     }
 
-
-    [Theory]
-    [InlineData(DeprecatedSyntaxFindingKind.TaskCommentTodo, "note")]
-    [InlineData(DeprecatedSyntaxFindingKind.TaskCommentFixme, "note")]
-    public void Write_DeprecatedSyntaxFinding_OnlyTaskCommentsAreDowngradedToNote(DeprecatedSyntaxFindingKind kind, string expectedLevel)
-    {
-        var finding = new DeprecatedSyntaxFinding(kind, "dbo.usp_Test", "test.sql", 1, 1, "detail", FindingConfidence.High);
-        var report = TestScanReports.Build(DeprecatedSyntaxFindings: [finding]);
-
-        Assert.Equal(expectedLevel, FirstResult(report).GetProperty("level").GetString());
-    }
-
-    [Fact]
-    public void Write_CascadingForeignKeyWithBothActionsSet_JoinsBothActionsIntoMessage()
-    {
-        var finding = new CascadingForeignKeyFinding("FK_Test", "dbo.Parent", "dbo.Child", ReferentialAction.Cascade, ReferentialAction.SetNull, "test.sql", 1);
-        var report = TestScanReports.Build(CascadingForeignKeyFindings: [finding]);
-
-        var message = FirstResult(report).GetProperty("message").GetProperty("text").GetString()!;
-        Assert.Contains("ON DELETE Cascade, ON UPDATE SetNull", message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Write_CascadingForeignKeyWithOnlyDeleteActionSet_OmitsUpdateActionClause()
-    {
-        var finding = new CascadingForeignKeyFinding("FK_Test", "dbo.Parent", "dbo.Child", ReferentialAction.Cascade, ReferentialAction.NoAction, "test.sql", 1);
-        var report = TestScanReports.Build(CascadingForeignKeyFindings: [finding]);
-
-        var message = FirstResult(report).GetProperty("message").GetProperty("text").GetString()!;
-        Assert.Contains("ON DELETE Cascade", message, StringComparison.Ordinal);
-        Assert.DoesNotContain("ON UPDATE", message, StringComparison.Ordinal);
-    }
 
     [Fact]
     public void Write_RegexpReplaceDollarBackreferenceFinding_EmitsItsOwnRule()

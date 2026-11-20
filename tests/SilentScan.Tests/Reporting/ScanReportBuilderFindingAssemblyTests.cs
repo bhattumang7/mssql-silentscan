@@ -8,30 +8,6 @@ namespace SilentScan.Tests.Reporting;
 
 public sealed class ScanReportBuilderFindingAssemblyTests
 {
-    [Fact]
-    public void MinimumConfidence_FiltersEachFindingByItsOwnConfidence_NotAllOrNothing()
-    {
-        const string Sql = """
-            -- TODO: revisit this once the migration lands
-            CREATE TABLE dbo.T (Col INT NOT NULL);
-            GO
-            SELECT 1 FROM dbo.T WHERE Col = NULL;
-            """;
-
-        var result = SqlScriptParser.ParseText("confidence.sql", Sql);
-        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        var catalog = CatalogBuilder.Build([result]);
-
-        var defaultReport = ScanReportBuilder.BuildFromParseResults([result], catalog);
-
-        Assert.DoesNotContain(defaultReport.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner"), f => f.Kind == DeprecatedSyntaxFindingKind.TaskCommentTodo);
-        Assert.Contains(defaultReport.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner"), f => f.Kind == DeprecatedSyntaxFindingKind.EqualsNullComparison);
-
-        var lowConfidenceReport = ScanReportBuilder.BuildFromParseResults([result], catalog, FindingConfidence.Low);
-
-        Assert.Contains(lowConfidenceReport.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner"), f => f.Kind == DeprecatedSyntaxFindingKind.TaskCommentTodo);
-        Assert.Contains(lowConfidenceReport.Find<DeprecatedSyntaxFinding>("DeprecatedSyntaxScanner"), f => f.Kind == DeprecatedSyntaxFindingKind.EqualsNullComparison);
-    }
 
     [Fact]
     public void SeekPreservedAndUnknownVerdicts_AreExcludedFromTypedFindingsButStillCountedInSummary()

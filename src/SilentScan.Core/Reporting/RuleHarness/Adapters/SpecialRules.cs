@@ -40,23 +40,6 @@ internal sealed class ProcCallTableValuedArgumentMismatchRule : IPerFileRule
         ProcCallTableValuedArgumentMismatchScanner.Harvest((ProcCallTableValuedArgumentMismatchScanner.Rule)moduleRule);
 }
 
-internal sealed class StatementShapeRule : IPerFileRule
-{
-    public string Id => "StatementShapeScanner";
-
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StatementShapeScanner.Scan(parseResult);
-
-    public IReadOnlyList<IFinding> ScanCatalogOnce(RuleContext context) => StatementShapeScanner.ScanCatalog(context.Catalog);
-
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<StatementShapeFinding>(f => f.Kind);
-
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StatementShapeScanner.CreateRule(parseResult.SourcePath);
-
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StatementShapeScanner.Harvest((StatementShapeScanner.Rule)moduleRule);
-}
-
 internal sealed class MultiReferencedCteRule : IPerFileRule
 {
     public string Id => "MultiReferencedCteScanner";

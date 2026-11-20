@@ -28,16 +28,13 @@ public sealed class DatabaseConfigurationReader
         var findings = new List<DatabaseConfigurationFinding>();
         AddSnapshotFindings(findings, snapshot);
 
-        var engineDefaultCompatibilityLevel = await AddCompatibilityLevelFindingsAsync(
-            connection, snapshot, findings, cancellationToken);
+        var engineDefaultCompatibilityLevel = await ReadEngineDefaultCompatibilityLevelAsync(connection, cancellationToken);
 
         if (engineDefaultCompatibilityLevel > snapshot.CompatibilityLevel)
         {
             await AddSpatialCompatibilityFindingsAsync(
                 connection, snapshot.DatabaseName, engineDefaultCompatibilityLevel.Value, findings, cancellationToken);
         }
-
-        await AddQueryStoreFindingsAsync(connection, snapshot.DatabaseName, findings, cancellationToken);
 
         await AddPlanGuideFindingsAsync(connection, snapshot.DatabaseName, findings, cancellationToken);
 
@@ -49,8 +46,8 @@ public sealed class DatabaseConfigurationReader
     {
         await using var command = connection.CreateReadOnlyCommand(
             """
-            SELECT name, page_verify_option_desc, is_auto_shrink_on, is_auto_close_on,
-                   target_recovery_time_in_seconds, is_auto_create_stats_on, is_auto_update_stats_on,
+            SELECT name, is_auto_shrink_on, is_auto_close_on,
+                   is_auto_create_stats_on, is_auto_update_stats_on,
                    compatibility_level
             FROM sys.databases
             WHERE database_id = DB_ID();
@@ -64,22 +61,15 @@ public sealed class DatabaseConfigurationReader
 
         return new DatabaseConfigurationSnapshot(
             DatabaseName: reader.GetString(0),
-            PageVerifyOptionDesc: reader.GetString(1),
-            IsAutoShrinkOn: reader.GetBoolean(2),
-            IsAutoCloseOn: reader.GetBoolean(3),
-            TargetRecoveryTimeInSeconds: reader.GetInt32(4),
-            IsAutoCreateStatsOn: reader.GetBoolean(5),
-            IsAutoUpdateStatsOn: reader.GetBoolean(6),
-            CompatibilityLevel: reader.GetByte(7));
+            IsAutoShrinkOn: reader.GetBoolean(1),
+            IsAutoCloseOn: reader.GetBoolean(2),
+            IsAutoCreateStatsOn: reader.GetBoolean(3),
+            IsAutoUpdateStatsOn: reader.GetBoolean(4),
+            CompatibilityLevel: reader.GetByte(5));
     }
 
     private static void AddSnapshotFindings(List<DatabaseConfigurationFinding> findings, DatabaseConfigurationSnapshot snapshot)
     {
-        if (!string.Equals(snapshot.PageVerifyOptionDesc, "CHECKSUM", StringComparison.OrdinalIgnoreCase))
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.PageVerifyNotChecksum, snapshot.DatabaseName));
-        }
-
         if (snapshot.IsAutoShrinkOn)
         {
             findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoShrinkOn, snapshot.DatabaseName));
@@ -88,11 +78,6 @@ public sealed class DatabaseConfigurationReader
         if (snapshot.IsAutoCloseOn)
         {
             findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoCloseOn, snapshot.DatabaseName));
-        }
-
-        if (snapshot.TargetRecoveryTimeInSeconds == 0)
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.TargetRecoveryTimeUnset, snapshot.DatabaseName));
         }
 
         if (!snapshot.IsAutoCreateStatsOn)
@@ -106,10 +91,8 @@ public sealed class DatabaseConfigurationReader
         }
     }
 
-    private static async Task<int?> AddCompatibilityLevelFindingsAsync(
+    private static async Task<int?> ReadEngineDefaultCompatibilityLevelAsync(
         SqlConnection connection,
-        DatabaseConfigurationSnapshot snapshot,
-        List<DatabaseConfigurationFinding> findings,
         CancellationToken cancellationToken)
     {
         await using var modelCommand = connection.CreateReadOnlyCommand(
@@ -121,13 +104,7 @@ public sealed class DatabaseConfigurationReader
             return null;
         }
 
-        int engineDefaultCompatibilityLevel = modelReader.GetByte(0);
-        if (snapshot.CompatibilityLevel < engineDefaultCompatibilityLevel)
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.CompatibilityLevelBehindEngineDefault, snapshot.DatabaseName));
-        }
-
-        return engineDefaultCompatibilityLevel;
+        return (int)modelReader.GetByte(0);
     }
 
     private static async Task AddSpatialCompatibilityFindingsAsync(
@@ -168,36 +145,6 @@ public sealed class DatabaseConfigurationReader
         }
     }
 
-    private static async Task AddQueryStoreFindingsAsync(
-        SqlConnection connection,
-        string databaseName,
-        List<DatabaseConfigurationFinding> findings,
-        CancellationToken cancellationToken)
-    {
-        await using var queryStoreCommand = connection.CreateReadOnlyCommand(
-            "SELECT actual_state_desc, query_capture_mode_desc FROM sys.database_query_store_options;");
-        await using var reader = await queryStoreCommand.ExecuteReaderAsync(cancellationToken);
-
-        if (!await reader.ReadAsync(cancellationToken))
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.QueryStoreNotReadWrite, databaseName));
-            return;
-        }
-
-        var actualStateDesc = reader.GetString(0);
-        var captureModeDesc = reader.GetString(1);
-        var isReadWrite = string.Equals(actualStateDesc, "READ_WRITE", StringComparison.OrdinalIgnoreCase);
-
-        if (!isReadWrite)
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.QueryStoreNotReadWrite, databaseName));
-        }
-        else if (!string.Equals(captureModeDesc, "AUTO", StringComparison.OrdinalIgnoreCase))
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.QueryStoreCaptureModeNotAuto, databaseName));
-        }
-    }
-
     private static async Task AddPlanGuideFindingsAsync(
         SqlConnection connection,
         string databaseName,
@@ -226,10 +173,8 @@ public sealed class DatabaseConfigurationReader
 
     private sealed record DatabaseConfigurationSnapshot(
         string DatabaseName,
-        string PageVerifyOptionDesc,
         bool IsAutoShrinkOn,
         bool IsAutoCloseOn,
-        int TargetRecoveryTimeInSeconds,
         bool IsAutoCreateStatsOn,
         bool IsAutoUpdateStatsOn,
         int CompatibilityLevel);

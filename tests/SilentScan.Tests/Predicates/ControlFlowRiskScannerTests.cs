@@ -14,118 +14,6 @@ public sealed class ControlFlowRiskScannerTests
     }
 
     [Fact]
-    public void EmptyCatchBlock_Fires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                BEGIN TRY
-                    SELECT 1;
-                END TRY
-                BEGIN CATCH
-                END CATCH
-            END
-            """);
-
-        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.EmptyCatchBlock);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void EmptyCatchBlock_ReportsARealLineNotASentinel()
-    {
-
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                BEGIN TRY
-                    SELECT 1;
-                END TRY
-                BEGIN CATCH
-                END CATCH
-            END
-            """);
-
-        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.EmptyCatchBlock);
-        Assert.True(finding.Line > 0, $"expected a real, positive line number, got {finding.Line}");
-        Assert.True(finding.Column > 0, $"expected a real, positive column number, got {finding.Column}");
-    }
-
-    [Fact]
-    public void CatchBlockWithStatements_NeverFires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                BEGIN TRY
-                    SELECT 1;
-                END TRY
-                BEGIN CATCH
-                    THROW;
-                END CATCH
-            END
-            """);
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.EmptyCatchBlock);
-    }
-
-    [Fact]
-    public void SelectInTrigger_Fires()
-    {
-        var findings = Scan("CREATE TRIGGER dbo.Trg ON dbo.T AFTER INSERT AS BEGIN SELECT * FROM inserted; END");
-
-        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void PrintInTrigger_Fires()
-    {
-        var findings = Scan("CREATE TRIGGER dbo.Trg ON dbo.T AFTER INSERT AS BEGIN PRINT 'fired'; END");
-
-        Assert.Contains(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
-    }
-
-    [Fact]
-    public void AssignmentOnlySelectInTrigger_NeverFires()
-    {
-        var findings = Scan("""
-            CREATE TRIGGER dbo.Trg ON dbo.T AFTER INSERT AS
-            BEGIN
-                DECLARE @id INT;
-                SELECT @id = Id FROM inserted;
-            END
-            """);
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
-    }
-
-    [Fact]
-    public void SelectIntoInTrigger_NeverFires()
-    {
-        var findings = Scan("CREATE TRIGGER dbo.Trg ON dbo.T AFTER INSERT AS BEGIN SELECT * INTO #tmp FROM inserted; END");
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
-    }
-
-    [Fact]
-    public void CursorDefiningSelectInTrigger_NeverFiresTriggerOutput()
-    {
-
-        var findings = Scan("""
-            CREATE TRIGGER dbo.Trg ON dbo.T AFTER INSERT AS
-            BEGIN
-                DECLARE cur CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM inserted;
-                OPEN cur;
-                CLOSE cur;
-                DEALLOCATE cur;
-            END
-            """);
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
-    }
-
-    [Fact]
     public void NoLockInsideCursorDefiningSelectInTrigger_StillFiresDirtyRead()
     {
 
@@ -140,14 +28,6 @@ public sealed class ControlFlowRiskScannerTests
             """);
 
         Assert.Contains(findings, f => f.Kind == ControlFlowRiskFindingKind.DirtyReadIsolationHint);
-    }
-
-    [Fact]
-    public void SelectInOrdinaryProcedure_NeverFiresTriggerOutput()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.P AS BEGIN SELECT 1; END");
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.TriggerEmitsOutput);
     }
 
     [Fact]
@@ -218,36 +98,6 @@ public sealed class ControlFlowRiskScannerTests
             """);
 
         Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.LegacyIdentityIntrinsic);
-    }
-
-    [Fact]
-    public void Goto_Fires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                GOTO Done;
-                SELECT 1;
-                Done:
-                SELECT 2;
-            END
-            """);
-
-        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.GotoUsage);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void NoGoto_NeverFires()
-    {
-        var findings = Scan("""
-            CREATE PROCEDURE dbo.P AS
-            BEGIN
-                SELECT 1;
-            END
-            """);
-
-        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.GotoUsage);
     }
 
     [Fact]

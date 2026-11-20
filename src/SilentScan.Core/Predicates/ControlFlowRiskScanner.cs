@@ -43,82 +43,8 @@ public static class ControlFlowRiskScanner
 
         private static string CurrentModule(ModuleWalker walker) => walker.CurrentProcScope ?? "(batch)";
 
-        private bool _inTrigger;
-
-        private readonly HashSet<SelectStatement> _cursorDefiningSelects = new(ReferenceEqualityComparer.Instance);
-
         private static readonly HashSet<string> NonDeterministicFunctionNames =
             new(StringComparer.OrdinalIgnoreCase) { "NEWID", "RAND", "CRYPT_GEN_RANDOM" };
-
-        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => ResetCursorTracking();
-
-        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => ResetCursorTracking();
-
-        public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker)
-        {
-            _inTrigger = true;
-            ResetCursorTracking();
-        }
-
-        public void OnLeaveTriggerBody(TriggerStatementBody node, ModuleWalker walker)
-        {
-            _inTrigger = false;
-            ResetCursorTracking();
-        }
-
-        private void ResetCursorTracking()
-        {
-            _cursorDefiningSelects.Clear();
-        }
-
-        public void OnEnterDeclareCursorStatement(DeclareCursorStatement node, ModuleWalker walker)
-        {
-            if (node.CursorDefinition.Select is { } cursorSelect)
-            {
-                _cursorDefiningSelects.Add(cursorSelect);
-            }
-        }
-
-        public void OnEnterTryCatchStatement(TryCatchStatement node, ModuleWalker walker)
-        {
-            if (node.CatchStatements.Statements.Count == 0)
-            {
-
-                Findings.Add(new ControlFlowRiskFinding(
-                    ControlFlowRiskFindingKind.EmptyCatchBlock,
-                    CurrentModule(walker), sourcePath, node.StartLine, node.StartColumn,
-                    "This CATCH block has no statements at all - every error reaching it is silently swallowed.",
-                    FindingConfidence.High));
-            }
-        }
-
-        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker)
-        {
-            if (_inTrigger && !IsAssignmentOnlySelect(node) && !_cursorDefiningSelects.Contains(node))
-            {
-                var message = catalog.IsDisallowResultsFromTriggersEnabled == true
-                    ? "A SELECT with a real result set inside a trigger raises Msg 524 and rolls back the triggering DML entirely, because this server has 'disallow results from triggers' enabled - it never reaches the connection that fired the DML."
-                    : "A SELECT with a real result set inside a trigger sends output back to whatever connection fired the DML, not the application that issued it.";
-
-                Findings.Add(new ControlFlowRiskFinding(
-                    ControlFlowRiskFindingKind.TriggerEmitsOutput,
-                    CurrentModule(walker), sourcePath, node.StartLine, node.StartColumn,
-                    message,
-                    FindingConfidence.Medium));
-            }
-        }
-
-        public void OnEnterPrintStatement(PrintStatement node, ModuleWalker walker)
-        {
-            if (_inTrigger)
-            {
-                Findings.Add(new ControlFlowRiskFinding(
-                    ControlFlowRiskFindingKind.TriggerEmitsOutput,
-                    CurrentModule(walker), sourcePath, node.StartLine, node.StartColumn,
-                    "A PRINT inside a trigger sends a message back to whatever connection fired the DML, not the application that issued it.",
-                    FindingConfidence.Medium));
-            }
-        }
 
         public void OnEnterTableHint(TableHint node, ModuleWalker walker)
         {
@@ -163,14 +89,6 @@ public static class ControlFlowRiskScanner
                     FindingConfidence.Medium));
             }
         }
-
-        public void OnEnterGoToStatement(GoToStatement node, ModuleWalker walker) =>
-            Findings.Add(new ControlFlowRiskFinding(
-                ControlFlowRiskFindingKind.GotoUsage,
-                CurrentModule(walker), sourcePath, node.StartLine, node.StartColumn,
-                "GOTO makes control flow harder to follow, and this codebase's own dead-code analysis " +
-                "already declines its entire reachability check for any routine that contains one.",
-                FindingConfidence.High));
 
         public void OnEnterOperandPosition(TSqlFragment node, ModuleWalker walker)
         {
@@ -289,17 +207,6 @@ public static class ControlFlowRiskScanner
 
                 base.ExplicitVisit(node);
             }
-        }
-
-        private static bool IsAssignmentOnlySelect(SelectStatement node)
-        {
-            if (node.Into is not null)
-            {
-                return true;
-            }
-
-            return node.QueryExpression is QuerySpecification { SelectElements: { Count: > 0 } elements }
-                && elements.All(e => e is SelectSetVariable);
         }
     }
 }

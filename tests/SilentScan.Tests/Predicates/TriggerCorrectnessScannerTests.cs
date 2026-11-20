@@ -115,37 +115,6 @@ public sealed class TriggerCorrectnessScannerTests
     }
 
     [Fact]
-    public void TriggerBodyWithNoGuard_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN UPDATE dbo.Other SET Val = 1 WHERE Id = 1; END;");
-
-        var finding = Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation);
-        Assert.Equal(FindingConfidence.Low, finding.Confidence);
-    }
-
-    [Fact]
-    public void TriggerBodyWithRowCountGuard_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN IF @@ROWCOUNT = 0 RETURN; UPDATE dbo.Other SET Val = 1 WHERE Id = 1; END;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation);
-    }
-
-    [Fact]
-    public void TriggerBodyWithNotExistsGuard_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN IF NOT EXISTS (SELECT * FROM inserted) RETURN; UPDATE dbo.Other SET Val = 1 WHERE Id = 1; END;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.NoEarlyOutForEmptyInvocation);
-    }
-
-    [Fact]
     public void SelfWritingTrigger_RecursiveTriggersOn_Fires()
     {
         var findings = Scan(
@@ -439,36 +408,5 @@ public sealed class TriggerCorrectnessScannerTests
             + "END;");
 
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison);
-    }
-
-    [Fact]
-    public void LogonTrigger_HostNameGateWithRollback_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_HostGate ON ALL SERVER FOR LOGON AS "
-            + "BEGIN IF HOST_NAME() NOT IN ('APPSERVER01') ROLLBACK; END;");
-
-        var finding = Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.LogonTriggerHostNameGate);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void LogonTrigger_HostNameCheckedButNoRollback_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_HostGate ON ALL SERVER FOR LOGON AS "
-            + "BEGIN IF HOST_NAME() NOT IN ('APPSERVER01') PRINT 'unexpected host'; END;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.LogonTriggerHostNameGate);
-    }
-
-    [Fact]
-    public void LogonTrigger_RollbackWithoutHostNameCheck_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_HostGate ON ALL SERVER FOR LOGON AS "
-            + "BEGIN IF ORIGINAL_LOGIN() NOT IN ('sa') ROLLBACK; END;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.LogonTriggerHostNameGate);
     }
 }

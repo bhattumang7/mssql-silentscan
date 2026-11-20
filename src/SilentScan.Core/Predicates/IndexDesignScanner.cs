@@ -38,15 +38,10 @@ public static class IndexDesignScanner
             ScanHeapFindings(table, findings);
             ScanClusteringKeyQuality(table, defaultTextByColumn, catalog.IdentifierComparer, findings);
             ScanDuplicateAndSubsumedIndexes(table, catalog.IdentifierComparer, findings);
-            ScanDisabledAndHypotheticalIndexes(table, findings);
             ScanFilteredIndexColumnCoverage(table, catalog.CompatibilityLevel, catalog.IdentifierComparer, findings);
-            ScanColumnTypeSignals(table, findings);
             ScanFloatOrRealIndexKeyColumns(table, catalog.IdentifierComparer, findings);
             ScanNoRecomputeStatistics(table, findings);
-            ScanVariableLengthKeyColumnWidth(table, catalog.IdentifierComparer, findings);
-            ScanMergeableIncludeOnlyIndexes(table, catalog.IdentifierComparer, findings);
             ScanMonotonicClusteredKeyMissingSequentialOptimization(table, catalog.IdentifierComparer, findings);
-            ScanNonAlignedPartitionedIndex(table, catalog.IdentifierComparer, findings);
             ScanRowOrPageLockingDisabled(table, findings);
         }
 
@@ -82,20 +77,6 @@ public static class IndexDesignScanner
             return;
         }
 
-        var nonclusteredPrimaryKey = activeNonclustered.FirstOrDefault(i => i.Kind == CatalogIndexKind.PrimaryKey);
-        if (nonclusteredPrimaryKey is not null)
-        {
-
-            findings.Add(new IndexDesignFinding(
-                IndexDesignFindingKind.HeapWithNonclusteredPrimaryKey,
-                table.QualifiedName,
-                nonclusteredPrimaryKey.Name,
-                $"'{table.QualifiedName}' has no clustered index anywhere - its own PRIMARY KEY constraint ('{nonclusteredPrimaryKey.Name ?? UnnamedIndexPlaceholder}') is declared NONCLUSTERED. Every nonclustered index on this table (including this one) points back to its base row with an 8-byte RID instead of the clustering key.",
-                table.SourcePath,
-                table.SourceLine));
-            return;
-        }
-
         var names = string.Join(", ", activeNonclustered.Select(i => i.Name ?? UnnamedIndexPlaceholder));
         findings.Add(new IndexDesignFinding(
             IndexDesignFindingKind.HeapWithNonclusteredIndexes,
@@ -116,24 +97,7 @@ public static class IndexDesignScanner
             return;
         }
 
-        CheckNonUniqueClusteredIndex(table, clusteredIndex, findings);
         CheckRandomClusteredKeyGuidDefault(table, clusteredIndex, defaultTextByColumn, identifierComparer, findings);
-    }
-
-    private static void CheckNonUniqueClusteredIndex(CatalogTable table, CatalogIndex clusteredIndex, List<IndexDesignFinding> findings)
-    {
-        if (clusteredIndex.IsUnique)
-        {
-            return;
-        }
-
-        findings.Add(new IndexDesignFinding(
-            IndexDesignFindingKind.NonUniqueClusteredIndex,
-            table.QualifiedName,
-            clusteredIndex.Name,
-            $"'{table.QualifiedName}' clustered index '{clusteredIndex.Name ?? UnnamedIndexPlaceholder}' ({string.Join(", ", clusteredIndex.KeyColumns)}) is not unique - the engine adds a hidden 4-byte uniquifier to every duplicate-keyed row, widening the clustering key that every nonclustered index on this table also carries in its own leaf rows.",
-            table.SourcePath,
-            table.SourceLine));
     }
 
     private static void CheckRandomClusteredKeyGuidDefault(
@@ -234,33 +198,6 @@ public static class IndexDesignScanner
         }
 
         return true;
-    }
-
-    private static void ScanDisabledAndHypotheticalIndexes(CatalogTable table, List<IndexDesignFinding> findings)
-    {
-        foreach (var index in table.Indexes)
-        {
-            if (index.IsHypothetical)
-            {
-                findings.Add(new IndexDesignFinding(
-                    IndexDesignFindingKind.HypotheticalIndex,
-                    table.QualifiedName,
-                    index.Name,
-                    $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' is hypothetical (sys.indexes.is_hypothetical = 1) - a Database Engine Tuning Advisor/missing-index-wizard artifact with no real data behind it, left over after an analysis session. Safe to drop.",
-                    table.SourcePath,
-                    table.SourceLine));
-            }
-            else if (index.IsDisabled)
-            {
-                findings.Add(new IndexDesignFinding(
-                    IndexDesignFindingKind.DisabledIndex,
-                    table.QualifiedName,
-                    index.Name,
-                    $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' is disabled (ALTER INDEX ... DISABLE) - unusable by the engine until rebuilt, but still occupies catalog metadata and blocks a same-named CREATE INDEX.",
-                    table.SourcePath,
-                    table.SourceLine));
-            }
-        }
     }
 
     private static void ScanUnindexedForeignKeys(DatabaseCatalog catalog, List<IndexDesignFinding> findings)
@@ -405,25 +342,6 @@ public static class IndexDesignScanner
         }
     }
 
-    private static void ScanColumnTypeSignals(CatalogTable table, List<IndexDesignFinding> findings)
-    {
-        foreach (var column in table.Columns)
-        {
-            switch (column.Type?.Category)
-            {
-                case SqlTypeCategory.Text or SqlTypeCategory.NText or SqlTypeCategory.Image:
-                    findings.Add(new IndexDesignFinding(
-                        IndexDesignFindingKind.DeprecatedLobColumnType,
-                        table.QualifiedName,
-                        IndexName: null,
-                        $"'{table.QualifiedName}.{column.Name}' is declared {column.Type}, formally deprecated by Microsoft since SQL Server 2005 in favor of the MAX-length equivalent - a future engine version may remove it entirely, and it already cannot be used in most string functions or a variable/parameter type in many contexts the MAX-length equivalent supports natively.",
-                        table.SourcePath,
-                        table.SourceLine));
-                    break;
-            }
-        }
-    }
-
     private static void ScanFloatOrRealIndexKeyColumns(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
     {
         foreach (var index in table.Indexes)
@@ -462,111 +380,6 @@ public static class IndexDesignScanner
             table.SourceLine,
             Confidence: FindingConfidence.Medium)));
 
-    public const int ClusteredKeyLimitBytes = 900;
-
-    public const int NonclusteredKeyLimitBytes = 1700;
-
-    private static void ScanVariableLengthKeyColumnWidth(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        foreach (var index in table.Indexes)
-        {
-            if (index.IsDisabled || index.IsColumnstore || index.KeyColumns.Count == 0)
-            {
-                continue;
-            }
-
-            CheckVariableLengthKeyColumnWidth(table, index, identifierComparer, findings);
-        }
-    }
-
-    private static void CheckVariableLengthKeyColumnWidth(
-        CatalogTable table, CatalogIndex index, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        var limit = index.IsClustered ? ClusteredKeyLimitBytes : NonclusteredKeyLimitBytes;
-
-        var hasVariableLengthColumn = false;
-        var fixedLengthBytes = 0;
-        var totalBytes = 0;
-
-        foreach (var columnName in index.KeyColumns)
-        {
-            var column = table.FindColumn(columnName, identifierComparer);
-            if (column?.Type is not { } type || EstimateColumnKeyBytes(type) is not { } declaredBytes)
-            {
-                return;
-            }
-
-            totalBytes += declaredBytes;
-            if (type.Category is SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar or SqlTypeCategory.VarBinary)
-            {
-                hasVariableLengthColumn = true;
-            }
-            else
-            {
-                fixedLengthBytes += declaredBytes;
-            }
-        }
-
-        if (!hasVariableLengthColumn || totalBytes <= limit || fixedLengthBytes > limit)
-        {
-            return;
-        }
-
-        findings.Add(new IndexDesignFinding(
-            IndexDesignFindingKind.VariableLengthKeyColumnExceedsKeyLimit,
-            table.QualifiedName,
-            index.Name,
-            $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' key ({string.Join(", ", index.KeyColumns)}) has a combined declared max width of {totalBytes} bytes, over the engine's {limit}-byte {(index.IsClustered ? "clustered" : "nonclustered")} key limit. CREATE INDEX only warns, it does not fail - the first INSERT/UPDATE that actually stores values long enough to exceed {limit} bytes combined fails at that moment instead, silently until then.",
-            table.SourcePath,
-            table.SourceLine));
-    }
-
-    private static void ScanMergeableIncludeOnlyIndexes(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        var candidates = table.Indexes
-            .Where(i => !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && i.KeyColumns.Count > 0 && i.KeyColumnIsDescending.Count == i.KeyColumns.Count)
-            .ToList();
-
-        for (var i = 0; i < candidates.Count; i++)
-        {
-            for (var j = i + 1; j < candidates.Count; j++)
-            {
-                CompareIndexPairForMergeableIncludeOnly(table, candidates[i], candidates[j], identifierComparer, findings);
-            }
-        }
-    }
-
-    private static void CompareIndexPairForMergeableIncludeOnly(
-        CatalogTable table, CatalogIndex a, CatalogIndex b, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        if (a.IsUnique != b.IsUnique || a.Kind != b.Kind || a.KeyColumns.Count != b.KeyColumns.Count)
-        {
-            return;
-        }
-
-        if (!KeyColumnsEqual(a.KeyColumns, b.KeyColumns, identifierComparer) || !a.KeyColumnIsDescending.SequenceEqual(b.KeyColumnIsDescending))
-        {
-            return;
-        }
-
-        var aIncluded = new HashSet<string>(a.IncludedColumns, identifierComparer);
-        var bIncluded = new HashSet<string>(b.IncludedColumns, identifierComparer);
-
-        if (aIncluded.SetEquals(bIncluded) || aIncluded.IsSubsetOf(bIncluded) || bIncluded.IsSubsetOf(aIncluded))
-        {
-            return;
-        }
-
-        var union = string.Join(", ", aIncluded.Concat(bIncluded).OrderBy(c => c, identifierComparer).Distinct(identifierComparer));
-        findings.Add(new IndexDesignFinding(
-            IndexDesignFindingKind.MergeableIndexesDifferingIncludeOnly,
-            table.QualifiedName,
-            b.Name,
-            $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}) and sort direction but carry different, non-overlapping INCLUDE columns ('{a.Name ?? UnnamedIndexPlaceholder}': {string.Join(", ", a.IncludedColumns)}; '{b.Name ?? UnnamedIndexPlaceholder}': {string.Join(", ", b.IncludedColumns)}) - mergeable into one index carrying the union ({union}) at no seek cost to either original query, for less write/storage overhead than carrying both.",
-            table.SourcePath,
-            table.SourceLine));
-    }
-
     private static void ScanMonotonicClusteredKeyMissingSequentialOptimization(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
     {
         var clusteredIndex = table.Indexes.FirstOrDefault(i => i.IsClustered && !i.IsColumnstore && !i.IsDisabled);
@@ -589,42 +402,6 @@ public static class IndexDesignScanner
             table.SourcePath,
             table.SourceLine,
             FindingConfidence.Medium));
-    }
-
-    private static void ScanNonAlignedPartitionedIndex(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        var clusteredIndex = table.Indexes.FirstOrDefault(i => i.IsClustered && !i.IsColumnstore);
-        if (clusteredIndex?.PartitionSchemeName is not { } tablePartitionScheme)
-        {
-
-            return;
-        }
-
-        foreach (var index in table.Indexes)
-        {
-            if (ReferenceEquals(index, clusteredIndex) || index.IsDisabled || index.IsColumnstore || index.IsJsonIndex)
-            {
-                continue;
-            }
-
-            var isAligned = identifierComparer.Equals(index.PartitionSchemeName, tablePartitionScheme)
-                && identifierComparer.Equals(index.PartitioningColumnName, clusteredIndex.PartitioningColumnName);
-            if (isAligned)
-            {
-                continue;
-            }
-
-            var whereText = index.PartitionSchemeName is { } indexScheme
-                ? $"is itself partitioned on scheme '{indexScheme}' keyed on '{index.PartitioningColumnName ?? "<unresolved>"}'"
-                : "sits on a single, unpartitioned filegroup";
-            findings.Add(new IndexDesignFinding(
-                IndexDesignFindingKind.NonAlignedPartitionedIndex,
-                table.QualifiedName,
-                index.Name,
-                $"'{table.QualifiedName}' is partitioned on scheme '{tablePartitionScheme}' keyed on '{clusteredIndex.PartitioningColumnName ?? "<unresolved>"}', but index '{index.Name ?? UnnamedIndexPlaceholder}' {whereText} - not aligned with the table. A non-aligned index cannot participate in a partition SWITCH against this table, and per-partition maintenance on it degrades to a full-index operation.",
-                table.SourcePath,
-                table.SourceLine));
-        }
     }
 
     private static void ScanRowOrPageLockingDisabled(CatalogTable table, List<IndexDesignFinding> findings)
@@ -662,55 +439,6 @@ public static class IndexDesignScanner
                 FindingConfidence.Medium));
         }
     }
-
-    public static int? EstimateColumnKeyBytes(SqlType type)
-    {
-        if (type.IsMax)
-        {
-            return null;
-        }
-
-        return type.Category switch
-        {
-            SqlTypeCategory.TinyInt or SqlTypeCategory.Bit => 1,
-            SqlTypeCategory.SmallInt => 2,
-            SqlTypeCategory.Int => 4,
-            SqlTypeCategory.BigInt => 8,
-            SqlTypeCategory.SmallMoney => 4,
-            SqlTypeCategory.Money => 8,
-            SqlTypeCategory.Real => 4,
-
-            SqlTypeCategory.Float => type.Precision is { } p && p <= 24 ? 4 : 8,
-            SqlTypeCategory.Decimal => EstimateDecimalBytes(type.Precision),
-            SqlTypeCategory.Date => 3,
-            SqlTypeCategory.SmallDateTime => 4,
-            SqlTypeCategory.DateTime => 8,
-            SqlTypeCategory.Time => EstimateTemporalScaledBytes(type.Scale, baseBytes: 3),
-            SqlTypeCategory.DateTime2 => EstimateTemporalScaledBytes(type.Scale, baseBytes: 6),
-            SqlTypeCategory.DateTimeOffset => EstimateTemporalScaledBytes(type.Scale, baseBytes: 8),
-            SqlTypeCategory.UniqueIdentifier => 16,
-            SqlTypeCategory.Timestamp => 8,
-            SqlTypeCategory.Char or SqlTypeCategory.VarChar or SqlTypeCategory.Binary or SqlTypeCategory.VarBinary =>
-                type.Length,
-            SqlTypeCategory.NChar or SqlTypeCategory.NVarChar => type.Length is { } len ? len * 2 : null,
-            _ => null,
-        };
-    }
-
-    private static int EstimateDecimalBytes(int? precision) => precision switch
-    {
-        <= 9 => 5,
-        <= 19 => 9,
-        <= 28 => 13,
-        _ => 17,
-    };
-
-    private static int EstimateTemporalScaledBytes(int? scale, int baseBytes) => scale switch
-    {
-        <= 2 => baseBytes,
-        <= 4 => baseBytes + 1,
-        _ => baseBytes + 2,
-    };
 
     private static bool IsNewIdDefault(string? definitionText)
     {
