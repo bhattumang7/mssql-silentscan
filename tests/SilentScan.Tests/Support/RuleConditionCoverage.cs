@@ -21,7 +21,7 @@ public static class RuleConditionCoverage
             .Where(c => c.Kind == RuleConditionKind.Fires && !firingEntries.Contains(c.Name))
             .Select(c => $"firing condition '{c.Name}' has no firing case"));
         problems.AddRange(conditions
-            .Where(c => c.Kind == RuleConditionKind.Excluded && !silentEntries.Contains(c.Name))
+            .Where(c => c.Kind == RuleConditionKind.Excluded && c.Form is null && !silentEntries.Contains(c.Name))
             .Select(c => $"exclusion '{c.Name}' has no silent case"));
 
         var fires = conditions.Where(c => c.Kind == RuleConditionKind.Fires).Select(c => c.Name).ToHashSet(StringComparer.Ordinal);

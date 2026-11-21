@@ -48,6 +48,20 @@ public sealed class RuleConditionCoverageTests
     }
 
     [Fact]
+    public void ExclusionThatNamesAStatementForm_NeedsNoSilentCaseBecauseTheBaseRunsTheForm()
+    {
+        RuleCondition[] conditions =
+        [
+            new("fires-a", RuleConditionKind.Fires, "a"),
+            new("excluded-form", RuleConditionKind.Excluded, "b", "dynamic SQL"),
+        ];
+
+        var problems = RuleConditionCoverage.Problems(conditions, [Firing("fires-a")], []);
+
+        Assert.Empty(problems);
+    }
+
+    [Fact]
     public void CaseNamingAnEntryThatDoesNotExist_IsReported()
     {
         var problems = RuleConditionCoverage.Problems(Conditions, [Firing("fires-a"), Firing("invented")], [Silent("excluded-b")]);

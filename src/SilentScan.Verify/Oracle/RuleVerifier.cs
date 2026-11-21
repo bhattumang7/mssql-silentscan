@@ -62,8 +62,10 @@ public sealed class Perturbation
         Func<SqlException, bool> engineRefusalRefutes,
         Func<string, string?>? baselineStatement = null,
         string? afterStatementQuery = null,
-        bool touchesReadAfterCondition = false)
+        bool touchesReadAfterCondition = false,
+        bool planCompiledInModule = false)
     {
+        PlanCompiledInModule = planCompiledInModule;
         AfterStatementQuery = afterStatementQuery;
         TouchesReadAfterCondition = touchesReadAfterCondition;
         ArgumentOutOfRangeException.ThrowIfZero(touches.Count);
@@ -99,6 +101,8 @@ public sealed class Perturbation
     public string? AfterStatementQuery { get; }
 
     public bool TouchesReadAfterCondition { get; }
+
+    public bool PlanCompiledInModule { get; }
 
     public string? NotApplicableReason { get; }
 
@@ -199,7 +203,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return NotDecided("The rewrite left the statement as it was, so the condition was never removed.");
         }
 
-        var observe = new Observe(perturbation.Expected, perturbation.AfterStatementQuery);
+        var observe = new Observe(perturbation.Expected, perturbation.AfterStatementQuery, perturbation.PlanCompiledInModule);
         var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, observe, cancellationToken);
         var control = await ObserveOnceAsync(connection, transaction, baselineStatement, observe, cancellationToken);
         if (!baseline.SameAs(control))
@@ -225,7 +229,9 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         if (perturbation.TouchesReadAfterCondition)
         {
             var touched = perturbation.Touches.OfType<TouchedObject>().ToList();
-            var planXml = await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
+            var planXml = perturbation.PlanCompiledInModule
+                ? await ModulePlanOfAsync(connection, transaction, statement, cancellationToken)
+                : await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
             if (planXml is null || !PlanReadsObjects(planXml, touched))
             {
                 return NotDecided($"Even with the condition applied the statement's plan does not read {string.Join(", ", touched.Select(NameOf))}, so the claim cannot be observed through it.");
@@ -303,14 +309,16 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             : new EngineVerification(EngineVerdict.Refuted, string.Create(CultureInfo.InvariantCulture, $"The statement still fails with error {perturbed.FailureNumber} when the condition is applied."));
     }
 
-    private sealed record Observe(Difference Expected, string? AfterQuery);
+    private sealed record Observe(Difference Expected, string? AfterQuery, bool PlanInModule = false);
 
     private static async Task<Observation> ObserveOnceAsync(
         SqlConnection connection, SqlTransaction transaction, string statement, Observe observe, CancellationToken cancellationToken)
     {
         if (observe.Expected == Difference.PlanChanged)
         {
-            var plan = await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
+            var plan = observe.PlanInModule
+                ? await ModulePlanOfAsync(connection, transaction, statement, cancellationToken)
+                : await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
             return new Observation([], 0, null, plan is null ? null : PlanSignature(plan));
         }
 
@@ -382,6 +390,55 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         return touches.All(t => objects.Exists(e =>
             string.Equals(Unbracket((string?)e.Attribute("Table")), t.Name, StringComparison.OrdinalIgnoreCase)
             && (t.Schema is null || string.Equals(Unbracket((string?)e.Attribute("Schema")), t.Schema, StringComparison.OrdinalIgnoreCase))));
+    }
+
+    private static async Task<string?> ModulePlanOfAsync(
+        SqlConnection connection, SqlTransaction transaction, string statement, CancellationToken cancellationToken)
+    {
+        const string ProbeName = "#silentscan_plan_probe";
+        transaction.Save(StatementSavepoint);
+        try
+        {
+            await using (var create = new SqlCommand($"CREATE PROCEDURE {ProbeName} AS BEGIN {statement} END;", connection, transaction))
+            {
+                await create.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            string? planXml = null;
+            await using (var on = new SqlCommand("SET STATISTICS XML ON;", connection, transaction))
+            {
+                await on.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            try
+            {
+                await using var run = new SqlCommand($"EXEC {ProbeName};", connection, transaction) { CommandTimeout = 120 };
+                await using var reader = await run.ExecuteReaderAsync(cancellationToken);
+                do
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string) && reader.GetString(0) is { } value
+                            && value.Contains("ShowPlanXML", StringComparison.Ordinal))
+                        {
+                            planXml = value;
+                        }
+                    }
+                }
+                while (await reader.NextResultAsync(cancellationToken));
+            }
+            finally
+            {
+                await using var off = new SqlCommand("SET STATISTICS XML OFF;", connection, transaction);
+                await off.ExecuteNonQueryAsync(CancellationToken.None);
+            }
+
+            return planXml;
+        }
+        finally
+        {
+            transaction.Rollback(StatementSavepoint);
+        }
     }
 
     private static async Task<string?> PlanOfAsync(

@@ -29,6 +29,8 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         GO
         CREATE TABLE dbo.Folded (V INT NOT NULL);
         GO
+        CREATE TABLE dbo.Checked (V INT NOT NULL, CONSTRAINT CK_Checked CHECK (V BETWEEN 1 AND 10));
+        GO
         INSERT INTO dbo.W (Short, Long) VALUES (NULL, 'abcdef');
         INSERT INTO dbo.T (V) VALUES (1), (2);
         INSERT INTO dbo.Other (V) VALUES (7);
@@ -358,6 +360,45 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         var result = await VerifyAsync(Unfolding(Run("SELECT 1;"), readsAfter: true), FoldedSelect);
 
         Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+    }
+
+    private const string CheckedSelect = "SELECT V FROM dbo.Checked WHERE V > 100;";
+
+    private static Perturbation DroppingTheCheck(bool inModule) =>
+        new(
+            [new TouchedObject("dbo", "Checked")],
+            Difference.PlanChanged,
+            Nothing,
+            Run("ALTER TABLE dbo.Checked DROP CONSTRAINT CK_Checked;"),
+            _ => false,
+            touchesReadAfterCondition: true,
+            planCompiledInModule: inModule);
+
+    [Fact]
+    public async Task ContradictionWithACheckConstraint_FoldsWhenCompiledInsideAModule()
+    {
+        var result = await VerifyAsync(DroppingTheCheck(inModule: true), CheckedSelect);
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task ContradictionWithACheckConstraint_DoesNotFoldInAnAdHocBatch()
+    {
+        var result = await VerifyAsync(DroppingTheCheck(inModule: false), CheckedSelect);
+
+        Assert.NotEqual(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task ModulePlan_LeavesNoProcedureBehind()
+    {
+        await VerifyAsync(DroppingTheCheck(inModule: true), CheckedSelect);
+
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT COUNT(*) FROM sys.procedures;", connection);
+        Assert.Equal(0, (int)(await command.ExecuteScalarAsync())!);
     }
 
     [Fact]
