@@ -130,4 +130,60 @@ public sealed class BareTopNoOrderByScannerTests
 
         Assert.Equal(2, findings.Count);
     }
+
+    [Fact]
+    public void TopZero_NeverFires()
+    {
+        var findings = Scan("SELECT TOP (0) a FROM dbo.T;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TopWithConstantOnlySelectList_NeverFires()
+    {
+        var findings = Scan("SELECT TOP (1) 1 FROM dbo.T;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TopOverAggregateWithoutGroupBy_NeverFires()
+    {
+        var findings = Scan("SELECT TOP (1) MAX(a) FROM dbo.T;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TopInsideExistsSubquery_NeverFires()
+    {
+        var findings = Scan("SELECT a FROM dbo.T WHERE EXISTS (SELECT TOP (1) b FROM dbo.U);");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TopInsideNotExistsInIfStatement_NeverFires()
+    {
+        var findings = Scan("IF NOT EXISTS (SELECT TOP (1) b FROM dbo.U) PRINT 'none';");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void TopInsideScalarSubquery_StillFires()
+    {
+        var findings = Scan("SELECT (SELECT TOP (1) b FROM dbo.U) FROM dbo.T;");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void TopOverAggregateWithGroupBy_StillFires()
+    {
+        var findings = Scan("SELECT TOP (1) MAX(a) FROM dbo.T GROUP BY b;");
+
+        Assert.Single(findings);
+    }
 }
