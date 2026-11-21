@@ -5,4 +5,5 @@ public sealed record CatalogSecurityPredicate(
     string TargetTableQualifiedName,
     string PredicateDefinitionText,
     bool IsFilterPredicate,
-    bool IsPolicyEnabled);
+    bool IsPolicyEnabled,
+    string? PredicateFunctionDefinition = null);

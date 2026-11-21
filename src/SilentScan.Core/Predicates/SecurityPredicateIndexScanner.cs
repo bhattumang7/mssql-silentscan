@@ -53,9 +53,9 @@ public static class SecurityPredicateIndexScanner
             .Distinct(catalog.IdentifierComparer)
             .ToList();
 
-        if (boundColumns.Count == 0)
+        if (boundColumns.Count == 0
+            || !PredicateFunctionAllowsSeek(predicate.PredicateFunctionDefinition, call, catalog))
         {
-
             return;
         }
 
@@ -76,6 +76,81 @@ public static class SecurityPredicateIndexScanner
             table.SourcePath,
             table.SourceLine));
     }
+
+    private static readonly HashSet<string> NationalCharacterSessionFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "USER_NAME", "SUSER_SNAME", "SUSER_NAME", "ORIGINAL_LOGIN",
+    };
+
+    private static bool PredicateFunctionAllowsSeek(string? definition, FunctionCall call, DatabaseCatalog catalog)
+    {
+        if (string.IsNullOrWhiteSpace(definition))
+        {
+            return false;
+        }
+
+        var parsed = SqlScriptParser.ParseText("security-predicate-function.sql", definition, initialQuotedIdentifiers: true, catalog.CompatibilityLevel);
+        if (parsed.HasErrors
+            || parsed.Fragment is not TSqlScript { Batches: [{ Statements: [CreateFunctionStatement { ReturnType: SelectFunctionReturnType { SelectStatement.QueryExpression: QuerySpecification specification } } function] }] })
+        {
+            return false;
+        }
+
+        var conjuncts = PredicateTreeWalker.FlattenAnd(specification.WhereClause?.SearchCondition).ToList();
+        for (var i = 0; i < call.Parameters.Count && i < function.Parameters.Count; i++)
+        {
+            if (call.Parameters[i] is not ColumnReferenceExpression)
+            {
+                continue;
+            }
+
+            var parameter = function.Parameters[i];
+            if (conjuncts.Any(c => IsSeekableEquality(c, parameter, catalog.IdentifierComparer)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSeekableEquality(BooleanExpression conjunct, ProcedureParameter parameter, StringComparer comparer)
+    {
+        if (conjunct is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
+        {
+            return false;
+        }
+
+        var (variable, other) = comparison.FirstExpression is VariableReference first && comparer.Equals(first.Name, parameter.VariableName.Value)
+            ? (true, comparison.SecondExpression)
+            : comparison.SecondExpression is VariableReference second && comparer.Equals(second.Name, parameter.VariableName.Value)
+                ? (true, comparison.FirstExpression)
+                : (false, null!);
+
+        return variable && parameter.DataType is SqlDataTypeReference { SqlDataTypeOption: var parameterType } && IsRuntimeConstantOfSameType(other, parameterType);
+    }
+
+    private static bool IsRuntimeConstantOfSameType(ScalarExpression expression, SqlDataTypeOption parameterType)
+    {
+        while (expression is ParenthesisExpression parenthesized)
+        {
+            expression = parenthesized.Expression;
+        }
+
+        return expression switch
+        {
+            CastCall { Parameter: FunctionCall inner, DataType: SqlDataTypeReference target } =>
+                IsSessionContext(inner) && target.SqlDataTypeOption == parameterType,
+            ConvertCall { Parameter: FunctionCall inner, Style: null, DataType: SqlDataTypeReference target } =>
+                IsSessionContext(inner) && target.SqlDataTypeOption == parameterType,
+            FunctionCall { Parameters.Count: 0 } sessionFunction =>
+                NationalCharacterSessionFunctions.Contains(sessionFunction.FunctionName.Value) && parameterType == SqlDataTypeOption.NVarChar,
+            _ => false,
+        };
+    }
+
+    private static bool IsSessionContext(FunctionCall call) =>
+        string.Equals(call.FunctionName.Value, "SESSION_CONTEXT", StringComparison.OrdinalIgnoreCase);
 
     private static FunctionCall? TryParseFunctionCall(string definitionText, int? compatibilityLevel)
     {

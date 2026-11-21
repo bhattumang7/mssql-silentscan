@@ -17,6 +17,49 @@ public sealed class SecurityPredicateIndexScannerTests
     private static CatalogIndex Index(string name, params string[] keyColumns) =>
         new(name, CatalogIndexKind.Index, IsUnique: false, keyColumns, IncludedColumns: []);
 
+    private const string SessionContextFunction = """
+        CREATE FUNCTION Security.fn_TenantPredicate(@TenantId INT)
+        RETURNS TABLE WITH SCHEMABINDING AS
+        RETURN SELECT 1 AS Allowed WHERE @TenantId = CAST(SESSION_CONTEXT(N'TenantId') AS INT);
+        """;
+
+    private static IReadOnlyList<SecurityPredicateIndexFinding> ScanWithFunction(string? definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "T", [Column("Id"), Column("TenantId")], []));
+        catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
+            "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantPredicate]([TenantId]))",
+            IsFilterPredicate: true, IsPolicyEnabled: true, PredicateFunctionDefinition: definition));
+        return SecurityPredicateIndexScanner.Scan(catalog);
+    }
+
+    [Theory]
+    [InlineData("WHERE @TenantId = CAST(SESSION_CONTEXT(N'TenantId') AS INT) OR CAST(SESSION_CONTEXT(N'IsAdmin') AS INT) = 1")]
+    [InlineData("WHERE @TenantId = CAST(SESSION_CONTEXT(N'TenantId') AS BIGINT)")]
+    [InlineData("WHERE @TenantId + 0 = CAST(SESSION_CONTEXT(N'TenantId') AS INT)")]
+    [InlineData("WHERE @TenantId > CAST(SESSION_CONTEXT(N'TenantId') AS INT)")]
+    [InlineData("WHERE IS_MEMBER('db_owner') = 1")]
+    public void PredicateFunctionTheEngineCannotSeekThrough_NeverFires(string whereClause)
+    {
+        var definition = $"CREATE FUNCTION Security.fn_TenantPredicate(@TenantId INT) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS Allowed {whereClause};";
+
+        Assert.Empty(ScanWithFunction(definition));
+    }
+
+    [Fact]
+    public void PredicateFunctionWithoutAVisibleBody_NeverFires()
+    {
+        Assert.Empty(ScanWithFunction(null));
+    }
+
+    [Fact]
+    public void SeekableEqualityAmongOtherConjuncts_StillFires()
+    {
+        var definition = "CREATE FUNCTION Security.fn_TenantPredicate(@TenantId INT) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS Allowed WHERE CAST(SESSION_CONTEXT(N'TenantId') AS INT) = @TenantId AND IS_MEMBER('db_owner') = 0;";
+
+        Assert.Single(ScanWithFunction(definition));
+    }
+
     [Fact]
     public void EnabledFilterPredicate_BoundColumnHasNoIndex_Fires()
     {
@@ -24,7 +67,8 @@ public sealed class SecurityPredicateIndexScannerTests
         catalog.AddOrReplace(Table("dbo", "T", [Column("Id"), Column("TenantId")], []));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantPredicate]([TenantId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         var finding = Assert.Single(SecurityPredicateIndexScanner.Scan(catalog));
 
@@ -44,7 +88,8 @@ public sealed class SecurityPredicateIndexScannerTests
             [Index("IX_T_TenantId", "TenantId")]));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantPredicate]([TenantId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -59,7 +104,8 @@ public sealed class SecurityPredicateIndexScannerTests
             [new CatalogIndex("IX_T_TenantId", CatalogIndexKind.Index, IsUnique: false, ["TenantId"], [], IsDisabled: true)]));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantPredicate]([TenantId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Single(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -74,7 +120,8 @@ public sealed class SecurityPredicateIndexScannerTests
             [Index("IX_T_OtherKey_TenantId", "OtherKey", "TenantId")]));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantPredicate]([TenantId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Single(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -111,7 +158,8 @@ public sealed class SecurityPredicateIndexScannerTests
         catalog.AddOrReplace(Table("dbo", "T", [Column("Id"), Column("TenantId")], []));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "not valid t-sql at all (((",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -123,7 +171,8 @@ public sealed class SecurityPredicateIndexScannerTests
         catalog.AddOrReplace(Table("dbo", "T", [Column("Id"), Column("TenantId")], []));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", string.Empty,
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -136,7 +185,8 @@ public sealed class SecurityPredicateIndexScannerTests
         catalog.AddOrReplace(Table("dbo", "T", [Column("Id"), Column("TenantId")], []));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_AlwaysTrue]())",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -147,7 +197,8 @@ public sealed class SecurityPredicateIndexScannerTests
         var catalog = new DatabaseCatalog();
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.GhostTable", "([Security].[fn_TenantPredicate]([TenantId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }
@@ -162,7 +213,8 @@ public sealed class SecurityPredicateIndexScannerTests
             [Index("IX_T_TenantId", "TenantId")]));
         catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
             "Security.TenantFilter", "dbo.T", "([Security].[fn_TenantRegionPredicate]([TenantId],[RegionId]))",
-            IsFilterPredicate: true, IsPolicyEnabled: true));
+            IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: SessionContextFunction));
 
         Assert.Empty(SecurityPredicateIndexScanner.Scan(catalog));
     }

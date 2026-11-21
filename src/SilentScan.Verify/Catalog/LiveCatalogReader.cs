@@ -504,7 +504,12 @@ public sealed class LiveCatalogReader
         const string sql = """
             SELECT ps.name AS policy_schema, pol.name AS policy_name,
                    ts.name AS table_schema, tt.name AS table_name,
-                   sp.predicate_definition, sp.predicate_type_desc, pol.is_enabled
+                   sp.predicate_definition, sp.predicate_type_desc, pol.is_enabled,
+                   (SELECT TOP (1) m.definition
+                    FROM sys.sql_expression_dependencies d
+                    JOIN sys.objects fo ON fo.object_id = d.referenced_id AND fo.type = 'IF'
+                    JOIN sys.sql_modules m ON m.object_id = fo.object_id
+                    WHERE d.referencing_id = pol.object_id) AS function_definition
             FROM sys.security_predicates sp
             JOIN sys.security_policies pol ON pol.object_id = sp.object_id
             JOIN sys.schemas ps ON ps.schema_id = pol.schema_id
@@ -524,7 +529,8 @@ public sealed class LiveCatalogReader
                 TargetTableQualifiedName: $"{reader.GetString(2)}.{reader.GetString(3)}",
                 PredicateDefinitionText: await reader.IsDBNullAsync(4, cancellationToken) ? string.Empty : reader.GetString(4),
                 IsFilterPredicate: string.Equals(reader.GetString(5), "FILTER", StringComparison.OrdinalIgnoreCase),
-                IsPolicyEnabled: reader.GetBoolean(6)));
+                IsPolicyEnabled: reader.GetBoolean(6),
+                PredicateFunctionDefinition: await reader.IsDBNullAsync(7, cancellationToken) ? null : reader.GetString(7)));
         }
 
         return predicates;
