@@ -1,3 +1,4 @@
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 
@@ -10,6 +11,38 @@ public sealed class StringAggMissingOrderScannerTests
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return StringAggMissingOrderScanner.Scan(result);
+    }
+
+    private static IReadOnlyList<StringAggMissingOrderFinding> ScanWithCatalog(string sql)
+    {
+        const string Ddl = "CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, GroupId INT NOT NULL, Name VARCHAR(20) NOT NULL);";
+        var result = SqlScriptParser.ParseText("test.sql", Ddl + Environment.NewLine + "GO" + Environment.NewLine + sql);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        return StringAggMissingOrderScanner.Scan(result, CatalogBuilder.Build([result]));
+    }
+
+    [Fact]
+    public void QueryPinnedToOneRowByPrimaryKey_NeverFires()
+    {
+        Assert.Empty(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T WHERE Id = 1;"));
+    }
+
+    [Fact]
+    public void QueryWithoutFromClause_NeverFires()
+    {
+        Assert.Empty(ScanWithCatalog("SELECT STRING_AGG('a', ',');"));
+    }
+
+    [Fact]
+    public void QueryOverManyRows_StillFires()
+    {
+        Assert.Single(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T;"));
+    }
+
+    [Fact]
+    public void QueryPinnedOnlyByNonUniqueColumn_StillFires()
+    {
+        Assert.Single(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T WHERE GroupId = 1;"));
     }
 
     [Fact]

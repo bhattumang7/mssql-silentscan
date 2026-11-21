@@ -8,15 +8,17 @@ namespace SilentScan.Core.Predicates;
 
 public static class StringAggMissingOrderScanner
 {
-    public static IReadOnlyList<StringAggMissingOrderFinding> Scan(SqlParseResult parseResult)
+    public static IReadOnlyList<StringAggMissingOrderFinding> Scan(SqlParseResult parseResult) => Scan(parseResult, new DatabaseCatalog());
+
+    public static IReadOnlyList<StringAggMissingOrderFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
-        var rule = CreateRule(parseResult.SourcePath);
-        var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
+        var rule = CreateRule(parseResult.SourcePath, catalog);
+        var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return Harvest(rule);
     }
 
-    internal static Rule CreateRule(string sourcePath) => new(sourcePath);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog catalog) => new(sourcePath, catalog);
 
     internal static IReadOnlyList<StringAggMissingOrderFinding> Harvest(Rule rule) =>
         [
@@ -28,14 +30,23 @@ public static class StringAggMissingOrderScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath) : IModuleRule
+    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
+        private readonly Stack<QuerySpecification> _specifications = new();
+
         public List<StringAggMissingOrderFinding> Findings { get; } = [];
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
+            _specifications.Push(node);
+
+        public void OnLeaveQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
+            _specifications.Pop();
 
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
             if (string.Equals(node.FunctionName?.Value, "STRING_AGG", StringComparison.OrdinalIgnoreCase)
-                && node.WithinGroupClause is null)
+                && node.WithinGroupClause is null
+                && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
                 Findings.Add(new StringAggMissingOrderFinding(sourcePath, node.StartLine, node.StartColumn));
             }

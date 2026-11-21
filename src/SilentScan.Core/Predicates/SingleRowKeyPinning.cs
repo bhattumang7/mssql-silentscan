@@ -47,6 +47,50 @@ internal static class SingleRowKeyPinning
         return pinned.Count == entries.Count;
     }
 
+    public static bool QueryReadsAtMostOneRow(QuerySpecification spec, DatabaseCatalog catalog)
+    {
+        if (spec.GroupByClause is not null)
+        {
+            return false;
+        }
+
+        if (spec.FromClause is null)
+        {
+            return true;
+        }
+
+        if (spec.FromClause.TableReferences.Count != 1)
+        {
+            return false;
+        }
+
+        var tables = new List<NamedTableReference>();
+        var conjuncts = PredicateTreeWalker.FlattenAnd(spec.WhereClause?.SearchCondition).ToList();
+        return CollectPinnableTables(spec.FromClause.TableReferences[0], tables, conjuncts)
+            && PinsAtMostOneRow(tables, conjuncts, new HashSet<string>(catalog.IdentifierComparer), catalog);
+    }
+
+    public static bool CollectPinnableTables(TableReference reference, List<NamedTableReference> tables, List<BooleanExpression> conjuncts)
+    {
+        switch (reference)
+        {
+            case NamedTableReference named:
+                tables.Add(named);
+                return true;
+
+            case QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner or QualifiedJoinType.LeftOuter } join:
+                conjuncts.AddRange(PredicateTreeWalker.FlattenAnd(join.SearchCondition));
+                return CollectPinnableTables(join.FirstTableReference, tables, conjuncts)
+                    && CollectPinnableTables(join.SecondTableReference, tables, conjuncts);
+
+            case JoinParenthesisTableReference { Join: { } inner }:
+                return CollectPinnableTables(inner, tables, conjuncts);
+
+            default:
+                return false;
+        }
+    }
+
     private static Dictionary<string, CatalogTable>? ResolveTables(IReadOnlyList<NamedTableReference> tables, HashSet<string> cteNames, DatabaseCatalog catalog)
     {
         if (tables.Count == 0)

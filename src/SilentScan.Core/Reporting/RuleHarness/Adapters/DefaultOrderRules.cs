@@ -89,8 +89,8 @@ internal sealed class StringAggMissingOrderRule : IPerFileRule
 {
     public string Id => "StringAggMissingOrderScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => StringAggMissingOrderScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => StringAggMissingOrderScanner.Harvest((StringAggMissingOrderScanner.Rule)moduleRule);
 }
 
@@ -98,8 +98,8 @@ internal sealed class ForXmlPathMissingOrderRule : IPerFileRule
 {
     public string Id => "ForXmlPathMissingOrderScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForXmlPathMissingOrderScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ForXmlPathMissingOrderScanner.Harvest((ForXmlPathMissingOrderScanner.Rule)moduleRule);
 }
 
@@ -107,8 +107,8 @@ internal sealed class JsonArrayAggMissingOrderRule : IPerFileRule
 {
     public string Id => "JsonArrayAggMissingOrderScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => JsonArrayAggMissingOrderScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => JsonArrayAggMissingOrderScanner.Harvest((JsonArrayAggMissingOrderScanner.Rule)moduleRule);
 }
 
