@@ -351,8 +351,6 @@ public static class NonSargablePredicateScanner
         private static bool StartsWithUnseekableWildcard(string pattern) =>
             pattern is ['%' or '_', ..] or ['[', '^', ..];
 
-        private static readonly SearchValues<char> RegexMetacharacters = SearchValues.Create("$*+.?()[]{}|\\^");
-
         private void InspectRegexpLikePredicate(RegexpLikePredicate node, ScopeChain scopeChain, ModuleWalker walker)
         {
             if (node.Text is not ColumnReferenceExpression columnRef || ColumnName(columnRef) is not { } columnName)
@@ -360,14 +358,11 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (node.Pattern is StringLiteral literal && !HasAnchoredLiteralPrefix(literal.Value))
+            if (node.Pattern is StringLiteral literal && RegexpSeekability.CannotDeriveRange(literal.Value))
             {
                 Add(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, columnName, detail: null, node, columnRef, scopeChain, walker);
             }
         }
-
-        private static bool HasAnchoredLiteralPrefix(string pattern) =>
-            pattern.Length > 0 && pattern[0] == '^' && pattern.AsSpan(1).IndexOfAny(RegexMetacharacters) < 0;
 
         private static ScalarExpression UnwrapParentheses(ScalarExpression expression)
         {

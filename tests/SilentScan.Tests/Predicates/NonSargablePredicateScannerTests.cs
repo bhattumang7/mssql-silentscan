@@ -605,6 +605,50 @@ public sealed class NonSargablePredicateScannerTests
         Assert.Equal("DisplayName", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("^[a-c]")]
+    [InlineData("^ab?")]
+    [InlineData("^ab*")]
+    [InlineData("^ab+")]
+    [InlineData("^a{2,3}")]
+    [InlineData("^a[bc]d")]
+    [InlineData(@"^abc\.")]
+    [InlineData(@"^[\d]")]
+    public void RegexpLikePattern_AnchoredClassOrQuantifiedLiteral_DoesNotFire(string pattern)
+    {
+        var findings = ScanSql(RegexpQuery(pattern));
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("^abc.*")]
+    [InlineData("^a.c")]
+    [InlineData("^(abc)")]
+    [InlineData("^a|^b")]
+    [InlineData("^abc$")]
+    [InlineData(@"^\d")]
+    [InlineData("^a?b")]
+    [InlineData("^a*")]
+    [InlineData("^[^a]")]
+    public void RegexpLikePattern_NoSeekableLeadingRun_Fires(string pattern)
+    {
+        var findings = ScanSql(RegexpQuery(pattern));
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, finding.Kind);
+    }
+
+    private static string RegexpQuery(string pattern) =>
+        $"""
+        CREATE TABLE dbo.Users (UserId INT NOT NULL PRIMARY KEY, DisplayName NVARCHAR(40) NOT NULL);
+        GO
+        CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);
+        GO
+        SELECT UserId FROM dbo.Users WHERE REGEXP_LIKE(DisplayName, '{pattern}');
+        """;
+
     [Fact]
     public void WildcardColumnInFunction_HavingCountStar_DoesNotCrashAndDoesNotFire()
     {

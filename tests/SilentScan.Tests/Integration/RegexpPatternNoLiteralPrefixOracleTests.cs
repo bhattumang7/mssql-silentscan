@@ -69,4 +69,40 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
 
         Assert.Equal(Tier1Outcome.Confirmed, result.Outcome);
     }
+
+    [Theory]
+    [InlineData("^[a-c]")]
+    [InlineData("^ab?")]
+    [InlineData("^ab*")]
+    [InlineData("^ab+")]
+    [InlineData("^a{2,3}")]
+    [InlineData("^a[bc]d")]
+    [InlineData(@"^abc\.")]
+    [InlineData(@"^[\d]")]
+    public async Task VerifyAsync_AnchoredClassOrQuantifiedLiteral_IsNotConfirmed(string pattern)
+    {
+        var finding = Finding(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, $"REGEXP_LIKE(DisplayName, '{pattern}')");
+
+        var result = await _verifier.VerifyAsync(_databaseName, finding, _catalog);
+
+        Assert.Equal(Tier1Outcome.NotConfirmed, result.Outcome);
+    }
+
+    [Theory]
+    [InlineData("^abc.*")]
+    [InlineData("^a.c")]
+    [InlineData("^(abc)")]
+    [InlineData("^a|^b")]
+    [InlineData(@"^\d")]
+    [InlineData("^a?b")]
+    [InlineData("^a*")]
+    [InlineData("^[^a]")]
+    public async Task VerifyAsync_PatternWithoutASeekableLeadingRun_ConfirmsNoIndexSeek(string pattern)
+    {
+        var finding = Finding(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, $"REGEXP_LIKE(DisplayName, '{pattern}')");
+
+        var result = await _verifier.VerifyAsync(_databaseName, finding, _catalog);
+
+        Assert.Equal(Tier1Outcome.Confirmed, result.Outcome);
+    }
 }
