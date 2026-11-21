@@ -40,6 +40,10 @@ public static class CatchAllPredicateScanner
 
         private bool _statementHasOptionRecompile;
 
+        private int _selectStatementDepth;
+
+        private bool OptionalParameterOptimizationApplies => _selectStatementDepth > 0 && catalog.CompatibilityLevel >= 170;
+
         private bool HasActiveRecompileGuard => _procedureHasWithRecompile || _statementHasOptionRecompile;
 
         private HashSet<string> _previousFormalParameterNames = new(StringComparer.OrdinalIgnoreCase);
@@ -78,15 +82,21 @@ public static class CatchAllPredicateScanner
             _procedureHasWithRecompile = false;
         }
 
-        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
+        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker)
+        {
+            _selectStatementDepth++;
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
+        }
 
-        public void OnLeaveSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
+        public void OnLeaveSelectStatementScope(SelectStatement node, ModuleWalker walker)
+        {
+            _selectStatementDepth--;
             _statementHasOptionRecompile = _statementRecompileStack.Pop();
+        }
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (!HasActiveRecompileGuard)
+            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
             {
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }

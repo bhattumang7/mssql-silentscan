@@ -6,19 +6,20 @@ namespace SilentScan.Tests.Predicates;
 
 public sealed class CatchAllPredicateScannerTests
 {
-    private static IReadOnlyList<CatchAllPredicateFinding> Scan(string sql)
+    private static IReadOnlyList<CatchAllPredicateFinding> Scan(string sql, int? compatibilityLevel = null)
     {
         var ddl = "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code));"
             + "CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, Code VARCHAR(20) NOT NULL);";
-        return ScanWithDdl(ddl, sql);
+        return ScanWithDdl(ddl, sql, compatibilityLevel);
     }
 
-    private static IReadOnlyList<CatchAllPredicateFinding> ScanWithDdl(string ddl, string sql)
+    private static IReadOnlyList<CatchAllPredicateFinding> ScanWithDdl(string ddl, string sql, int? compatibilityLevel = null)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{ddl}\nGO\n{sql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
+        catalog.CompatibilityLevel = compatibilityLevel;
         return CatchAllPredicateScanner.Scan(result, catalog);
     }
 
@@ -38,6 +39,35 @@ public sealed class CatchAllPredicateScannerTests
             "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE Code = @p AND (Code = @p OR @p IS NULL); END");
 
         Assert.Empty(findings);
+    }
+
+    private const string SelectProcedure =
+        "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE (Code = @p OR @p IS NULL); END";
+
+    [Theory]
+    [InlineData(170)]
+    public void SelectAtACompatibilityLevelWithOptionalParameterOptimization_NeverFires(int compatibilityLevel)
+    {
+        Assert.Empty(Scan(SelectProcedure, compatibilityLevel));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(160)]
+    [InlineData(150)]
+    public void SelectAtAnUnknownOrOlderCompatibilityLevel_StillFires(int? compatibilityLevel)
+    {
+        Assert.Single(Scan(SelectProcedure, compatibilityLevel));
+    }
+
+    [Fact]
+    public void UpdateAtCompatibilityLevel170_StillFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN UPDATE dbo.Customers SET Region = 'x' WHERE (Code = @p OR @p IS NULL); END",
+            170);
+
+        Assert.Single(findings);
     }
 
     [Fact]

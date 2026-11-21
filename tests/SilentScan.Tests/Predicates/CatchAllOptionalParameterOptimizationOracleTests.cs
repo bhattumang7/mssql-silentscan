@@ -1,0 +1,81 @@
+using Microsoft.Data.SqlClient;
+using SilentScan.Verify;
+using SilentScan.Verify.Deployment;
+
+namespace SilentScan.Tests.Predicates;
+
+[Trait("Category", "Oracle")]
+[Trait("Rule", FindingRuleIds.CatchAllPredicateRuleId)]
+public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLifetime
+{
+    private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
+
+    private readonly string _databaseName = $"{nameof(CatchAllOptionalParameterOptimizationOracleTests)}_{Guid.NewGuid():N}";
+
+    private const string Ddl = """
+        CREATE TABLE dbo.Wide (Id INT NOT NULL, A INT NOT NULL);
+        GO
+        INSERT INTO dbo.Wide (Id, A)
+        SELECT TOP (400000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 4000
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b CROSS JOIN sys.all_objects c;
+        CREATE INDEX IX_Wide_A ON dbo.Wide(A);
+        UPDATE STATISTICS dbo.Wide WITH FULLSCAN;
+        GO
+        CREATE PROCEDURE dbo.FindByA @p INT = NULL AS SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
+        GO
+        """;
+
+    public async Task InitializeAsync()
+    {
+        await new DatabaseProvisioner(Options).CreateFreshAsync(_databaseName);
+        await new ScriptDeployer(Options).DeployAsync(Ddl, _databaseName);
+    }
+
+    public async Task DisposeAsync() =>
+        await new DatabaseProvisioner(Options).DropIfExistsAsync(_databaseName);
+
+    private async Task<long> LogicalReadsAsync(int compatibilityLevel, string statement)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using (var setup = new SqlCommand(
+            $"ALTER DATABASE [{_databaseName}] SET COMPATIBILITY_LEVEL = {compatibilityLevel}; DBCC FREEPROCCACHE; SET STATISTICS IO ON;", connection))
+        {
+            await setup.ExecuteNonQueryAsync();
+        }
+
+        long reads = 0;
+        connection.InfoMessage += (_, e) =>
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(e.Message, @"Table 'Wide'\. Scan count \d+, logical reads (\d+)");
+            if (match.Success)
+            {
+                reads += long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+        };
+
+        await using var call = new SqlCommand(statement, connection);
+        await call.ExecuteNonQueryAsync();
+        return reads;
+    }
+
+    [Fact]
+    public async Task SelectiveCallOnAProcedureParameter_ScansAtCompat150_ButSeeksAtCompat170()
+    {
+        var before = await LogicalReadsAsync(150, "EXEC dbo.FindByA @p = 7;");
+        var after = await LogicalReadsAsync(170, "EXEC dbo.FindByA @p = 7;");
+
+        Assert.True(before > after * 5, $"compat 150 read {before} pages, compat 170 read {after}");
+    }
+
+    [Fact]
+    public async Task SelectiveCallOnALocalVariable_StillScansAtCompat170()
+    {
+        var variableReads = await LogicalReadsAsync(
+            170, "DECLARE @p INT = 7; SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);");
+        var parameterReads = await LogicalReadsAsync(170, "EXEC dbo.FindByA @p = 7;");
+
+        Assert.True(variableReads > parameterReads * 5, $"local variable read {variableReads} pages, parameter read {parameterReads}");
+    }
+}
