@@ -57,6 +57,12 @@ public sealed class RuleOracleBaseTests
 
         protected override IReadOnlyList<RuleCondition> Conditions => conditions ?? [];
 
+        protected override IReadOnlyList<EngineTarget> Targets { get; } =
+        [
+            new(SqlServerOptions.LocalDocker, null),
+            new(SqlServerOptions.LocalDockerLatest, 170),
+        ];
+
         protected override IRuleVerifier Verifier => verifier ?? base.Verifier;
     }
 

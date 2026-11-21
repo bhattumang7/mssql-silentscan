@@ -87,15 +87,17 @@ public abstract class RuleOracle
 {
     private const string UnrelatedStatement = "SELECT 1;";
 
-    private static readonly int?[] CompatibilityLevels = [null, 130];
+    private static readonly int[] CommonCompatibilityLevels = [110, 120, 130, 140, 150, 160];
 
-    private static readonly EngineTarget[] Targets =
+    private static readonly EngineTarget[] AllTargets =
     [
-        .. new[] { SqlServerOptions.LocalDocker, SqlServerOptions.LocalDockerLatest }
-            .SelectMany(options => CompatibilityLevels.Select(level => new EngineTarget(options, level))),
+        .. WithLevels(SqlServerOptions.LocalDocker, []),
+        .. WithLevels(SqlServerOptions.LocalDockerLatest, [170]),
     ];
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ScanReport> _scans = [];
+
+    protected virtual IReadOnlyList<EngineTarget> Targets => AllTargets;
 
     protected abstract IReadOnlyList<OracleCase> FiringCases { get; }
 
@@ -216,6 +218,9 @@ public abstract class RuleOracle
 
         return new SilentTargetResult(failures, refuted);
     }
+
+    private static IEnumerable<EngineTarget> WithLevels(SqlServerOptions options, int[] extraLevels) =>
+        new int?[] { null }.Concat(CommonCompatibilityLevels.Concat(extraLevels).Select(level => (int?)level)).Select(level => new EngineTarget(options, level));
 
     private static void Collect(List<string> failures, string label, string? failure)
     {

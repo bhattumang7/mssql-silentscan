@@ -65,3 +65,19 @@ public sealed class StatementFormsTests
         Assert.Contains(StatementForms.Procedure, applicable);
     }
 }
+
+public sealed class RuleOracleTargetsTests
+{
+    [Fact]
+    public void NoRuleOracleNarrowsTheEngineMatrix()
+    {
+        var offenders = typeof(RuleOracleTargetsTests).Assembly.GetTypes()
+            .Where(t => t is { IsAbstract: false } && typeof(RuleOracle).IsAssignableFrom(t))
+            .Where(t => t.GetProperty("Targets", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.DeclaringType == t)
+            .Where(t => !string.Equals(t.Namespace, typeof(RuleOracleTargetsTests).Namespace, StringComparison.Ordinal))
+            .Select(t => t.Name)
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+}
