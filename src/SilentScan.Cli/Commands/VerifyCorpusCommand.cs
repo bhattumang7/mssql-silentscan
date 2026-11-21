@@ -138,6 +138,8 @@ public static class VerifyCorpusCommand
             Column = r.Finding.Column.ColumnName,
             r.Finding.SourcePath,
             r.Finding.Line,
+            r.Finding.PredicateFragmentText,
+            OtherOperand = r.Finding.OtherOperand.ToString(),
             r.Detail,
         });
         var orderedRows = rows.ToList();
