@@ -109,7 +109,7 @@ public static class VerdictClassifier
 
         if (columnType.IsMax != otherType.IsMax)
         {
-            return (Verdict.RangeSeek, null);
+            return columnType.IsMax ? (Verdict.SeekPreserved, null) : (Verdict.RangeSeek, null);
         }
 
         if (columnType.Collation is null)

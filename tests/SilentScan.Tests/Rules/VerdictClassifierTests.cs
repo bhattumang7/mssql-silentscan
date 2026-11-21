@@ -724,4 +724,17 @@ public sealed class VerdictClassifierTests
 
         Assert.Equal(Verdict.SeekPreserved, VerdictClassifier.Classify(column, value));
     }
+
+    [Theory]
+    [InlineData("SQL_Latin1_General_CP1_CI_AS")]
+    [InlineData("Latin1_General_CI_AS")]
+    [InlineData(null)]
+    public void Classify_MaxColumnVsBoundedValue_SeekPreserved(string? collationName)
+    {
+        var collation = collationName is null ? null : new Collation(collationName);
+        var column = new SqlType(SqlTypeCategory.VarChar, IsMax: true, Collation: collation);
+        var value = new SqlType(SqlTypeCategory.VarChar, Length: 50, Collation: collation);
+
+        Assert.Equal(Verdict.SeekPreserved, VerdictClassifier.Classify(column, value));
+    }
 }
