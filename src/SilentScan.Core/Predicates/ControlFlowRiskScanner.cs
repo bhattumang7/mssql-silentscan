@@ -54,9 +54,19 @@ public static class ControlFlowRiskScanner
         private static readonly HashSet<string> NonDeterministicFunctionNames =
             new(StringComparer.OrdinalIgnoreCase) { "NEWID", "RAND", "CRYPT_GEN_RANDOM" };
 
+        private NamedTableReference? _currentTable;
+
+        public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker) =>
+            _currentTable = node;
+
+        private bool HintIsOnSessionLocalTemporaryTable(TableHint node) =>
+            _currentTable is { } table
+            && table.TableHints.Contains(node)
+            && table.SchemaObject.BaseIdentifier.Value is ['#', not '#', ..];
+
         public void OnEnterTableHint(TableHint node, ModuleWalker walker)
         {
-            if (node.HintKind is TableHintKind.NoLock or TableHintKind.ReadUncommitted)
+            if (node.HintKind is TableHintKind.NoLock or TableHintKind.ReadUncommitted && !HintIsOnSessionLocalTemporaryTable(node))
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.DirtyReadIsolationHint,

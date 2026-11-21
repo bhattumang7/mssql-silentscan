@@ -40,6 +40,22 @@ public sealed class ControlFlowRiskScannerTests
     }
 
     [Fact]
+    public void NoLockHintOnSessionLocalTemporaryTable_NeverFires()
+    {
+        var findings = Scan("CREATE TABLE #t (A INT); SELECT A FROM #t WITH (NOLOCK);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.DirtyReadIsolationHint);
+    }
+
+    [Fact]
+    public void NoLockHintOnGlobalTemporaryTable_StillFires()
+    {
+        var findings = Scan("SELECT A FROM ##t WITH (NOLOCK);");
+
+        Assert.Contains(findings, f => f.Kind == ControlFlowRiskFindingKind.DirtyReadIsolationHint);
+    }
+
+    [Fact]
     public void ReadUncommittedHint_Fires()
     {
         var findings = Scan("SELECT A FROM dbo.T WITH (READUNCOMMITTED);");
