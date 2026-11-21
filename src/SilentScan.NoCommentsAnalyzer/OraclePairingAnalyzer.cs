@@ -24,6 +24,7 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     private const string TraitMetadataName = "Xunit.TraitAttribute";
     private const string BaselineFileName = "oracle-pairing-baseline.txt";
     private const string RuleTraitName = "Rule";
+    private const string FindingInterfaceName = "SilentScan.Core.Predicates.IFinding";
 
     private static readonly string[] AllowedVerifierNamespaces =
     [
@@ -308,6 +309,7 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     {
         var original = type.OriginalDefinition;
         if (SymbolEqualityComparer.Default.Equals(original, ruleIds)
+            || string.Equals(original.ToDisplayString(), FindingInterfaceName, StringComparison.Ordinal)
             || (findingType is not null && SymbolEqualityComparer.Default.Equals(original, findingType.OriginalDefinition)))
         {
             return true;
