@@ -81,6 +81,22 @@ public static partial class AmbiguousDateLiteralConversionScanner
     {
         public List<AmbiguousDateLiteralConversionFinding> Findings { get; } = [];
 
+        private bool _sessionFormatPinned;
+
+        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) =>
+            _sessionFormatPinned = false;
+
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+            _sessionFormatPinned = false;
+
+        public void OnEnterSetCommandStatement(SetCommandStatement node, ModuleWalker walker)
+        {
+            if (node.Commands.OfType<GeneralSetCommand>().Any(c => c.CommandType is GeneralSetCommandType.DateFormat or GeneralSetCommandType.Language))
+            {
+                _sessionFormatPinned = true;
+            }
+        }
+
         public void OnEnterCastCall(CastCall node, ModuleWalker walker) =>
             Inspect(node.DataType, node.Parameter);
 
@@ -109,7 +125,7 @@ public static partial class AmbiguousDateLiteralConversionScanner
             var isAmbiguous = IsAmbiguousDateLiteral(stringLiteral.Value)
                 || (DateFormatDependentIsoLiteralTypes.Contains(option) && IsAmbiguousYearFirstDateLiteral(stringLiteral.Value));
 
-            if (!isAmbiguous)
+            if (!isAmbiguous || _sessionFormatPinned)
             {
                 return;
             }

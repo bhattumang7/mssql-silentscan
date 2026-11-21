@@ -12,6 +12,34 @@ public sealed class AmbiguousDateLiteralConversionScannerTests
         return AmbiguousDateLiteralConversionScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("SET DATEFORMAT dmy;")]
+    [InlineData("SET LANGUAGE British;")]
+    public void SessionFormatPinnedEarlierInTheBatch_NeverFires(string setStatement)
+    {
+        var findings = Scan(setStatement + " SELECT CAST('03/04/2026' AS date);");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SessionFormatPinnedOnlyAfterTheConversion_StillFires()
+    {
+        var findings = Scan("SELECT CAST('03/04/2026' AS date); SET DATEFORMAT dmy;");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void SessionFormatPinnedInAnotherProcedure_StillFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.A AS BEGIN SET DATEFORMAT dmy; SELECT 1; END;" + Environment.NewLine + "GO" + Environment.NewLine +
+            "CREATE PROCEDURE dbo.B AS BEGIN SELECT CAST('03/04/2026' AS date); END;");
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void CastToDate_AmbiguousLiteral_Fires()
     {
