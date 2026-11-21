@@ -383,7 +383,7 @@ public static class QueryAntiPatternScanner
         private void InspectMergeMissingHoldlock(MergeSpecification spec)
         {
             if (spec.Target is not NamedTableReference targetRef
-                || targetRef.SchemaObject.BaseIdentifier.Value.StartsWith('#')
+                || SchemaObjectNameHelper.IsLocalTempName(targetRef.SchemaObject.BaseIdentifier.Value)
                 || !spec.ActionClauses.Any(clause => clause.Action is InsertMergeAction))
             {
                 return;

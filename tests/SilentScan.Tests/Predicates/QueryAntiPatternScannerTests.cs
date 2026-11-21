@@ -517,6 +517,16 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void MergeTargetIsGlobalTemporaryTable_StillFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "MERGE ##t AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN NOT MATCHED THEN INSERT (Id, AId) VALUES (s.AId, s.AId);");
+
+        Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
     public void MergeUnconditionalWhenMatchedDelete_Fires()
     {
         var findings = Scan(
