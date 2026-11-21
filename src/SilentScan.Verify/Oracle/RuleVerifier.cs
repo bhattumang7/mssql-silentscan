@@ -40,6 +40,8 @@ public enum Difference
     NullAppeared,
 
     FailureSuppressed,
+
+    PlanChanged,
 }
 
 public abstract record Touch;
@@ -58,8 +60,10 @@ public sealed class Perturbation
         PerturbationStep removeCondition,
         PerturbationStep applyCondition,
         Func<SqlException, bool> engineRefusalRefutes,
-        Func<string, string?>? baselineStatement = null)
+        Func<string, string?>? baselineStatement = null,
+        string? afterStatementQuery = null)
     {
+        AfterStatementQuery = afterStatementQuery;
         ArgumentOutOfRangeException.ThrowIfZero(touches.Count);
         BaselineStatement = baselineStatement;
         Touches = touches;
@@ -89,6 +93,8 @@ public sealed class Perturbation
     public Func<SqlException, bool> EngineRefusalRefutes { get; }
 
     public Func<string, string?>? BaselineStatement { get; }
+
+    public string? AfterStatementQuery { get; }
 
     public string? NotApplicableReason { get; }
 
@@ -189,9 +195,9 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return NotDecided("The rewrite left the statement as it was, so the condition was never removed.");
         }
 
-        var allowFailure = perturbation.Expected == Difference.FailureSuppressed;
-        var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, allowFailure, cancellationToken);
-        var control = await ObserveOnceAsync(connection, transaction, baselineStatement, allowFailure, cancellationToken);
+        var observe = new Observe(perturbation.Expected, perturbation.AfterStatementQuery);
+        var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, observe, cancellationToken);
+        var control = await ObserveOnceAsync(connection, transaction, baselineStatement, observe, cancellationToken);
         if (!baseline.SameAs(control))
         {
             return NotDecided("The statement returns different results on its own, with nothing changed, so a difference cannot be credited to the condition.");
@@ -212,7 +218,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return NotDecided("The condition changed no rows, so nothing was put in place to observe.");
         }
 
-        var perturbed = await ObserveOnceAsync(connection, transaction, statement, allowFailure, cancellationToken);
+        var perturbed = await ObserveOnceAsync(connection, transaction, statement, observe, cancellationToken);
         return Classify(perturbation.Expected, baseline, perturbed);
     }
 
@@ -221,6 +227,11 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         if (expected == Difference.FailureSuppressed)
         {
             return ClassifyFailure(baseline, perturbed);
+        }
+
+        if (expected == Difference.PlanChanged)
+        {
+            return ClassifyPlan(baseline, perturbed);
         }
 
         if (expected is Difference.ResultEmptied or Difference.NullAppeared && baseline.IsEmpty)
@@ -252,6 +263,18 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             : NotDecided("The condition changed the statement's result, but did not empty it as the claim describes.");
     }
 
+    private static EngineVerification ClassifyPlan(Observation baseline, Observation perturbed)
+    {
+        if (baseline.Plan is null || perturbed.Plan is null)
+        {
+            return NotDecided("The engine returned no plan for the statement.");
+        }
+
+        return string.Equals(baseline.Plan, perturbed.Plan, StringComparison.Ordinal)
+            ? new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not change the statement's plan.")
+            : new EngineVerification(EngineVerdict.Confirmed, "Applying the condition changed the statement's plan.");
+    }
+
     private static EngineVerification ClassifyFailure(Observation baseline, Observation perturbed)
     {
         if (baseline.FailureNumber is null)
@@ -266,9 +289,18 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             : new EngineVerification(EngineVerdict.Refuted, string.Create(CultureInfo.InvariantCulture, $"The statement still fails with error {perturbed.FailureNumber} when the condition is applied."));
     }
 
+    private sealed record Observe(Difference Expected, string? AfterQuery);
+
     private static async Task<Observation> ObserveOnceAsync(
-        SqlConnection connection, SqlTransaction transaction, string statement, bool allowFailure, CancellationToken cancellationToken)
+        SqlConnection connection, SqlTransaction transaction, string statement, Observe observe, CancellationToken cancellationToken)
     {
+        if (observe.Expected == Difference.PlanChanged)
+        {
+            var plan = await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
+            return new Observation([], 0, null, plan is null ? null : PlanSignature(plan));
+        }
+
+        var allowFailure = observe.Expected == Difference.FailureSuppressed;
         transaction.Save(StatementSavepoint);
         try
         {
@@ -286,7 +318,21 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             }
             while (await reader.NextResultAsync(cancellationToken));
 
-            return new Observation(rows, reader.RecordsAffected);
+            var affected = reader.RecordsAffected;
+            await reader.CloseAsync();
+            if (observe.AfterQuery is { } after)
+            {
+                await using var stored = new SqlCommand(after, connection, transaction) { CommandTimeout = 120 };
+                await using var storedReader = await stored.ExecuteReaderAsync(cancellationToken);
+                while (await storedReader.ReadAsync(cancellationToken))
+                {
+                    var values = new object?[storedReader.FieldCount];
+                    storedReader.GetValues(values);
+                    rows.Add("after:" + string.Join('|', values.Select(v => v is DBNull ? NullCell : Convert.ToString(v, CultureInfo.InvariantCulture))));
+                }
+            }
+
+            return new Observation(rows, affected);
         }
         catch (SqlException ex) when (allowFailure)
         {
@@ -298,10 +344,31 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         }
     }
 
+    private static string PlanSignature(string planXml) =>
+        string.Join(
+            ";",
+            XDocument.Parse(planXml).Descendants().Where(e => e.Name.LocalName == "RelOp").Select(e =>
+                (string?)e.Attribute("PhysicalOp") + ":" + string.Join(",", e.Descendants().Where(o => o.Name.LocalName == "Object").Select(o => (string?)o.Attribute("Table") + "/" + (string?)o.Attribute("Index")))));
+
     private static async Task<bool> PlanReadsEveryObjectAsync(
         SqlConnection connection, string statement, IReadOnlyList<TouchedObject> touches, CancellationToken cancellationToken)
     {
-        await using (var on = new SqlCommand("SET SHOWPLAN_XML ON;", connection))
+        var planXml = await PlanOfAsync(connection, null, statement, cancellationToken);
+        if (planXml is null)
+        {
+            return false;
+        }
+
+        var objects = XDocument.Parse(planXml).Descendants().Where(e => e.Name.LocalName == "Object").ToList();
+        return touches.All(t => objects.Exists(e =>
+            string.Equals(Unbracket((string?)e.Attribute("Table")), t.Name, StringComparison.OrdinalIgnoreCase)
+            && (t.Schema is null || string.Equals(Unbracket((string?)e.Attribute("Schema")), t.Schema, StringComparison.OrdinalIgnoreCase))));
+    }
+
+    private static async Task<string?> PlanOfAsync(
+        SqlConnection connection, SqlTransaction? transaction, string statement, CancellationToken cancellationToken)
+    {
+        await using (var on = new SqlCommand("SET SHOWPLAN_XML ON;", connection, transaction))
         {
             await on.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -309,7 +376,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         string? planXml = null;
         try
         {
-            await using var command = new SqlCommand(statement, connection) { CommandTimeout = 120 };
+            await using var command = new SqlCommand(statement, connection, transaction) { CommandTimeout = 120 };
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             do
             {
@@ -326,19 +393,11 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         }
         finally
         {
-            await using var off = new SqlCommand("SET SHOWPLAN_XML OFF;", connection);
+            await using var off = new SqlCommand("SET SHOWPLAN_XML OFF;", connection, transaction);
             await off.ExecuteNonQueryAsync(CancellationToken.None);
         }
 
-        if (planXml is null)
-        {
-            return false;
-        }
-
-        var objects = XDocument.Parse(planXml).Descendants().Where(e => e.Name.LocalName == "Object").ToList();
-        return touches.All(t => objects.Exists(e =>
-            string.Equals(Unbracket((string?)e.Attribute("Table")), t.Name, StringComparison.OrdinalIgnoreCase)
-            && (t.Schema is null || string.Equals(Unbracket((string?)e.Attribute("Schema")), t.Schema, StringComparison.OrdinalIgnoreCase))));
+        return planXml;
     }
 
     private static string? Unbracket(string? name) => name?.Trim('[', ']');
@@ -370,14 +429,14 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private static EngineVerification NotDecided(string detail) => new(EngineVerdict.NotDecided, detail);
 
-    private sealed record Observation(List<string> Rows, int RecordsAffected, int? FailureNumber = null)
+    private sealed record Observation(List<string> Rows, int RecordsAffected, int? FailureNumber = null, string? Plan = null)
     {
         public int NullCells => Rows.Sum(row => row.Split('|').Count(cell => string.Equals(cell, NullCell, StringComparison.Ordinal)));
 
         public bool IsEmpty => Rows.Count == 0 && RecordsAffected <= 0;
 
         public bool SameAs(Observation other) =>
-            RecordsAffected == other.RecordsAffected && FailureNumber == other.FailureNumber && Rows.SequenceEqual(other.Rows, StringComparer.Ordinal);
+            RecordsAffected == other.RecordsAffected && FailureNumber == other.FailureNumber && Plan == other.Plan && Rows.SequenceEqual(other.Rows, StringComparer.Ordinal);
     }
 }
 

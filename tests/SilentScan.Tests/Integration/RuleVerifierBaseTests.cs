@@ -254,6 +254,79 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         Assert.NotEqual(EngineVerdict.NotDecided, result.Verdict);
     }
 
+    private static Perturbation Observing(Difference expected, PerturbationStep apply, string? afterQuery = null) =>
+        new(TouchesT, expected, Nothing, apply, _ => false, afterStatementQuery: afterQuery);
+
+    private const string StoredValues = "SELECT V FROM dbo.T ORDER BY V;";
+
+    [Fact]
+    public async Task StoredValueAfterTheStatementDiffers_IsConfirmedWhenTheResultItselfDoesNotShowIt()
+    {
+        var perturbation = Observing(Difference.ResultChanged, Run("UPDATE dbo.T SET V = V + 100 WHERE V = 1;"), StoredValues);
+
+        var result = await VerifyAsync(perturbation, "UPDATE dbo.T SET V = V + 1 WHERE V = 2;");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task WithoutAStoredValueQuery_TheSameDataStatementShowsNoDifference()
+    {
+        var perturbation = Observing(Difference.ResultChanged, Run("UPDATE dbo.T SET V = V + 100 WHERE V = 1;"));
+
+        var result = await VerifyAsync(perturbation, "UPDATE dbo.T SET V = V + 1 WHERE V = 2;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StoredValueAfterTheStatementIsUnchanged_IsRefuted()
+    {
+        var perturbation = Observing(Difference.ResultChanged, NoOpWrite, StoredValues);
+
+        var result = await VerifyAsync(perturbation, "UPDATE dbo.T SET V = V + 1 WHERE V = 2;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task AddedIndexChangesThePlanOfTheStatement_IsConfirmedWhenAPlanChangeIsExpected()
+    {
+        var perturbation = Observing(Difference.PlanChanged, Run("CREATE INDEX IX_T_V ON dbo.T (V);"));
+
+        var result = await VerifyAsync(perturbation, "SELECT V FROM dbo.T WHERE V = 1;");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task ConditionThatLeavesThePlanAlone_IsRefutedWhenAPlanChangeIsExpected()
+    {
+        var perturbation = Observing(Difference.PlanChanged, NoOpWrite);
+
+        var result = await VerifyAsync(perturbation, "SELECT V FROM dbo.T WHERE V = 1;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task PlanObservation_LeavesTheDatabaseUnchanged()
+    {
+        var before = await IndexCountAsync();
+
+        await VerifyAsync(Observing(Difference.PlanChanged, Run("CREATE INDEX IX_T_V ON dbo.T (V);")), "SELECT V FROM dbo.T WHERE V = 1;");
+
+        Assert.Equal(before, await IndexCountAsync());
+    }
+
+    private async Task<int> IndexCountAsync()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("SELECT COUNT(*) FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.T') AND name IS NOT NULL;", connection);
+        return (int)(await command.ExecuteScalarAsync())!;
+    }
+
     [Fact]
     public async Task EngineRefusesTheConditionAndTheRefusalIsTheClaim_IsRefuted()
     {
