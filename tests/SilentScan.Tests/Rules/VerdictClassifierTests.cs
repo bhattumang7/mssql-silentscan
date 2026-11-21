@@ -737,4 +737,25 @@ public sealed class VerdictClassifierTests
 
         Assert.Equal(Verdict.SeekPreserved, VerdictClassifier.Classify(column, value));
     }
+
+    [Fact]
+    public void ClassifyWithReason_BoundedColumnVsMaxColumn_IsUnknownBecauseThePlanDependsOnTheJoinStrategy()
+    {
+        var column = new SqlType(SqlTypeCategory.VarChar, Length: 50, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"));
+        var other = new SqlType(SqlTypeCategory.VarChar, IsMax: true, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"));
+
+        var (verdict, reason) = VerdictClassifier.ClassifyWithReason(column, other, otherIsColumn: true);
+
+        Assert.Equal(Verdict.Unknown, verdict);
+        Assert.Equal("max-length-column-comparison", reason);
+    }
+
+    [Fact]
+    public void ClassifyWithReason_BoundedColumnVsMaxValue_StaysRangeSeekWhenTheOtherSideIsNotAColumn()
+    {
+        var column = new SqlType(SqlTypeCategory.VarChar, Length: 50, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"));
+        var other = new SqlType(SqlTypeCategory.VarChar, IsMax: true, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"));
+
+        Assert.Equal(Verdict.RangeSeek, VerdictClassifier.ClassifyWithReason(column, other, otherIsColumn: false).Verdict);
+    }
 }

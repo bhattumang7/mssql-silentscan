@@ -3553,4 +3553,16 @@ public sealed class TypedPredicateExtractorOracleTests : OracleTestFixture
         Assert.Contains("GetRangeWithMismatchedTypes", planXml);
     }
 
+    [Fact]
+    public void Extract_BoundedStringColumnJoinedToMaxStringColumn_IsUnknownBecauseThePlanDependsOnTheJoinStrategy()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.A (Id INT NOT NULL, B VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
+            "CREATE TABLE dbo.O (Id INT NOT NULL, M VARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
+            "SELECT 1 FROM dbo.A a JOIN dbo.O o ON a.B = o.M;");
+
+        var boundedSide = Assert.Single(findings, f => f.Column.ColumnName == "B");
+        Assert.Equal(Verdict.Unknown, boundedSide.Verdict);
+        Assert.Equal("max-length-column-comparison", boundedSide.UnknownReason);
+    }
 }

@@ -910,7 +910,7 @@ public static class TypedPredicateExtractor
         {
             var otherIsLiteral = other is PredicateOperand.Value { IsLiteral: true };
             var otherType = other is PredicateOperand.Value value ? value.Type : ((PredicateOperand.Column)other).Type;
-            var (verdict, unknownReason) = VerdictClassifier.ClassifyWithReason(column.Type, otherType, otherIsLiteral, operatorText);
+            var (verdict, unknownReason) = VerdictClassifier.ClassifyWithReason(column.Type, otherType, otherIsLiteral, operatorText, otherIsColumn: other is PredicateOperand.Column);
 
             Findings.Add(new TypedPredicateFinding(
                 verdict, column, other, operatorText, sourcePath, node.StartLine, node.StartColumn,

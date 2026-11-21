@@ -8,7 +8,8 @@ public static class VerdictClassifier
     public static Verdict Classify(SqlType? columnType, SqlType? otherType, bool otherIsLiteral = false, string? operatorText = null) =>
         ClassifyWithReason(columnType, otherType, otherIsLiteral, operatorText).Verdict;
 
-    public static (Verdict Verdict, string? UnknownReason) ClassifyWithReason(SqlType? columnType, SqlType? otherType, bool otherIsLiteral = false, string? operatorText = null)
+    public static (Verdict Verdict, string? UnknownReason) ClassifyWithReason(
+        SqlType? columnType, SqlType? otherType, bool otherIsLiteral = false, string? operatorText = null, bool otherIsColumn = false)
     {
         if (columnType is null || otherType is null)
         {
@@ -42,7 +43,7 @@ public static class VerdictClassifier
 
         if (columnType.Category == otherType.Category)
         {
-            return ClassifySameCategory(columnType, otherType);
+            return ClassifySameCategory(columnType, otherType, otherIsColumn);
         }
 
         return ClassifyCrossCategory(columnType, otherType, otherIsLiteral, operatorText);
@@ -99,7 +100,7 @@ public static class VerdictClassifier
             or SqlTypeCategory.Text or SqlTypeCategory.NText or SqlTypeCategory.Image or SqlTypeCategory.Json
             or SqlTypeCategory.Vector or SqlTypeCategory.Geometry or SqlTypeCategory.Geography;
 
-    private static (Verdict Verdict, string? UnknownReason) ClassifySameCategory(SqlType columnType, SqlType otherType)
+    private static (Verdict Verdict, string? UnknownReason) ClassifySameCategory(SqlType columnType, SqlType otherType, bool otherIsColumn)
     {
         if (!columnType.IsStringFamily)
         {
@@ -109,7 +110,12 @@ public static class VerdictClassifier
 
         if (columnType.IsMax != otherType.IsMax)
         {
-            return columnType.IsMax ? (Verdict.SeekPreserved, null) : (Verdict.RangeSeek, null);
+            if (columnType.IsMax)
+            {
+                return (Verdict.SeekPreserved, null);
+            }
+
+            return otherIsColumn ? (Verdict.Unknown, "max-length-column-comparison") : (Verdict.RangeSeek, null);
         }
 
         if (columnType.Collation is null)
