@@ -403,6 +403,35 @@ public sealed class TypedPredicateExtractorTests
             """));
     }
 
+    private static IReadOnlyList<ExpressionDerivedFinding> ExpressionDerivedThroughView(string selectExpression, string parameterType, string predicateOperand)
+    {
+        return ExtractExpressionDerived(
+            "CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Placed DATETIME NOT NULL, Code VARCHAR(20) NOT NULL);",
+            "CREATE INDEX IX_Orders_Placed ON dbo.Orders(Placed);",
+            $"CREATE VIEW dbo.vw_Orders AS SELECT OrderId, {selectExpression} AS Derived FROM dbo.Orders;",
+            $"CREATE PROCEDURE dbo.usp_Get @p {parameterType} AS BEGIN SELECT OrderId FROM dbo.vw_Orders WHERE Derived = {predicateOperand}; END");
+    }
+
+    [Theory]
+    [InlineData("CAST(OrderId AS BIGINT)", "BIGINT")]
+    [InlineData("CAST(OrderId AS DECIMAL(18, 0))", "DECIMAL(18, 0)")]
+    [InlineData("CAST(Placed AS DATE)", "DATE")]
+    [InlineData("CAST(Placed AS DATETIME2(3))", "DATETIME2(3)")]
+    public void Extract_CastWithinTheNumericOrDateTimeFamilyThroughAView_NeverFiresExpressionDerived(string selectExpression, string parameterType)
+    {
+        Assert.Empty(ExpressionDerivedThroughView(selectExpression, parameterType, "@p"));
+    }
+
+    [Theory]
+    [InlineData("CAST(OrderId AS VARCHAR(20))", "VARCHAR(20)")]
+    [InlineData("UPPER(Code)", "VARCHAR(20)")]
+    [InlineData("OrderId + 1", "INT")]
+    [InlineData("CAST(Placed AS VARCHAR(30))", "VARCHAR(30)")]
+    public void Extract_StringCastOrScalarExpressionThroughAView_StillFiresExpressionDerived(string selectExpression, string parameterType)
+    {
+        Assert.Single(ExpressionDerivedThroughView(selectExpression, parameterType, "@p"));
+    }
+
     [Fact]
     public void Extract_PlainPassthroughThroughTwoViews_NoExpressionDerivedFinding()
     {

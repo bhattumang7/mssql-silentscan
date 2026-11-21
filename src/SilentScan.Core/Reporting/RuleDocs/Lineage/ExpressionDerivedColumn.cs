@@ -12,10 +12,14 @@ internal static class ExpressionDerivedColumn
             time the query actually sees it - somewhere between the predicate and the real base
             table, a `CAST`/`CONVERT` or other expression replaced it with a computed value, either
             right there in the current statement's own derived table, or further upstream, baked
-            into a view or inline TVF's own `SELECT` list. No comparison against a computed
-            expression can use an index seek, regardless of what type the expression lands on or
-            what it's compared against - the index exists on the real underlying column's stored
-            values, not on a value the engine has to compute fresh for every row.
+            into a view or inline TVF's own `SELECT` list. A comparison against a computed
+            expression generally cannot use an index seek - the index exists on the real
+            underlying column's stored values, not on a value the engine has to compute fresh for
+            every row. Oracle-confirmed exceptions are not reported: a `CAST` that stays inside the
+            numeric family (`INT` to `BIGINT`, `DECIMAL`) or inside the date/time family
+            (`DATETIME` to `DATE`) still seeks the base column's index, because the engine converts
+            the constant instead. A cast to a string, a function such as `UPPER`, and arithmetic
+            on the column all lose the seek, and those are what this finding covers.
 
             This is reported separately from this tool's ordinary sargability verdicts (the
             `verdict/*` family), which are about type-precedence mismatches between two otherwise-

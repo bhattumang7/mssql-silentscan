@@ -1306,6 +1306,12 @@ public static class TypedPredicateExtractor
                 return;
             }
 
+            if (provenance is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } }
+                && NonSargablePredicateScanner.IsSeekableThroughConvert(castType, sourceType))
+            {
+                return;
+            }
+
             var underlyingBaseColumns = ColumnProvenanceAnalysis.FindUnderlyingBaseColumns(provenance)
                 .Select(bc => new UnderlyingBaseColumn(bc.TableQualifiedName, bc.ColumnName, catalog.Find(bc.TableQualifiedName, walker.CurrentProcScope)?.IsIndexedColumn(bc.ColumnName, catalog.IdentifierComparer) ?? false))
                 .ToList();

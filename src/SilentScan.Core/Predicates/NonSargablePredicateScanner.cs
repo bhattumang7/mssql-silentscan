@@ -44,6 +44,12 @@ public static class NonSargablePredicateScanner
         return (rule.Findings, rule.TemporalBoundaryFindings);
     }
 
+    internal static bool IsSeekableThroughConvert(SqlType targetType, SqlType sourceType) =>
+        (targetType.IsNumericFamily && sourceType.IsNumericFamily)
+        || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
+            && sourceType.Category != SqlTypeCategory.DateTimeOffset
+            && targetType.Category is not SqlTypeCategory.Time);
+
     private sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
         public List<SargabilityFinding> Findings { get; } = [];
@@ -392,12 +398,6 @@ public static class NonSargablePredicateScanner
 
             return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
         }
-
-        private static bool IsSeekableThroughConvert(SqlType targetType, SqlType sourceType) =>
-            (targetType.IsNumericFamily && sourceType.IsNumericFamily)
-            || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
-                && sourceType.Category != SqlTypeCategory.DateTimeOffset
-                && targetType.Category is not SqlTypeCategory.Time);
 
         private void InspectSide(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
         {
