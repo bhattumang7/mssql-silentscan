@@ -52,6 +52,7 @@ internal static class RangeSeek
                     );
                     CREATE INDEX IX_Inventory_Quantity ON dbo.Inventory(Quantity);
 
+                    GO
                     CREATE PROCEDURE dbo.FindLowStock (@threshold REAL)
                     AS
                     SELECT ItemId
@@ -67,6 +68,7 @@ internal static class RangeSeek
                     );
                     CREATE INDEX IX_Inventory_Quantity ON dbo.Inventory(Quantity);
 
+                    GO
                     CREATE PROCEDURE dbo.FindLowStock (@threshold INT)
                     AS
                     SELECT ItemId

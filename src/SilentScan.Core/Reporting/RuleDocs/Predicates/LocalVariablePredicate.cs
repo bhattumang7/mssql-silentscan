@@ -57,6 +57,7 @@ internal static class LocalVariablePredicate
                     );
                     CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrdersForTopCustomer
                     AS
                     DECLARE @customerId INT = (SELECT TOP (1) CustomerId FROM dbo.Orders GROUP BY CustomerId ORDER BY COUNT(*) DESC);
@@ -74,6 +75,7 @@ internal static class LocalVariablePredicate
                     );
                     CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrdersForTopCustomer
                     AS
                     DECLARE @customerId INT = (SELECT TOP (1) CustomerId FROM dbo.Orders GROUP BY CustomerId ORDER BY COUNT(*) DESC);

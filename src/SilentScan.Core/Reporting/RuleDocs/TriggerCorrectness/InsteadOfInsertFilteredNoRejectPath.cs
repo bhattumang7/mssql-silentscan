@@ -61,6 +61,7 @@ internal static class InsteadOfInsertFilteredNoRejectPath
                         CategoryId INT NOT NULL PRIMARY KEY
                     );
 
+                    GO
                     CREATE VIEW dbo.ProductEntry AS
                     SELECT ProductId, CategoryId, Name FROM dbo.Products;
                     GO

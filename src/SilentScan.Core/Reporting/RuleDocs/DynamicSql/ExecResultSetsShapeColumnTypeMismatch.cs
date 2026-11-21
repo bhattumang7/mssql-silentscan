@@ -39,6 +39,7 @@ internal static class ExecResultSetsShapeColumnTypeMismatch
                         SELECT CAST('hello world' AS VARCHAR(100)) AS Name;
                     END;
 
+                    GO
                     CREATE PROCEDURE dbo.usp_Caller AS
                     BEGIN
                         EXEC dbo.usp_Callee WITH RESULT SETS ((Name VARCHAR(3) NOT NULL));

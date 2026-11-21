@@ -45,7 +45,7 @@ internal static class TemporalOffsetDropped
                         OccurredAt DATETIME2(3) NOT NULL
                     );
 
-                    DECLARE @capturedAt DATETIMEOFFSET(3) = '2024-03-15T09:00:00.000 -05:00';
+                    DECLARE @capturedAt DATETIMEOFFSET(3) = '2024-03-15T09:00:00.000-05:00';
 
                     UPDATE dbo.Events
                     SET OccurredAt = @capturedAt
@@ -59,7 +59,7 @@ internal static class TemporalOffsetDropped
                         OccurredAt DATETIMEOFFSET(3) NOT NULL
                     );
 
-                    DECLARE @capturedAt DATETIMEOFFSET(3) = '2024-03-15T09:00:00.000 -05:00';
+                    DECLARE @capturedAt DATETIMEOFFSET(3) = '2024-03-15T09:00:00.000-05:00';
 
                     UPDATE dbo.Events
                     SET OccurredAt = @capturedAt

@@ -63,6 +63,7 @@ internal static class UnicodeReplacement
                         FullName   VARCHAR(100) NOT NULL
                     );
 
+                    GO
                     CREATE PROCEDURE dbo.AddCustomer (@fullName NVARCHAR(100))
                     AS
                     INSERT INTO dbo.Customers (CustomerId, FullName)
@@ -76,6 +77,7 @@ internal static class UnicodeReplacement
                         FullName   NVARCHAR(100) NOT NULL
                     );
 
+                    GO
                     CREATE PROCEDURE dbo.AddCustomer (@fullName NVARCHAR(100))
                     AS
                     INSERT INTO dbo.Customers (CustomerId, FullName)

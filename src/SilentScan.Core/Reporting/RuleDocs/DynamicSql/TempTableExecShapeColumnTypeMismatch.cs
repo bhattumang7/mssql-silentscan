@@ -39,6 +39,7 @@ internal static class TempTableExecShapeColumnTypeMismatch
                         SELECT CAST(N'x' AS NVARCHAR(100)) AS Name;
                     END;
 
+                    GO
                     CREATE PROCEDURE dbo.usp_Caller AS
                     BEGIN
                         CREATE TABLE #Results (Name VARCHAR(50) NOT NULL);

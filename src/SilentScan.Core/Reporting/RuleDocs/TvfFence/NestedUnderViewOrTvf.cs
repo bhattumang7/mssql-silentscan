@@ -42,6 +42,7 @@ internal static class NestedUnderViewOrTvf
                 NoncompliantSql: """
                     CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, Name VARCHAR(100) NOT NULL);
 
+                    GO
                     CREATE FUNCTION dbo.fn_CustomerTier(@CustomerId INT)
                     RETURNS @Tier TABLE (TierName VARCHAR(20))
                     AS

@@ -66,6 +66,7 @@ internal static class UpdateFunctionWithoutValueComparison
                         ChangedAt DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME()
                     );
 
+                    GO
                     CREATE TRIGGER dbo.trg_Orders_StatusChange ON dbo.Orders
                     AFTER UPDATE
                     AS

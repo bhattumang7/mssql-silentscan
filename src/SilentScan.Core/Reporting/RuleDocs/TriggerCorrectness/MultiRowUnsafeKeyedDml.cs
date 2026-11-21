@@ -53,6 +53,7 @@ internal static class MultiRowUnsafeKeyedDml
                         Delta      INT NOT NULL
                     );
 
+                    GO
                     CREATE TRIGGER dbo.trg_StockMoves_Insert ON dbo.StockMoves
                     AFTER INSERT
                     AS

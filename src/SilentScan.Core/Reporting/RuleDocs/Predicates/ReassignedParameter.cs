@@ -58,6 +58,7 @@ internal static class ReassignedParameter
                     );
                     CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrders (@customerId INT)
                     AS
                     SET @customerId = @customerId + 0;
@@ -75,6 +76,7 @@ internal static class ReassignedParameter
                     );
                     CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrders (@customerId INT)
                     AS
                     SET @customerId = @customerId + 0;

@@ -51,6 +51,7 @@ internal static class FilteredIndexParameterMismatch
                     );
                     CREATE INDEX IX_Orders_Open ON dbo.Orders(CustomerId) WHERE Status = 'Open';
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrdersByStatus (@status VARCHAR(10))
                     AS
                     SELECT OrderId
@@ -67,6 +68,7 @@ internal static class FilteredIndexParameterMismatch
                     );
                     CREATE INDEX IX_Orders_Open ON dbo.Orders(CustomerId) WHERE Status = 'Open';
 
+                    GO
                     CREATE PROCEDURE dbo.FindOpenOrders
                     AS
                     SELECT OrderId

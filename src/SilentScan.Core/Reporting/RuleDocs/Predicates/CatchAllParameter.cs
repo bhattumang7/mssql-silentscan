@@ -63,6 +63,7 @@ internal static class CatchAllParameter
                     );
                     CREATE INDEX IX_Orders_CustomerId ON dbo.Orders(CustomerId);
 
+                    GO
                     CREATE PROCEDURE dbo.FindOrders (@customerId INT = NULL)
                     AS
                     SELECT OrderId

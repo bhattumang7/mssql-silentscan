@@ -63,6 +63,7 @@ internal static class MultiRowUnsafeSingleRowAssignment
                         LoggedAt   DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
                     );
 
+                    GO
                     CREATE TRIGGER dbo.trg_Orders_Insert ON dbo.Orders
                     AFTER INSERT
                     AS

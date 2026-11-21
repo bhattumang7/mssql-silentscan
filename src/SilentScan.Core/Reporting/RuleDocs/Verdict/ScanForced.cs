@@ -57,6 +57,7 @@ internal static class ScanForced
                     );
                     CREATE INDEX IX_Accounts_AccountNo ON dbo.Accounts(AccountNo);
 
+                    GO
                     CREATE PROCEDURE dbo.FindAccount (@accountNo NVARCHAR(20))
                     AS
                     SELECT AccountId

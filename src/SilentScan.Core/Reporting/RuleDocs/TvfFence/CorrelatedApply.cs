@@ -49,6 +49,7 @@ internal static class CorrelatedApply
                 NoncompliantSql: """
                     CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
 
+                    GO
                     CREATE FUNCTION dbo.fn_CustomerTier(@CustomerId INT)
                     RETURNS @Tier TABLE (TierName VARCHAR(20))
                     AS

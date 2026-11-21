@@ -33,6 +33,7 @@ internal static class SmallDateTimeRounding
                 NoncompliantSql: """
                     CREATE TABLE dbo.Slot (Id INT NOT NULL, StartsAt SMALLDATETIME NOT NULL);
 
+                    GO
                     CREATE PROCEDURE dbo.AddSlot (@id INT)
                     AS
                     BEGIN
@@ -43,6 +44,7 @@ internal static class SmallDateTimeRounding
                 CompliantSql: """
                     CREATE TABLE dbo.Slot (Id INT NOT NULL, StartsAt DATETIME2(0) NOT NULL);
 
+                    GO
                     CREATE PROCEDURE dbo.AddSlot (@id INT)
                     AS
                     BEGIN

@@ -60,6 +60,7 @@ internal static class DirectRecursiveTrigger
                         Level      INT NOT NULL
                     );
 
+                    GO
                     CREATE TRIGGER dbo.trg_Employees_Update ON dbo.Employees
                     AFTER UPDATE
                     AS

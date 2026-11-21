@@ -55,6 +55,7 @@ internal static class InconsistentLockOrder
                     CREATE TABLE dbo.Accounts (AccountId INT NOT NULL PRIMARY KEY, Balance DECIMAL(12,2) NOT NULL);
                     CREATE TABLE dbo.Ledger   (LedgerId  INT NOT NULL PRIMARY KEY, AccountId INT NOT NULL, Amount DECIMAL(12,2) NOT NULL);
 
+                    GO
                     CREATE PROCEDURE dbo.ApplyDeposit (@AccountId INT, @Amount DECIMAL(12,2), @LedgerId INT)
                     AS
                     BEGIN
