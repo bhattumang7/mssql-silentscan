@@ -1427,6 +1427,7 @@ public static class CatalogBuilder
             IsMasked: columnDefinition.IsMasked,
             MaskingFunctionName: MaskingFunctionNameNormalizer.Normalize(columnDefinition.MaskingFunction?.Value),
             IsGeneratedAlwaysPeriod: columnDefinition.GeneratedAlways is GeneratedAlwaysType.RowStart or GeneratedAlwaysType.RowEnd,
+            IsHidden: columnDefinition.IsHidden,
             IsSparse: columnDefinition.StorageOptions?.SparseOption == SparseColumnOption.Sparse,
             IsComputedNonDeterministic: columnDefinition.ComputedColumnExpression is { } expressionForDeterminism
                 && ComputedColumnDeterminismChecker.IsNonDeterministic(expressionForDeterminism));

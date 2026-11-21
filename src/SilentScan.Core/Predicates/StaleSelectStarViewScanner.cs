@@ -38,9 +38,16 @@ public static class StaleSelectStarViewScanner
                 continue;
             }
 
-            var baseTableColumns = baseTable.Columns.Select(c => c.Name).ToList();
+            var baseTableColumns = baseTable.Columns.Where(c => !c.IsHidden).Select(c => c.Name).ToList();
 
-            if (viewColumns.SequenceEqual(baseTableColumns, catalog.IdentifierComparer))
+            if (ExtraColumnNames(view.SelectStatement.QueryExpression) is not { } extraNames
+                || extraNames.Any(extra => baseTableColumns.Contains(extra, catalog.IdentifierComparer)))
+            {
+                continue;
+            }
+
+            var starExpandedColumns = viewColumns.Where(column => !extraNames.Contains(column, catalog.IdentifierComparer)).ToList();
+            if (starExpandedColumns.SequenceEqual(baseTableColumns, catalog.IdentifierComparer))
             {
                 continue;
             }
@@ -55,6 +62,36 @@ public static class StaleSelectStarViewScanner
                 .OrderBy(f => f.ViewQualifiedName, StringComparer.Ordinal)
                 .ThenBy(f => f.BaseTableQualifiedName, StringComparer.Ordinal),
         ];
+    }
+
+    private static List<string>? ExtraColumnNames(QueryExpression queryExpression)
+    {
+        switch (queryExpression)
+        {
+            case QueryParenthesisExpression parenthesis:
+                return ExtraColumnNames(parenthesis.QueryExpression);
+            case QuerySpecification spec:
+                var names = new List<string>();
+                foreach (var element in spec.SelectElements.Where(e => e is not SelectStarExpression))
+                {
+                    var name = element switch
+                    {
+                        SelectScalarExpression { ColumnName.Value: { } alias } => alias,
+                        SelectScalarExpression { Expression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers } } => identifiers[^1].Value,
+                        _ => null,
+                    };
+                    if (name is null)
+                    {
+                        return null;
+                    }
+
+                    names.Add(name);
+                }
+
+                return names;
+            default:
+                return null;
+        }
     }
 
     private static int? FindOutermostStarLine(QueryExpression queryExpression) =>

@@ -903,7 +903,7 @@ public sealed class LiveCatalogReader
                    c.is_nullable, c.is_identity, c.is_computed, cc.is_persisted, c.is_ansi_padded,
                    CONVERT(decimal(38,0), idc.seed_value), CONVERT(decimal(38,0), idc.increment_value),
                    CONVERT(decimal(38,0), idc.last_value), c.encryption_type,
-                   c.is_masked, mc.masking_function, c.generated_always_type
+                   c.is_masked, mc.masking_function, c.generated_always_type, c.is_hidden
             FROM sys.columns c
             JOIN sys.types ty ON ty.user_type_id = c.user_type_id
             JOIN sys.tables t ON t.object_id = c.object_id
@@ -965,7 +965,8 @@ public sealed class LiveCatalogReader
             EnclaveSupport: ColumnEncryptionEnclaveSupport.Unknown,
             IsMasked: isMasked,
             MaskingFunctionName: maskingFunctionName,
-            IsGeneratedAlwaysPeriod: generatedAlwaysType is 1 or 2);
+            IsGeneratedAlwaysPeriod: generatedAlwaysType is 1 or 2,
+            IsHidden: reader.GetBoolean(21));
         return (objectId, column);
     }
 
