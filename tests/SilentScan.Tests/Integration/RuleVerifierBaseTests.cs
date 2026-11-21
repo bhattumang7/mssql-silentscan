@@ -138,6 +138,22 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task AppliedConditionChangesHowManyRowsComeBack_IsConfirmedWhenARowCountChangeIsExpected()
+    {
+        var result = await VerifyAsync(Of(Difference.RowCountChanged, Run("DELETE FROM dbo.T WHERE V = 1;")), Select);
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task AppliedConditionChangesValuesButNotTheRowCount_IsRefutedWhenARowCountChangeIsExpected()
+    {
+        var result = await VerifyAsync(Of(Difference.RowCountChanged, Run("UPDATE dbo.T SET V = V + 10;")), Select);
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
     public async Task EngineRefusesTheConditionAndTheRefusalIsTheClaim_IsRefuted()
     {
         var result = await VerifyAsync(

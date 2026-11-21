@@ -35,6 +35,8 @@ public enum Difference
     ResultChanged,
 
     NullAppeared,
+
+    RowCountChanged,
 }
 
 public sealed record TouchedObject(string? Schema, string Name);
@@ -202,6 +204,13 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
                 : new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not turn any value the statement returns into NULL.");
         }
 
+        if (expected == Difference.RowCountChanged)
+        {
+            return perturbed.RowCount != baseline.RowCount
+                ? new EngineVerification(EngineVerdict.Confirmed, string.Create(CultureInfo.InvariantCulture, $"Applying the condition changed how many rows the statement returns or affects ({baseline.RowCount} before, {perturbed.RowCount} after)."))
+                : new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not change how many rows the statement returns or affects.");
+        }
+
         if (perturbed.SameAs(baseline))
         {
             return new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not change the statement's result.");
@@ -298,6 +307,8 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private sealed record Observation(List<string> Rows, int RecordsAffected)
     {
+        public int RowCount => Rows.Count + Math.Max(RecordsAffected, 0);
+
         public int NullCells => Rows.Sum(row => row.Split('|').Count(cell => string.Equals(cell, NullCell, StringComparison.Ordinal)));
 
         public bool IsEmpty => Rows.Count == 0 && RecordsAffected <= 0;
