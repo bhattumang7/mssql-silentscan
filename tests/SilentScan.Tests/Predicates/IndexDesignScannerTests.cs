@@ -282,6 +282,45 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
+    public void UniquePrefixOfUniqueIndex_NeverFiresSubsumed()
+    {
+        var catalog = new DatabaseCatalog();
+        var narrow = new CatalogIndex("UX_Narrow", CatalogIndexKind.Index, IsUnique: true, ["CustomerId"], []);
+        var wide = new CatalogIndex("UX_Wide", CatalogIndexKind.Index, IsUnique: true, ["CustomerId", "OrderDate"], []);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("OrderDate", IntType)], [narrow, wide]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.SubsumedIndex);
+    }
+
+    [Fact]
+    public void PrefixWithOppositeSortDirection_NeverFiresSubsumed()
+    {
+        var catalog = new DatabaseCatalog();
+        var narrow = new CatalogIndex("IX_Narrow", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], KeyColumnIsDescendingRaw: [true]);
+        var wide = new CatalogIndex("IX_Wide", CatalogIndexKind.Index, IsUnique: false, ["CustomerId", "OrderDate"], [], KeyColumnIsDescendingRaw: [false, false]);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("OrderDate", IntType)], [narrow, wide]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.SubsumedIndex);
+    }
+
+    [Fact]
+    public void PrefixWithMatchingSortDirection_StillFiresSubsumed()
+    {
+        var catalog = new DatabaseCatalog();
+        var narrow = new CatalogIndex("IX_Narrow", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], KeyColumnIsDescendingRaw: [true]);
+        var wide = new CatalogIndex("IX_Wide", CatalogIndexKind.Index, IsUnique: false, ["CustomerId", "OrderDate"], [], KeyColumnIsDescendingRaw: [true, false]);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("OrderDate", IntType)], [narrow, wide]));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.SubsumedIndex);
+    }
+
+    [Fact]
     public void SameLengthDifferentColumns_NeverFiresSubsumed()
     {
         var catalog = new DatabaseCatalog();

@@ -168,7 +168,9 @@ public static class IndexDesignScanner
         }
 
         var (shorter, longer) = a.KeyColumns.Count < b.KeyColumns.Count ? (a, b) : (b, a);
-        if (IsProperPrefix(shorter.KeyColumns, longer.KeyColumns, identifierComparer)
+        if (!shorter.IsUnique
+            && IsProperPrefix(shorter.KeyColumns, longer.KeyColumns, identifierComparer)
+            && PrefixSortDirectionsEqual(shorter, longer)
             && shorter.IncludedColumns.All(c => longer.IncludedColumns.Contains(c, identifierComparer)))
         {
             findings.Add(new IndexDesignFinding(
@@ -179,6 +181,21 @@ public static class IndexDesignScanner
                 table.SourcePath,
                 table.SourceLine));
         }
+    }
+
+    private static bool PrefixSortDirectionsEqual(CatalogIndex shorter, CatalogIndex longer)
+    {
+        for (var k = 0; k < shorter.KeyColumns.Count; k++)
+        {
+            var shorterDescending = k < shorter.KeyColumnIsDescending.Count && shorter.KeyColumnIsDescending[k];
+            var longerDescending = k < longer.KeyColumnIsDescending.Count && longer.KeyColumnIsDescending[k];
+            if (shorterDescending != longerDescending)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool KeyColumnsEqual(IReadOnlyList<string> a, IReadOnlyList<string> b, StringComparer identifierComparer) =>
