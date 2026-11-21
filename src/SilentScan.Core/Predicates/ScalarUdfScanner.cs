@@ -289,6 +289,10 @@ public static class ScalarUdfScanner
             }
 
             var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel);
+            if (inlineability == ScalarUdfInlineability.Inlineable)
+            {
+                return;
+            }
             var constantArgumentsNotFolded = info.IsSchemaBound == false && node.Parameters.Count > 0 && node.Parameters.All(p => p is Literal);
 
             Findings.Add(new ScalarUdfFinding(

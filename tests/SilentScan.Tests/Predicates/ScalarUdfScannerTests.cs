@@ -7,16 +7,50 @@ namespace SilentScan.Tests.Predicates;
 
 public sealed class ScalarUdfScannerTests
 {
-    private static IReadOnlyList<ScalarUdfFinding> ScanSql(string sql, int? compatibilityLevel = null)
+    private static IReadOnlyList<ScalarUdfFinding> ScanSql(string sql, int? compatibilityLevel = null, bool? engineIsInlineable = null)
     {
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
+        if (engineIsInlineable is { } inlineable)
+        {
+            catalog.TryGetScalarUdfInfo("dbo.fn_Compute", out var info);
+            catalog.AddScalarUdfInfo("dbo.fn_Compute", info! with { EngineIsInlineable = inlineable });
+        }
+
         var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
         var scalarUdfMap = ScalarUdfMap.Build(views, catalog);
         return ScalarUdfScanner.Scan(result, catalog, scalarUdfMap);
+    }
+
+    private const string ComputeFunctionAndTable = """
+        CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT AS BEGIN RETURN @x + 1; END;
+        GO
+        CREATE TABLE dbo.T (Id INT NOT NULL);
+        GO
+
+        """;
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.T WHERE dbo.fn_Compute(Id) = 1;")]
+    [InlineData("SELECT dbo.fn_Compute(Id) FROM dbo.T;")]
+    public void EngineInlineableFunctionAtCompat150_NeverFires(string statement)
+    {
+        var findings = ScanSql(ComputeFunctionAndTable + statement, compatibilityLevel: 150, engineIsInlineable: true);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void EngineNonInlineableFunctionAtCompat150_StillFires()
+    {
+        var findings = ScanSql(
+            ComputeFunctionAndTable + "SELECT Id FROM dbo.T WHERE dbo.fn_Compute(Id) = 1;",
+            compatibilityLevel: 150, engineIsInlineable: false);
+
+        Assert.Single(findings);
     }
 
     [Fact]
