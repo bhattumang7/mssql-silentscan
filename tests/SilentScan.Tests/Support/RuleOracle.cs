@@ -80,7 +80,7 @@ public abstract class RuleOracle
     }
 
     private static List<IFinding> FindingsOf(ScanReport report, IRuleVerifier verifier) =>
-        [.. report.FindingsByRuleId.Values.SelectMany(findings => findings).Where(verifier.FindingType.IsInstanceOfType)];
+        [.. report.FindingsByRuleId.Values.SelectMany(findings => findings).Where(verifier.Judges)];
 
     private bool FlaggedInSarif(ScanReport report)
     {
@@ -107,7 +107,7 @@ public abstract class RuleOracle
             var results = new List<EngineVerification>();
             foreach (var finding in findings)
             {
-                results.Add(await verifier.VerifyAsync(options, databaseName, finding));
+                results.Add(await verifier.VerifyAsync(options, databaseName, finding, oracleCase.Probe));
             }
 
             return results;

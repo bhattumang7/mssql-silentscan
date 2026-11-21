@@ -26,6 +26,19 @@ public sealed class OraclePairingAnalyzerTests
             {
                 public static int Go() => 1;
             }
+
+            public static class ConversionModel
+            {
+                public static int Go() => 1;
+            }
+        }
+
+        namespace SilentScan.Core.Predicates
+        {
+            public sealed class ExampleFinding
+            {
+                public string Name => "example";
+            }
         }
 
         namespace SilentScan.Tests.Support
@@ -77,14 +90,16 @@ public sealed class OraclePairingAnalyzerTests
         }
         """;
 
-    private static string VerifierObserving(string body) =>
+    private static string VerifierObserving(string body, string helpers = "") =>
         string.Create(CultureInfo.InvariantCulture, $$"""
-            public sealed class AlphaVerifier : SilentScan.Verify.Oracle.RuleVerifier<string>
+            public sealed class AlphaVerifier : SilentScan.Verify.Oracle.RuleVerifier<SilentScan.Core.Predicates.ExampleFinding>
             {
-                protected override System.Threading.Tasks.Task<bool> ObserveAsync(object connection, string finding)
+                protected override System.Threading.Tasks.Task<bool> ObserveAsync(object connection, SilentScan.Core.Predicates.ExampleFinding finding)
                 {
                     {{body}}
                 }
+
+                {{helpers}}
             }
             """);
 
@@ -176,10 +191,34 @@ public sealed class OraclePairingAnalyzerTests
     }
 
     [Fact]
-    public async Task VerifierObservationNotUsingScannerCode_IsAccepted()
+    public async Task VerifierObservationUsingACoreTypeNotNamedScanner_IsRejected()
     {
         var diagnostics = await AnalyzeAsync(
-            PairedAlpha() + "\n" + VerifierObserving("return System.Threading.Tasks.Task.FromResult(true);"),
+            PairedAlpha() + "\n" + VerifierObserving("var n = SilentScan.Core.Reporting.ConversionModel.Go(); return System.Threading.Tasks.Task.FromResult(n == 1);"),
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
+    }
+
+    [Fact]
+    public async Task VerifierHelperMethodReferencingCoreCode_IsRejected()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving(
+                "return System.Threading.Tasks.Task.FromResult(Helper() == 1);",
+                "private static int Helper() => SilentScan.Core.Reporting.ConversionModel.Go();"),
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
+    }
+
+    [Fact]
+    public async Task VerifierUsingOnlyItsFindingTypeRuleIdsAndTheBaseLibrary_IsAccepted()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving(
+                "var ids = new System.Collections.Generic.List<string> { finding.Name, SilentScan.Core.Rules.FindingRuleIds.AlphaRuleId }; return System.Threading.Tasks.Task.FromResult(System.Linq.Enumerable.Any(ids, i => i.Length > 0) && Helper(finding));",
+                "private static bool Helper(SilentScan.Core.Predicates.ExampleFinding f) => f.Name.Length > 0;"),
             "BetaRuleId\n");
 
         Assert.Empty(diagnostics);

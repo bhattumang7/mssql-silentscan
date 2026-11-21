@@ -16,13 +16,13 @@ public sealed class OraclePairingBaselineTests
     }
 
     [Fact]
-    public void BaselineOnlyShrinks()
+    public void BaselineSizeMatchesTheRecordedCap()
     {
         var entries = File.ReadAllLines(BaselinePath()).Where(l => l.Trim().Length > 0).ToList();
 
         Assert.True(
-            entries.Count <= MaxUnpairedRules,
-            $"The baseline lists {entries.Count} unpaired rules, above the ceiling of {MaxUnpairedRules}. A new rule must be paired through RuleOracle, not added here; lower the ceiling when rules are migrated.");
+            entries.Count == MaxUnpairedRules,
+            $"The baseline lists {entries.Count} unpaired rules but the recorded cap is {MaxUnpairedRules}. A new rule must be paired through RuleOracle, never added here; when a rule is migrated, remove its entry and lower MaxUnpairedRules to match.");
     }
 
     [Fact]

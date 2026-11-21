@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.Data.SqlClient;
 using SilentScan.Core.Predicates;
 
@@ -21,7 +20,10 @@ public interface IRuleVerifier
 
     Type FindingType { get; }
 
-    Task<EngineVerification> VerifyAsync(SqlServerOptions options, string database, IFinding finding, CancellationToken cancellationToken = default);
+    bool Judges(IFinding finding);
+
+    Task<EngineVerification> VerifyAsync(
+        SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken = default);
 }
 
 public abstract class RuleVerifier<TFinding> : IRuleVerifier
@@ -31,17 +33,27 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     public Type FindingType => typeof(TFinding);
 
-    protected abstract Task<EngineVerification> ObserveAsync(SqlConnection connection, TFinding finding, CancellationToken cancellationToken);
+    protected abstract Task<EngineVerification> ObserveAsync(
+        SqlConnection connection, TFinding finding, string statement, CancellationToken cancellationToken);
 
-    public async Task<EngineVerification> VerifyAsync(SqlServerOptions options, string database, TFinding finding, CancellationToken cancellationToken = default)
+    protected virtual string RuleIdOf(TFinding finding) =>
+        typeof(TFinding).GetProperty("RuleId")?.GetValue(finding) as string
+        ?? throw new InvalidOperationException($"{typeof(TFinding).Name} has no RuleId property; {GetType().Name} must override RuleIdOf.");
+
+    public bool Judges(IFinding finding) =>
+        finding is TFinding typed && string.Equals(RuleIdOf(typed), RuleId, StringComparison.Ordinal);
+
+    public async Task<EngineVerification> VerifyAsync(
+        SqlServerOptions options, string database, TFinding finding, string statement, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(options.BuildConnectionString(database));
         await connection.OpenAsync(cancellationToken);
-        return await ObserveAsync(connection, finding, cancellationToken);
+        return await ObserveAsync(connection, finding, statement, cancellationToken);
     }
 
-    Task<EngineVerification> IRuleVerifier.VerifyAsync(SqlServerOptions options, string database, IFinding finding, CancellationToken cancellationToken) =>
-        VerifyAsync(options, database, (TFinding)finding, cancellationToken);
+    Task<EngineVerification> IRuleVerifier.VerifyAsync(
+        SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken) =>
+        VerifyAsync(options, database, (TFinding)finding, statement, cancellationToken);
 }
 
 public static class RuleVerifierRegistry

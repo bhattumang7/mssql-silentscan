@@ -23,17 +23,13 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     private const string RuleVerifierMetadataName = "SilentScan.Verify.Oracle.RuleVerifier`1";
     private const string TraitMetadataName = "Xunit.TraitAttribute";
     private const string BaselineFileName = "oracle-pairing-baseline.txt";
-    private const string ObserveMethodName = "ObserveAsync";
     private const string RuleTraitName = "Rule";
-    private const string ScannerSuffix = "Scanner";
-    private const string LiveNamespace = "SilentScan.Live";
 
-    private static readonly string[] ScannerPipelineTypeNames =
+    private static readonly string[] AllowedVerifierNamespaces =
     [
-        "ScanReportBuilder",
-        "TypedPredicateExtractor",
-        "EngineAuthoritativeScan",
-        "LiveScanRunner",
+        "System",
+        "Microsoft.Data",
+        "SilentScan.Verify",
     ];
 
     private static DiagnosticDescriptor Describe(string id, string title) => new(
@@ -47,7 +43,7 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor RawRuleTrait = Describe(RawRuleTraitId, "Rule trait must reference a FindingRuleIds constant");
     private static readonly DiagnosticDescriptor UnpairedRule = Describe(UnpairedRuleId, "Rule has no paired scanner-and-engine oracle test");
     private static readonly DiagnosticDescriptor StaleBaseline = Describe(StaleBaselineId, "Oracle pairing baseline entry is stale");
-    private static readonly DiagnosticDescriptor EngineSideUsesScanner = Describe(EngineSideUsesScannerId, "Engine-side observation must not use scanner code");
+    private static readonly DiagnosticDescriptor EngineSideUsesScanner = Describe(EngineSideUsesScannerId, "Verifier may reference only its finding type, rule ids and the base library");
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
         ImmutableArray.Create(RawRuleTrait, UnpairedRule, StaleBaseline, EngineSideUsesScanner);
@@ -62,14 +58,14 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     private static void OnCompilationStart(CompilationStartAnalysisContext context)
     {
         var verifier = context.Compilation.GetTypeByMetadataName(RuleVerifierMetadataName);
-        if (verifier is not null)
+        var ruleIds = context.Compilation.GetTypeByMetadataName(FindingRuleIdsMetadataName);
+        if (verifier is not null && ruleIds is not null)
         {
             context.RegisterSyntaxNodeAction(
-                nodeContext => CheckVerifierObservation(nodeContext, verifier),
+                nodeContext => CheckVerifierReferences(nodeContext, verifier, ruleIds),
                 SyntaxKind.IdentifierName);
         }
 
-        var ruleIds = context.Compilation.GetTypeByMetadataName(FindingRuleIdsMetadataName);
         var oracle = context.Compilation.GetTypeByMetadataName(RuleOracleMetadataName);
         var trait = context.Compilation.GetTypeByMetadataName(TraitMetadataName);
         if (ruleIds is null || oracle is null || trait is null)
@@ -233,22 +229,48 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    private static void CheckVerifierObservation(SyntaxNodeAnalysisContext context, INamedTypeSymbol verifier)
+    private static INamedTypeSymbol? VerifiedFindingType(INamedTypeSymbol owner, INamedTypeSymbol genericBase)
     {
-        var method = context.Node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
-        if (method is null || !string.Equals(method.Identifier.Text, ObserveMethodName, StringComparison.Ordinal))
+        for (var current = owner.BaseType; current is not null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, genericBase) && current.TypeArguments.Length == 1)
+            {
+                return current.TypeArguments[0] as INamedTypeSymbol;
+            }
+        }
+
+        return null;
+    }
+
+    private static void CheckVerifierReferences(SyntaxNodeAnalysisContext context, INamedTypeSymbol verifier, INamedTypeSymbol ruleIds)
+    {
+        if (context.Node is IdentifierNameSyntax { IsVar: true })
         {
             return;
         }
 
-        if (context.SemanticModel.GetDeclaredSymbol(method, context.CancellationToken)?.ContainingType is not { } owner
+        var declaration = context.Node.FirstAncestorOrSelf<TypeDeclarationSyntax>();
+        if (declaration is null
+            || context.SemanticModel.GetDeclaredSymbol(declaration, context.CancellationToken) is not { } owner
             || !DerivesFromGeneric(owner, verifier))
         {
             return;
         }
 
         var symbol = context.SemanticModel.GetSymbolInfo(context.Node, context.CancellationToken).Symbol;
-        if (symbol is null || !IsScannerSide(symbol))
+        if (symbol is null || IsOwnOrNeutral(symbol, owner))
+        {
+            return;
+        }
+
+        var type = symbol as INamedTypeSymbol ?? symbol.ContainingType;
+        if (type is null)
+        {
+            return;
+        }
+
+        var findingType = VerifiedFindingType(owner, verifier);
+        if (IsAllowedForVerifier(type, findingType, ruleIds))
         {
             return;
         }
@@ -256,28 +278,52 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(
             EngineSideUsesScanner,
             context.Node.GetLocation(),
-            "Verifier " + owner.Name + " references scanner code (" + symbol.ToDisplayString() + ") in " + ObserveMethodName + "; it must observe SQL Server only."));
+            "Verifier " + owner.Name + " references " + symbol.ToDisplayString()
+                + "; a verifier may use only its finding type, FindingRuleIds, SilentScan.Verify, SqlClient and the base library, so its expected answer comes from SQL Server alone."));
     }
 
-    private static bool IsScannerSide(ISymbol symbol)
+    private static bool IsOwnOrNeutral(ISymbol symbol, INamedTypeSymbol owner)
     {
+        switch (symbol.Kind)
+        {
+            case SymbolKind.Local:
+            case SymbolKind.Parameter:
+            case SymbolKind.RangeVariable:
+            case SymbolKind.TypeParameter:
+            case SymbolKind.Label:
+            case SymbolKind.Namespace:
+            case SymbolKind.Alias:
+            case SymbolKind.ArrayType:
+            case SymbolKind.PointerType:
+            case SymbolKind.DynamicType:
+            case SymbolKind.Discard:
+                return true;
+        }
+
         var type = symbol as INamedTypeSymbol ?? symbol.ContainingType;
-        if (type is not null
-            && (type.Name.EndsWith(ScannerSuffix, StringComparison.Ordinal)
-                || ScannerPipelineTypeNames.Contains(type.Name, StringComparer.Ordinal)))
+        return type is not null && SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, owner.OriginalDefinition);
+    }
+
+    private static bool IsAllowedForVerifier(INamedTypeSymbol type, INamedTypeSymbol? findingType, INamedTypeSymbol ruleIds)
+    {
+        var original = type.OriginalDefinition;
+        if (SymbolEqualityComparer.Default.Equals(original, ruleIds)
+            || (findingType is not null && SymbolEqualityComparer.Default.Equals(original, findingType.OriginalDefinition)))
         {
             return true;
         }
 
-        var ns = symbol as INamespaceSymbol ?? symbol.ContainingNamespace;
-        if (ns is null || ns.IsGlobalNamespace)
+        var display = type.ContainingNamespace?.ToDisplayString() ?? string.Empty;
+        foreach (var allowed in AllowedVerifierNamespaces)
         {
-            return false;
+            if (string.Equals(display, allowed, StringComparison.Ordinal)
+                || display.StartsWith(allowed + ".", StringComparison.Ordinal))
+            {
+                return true;
+            }
         }
 
-        var display = ns.ToDisplayString();
-        return string.Equals(display, LiveNamespace, StringComparison.Ordinal)
-            || display.StartsWith(LiveNamespace + ".", StringComparison.Ordinal);
+        return false;
     }
 
     private static void ReportCoverage(
