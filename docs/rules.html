@@ -283,7 +283,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <section class="family-section">
     <h2>predicate</h2>
     <ul class="rule-list">
-      <li><a class="id" href="rules/predicate-plus-operator-null-propagation.html">Plus Operator Null Propagation</a> <code class="rule-key">silentscan/predicate/plus-operator-null-propagation</code><span class="snippet">A &#x2B; concatenation chain between string-typed operands where at least one operand is a nullable column with no ISNULL/COALESCE guard.</span></li>
+      <li><a class="id" href="rules/predicate-plus-operator-null-propagation.html">Plus Operator Null Propagation</a> <code class="rule-key">silentscan/predicate/plus-operator-null-propagation</code><span class="snippet">Unlike CONCAT(), which treats a NULL operand as an empty string, the &#x2B; operator propagates a single NULL operand to NULL for the whole concatenation with no error raised.</span></li>
     </ul>
   </section>
 

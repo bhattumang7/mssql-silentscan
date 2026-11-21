@@ -82,6 +82,30 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task AppliedConditionTurnsAReturnedValueNull_IsConfirmedWhenANullIsExpected()
+    {
+        var result = await VerifyAsync(Of(Difference.NullAppeared, Run("UPDATE dbo.T SET V = NULL;")), "SELECT 'a' + CAST(V AS VARCHAR(5)) FROM dbo.T;");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task AppliedConditionRemovesTheRowsInsteadOfNullingThem_IsRefutedWhenANullIsExpected()
+    {
+        var result = await VerifyAsync(Of(Difference.NullAppeared, Run("UPDATE dbo.T SET V = NULL;")), "SELECT 'a' + CAST(V AS VARCHAR(5)) FROM dbo.T WHERE V IS NOT NULL;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task AppliedConditionChangesValuesWithoutAnyNull_IsRefutedWhenANullIsExpected()
+    {
+        var result = await VerifyAsync(Of(Difference.NullAppeared, Run("UPDATE dbo.T SET V = V + 10;")), "SELECT 'a' + CAST(V AS VARCHAR(5)) FROM dbo.T;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
     public async Task EngineRefusesTheConditionAndTheRefusalIsTheClaim_IsRefuted()
     {
         var result = await VerifyAsync(

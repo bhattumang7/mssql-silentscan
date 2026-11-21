@@ -33,6 +33,8 @@ public enum Difference
     ResultEmptied,
 
     ResultChanged,
+
+    NullAppeared,
 }
 
 public sealed record TouchedObject(string? Schema, string Name);
@@ -94,6 +96,8 @@ public interface IRuleVerifier
 public abstract class RuleVerifier<TFinding> : IRuleVerifier
     where TFinding : class, IFinding
 {
+    private const string NullCell = "<null>";
+
     private const string StatementSavepoint = "silentscan_judged_statement";
 
     public abstract string RuleId { get; }
@@ -176,9 +180,16 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private static EngineVerification Classify(Difference expected, Observation baseline, Observation perturbed)
     {
-        if (expected == Difference.ResultEmptied && baseline.IsEmpty)
+        if (expected is Difference.ResultEmptied or Difference.NullAppeared && baseline.IsEmpty)
         {
-            return NotDecided("The statement returns nothing even before the condition, so there is no result for it to empty.");
+            return NotDecided("The statement returns nothing even before the condition, so there is nothing for the condition to act on.");
+        }
+
+        if (expected == Difference.NullAppeared)
+        {
+            return perturbed.NullCells > baseline.NullCells
+                ? new EngineVerification(EngineVerdict.Confirmed, "Applying the condition turned a value the statement returns into NULL.")
+                : new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not turn any value the statement returns into NULL.");
         }
 
         if (perturbed.SameAs(baseline))
@@ -213,7 +224,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
                 {
                     var values = new object?[reader.FieldCount];
                     reader.GetValues(values);
-                    rows.Add(string.Join('|', values.Select(v => v is DBNull ? "<null>" : Convert.ToString(v, CultureInfo.InvariantCulture))));
+                    rows.Add(string.Join('|', values.Select(v => v is DBNull ? NullCell : Convert.ToString(v, CultureInfo.InvariantCulture))));
                 }
             }
             while (await reader.NextResultAsync(cancellationToken));
@@ -277,6 +288,8 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private sealed record Observation(List<string> Rows, int RecordsAffected)
     {
+        public int NullCells => Rows.Sum(row => row.Split('|').Count(cell => string.Equals(cell, NullCell, StringComparison.Ordinal)));
+
         public bool IsEmpty => Rows.Count == 0 && RecordsAffected <= 0;
 
         public bool SameAs(Observation other) =>

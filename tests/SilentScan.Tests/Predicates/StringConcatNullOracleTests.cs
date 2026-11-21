@@ -5,7 +5,6 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", FindingRuleIds.StringConcatNullRuleId)]
 [Trait("Rule", FindingRuleIds.SetOptionConcatNullYieldsNullOffBlocksIndexedFeatureRuleId)]
 public sealed class StringConcatNullOracleTests : IAsyncLifetime
 {
