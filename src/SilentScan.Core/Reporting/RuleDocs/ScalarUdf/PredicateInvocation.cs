@@ -50,7 +50,13 @@ internal static class PredicateInvocation
                     RETURNS DECIMAL(12,2)
                     AS
                     BEGIN
-                        RETURN @price * (1 - @discount);
+                        DECLARE @result DECIMAL(12,2) = @price;
+                        WHILE @discount > 0
+                        BEGIN
+                            SET @result = @result - 1;
+                            SET @discount = @discount - 1;
+                        END;
+                        RETURN @result;
                     END;
                     GO
                     CREATE TABLE dbo.LineItem
@@ -64,7 +70,7 @@ internal static class PredicateInvocation
                     FROM dbo.LineItem
                     WHERE dbo.discount_price(ExtendedPrice, Discount) > 100.00;
                     """,
-                NoncompliantExplanation: "On an engine/catalog state where discount_price isn't inlined, every row's predicate evaluation is a separate routine invocation, and the whole plan is forced serial - on a 10GB TPC-H-scale LineItem table, Microsoft's own measurement of this exact function went from 29 minutes down to 1.6 seconds once it inlined.",
+                NoncompliantExplanation: "discount_price contains a WHILE loop, so the engine cannot inline it: every row's predicate evaluation is a separate routine invocation, and the whole plan is forced serial - on a 10GB TPC-H-scale LineItem table, Microsoft's own measurement of this exact function went from 29 minutes down to 1.6 seconds once it inlined.",
                 CompliantSql: """
                     SELECT LineItemId
                     FROM dbo.LineItem

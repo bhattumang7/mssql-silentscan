@@ -45,16 +45,19 @@ internal static class ProjectionInvocation
                     RETURNS NVARCHAR(200)
                     AS
                     BEGIN
-                        DECLARE @Output NVARCHAR(200);
-                        SET @Output = @DisplayName + N' from ' + COALESCE(@Location, N'Earth, probably');
-                        RETURN @Output;
+                        DECLARE @Output NVARCHAR(200) = @DisplayName;
+                        WHILE LEN(@Output) < 20
+                        BEGIN
+                            SET @Output = @Output + N'.';
+                        END;
+                        RETURN @Output + N' from ' + COALESCE(@Location, N'Earth, probably');
                     END;
                     GO
                     SELECT TOP 100 dbo.FormatUsername(DisplayName, Location), Reputation
                     FROM dbo.Users
                     ORDER BY Reputation DESC;
                     """,
-                NoncompliantExplanation: "FormatUsername's body has a local variable and an intermediate SET, so it doesn't qualify for 2019+ inlining - every one of the 100 output rows triggers a separate routine invocation purely to build a display string, with nothing in the WHERE clause even involved.",
+                NoncompliantExplanation: "FormatUsername's body contains a WHILE loop, so it doesn't qualify for 2019+ inlining - every one of the 100 output rows triggers a separate routine invocation purely to build a display string, with nothing in the WHERE clause even involved.",
                 CompliantSql: """
                     SELECT TOP 100 DisplayName + N' from ' + COALESCE(Location, N'Earth, probably'), Reputation
                     FROM dbo.Users
