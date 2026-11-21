@@ -30,8 +30,9 @@ internal static class RangeSeek
             genuinely different, less urgent finding than one that forces a scan, and conflating
             them would waste a reader's time chasing a scan-level fix for a range-seek-level cost.
 
-            The finding states the conversion itself, which the plan shows whenever the two types
-            differ in this way, whether or not the column is indexed today.
+            The finding states the type difference itself. For a bounded string column against a
+            max-length value, the dynamic range seek is observed in the plan where the column has
+            an index the engine can seek.
             """,
         HowToFixIt: """
             The fix is the same shape as ScanForced's: match the comparison value's declared type
