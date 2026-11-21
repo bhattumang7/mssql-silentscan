@@ -281,6 +281,61 @@ public sealed class IndexDesignScannerTests
         Assert.Equal("IX_Narrow", finding.IndexName);
     }
 
+    private static IReadOnlyList<IndexDesignFinding> ScanPair(CatalogIndex first, CatalogIndex second)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType), Column("OrderDate", IntType)], [first, second]));
+        return IndexDesignScanner.Scan(catalog);
+    }
+
+    [Fact]
+    public void ClusteredIndexAndNonclusteredPrefix_NeverFiresSubsumed()
+    {
+        var clustered = new CatalogIndex("CX", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsClustered: true);
+        var wide = new CatalogIndex("IX_Wide", CatalogIndexKind.Index, IsUnique: false, ["CustomerId", "OrderDate"], []);
+
+        Assert.DoesNotContain(ScanPair(clustered, wide), f => f.Kind == IndexDesignFindingKind.SubsumedIndex);
+    }
+
+    [Fact]
+    public void ClusteredAndNonclusteredWithIdenticalKeys_NeverFiresDuplicate()
+    {
+        var clustered = new CatalogIndex("CX", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsClustered: true);
+        var other = new CatalogIndex("IX", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], []);
+
+        Assert.DoesNotContain(ScanPair(clustered, other), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Fact]
+    public void PartitionedAndUnpartitionedWithIdenticalKeys_NeverFiresDuplicate()
+    {
+        var partitioned = new CatalogIndex("IX_P", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], PartitionSchemeName: "ps");
+        var plain = new CatalogIndex("IX", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], []);
+
+        Assert.DoesNotContain(ScanPair(partitioned, plain), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    public void XmlSpatialOrHypotheticalIndexesWithIdenticalKeys_NeverFireDuplicate(bool xml, bool spatial, bool hypothetical)
+    {
+        var first = new CatalogIndex("A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial, IsHypothetical: hypothetical);
+        var second = new CatalogIndex("B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial, IsHypothetical: hypothetical);
+
+        Assert.DoesNotContain(ScanPair(first, second), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
+    [Fact]
+    public void TwoPlainNonclusteredIndexesWithIdenticalKeys_StillFireDuplicate()
+    {
+        var first = new CatalogIndex("A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], []);
+        var second = new CatalogIndex("B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], []);
+
+        Assert.Single(ScanPair(first, second), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+    }
+
     [Fact]
     public void UniquePrefixOfUniqueIndex_NeverFiresSubsumed()
     {

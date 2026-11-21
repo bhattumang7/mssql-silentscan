@@ -129,7 +129,7 @@ public static class IndexDesignScanner
     private static void ScanDuplicateAndSubsumedIndexes(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
     {
         var candidates = table.Indexes
-            .Where(i => !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex && i.KeyColumns.Count > 0)
+            .Where(i => !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex && !i.IsXmlIndex && !i.IsSpatialIndex && !i.IsHypothetical && i.KeyColumns.Count > 0)
             .ToList();
 
         for (var i = 0; i < candidates.Count; i++)
@@ -144,7 +144,8 @@ public static class IndexDesignScanner
     private static void CompareIndexPairForDuplicateOrSubsumed(
         CatalogTable table, CatalogIndex a, CatalogIndex b, StringComparer identifierComparer, List<IndexDesignFinding> findings)
     {
-        if (a.IsUnique != b.IsUnique || a.Kind != b.Kind)
+        if (a.IsUnique != b.IsUnique || a.Kind != b.Kind || a.IsClustered != b.IsClustered
+            || !string.Equals(a.PartitionSchemeName, b.PartitionSchemeName, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

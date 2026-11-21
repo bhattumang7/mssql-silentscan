@@ -68,6 +68,22 @@ public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task OptimizeForNamingTheVariableValue_RestoresTheHistogramEstimate_OtherHintsDoNot()
+    {
+        var capture = new PlanXmlCapture(Options);
+        const string Declare = "DECLARE @p VARCHAR(20) = 'Common'; DECLARE @q VARCHAR(20) = 'x'; ";
+        const string Query = "SELECT Id FROM dbo.Customers WHERE Region = @p AND @q IS NOT NULL ";
+
+        var named = await capture.CaptureAsync(DatabaseName, Declare + Query + "OPTION (OPTIMIZE FOR (@p = 'Common', @q = 'x'));");
+        var unknown = await capture.CaptureAsync(DatabaseName, Declare + Query + "OPTION (OPTIMIZE FOR (@p UNKNOWN, @q = 'x'));");
+        var otherVariable = await capture.CaptureAsync(DatabaseName, Declare + Query + "OPTION (OPTIMIZE FOR (@q = 'x'));");
+
+        Assert.True(ExtractEstimateRows(named) > 1500, "a named OPTIMIZE FOR value must drive the histogram estimate.");
+        Assert.True(ExtractEstimateRows(unknown) < 1000, "OPTIMIZE FOR UNKNOWN keeps the density estimate.");
+        Assert.True(ExtractEstimateRows(otherVariable) < 1000, "OPTIMIZE FOR on another variable leaves this variable on the density estimate.");
+    }
+
+    [Fact]
     public async Task UniqueKeyEquality_LocalVariableAndSniffedLiteralEstimateTheSameRow()
     {
         var capture = new PlanXmlCapture(Options);

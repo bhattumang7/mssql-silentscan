@@ -202,6 +202,13 @@ public sealed class ForcedSerialScannerTests
     [InlineData("SCHEMA_NAME(Id)")]
     [InlineData("OBJECTPROPERTY(Id, 'IsTable')")]
     [InlineData("COLUMNPROPERTY(Id, 'a', 'AllowsNull')")]
+    [InlineData("XACT_STATE()")]
+    [InlineData("SCHEMA_ID()")]
+    [InlineData("COL_LENGTH('dbo.T', 'Id')")]
+    [InlineData("IS_MEMBER('x')")]
+    [InlineData("OBJECTPROPERTYEX(Id, 'IsTable')")]
+    [InlineData("TYPE_ID('int')")]
+    [InlineData("OBJECT_DEFINITION(Id)")]
     public void EngineSerializingMetadataFunction_Fires(string call)
     {
         var findings = Scan("SELECT Id FROM dbo.T WHERE " + call + " IS NOT NULL;");

@@ -1860,6 +1860,18 @@ public sealed class TypedPredicateExtractorTests
         Assert.Empty(result.LocalVariablePredicateFindings);
     }
 
+    [Theory]
+    [InlineData("OPTIMIZE FOR (@other = 'ABC')")]
+    [InlineData("OPTIMIZE FOR (@v UNKNOWN)")]
+    public void Extract_OptimizeForNamingAnotherVariableOrUnknown_StillFires(string hint)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
+            "DECLARE @v VARCHAR(20) = 'ABC'; DECLARE @other VARCHAR(20) = 'x'; SELECT 1 FROM dbo.Customers WHERE Code = @v OPTION (" + hint + ");");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
     [Fact]
     public void Extract_LocalVariableWithOptimizeForUnknown_StillFires()
     {

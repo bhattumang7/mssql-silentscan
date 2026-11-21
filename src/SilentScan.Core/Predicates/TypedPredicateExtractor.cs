@@ -154,7 +154,9 @@ public static class TypedPredicateExtractor
 
         private bool _statementHasOptionRecompile;
 
-        private readonly Stack<bool> _statementRecompileStack = new();
+        private readonly Stack<(bool Recompile, HashSet<string> OptimizeFor)> _statementRecompileStack = new();
+
+        private HashSet<string> _statementOptimizeForVariables = new(StringComparer.OrdinalIgnoreCase);
 
         private bool HasActiveRecompileGuard => _procedureHasWithRecompile || _statementHasOptionRecompile;
 
@@ -201,7 +203,7 @@ public static class TypedPredicateExtractor
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
 
         public void OnLeaveSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
-            _statementHasOptionRecompile = _statementRecompileStack.Pop();
+            EndStatementOptimizerHints();
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -306,7 +308,7 @@ public static class TypedPredicateExtractor
 
         public void OnLeaveUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            _statementHasOptionRecompile = _statementRecompileStack.Pop();
+            EndStatementOptimizerHints();
             _currentWriteStatement = null;
         }
 
@@ -320,7 +322,7 @@ public static class TypedPredicateExtractor
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
 
         public void OnLeaveDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
-            _statementHasOptionRecompile = _statementRecompileStack.Pop();
+            EndStatementOptimizerHints();
 
         public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -330,7 +332,7 @@ public static class TypedPredicateExtractor
 
         public void OnLeaveMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            _statementHasOptionRecompile = _statementRecompileStack.Pop();
+            EndStatementOptimizerHints();
             _currentWriteStatement = null;
         }
 
@@ -466,13 +468,21 @@ public static class TypedPredicateExtractor
 
         public void OnLeaveOperandPosition(TSqlFragment node, ModuleWalker walker) => _position = _positionStack.Pop();
 
-        private bool BeginStatementOptimizerHints(IList<OptimizerHint> hints)
+        private (bool, HashSet<string>) BeginStatementOptimizerHints(IList<OptimizerHint> hints)
         {
-            var previous = _statementHasOptionRecompile;
-            _statementHasOptionRecompile = hints.Any(h => h.HintKind == OptimizerHintKind.Recompile
-                || h is OptimizeForOptimizerHint { Pairs.Count: > 0 });
+            var previous = (_statementHasOptionRecompile, _statementOptimizeForVariables);
+            _statementHasOptionRecompile = hints.Any(h => h.HintKind == OptimizerHintKind.Recompile);
+            _statementOptimizeForVariables = new HashSet<string>(
+                hints.OfType<OptimizeForOptimizerHint>()
+                    .SelectMany(h => h.Pairs)
+                    .Where(pair => pair.Value is not null && !pair.IsForUnknown && pair.Variable is not null)
+                    .Select(pair => pair.Variable.Name),
+                StringComparer.OrdinalIgnoreCase);
             return previous;
         }
+
+        private void EndStatementOptimizerHints() =>
+            (_statementHasOptionRecompile, _statementOptimizeForVariables) = _statementRecompileStack.Pop();
 
         private bool SkipIfNotSeekable(TSqlFragment node)
         {
@@ -955,6 +965,7 @@ public static class TypedPredicateExtractor
         {
             if (HasActiveRecompileGuard
                 || other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: false }
+                || _statementOptimizeForVariables.Contains(variableName)
                 || IsUniqueSingleColumnEquality(column, operatorText))
             {
                 return;

@@ -11,6 +11,14 @@ public sealed class LiveCatalogReaderScalarUdfTests : OracleTestFixture
     protected override string DatabaseNameSeed => nameof(LiveCatalogReaderScalarUdfTests);
 
     protected override string Ddl => """
+        CREATE FUNCTION dbo.fn_InlineOff (@x INT)
+        RETURNS INT
+        WITH INLINE = OFF
+        AS
+        BEGIN
+            RETURN @x + 1;
+        END;
+        GO
         CREATE FUNCTION dbo.fn_Plain (@x INT)
         RETURNS INT
         AS
@@ -231,6 +239,15 @@ public sealed class LiveCatalogReaderScalarUdfTests : OracleTestFixture
         var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
 
         Assert.True(catalog.TryGetScalarUdfInfo("dbo.fn_Tvp", out var info));
+        Assert.False(info!.EngineIsInlineable);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FunctionCreatedWithInlineOff_EngineReportsNotInlineable()
+    {
+        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
+
+        Assert.True(catalog.TryGetScalarUdfInfo("dbo.fn_InlineOff", out var info));
         Assert.False(info!.EngineIsInlineable);
     }
 

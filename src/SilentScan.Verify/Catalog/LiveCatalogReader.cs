@@ -196,7 +196,8 @@ public sealed class LiveCatalogReader
         const int InvalidColumnNameErrorNumber = 207;
 
         const string sqlWithInlineable = """
-            SELECT s.name AS schema_name, o.name AS function_name, m.is_schema_bound, m.is_inlineable
+            SELECT s.name AS schema_name, o.name AS function_name, m.is_schema_bound,
+                   CASE WHEN m.inline_type = 0 THEN CAST(0 AS bit) ELSE m.is_inlineable END AS is_inlineable
             FROM sys.objects o
             JOIN sys.schemas s ON s.schema_id = o.schema_id
             JOIN sys.sql_modules m ON m.object_id = o.object_id

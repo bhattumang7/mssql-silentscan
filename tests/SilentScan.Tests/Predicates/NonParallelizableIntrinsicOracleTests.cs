@@ -83,6 +83,23 @@ public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
     [InlineData("ERROR_STATE() IS NULL")]
     [InlineData("ERROR_PROCEDURE() IS NULL")]
     [InlineData("@@TRANCOUNT >= 0")]
+    [InlineData("OBJECT_NAME(1) IS NULL")]
+    [InlineData("SCHEMA_NAME() IS NULL")]
+    [InlineData("OBJECTPROPERTY(1, 'IsTable') IS NULL")]
+    [InlineData("COLUMNPROPERTY(1, 'a', 'AllowsNull') IS NULL")]
+    [InlineData("XACT_STATE() IS NULL")]
+    [InlineData("SCHEMA_ID() IS NULL")]
+    [InlineData("COL_LENGTH('dbo.BigTable', 'Id') IS NULL")]
+    [InlineData("IS_MEMBER('x') IS NULL")]
+    [InlineData("OBJECTPROPERTYEX(1, 'IsTable') IS NULL")]
+    [InlineData("TYPE_ID('int') IS NULL")]
+    [InlineData("OBJECT_DEFINITION(1) IS NULL")]
+    [InlineData("IDENT_SEED('dbo.BigTable') IS NULL")]
+    [InlineData("USER_ID() IS NULL")]
+    [InlineData("ORIGINAL_LOGIN() IS NULL")]
+    [InlineData("CURRENT_TRANSACTION_ID() IS NULL")]
+    [InlineData("CURSOR_STATUS('global', 'x') IS NULL")]
+    [InlineData("INDEXPROPERTY(1, 'x', 'IsUnique') IS NULL")]
     public async Task ConfirmedIntrinsic_InsideQueryWithFrom_ForcesSerial(string predicate)
     {
         var planXml = await CaptureRealExecutionPlanAsync(
@@ -116,6 +133,8 @@ public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
 
     [Theory]
     [InlineData("@@ROWCOUNT >= 0")]
+    [InlineData("DB_ID() IS NULL")]
+    [InlineData("DATEPART(YEAR, GETDATE()) > 0")]
     [InlineData("SCOPE_IDENTITY() IS NULL OR SCOPE_IDENTITY() IS NOT NULL")]
     public async Task ExcludedIntrinsic_InsideQueryWithFrom_NeverForcesSerial(string predicate)
     {
