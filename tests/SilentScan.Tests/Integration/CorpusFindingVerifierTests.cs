@@ -533,4 +533,22 @@ public sealed class CorpusFindingVerifierTests : IAsyncLifetime
 
         Assert.Equal(CorpusFindingOutcome.Confirmed, result.Outcome);
     }
+
+    [Fact]
+    public async Task VerifyAsync_UnindexedBoundedVarcharColumnVsMaxVarcharValue_ShowsNoDynamicRangeSeek()
+    {
+        var finding = new TypedPredicateFinding(
+            Verdict.RangeSeek,
+            ColumnOperand("dbo.Unindexed", "UnindexedCode", new SqlType(SqlTypeCategory.VarChar, Length: 20, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"))),
+            new PredicateOperand.Value(new SqlType(SqlTypeCategory.VarChar, IsMax: true, Collation: new Collation("SQL_Latin1_General_CP1_CI_AS"))),
+            "=",
+            "file.sql",
+            1,
+            1);
+
+        var result = await _verifier.VerifyAsync(DatabaseName, finding);
+
+        Assert.False(result.ColumnConverted);
+        Assert.False(result.DynamicRangeSeekObserved);
+    }
 }

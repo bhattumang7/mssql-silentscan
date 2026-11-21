@@ -32,7 +32,7 @@ internal static class RangeSeek
 
             The finding states the type difference itself. For a bounded string column against a
             max-length value, the dynamic range seek is observed in the plan where the column has
-            an index the engine can seek.
+            an index the engine can seek; a column with no index shows an ordinary filtered scan.
             """,
         HowToFixIt: """
             The fix is the same shape as ScanForced's: match the comparison value's declared type
