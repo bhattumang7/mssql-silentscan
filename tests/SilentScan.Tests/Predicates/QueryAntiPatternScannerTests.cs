@@ -496,6 +496,27 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void MergeWithoutAnInsertBranch_NeverFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "MERGE dbo.A AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
+    public void MergeTargetIsTemporaryTable_NeverFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "CREATE TABLE #t (Id INT NOT NULL, AId INT NOT NULL); "
+            + "MERGE #t AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN NOT MATCHED THEN INSERT (Id, AId) VALUES (s.AId, s.AId);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
     public void MergeUnconditionalWhenMatchedDelete_Fires()
     {
         var findings = Scan(
