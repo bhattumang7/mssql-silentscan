@@ -21,6 +21,9 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         GO
         CREATE TABLE dbo.Other (V INT NULL);
         GO
+        CREATE TABLE dbo.W (Short VARCHAR(3) NULL, Long VARCHAR(10) NOT NULL);
+        GO
+        INSERT INTO dbo.W (Short, Long) VALUES (NULL, 'abcdef');
         INSERT INTO dbo.T (V) VALUES (1), (2);
         INSERT INTO dbo.Other (V) VALUES (7);
         GO
@@ -103,6 +106,35 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         var result = await VerifyAsync(Of(Difference.NullAppeared, Run("UPDATE dbo.T SET V = V + 10;")), "SELECT 'a' + CAST(V AS VARCHAR(5)) FROM dbo.T;");
 
         Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    private static Perturbation Rewriting(Func<string, string?> baseline, params TouchedObject[] touches) =>
+        new(touches, Difference.ResultChanged, Nothing, Nothing, _ => false, baseline);
+
+    private static string? IsNullToCoalesce(string statement) => statement.Replace("ISNULL(", "COALESCE(", StringComparison.Ordinal);
+
+    [Fact]
+    public async Task StatementDiffersFromItsRewrittenBaseline_IsConfirmed()
+    {
+        var result = await VerifyAsync(Rewriting(IsNullToCoalesce, new TouchedObject("dbo", "W")), "SELECT ISNULL(Short, Long) FROM dbo.W;");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementMatchesItsRewrittenBaseline_IsRefuted()
+    {
+        var result = await VerifyAsync(Rewriting(IsNullToCoalesce, new TouchedObject("dbo", "W")), "SELECT ISNULL(Long, Short) FROM dbo.W;");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task BaselineThatCannotBeBuiltFromTheStatement_IsNotDecided()
+    {
+        var result = await VerifyAsync(Rewriting(_ => null, new TouchedObject("dbo", "W")), "SELECT ISNULL(Short, Long) FROM dbo.W;");
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
     }
 
     [Fact]

@@ -75,6 +75,15 @@ public abstract class RuleOracle
 
     protected abstract IReadOnlyList<SilentCase> SilentCases { get; }
 
+    protected virtual IReadOnlyList<string> ExcludedForms => [];
+
+    private IEnumerable<StatementForm> FormsFor(string statement)
+    {
+        var unknown = ExcludedForms.Where(name => StatementForms.All.All(f => !string.Equals(f.Name, name, StringComparison.Ordinal))).ToList();
+        Assert.True(unknown.Count == 0, $"{RuleId} excludes unknown statement form(s): {string.Join(", ", unknown)}.");
+        return StatementForms.All.Where(f => f.Applies(statement) && !ExcludedForms.Contains(f.Name, StringComparer.Ordinal));
+    }
+
     protected virtual IRuleVerifier Verifier =>
         RuleVerifierRegistry.For(RuleId)
         ?? throw new InvalidOperationException($"{RuleId} has no registered RuleVerifier in SilentScan.Verify.");
@@ -118,7 +127,7 @@ public abstract class RuleOracle
                 failures.Add($"[{oracleCase.Name}] {failure}");
             }
 
-            foreach (var form in StatementForms.All.Where(f => f.Applies(oracleCase.Statement)))
+            foreach (var form in FormsFor(oracleCase.Statement))
             {
                 var shaped = form.Apply(oracleCase);
                 if (await CheckFiringAsync(shaped, [], PrimaryTarget, false) is { } formFailure)
@@ -150,7 +159,7 @@ public abstract class RuleOracle
                 failures.Add($"[{silentCase.Case.Name}] {failure}");
             }
 
-            foreach (var form in StatementForms.All.Where(f => f.Applies(silentCase.Case.Statement)))
+            foreach (var form in FormsFor(silentCase.Case.Statement))
             {
                 if (await CheckSilentAsync(silentCase with { Case = form.Apply(silentCase.Case) }, PrimaryTarget) is { } formFailure)
                 {

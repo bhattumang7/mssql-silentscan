@@ -48,8 +48,10 @@ public sealed class Perturbation
         Difference expected,
         PerturbationStep removeCondition,
         PerturbationStep applyCondition,
-        Func<SqlException, bool> engineRefusalRefutes)
+        Func<SqlException, bool> engineRefusalRefutes,
+        Func<string, string?>? baselineStatement = null)
     {
+        BaselineStatement = baselineStatement;
         Touches = touches;
         Expected = expected;
         RemoveCondition = removeCondition;
@@ -75,6 +77,8 @@ public sealed class Perturbation
     public PerturbationStep ApplyCondition { get; }
 
     public Func<SqlException, bool> EngineRefusalRefutes { get; }
+
+    public Func<string, string?>? BaselineStatement { get; }
 
     public string? NotApplicableReason { get; }
 
@@ -158,8 +162,14 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
     {
         await perturbation.RemoveCondition(connection, transaction, cancellationToken);
 
-        var baseline = await ObserveOnceAsync(connection, transaction, statement, cancellationToken);
-        var control = await ObserveOnceAsync(connection, transaction, statement, cancellationToken);
+        var baselineStatement = perturbation.BaselineStatement is { } rewrite ? rewrite(statement) : statement;
+        if (baselineStatement is null)
+        {
+            return NotDecided("The statement has no single place where the condition can be removed, so there is nothing to compare it with.");
+        }
+
+        var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, cancellationToken);
+        var control = await ObserveOnceAsync(connection, transaction, baselineStatement, cancellationToken);
         if (!baseline.SameAs(control))
         {
             return NotDecided("The statement returns different results on its own, with nothing changed, so a difference cannot be credited to the condition.");
