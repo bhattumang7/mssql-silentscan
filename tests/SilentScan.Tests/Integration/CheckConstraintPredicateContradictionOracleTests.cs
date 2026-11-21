@@ -139,6 +139,29 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
         ];
     }
 
+    private async Task<IReadOnlyList<CheckConstraintPredicateContradictionFinding>> ScanAdHocAsync(string sql)
+    {
+        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
+        var parsed = SqlScriptParser.ParseText("adhoc.sql", sql, true, catalog.CompatibilityLevel);
+        return CheckConstraintPredicateContradictionScanner.Scan(parsed, catalog);
+    }
+
+    [Fact]
+    public async Task LiteralAboveTrustedCheckUpperBound_InAnAdHocBatch_IsNotReportedAsAFold()
+    {
+        var findings = await ScanAdHocAsync("SELECT OrderId FROM dbo.Orders WHERE Amount > 2000;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == CheckConstraintPredicateContradictionKind.CheckConstraintInterval);
+    }
+
+    [Fact]
+    public async Task NotNullColumnQueriedForNull_InAnAdHocBatch_StillFires()
+    {
+        var findings = await ScanAdHocAsync("SELECT NoteId FROM dbo.Notes WHERE NoteId IS NULL;");
+
+        Assert.Contains(findings, f => f.Kind == CheckConstraintPredicateContradictionKind.NotNullConstraint);
+    }
+
     [Fact]
     public async Task LiteralAboveTrustedCheckUpperBound_Fires()
     {

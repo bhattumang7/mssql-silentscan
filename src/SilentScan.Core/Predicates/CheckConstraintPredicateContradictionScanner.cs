@@ -42,6 +42,28 @@ public static class CheckConstraintPredicateContradictionScanner
 
         private string SourcePath { get; }
 
+        private int _moduleDepth;
+
+        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => _moduleDepth++;
+
+        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) => _moduleDepth--;
+
+        public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _moduleDepth++;
+
+        public void OnLeaveTriggerBody(TriggerStatementBody node, ModuleWalker walker) => _moduleDepth--;
+
+        public void OnEnterCreateViewStatement(CreateViewStatement node, ModuleWalker walker) => _moduleDepth++;
+
+        public void OnLeaveCreateViewStatement(CreateViewStatement node, ModuleWalker walker) => _moduleDepth--;
+
+        public void OnEnterAlterViewStatement(AlterViewStatement node, ModuleWalker walker) => _moduleDepth++;
+
+        public void OnLeaveAlterViewStatement(AlterViewStatement node, ModuleWalker walker) => _moduleDepth--;
+
+        public void OnEnterCreateOrAlterViewStatement(CreateOrAlterViewStatement node, ModuleWalker walker) => _moduleDepth++;
+
+        public void OnLeaveCreateOrAlterViewStatement(CreateOrAlterViewStatement node, ModuleWalker walker) => _moduleDepth--;
+
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
             Inspect(node.WhereClause?.SearchCondition, scopeChain, walker);
 
@@ -59,6 +81,11 @@ public static class CheckConstraintPredicateContradictionScanner
             }
 
             if (Classify(searchCondition, scopeChain, walker) is not { } evidence)
+            {
+                return;
+            }
+
+            if (evidence.Kind == CheckConstraintPredicateContradictionKind.CheckConstraintInterval && _moduleDepth == 0)
             {
                 return;
             }
