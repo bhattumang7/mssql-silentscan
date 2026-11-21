@@ -9,7 +9,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/column-arithmetic")]
+[Trait("Rule", FindingRuleIds.Tier1ColumnArithmeticRuleId)]
 public sealed class ColumnArithmeticComputedColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanArithCompColOracleTest";

@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
+[Trait("Rule", FindingRuleIds.FloatOrderDependentAggregateRuleId)]
 public sealed class FloatOrderDependentAggregateEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(FloatOrderDependentAggregateEngineFactOracleTests);
@@ -43,7 +43,7 @@ public sealed class FloatOrderDependentAggregateEngineFactOracleTests : OracleTe
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
+[Trait("Rule", FindingRuleIds.FloatOrderDependentAggregateRuleId)]
 public sealed class VarianceAggregateAlwaysFloatEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(VarianceAggregateAlwaysFloatEngineFactOracleTests);
@@ -83,7 +83,7 @@ public sealed class VarianceAggregateAlwaysFloatEngineFactOracleTests : OracleTe
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/float-order-dependent-aggregate")]
+[Trait("Rule", FindingRuleIds.FloatOrderDependentAggregateRuleId)]
 public sealed class FloatOrderDependentAggregateScannerLiveOracleTests
 {
     [Fact]

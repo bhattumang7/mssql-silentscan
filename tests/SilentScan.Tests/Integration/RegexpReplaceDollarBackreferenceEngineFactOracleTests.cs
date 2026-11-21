@@ -5,7 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/string-builtin/regexp-replace-dollar-backreference")]
+[Trait("Rule", FindingRuleIds.RegexpReplaceDollarBackreferenceRuleId)]
 public sealed class RegexpReplaceDollarBackreferenceEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;

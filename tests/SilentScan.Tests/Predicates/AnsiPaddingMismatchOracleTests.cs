@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/ansi-padding-mismatch")]
+[Trait("Rule", FindingRuleIds.AnsiPaddingMismatchRuleId)]
 public sealed class AnsiPaddingMismatchOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(AnsiPaddingMismatchOracleTests);

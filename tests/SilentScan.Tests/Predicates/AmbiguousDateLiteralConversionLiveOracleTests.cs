@@ -6,7 +6,7 @@ using SilentScan.Verify;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/session-date/ambiguous-date-literal-conversion")]
+[Trait("Rule", FindingRuleIds.AmbiguousDateLiteralConversionRuleId)]
 public sealed class AmbiguousDateLiteralConversionLiveOracleTests
 {
     [Fact]

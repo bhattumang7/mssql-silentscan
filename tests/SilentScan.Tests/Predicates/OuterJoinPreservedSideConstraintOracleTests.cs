@@ -6,8 +6,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/index/key-lookup-prone")]
-[Trait("Rule", "silentscan/index-shape/composite-leading-column-unconstrained")]
+[Trait("Rule", FindingRuleIds.IndexCoverageKeyLookupProneIndexRuleId)]
+[Trait("Rule", FindingRuleIds.CompositeIndexLeadingColumnRuleId)]
 public sealed class OuterJoinPreservedSideConstraintOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(OuterJoinPreservedSideConstraintOracleTests);

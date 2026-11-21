@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/isnull-replacement-value-truncation")]
+[Trait("Rule", FindingRuleIds.IsNullReplacementValueTruncationRuleId)]
 public sealed class IsNullReplacementValueTruncationEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IsNullReplacementValueTruncationEngineFactOracleTests);
@@ -73,7 +73,7 @@ public sealed class IsNullReplacementValueTruncationEngineFactOracleTests : Orac
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/isnull-replacement-value-truncation")]
+[Trait("Rule", FindingRuleIds.IsNullReplacementValueTruncationRuleId)]
 public sealed class IsNullReplacementValueTruncationScannerLiveOracleTests
 {
     [Fact]

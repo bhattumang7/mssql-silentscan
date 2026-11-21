@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/string-builtin/string-agg-missing-order")]
+[Trait("Rule", FindingRuleIds.StringAggMissingOrderRuleId)]
 public sealed class StringAggMissingOrderEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(StringAggMissingOrderEngineFactOracleTests);

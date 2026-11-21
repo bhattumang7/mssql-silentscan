@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/scalar-udf/in-select-or-expression")]
+[Trait("Rule", FindingRuleIds.ScalarUdfProjectionInvocationRuleId)]
 public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
 {
     private const int RowCount = 50;
@@ -55,14 +55,14 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     public async Task UdfInWhereWithRowSource_RunsOncePerRow()
     {
         Assert.Equal(RowCount, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT Id FROM dbo.Source WHERE dbo.Bump(Id) > 0;"));
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     public async Task UdfInWhereWithoutRowSource_RunsOnce()
     {
         Assert.Equal(1, await MaxActualRowsOfOperatorsCallingUdfAsync("SELECT 1 AS One WHERE dbo.Bump(1) = 2;"));
@@ -77,7 +77,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Theory]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE dbo.Bump(@v) > 0 AND Id > 0;")]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE @v < dbo.Bump(DATEPART(day, GETDATE()));")]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source a JOIN dbo.Source b ON a.Id = b.Id AND dbo.Bump(@v) > 0;")]
@@ -88,7 +88,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Theory]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V < dbo.Bump(@v) + 1000;")]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V = 5 OR dbo.Bump(@v) > 100;")]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source a JOIN dbo.Source b ON a.Id = b.Id AND a.V < dbo.Bump(@v) + 1000;")]
@@ -98,7 +98,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Theory]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE Id = dbo.Bump(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE V >= 0 AND dbo.Bump(@v) = Id;")]
@@ -110,7 +110,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     }
 
     [Theory]
-    [Trait("Rule", "silentscan/scalar-udf/in-predicate")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
     [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(@v) OR V = 5;")]
     [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE Id = dbo.Bump(V);")]
     [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Source WHERE V = dbo.Bump(@v);")]

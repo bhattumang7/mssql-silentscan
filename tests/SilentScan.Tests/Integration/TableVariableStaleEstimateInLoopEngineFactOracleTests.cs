@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/query/table-variable-stale-estimate-in-loop")]
+[Trait("Rule", FindingRuleIds.QueryAntiPatternTableVariableStaleEstimateInLoopRuleId)]
 public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTests : OracleTestFixture
 {
     private const int LoopIterations = 200;

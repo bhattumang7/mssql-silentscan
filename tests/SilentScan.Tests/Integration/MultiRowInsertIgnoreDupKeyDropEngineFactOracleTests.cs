@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/query/multi-row-insert-ignore-dup-key-drop")]
+[Trait("Rule", FindingRuleIds.QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId)]
 public sealed class MultiRowInsertIgnoreDupKeyDropEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MultiRowInsertIgnoreDupKeyDropEngineFactOracleTests);

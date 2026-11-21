@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/window-frame/implicit-default-range")]
+[Trait("Rule", FindingRuleIds.WindowFrameImplicitDefaultRangeFrameRuleId)]
 public sealed class WindowFrameScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WindowFrameScannerOracleTests);

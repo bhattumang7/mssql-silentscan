@@ -13,6 +13,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,11 +22,16 @@
     <ProjectReference Include="../../src/SilentScan.Live/SilentScan.Live.csproj" />
     <ProjectReference Include="../../src/SilentScan.Verify/SilentScan.Verify.csproj" />
     <ProjectReference Include="../../src/SilentScan.Bench/SilentScan.Bench.csproj" />
-    <ProjectReference Include="../../src/SilentScan.NoCommentsAnalyzer/SilentScan.NoCommentsAnalyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/SilentScan.NoCommentsAnalyzer/SilentScan.NoCommentsAnalyzer.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="oracle-pairing-baseline.txt" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="SilentScan.Core.Rules" />
   </ItemGroup>
 
   <ItemGroup>

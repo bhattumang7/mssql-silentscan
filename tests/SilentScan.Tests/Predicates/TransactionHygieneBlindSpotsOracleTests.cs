@@ -6,8 +6,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/control-flow/unresolved-transaction")]
-[Trait("Rule", "silentscan/control-flow/unresolved-implicit-transaction")]
+[Trait("Rule", FindingRuleIds.TransactionHygieneUnresolvedOnSomePathRuleId)]
+[Trait("Rule", FindingRuleIds.TransactionHygieneImplicitTransactionUnresolvedOnSomePathRuleId)]
 public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TransactionHygieneBlindSpotsOracleTests);

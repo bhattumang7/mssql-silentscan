@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/verdict/seek-preserved")]
+[Trait("Rule", FindingRuleIds.VerdictSeekPreservedRuleId)]
 public sealed class SameFamilyWideningOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanWideningOracleTest";

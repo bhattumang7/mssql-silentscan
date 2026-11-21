@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/correctness/nonunique-update-source")]
+[Trait("Rule", FindingRuleIds.NonUniqueUpdateSourceRuleId)]
 public sealed class NonUniqueUpdateSourceOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(NonUniqueUpdateSourceOracleTests);

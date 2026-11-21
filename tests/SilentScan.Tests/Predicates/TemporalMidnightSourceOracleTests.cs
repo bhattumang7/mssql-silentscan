@@ -3,7 +3,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/write-loss/temporal-precision-loss")]
+[Trait("Rule", FindingRuleIds.WriteLossTemporalPrecisionLossRuleId)]
 public sealed class TemporalMidnightSourceOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TemporalMidnightSourceOracleTests);

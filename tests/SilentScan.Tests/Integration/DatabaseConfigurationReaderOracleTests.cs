@@ -28,7 +28,7 @@ public sealed class DatabaseConfigurationReaderDefaultsOracleTests : OracleTestF
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/auto-shrink-on")]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoShrinkOnRuleId)]
 public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderUnhealthyFlagsOracleTests);
@@ -52,7 +52,7 @@ public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : Oracl
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/auto-close-on")]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoCloseOnRuleId)]
 public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderAutoCloseOracleTests);
@@ -74,8 +74,8 @@ public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTest
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/auto-create-statistics-off")]
-[Trait("Rule", "silentscan/database/auto-update-statistics-off")]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoCreateStatisticsOffRuleId)]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoUpdateStatisticsOffRuleId)]
 public sealed class DatabaseConfigurationReaderStatisticsFlagsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderStatisticsFlagsOracleTests);
@@ -105,7 +105,7 @@ public sealed class DatabaseConfigurationReaderStatisticsFlagsOracleTests : Orac
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/spatial-persisted-computed-column-compatibility-change")]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationSpatialPersistedComputedColumnDisabledOnCompatibilityLevelChangeRuleId)]
 public sealed class DatabaseConfigurationReaderSpatialPersistedComputedColumnOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderSpatialPersistedComputedColumnOracleTests);
@@ -165,7 +165,7 @@ public sealed class DatabaseConfigurationReaderSpatialPersistedComputedColumnOra
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/database/plan-guide-alters-optimization")]
+[Trait("Rule", FindingRuleIds.DatabaseConfigurationPlanGuideAltersOptimizationRuleId)]
 public sealed class DatabaseConfigurationReaderPlanGuideOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderPlanGuideOracleTests);

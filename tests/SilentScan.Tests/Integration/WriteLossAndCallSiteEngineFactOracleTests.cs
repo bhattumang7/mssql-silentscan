@@ -19,7 +19,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
         """;
 
     [Fact]
-    [Trait("Rule", "silentscan/write-loss/temporal-offset-dropped")]
+    [Trait("Rule", FindingRuleIds.WriteLossTemporalOffsetDroppedRuleId)]
     public async Task DatetimeoffsetToDatetime2_KeepsLocalDigitsWithoutUtcAdjustment()
     {
         var kept = await ScalarAsync<string>("DECLARE @o DATETIMEOFFSET = '2020-01-01 10:00:00 +05:00'; DECLARE @d DATETIME2 = @o; SELECT CONVERT(VARCHAR(30), @d, 121);");
@@ -32,7 +32,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/write-loss/temporal-precision-loss")]
+    [Trait("Rule", FindingRuleIds.WriteLossTemporalPrecisionLossRuleId)]
     public async Task Datetime2ToDate_DropsTimeSilently_DatetimeTargetKeepsIt()
     {
         var date = await ScalarAsync<string>("DECLARE @s DATETIME2 = '2020-01-01 23:59:59'; DECLARE @d DATE = @s; SELECT CONVERT(VARCHAR(30), @d, 121);");
@@ -43,7 +43,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/write-loss/temporal-scale-narrowing")]
+    [Trait("Rule", FindingRuleIds.WriteLossTemporalScaleNarrowingRuleId)]
     public async Task Time7ToTime0_RoundsFractionalSeconds_SameScaleControlKeepsThem()
     {
         var narrowed = await ScalarAsync<string>("DECLARE @s TIME(7) = '10:00:00.9999999'; DECLARE @t TIME(0) = @s; SELECT CONVERT(VARCHAR(30), @t);");
@@ -54,7 +54,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/call-graph/tvf-argument-type-mismatch")]
+    [Trait("Rule", FindingRuleIds.TvfCallArgumentMismatchRuleId)]
     public async Task InlineTvfArgumentLongerThanParameter_IsTruncated_FittingControlIsNot()
     {
         Assert.Equal("abcde", await ScalarAsync<string>("SELECT V FROM dbo.ItvfEcho('abcdefgh');"));
@@ -62,7 +62,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/call-graph/table-valued-argument-column-mismatch")]
+    [Trait("Rule", FindingRuleIds.ProcCallTableValuedArgumentMismatchRuleId)]
     public async Task TableVariableOfTableType_RoundsWideDecimalOnInsert_ExactControlIsUnchanged()
     {
         var rows = await RowsAsync("DECLARE @t dbo.AmountTable; INSERT INTO @t VALUES (1.239), (1.23); EXEC dbo.ReadAmounts @t;");
@@ -72,7 +72,7 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/dynamic-sql/insert-exec-temp-table-column-type-mismatch")]
+    [Trait("Rule", FindingRuleIds.TempTableExecShapeColumnTypeMismatchRuleId)]
     public async Task InsertExecIntoNarrowerTempColumn_RoundsSilently_MatchingColumnControlKeepsPrecision()
     {
         await using var connection = await OpenConnectionAsync();

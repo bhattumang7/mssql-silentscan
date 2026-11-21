@@ -4,7 +4,7 @@ using SilentScan.Verify;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/string-builtin/unistr-unpaired-surrogate")]
+[Trait("Rule", FindingRuleIds.UnistrUnpairedSurrogateRuleId)]
 public sealed class UnistrUnpairedSurrogateEngineFactOracleTests
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;

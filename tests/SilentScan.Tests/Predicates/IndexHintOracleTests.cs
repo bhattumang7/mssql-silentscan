@@ -6,7 +6,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/hint/index-not-seekable")]
+[Trait("Rule", FindingRuleIds.IndexHintHintedIndexNotSeekableRuleId)]
 public sealed class IndexHintOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IndexHintOracleTests);

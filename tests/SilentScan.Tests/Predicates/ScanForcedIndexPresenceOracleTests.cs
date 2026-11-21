@@ -9,7 +9,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/verdict/scan-forced")]
+[Trait("Rule", FindingRuleIds.VerdictScanForcedRuleId)]
 public sealed class ScanForcedIndexPresenceOracleTests : OracleTestFixture
 {
     private const string StaticDdl =

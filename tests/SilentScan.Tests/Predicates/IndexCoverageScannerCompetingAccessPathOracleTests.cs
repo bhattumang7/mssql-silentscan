@@ -6,7 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/index/key-lookup-prone")]
+[Trait("Rule", FindingRuleIds.IndexCoverageKeyLookupProneIndexRuleId)]
 public sealed class IndexCoverageScannerCompetingAccessPathOracleTests : OracleTestFixture
 {
     private const string StaticDdl =

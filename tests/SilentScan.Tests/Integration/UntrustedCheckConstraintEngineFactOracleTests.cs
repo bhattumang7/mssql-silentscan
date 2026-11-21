@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/catalog/untrusted-check-constraint")]
+[Trait("Rule", FindingRuleIds.UntrustedCheckConstraintRuleId)]
 public sealed class UntrustedCheckConstraintEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(UntrustedCheckConstraintEngineFactOracleTests);

@@ -9,7 +9,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/function-wrapped-column")]
+[Trait("Rule", FindingRuleIds.Tier1FunctionWrappedColumnRuleId)]
 public sealed class FunctionWrappedColumnComputedColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanFuncWrapCompColOracleTest";

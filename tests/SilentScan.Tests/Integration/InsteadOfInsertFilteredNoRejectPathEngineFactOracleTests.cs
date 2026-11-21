@@ -3,7 +3,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/trigger/instead-of-insert-filtered-no-reject-path")]
+[Trait("Rule", FindingRuleIds.TriggerCorrectnessInsteadOfInsertFilteredNoRejectPathRuleId)]
 public sealed class InsteadOfInsertFilteredNoRejectPathEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(InsteadOfInsertFilteredNoRejectPathEngineFactOracleTests);

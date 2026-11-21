@@ -3,7 +3,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/column-arithmetic")]
+[Trait("Rule", FindingRuleIds.Tier1ColumnArithmeticRuleId)]
 public sealed class ColumnArithmeticNormalizationOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ColumnArithmeticNormalizationOracleTests);

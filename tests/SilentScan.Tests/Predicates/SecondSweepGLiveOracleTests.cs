@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/query/bare-top-no-order-by")]
+[Trait("Rule", FindingRuleIds.BareTopNoOrderByRuleId)]
 public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(BareTopNoOrderByEngineFactOracleTests);
@@ -53,7 +53,7 @@ public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
+[Trait("Rule", FindingRuleIds.ViewOrderingOrderByNotGuaranteedToConsumerRuleId)]
 public sealed class ViewOrderingNotGuaranteedToConsumerEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ViewOrderingNotGuaranteedToConsumerEngineFactOracleTests);
@@ -108,8 +108,8 @@ public sealed class ViewOrderingNotGuaranteedToConsumerEngineFactOracleTests : O
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/view/top-percent-order-by-no-op")]
-[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
+[Trait("Rule", FindingRuleIds.ViewOrderingTopPercentOrderByNeverLimitsRuleId)]
+[Trait("Rule", FindingRuleIds.ViewOrderingOrderByNotGuaranteedToConsumerRuleId)]
 public sealed class SecondSweepGLiveOracleTests
 {
     [Fact]

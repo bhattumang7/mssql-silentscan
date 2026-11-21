@@ -5,7 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/query/table-variable-psp-skip")]
+[Trait("Rule", FindingRuleIds.QueryAntiPatternTableVariablePspSkipRuleId)]
 public sealed class TableVariablePspSkipEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;

@@ -6,8 +6,8 @@ using SilentScan.Core.Predicates;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/verdict/scan-forced")]
-[Trait("Rule", "silentscan/verdict/range-seek")]
+[Trait("Rule", FindingRuleIds.VerdictScanForcedRuleId)]
+[Trait("Rule", FindingRuleIds.VerdictRangeSeekRuleId)]
 public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
 {
     private const string Ddl_ = """

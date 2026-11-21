@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/case-fold-on-column")]
+[Trait("Rule", FindingRuleIds.Tier1CaseFoldOnColumnRuleId)]
 public sealed class CaseFoldOnColumnOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanCaseFoldOracleTest";

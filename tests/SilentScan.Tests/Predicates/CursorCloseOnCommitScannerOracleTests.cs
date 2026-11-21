@@ -6,7 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/control-flow/cursor-close-on-commit")]
+[Trait("Rule", FindingRuleIds.CursorCloseOnCommitRuleId)]
 public sealed class CursorCloseOnCommitScannerOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(CursorCloseOnCommitScannerOracleTests);

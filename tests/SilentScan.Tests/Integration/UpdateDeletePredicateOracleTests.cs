@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/verdict/scan-forced")]
+[Trait("Rule", FindingRuleIds.VerdictScanForcedRuleId)]
 public sealed class UpdateDeletePredicateOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanUpdateDeleteOracleTest";

@@ -55,8 +55,8 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         """;
 
     [Fact]
-    [Trait("Rule", "silentscan/deprecated-syntax/equals-null-comparison")]
-    [Trait("Rule", "silentscan/deprecated-syntax/not-equals-null-comparison")]
+    [Trait("Rule", FindingRuleIds.DeprecatedSyntaxEqualsNullComparisonRuleId)]
+    [Trait("Rule", FindingRuleIds.DeprecatedSyntaxNotEqualsNullComparisonRuleId)]
     public async Task EqualsAndNotEqualsNull_MatchNoRows_WhileIsNullMatches()
     {
         Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.N WHERE V = NULL;"));
@@ -66,7 +66,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/case-expression-missing-else")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskCaseExpressionMissingElseRuleId)]
     public async Task SimpleCaseWithNoMatchAndNoElse_ReturnsNull_ElseControlDoesNot()
     {
         Assert.Null(await ScalarAsync<string>("SELECT CASE 5 WHEN 1 THEN 'a' WHEN 2 THEN 'b' END;"));
@@ -74,7 +74,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/case-expression-missing-else")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskCaseExpressionMissingElseRuleId)]
     public async Task SimpleCaseCoveringEveryDatepartValue_NeverReturnsNull_PartialCoverageDoes()
     {
         const string days = "WITH d AS (SELECT TOP (14) DATEADD(DAY, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), '2024-01-01') AS v FROM sys.all_objects) ";
@@ -90,7 +90,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/non-deterministic-case-input")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskNonDeterministicCaseInputRuleId)]
     public async Task SimpleCaseOverNewid_IsReEvaluatedPerWhen_DeterministicControlNeverYieldsNull()
     {
         const string rows = "WITH n AS (SELECT TOP (3000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) r FROM sys.all_objects a CROSS JOIN sys.all_objects b) ";
@@ -102,7 +102,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/legacy-identity-intrinsic")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskLegacyIdentityIntrinsicRuleId)]
     public async Task AtAtIdentityReturnsTriggerScopeValue_ScopeIdentityReturnsOwnScopeValue()
     {
         var rows = await RowsAsync("INSERT INTO dbo.A1 (V) VALUES (1); SELECT CAST(@@IDENTITY AS INT), CAST(SCOPE_IDENTITY() AS INT);");
@@ -112,8 +112,8 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/join/cartesian-comma-join")]
-    [Trait("Rule", "silentscan/join/cartesian-cross-join")]
+    [Trait("Rule", FindingRuleIds.CartesianJoinCommaJoinRuleId)]
+    [Trait("Rule", FindingRuleIds.CartesianJoinExplicitCrossJoinRuleId)]
     public async Task CommaAndCrossJoinWithoutPredicate_ProduceFullProduct_PredicateControlDoesNot()
     {
         Assert.Equal(12, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.X, dbo.Y;"));
@@ -122,7 +122,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/join/join-predicate-empty-with-where-clause")]
+    [Trait("Rule", FindingRuleIds.CartesianJoinJoinPredicateEmptyWithWhereClauseRuleId)]
     public async Task JoinWhoseWhereClauseContradictsItsOn_ReturnsNothing_CompatibleWhereControlReturnsRows()
     {
         Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.X x JOIN dbo.Y y ON x.a = y.b WHERE x.a = 1 AND y.b = 2;"));
@@ -130,7 +130,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/merge-unconditional-delete")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternMergeUnconditionalDeleteRuleId)]
     public async Task MergeNotMatchedBySourceDelete_WithEmptySourceDeletesEverything_ConditionedBranchDoesNot()
     {
         await ExecuteAsync("MERGE dbo.TgCond t USING (SELECT Id FROM dbo.TgCond WHERE 1 = 0) s ON t.Id = s.Id WHEN NOT MATCHED BY SOURCE AND t.Id > 100 THEN DELETE;");
@@ -141,7 +141,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/non-aggregate-having-predicate")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternNonAggregateHavingPredicateRuleId)]
     public async Task NonAggregateHaving_EqualsWhereResult_AndPlansAreIdentical()
     {
         const string having = "SELECT K, SUM(V) FROM dbo.H GROUP BY K HAVING K = 1";
@@ -158,7 +158,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/float-or-real-index-key-column")]
+    [Trait("Rule", FindingRuleIds.IndexDesignFloatOrRealIndexKeyColumnRuleId)]
     public async Task FloatIndexKeyEquality_MissesSumOfTenthsWhileDecimalControlMatches()
     {
         Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Fl WITH (INDEX(IX_Fl_F)) WHERE F = 0.3;"));
@@ -166,7 +166,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/distinct-masking-join-fanout")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternDistinctMaskingJoinFanoutRuleId)]
     public async Task JoinOnNonUniqueColumnFansOutAndDistinctHidesIt_UniqueControlDoesNotFanOut()
     {
         var fanned = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Pa a JOIN dbo.Pb b ON b.PaId = a.Id;");
@@ -179,7 +179,7 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/case-expression-missing-else")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskCaseExpressionMissingElseRuleId)]
     public async Task SimpleCaseWithoutElse_NeverYieldsNullOverTheWhereRestrictedOrBitDomain_ButDoesOverAnUnrestrictedOne()
     {
         const string rows = "(VALUES (1, CAST(0 AS BIT)), (2, CAST(1 AS BIT)), (3, CAST(1 AS BIT))) AS t(d, f)";

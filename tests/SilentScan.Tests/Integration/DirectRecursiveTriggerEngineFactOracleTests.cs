@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/trigger/direct-recursive-trigger")]
+[Trait("Rule", FindingRuleIds.TriggerCorrectnessDirectRecursiveTriggerRuleId)]
 public sealed class DirectRecursiveTriggerEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(DirectRecursiveTriggerEngineFactOracleTests);

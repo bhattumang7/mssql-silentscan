@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/leading-wildcard-like")]
+[Trait("Rule", FindingRuleIds.Tier1LeadingWildcardLikeRuleId)]
 public sealed class LeadingCharacterClassLikeOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanLeadingClassLikeOracleTest";

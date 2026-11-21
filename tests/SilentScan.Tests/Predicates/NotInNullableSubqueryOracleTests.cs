@@ -1,78 +1,33 @@
-using Microsoft.Data.SqlClient;
+using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/correctness/not-in-nullable-subquery")]
-public sealed class NotInNullableSubqueryOracleTests : OracleTestFixture
+[Trait("Rule", FindingRuleIds.NotInNullableSubqueryRuleId)]
+public sealed class NotInNullableSubqueryOracleTests : RuleOracle
 {
-    protected override string DatabaseNameSeed => nameof(NotInNullableSubqueryOracleTests);
-
-    protected override string Ddl => """
+    private const string Setup = """
         CREATE TABLE dbo.Parent (Id INT NOT NULL);
         GO
         CREATE TABLE dbo.ChildNullable (RefId INT NULL);
         GO
         CREATE TABLE dbo.ChildNotNull (RefId INT NOT NULL);
         GO
+        INSERT INTO dbo.Parent (Id) VALUES (1), (2), (3);
+        INSERT INTO dbo.ChildNullable (RefId) VALUES (1), (NULL);
+        INSERT INTO dbo.ChildNotNull (RefId) VALUES (1), (9);
+        GO
         """;
 
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
+    protected override OracleCase Fires { get; } = new(
+        Setup,
+        "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable) ORDER BY Id;");
 
-        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
-        await connection.OpenAsync();
+    protected override OracleCase Silent { get; } = new(
+        Setup,
+        "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull) ORDER BY Id;");
 
-        await using var seedCommand = new SqlCommand(
-            """
-            INSERT INTO dbo.Parent (Id) VALUES (1), (2), (3);
-            INSERT INTO dbo.ChildNullable (RefId) VALUES (1), (NULL);
-            INSERT INTO dbo.ChildNotNull (RefId) VALUES (1);
-            """, connection);
-        await seedCommand.ExecuteNonQueryAsync();
-    }
-
-    private async Task<List<int>> RunAsync(string sql)
-    {
-        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
-        await connection.OpenAsync();
-
-        await using var command = new SqlCommand(sql, connection);
-        await using var reader = await command.ExecuteReaderAsync();
-
-        var results = new List<int>();
-        while (await reader.ReadAsync())
-        {
-            results.Add(reader.GetInt32(0));
-        }
-
-        return results;
-    }
-
-    [Fact]
-    public async Task NullableSubqueryColumn_NotIn_ReturnsZeroRowsDespiteIntuitivelyMatchingRows()
-    {
-        var rows = await RunAsync("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable) ORDER BY Id;");
-
-        Assert.Empty(rows);
-    }
-
-    [Fact]
-    public async Task NotNullSubqueryColumn_NotIn_ReturnsExpectedAntiJoinRows()
-    {
-        var rows = await RunAsync("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull) ORDER BY Id;");
-
-        Assert.Equal([2, 3], rows);
-    }
-
-    [Fact]
-    public async Task NullableSubqueryColumn_WithDefensiveNotNullFilter_NotIn_ReturnsExpectedAntiJoinRows()
-    {
-        var rows = await RunAsync(
-            "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL) ORDER BY Id;");
-
-        Assert.Equal([2, 3], rows);
-    }
+    protected override IFinding ClaimedOnSilent { get; } =
+        new NotInNullableSubqueryFinding("Id", "dbo.ChildNotNull", "RefId", false, "claimed.sql", 1, 1);
 }

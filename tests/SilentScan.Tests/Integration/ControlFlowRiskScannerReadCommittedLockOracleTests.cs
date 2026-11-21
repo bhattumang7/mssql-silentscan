@@ -7,7 +7,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/control-flow/read-committed-lock-reverts-row-versioning")]
+[Trait("Rule", FindingRuleIds.ControlFlowRiskReadCommittedLockRevertsRowVersioningRuleId)]
 public sealed class ControlFlowRiskScannerReadCommittedLockOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(ControlFlowRiskScannerReadCommittedLockOracleTests);

@@ -6,7 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/query/table-variable-low-compat-estimate")]
+[Trait("Rule", FindingRuleIds.QueryAntiPatternTableVariableLowCompatEstimateRuleId)]
 public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TableVariableLowCompatEstimateEngineFactOracleTests);

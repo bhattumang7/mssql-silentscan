@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/catalog/non-persisted-computed-column")]
+[Trait("Rule", FindingRuleIds.NonPersistedComputedColumnRuleId)]
 public sealed class NonPersistedComputedColumnIndexCoverageOracleTests : OracleTestFixture
 {
     private const string ShowPlanNs = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";

@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/forced-serial/table-variable-modification")]
+[Trait("Rule", FindingRuleIds.ForcedSerialTableVariableModificationRuleId)]
 public sealed class TableVariableModificationOracleTests : OracleTestFixture
 {
     private static readonly string[] NonScanningOperators = ["Table Insert", "Constant Scan", "Compute Scalar", "Parameter Table Scan"];

@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/control-flow/truncate-swallowed-by-catch")]
+[Trait("Rule", FindingRuleIds.TruncateSwallowedRuleId)]
 public sealed class TruncateSwallowedOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TruncateSwallowedOracleTests);

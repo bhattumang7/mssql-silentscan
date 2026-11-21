@@ -66,7 +66,7 @@ public sealed class CatalogBuilderAnsiNullDfltBranchOracleTests
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/correctness/not-null-predicate-contradiction")]
+    [Trait("Rule", FindingRuleIds.NotNullPredicateContradictionRuleId)]
     public async Task Build_UnspecifiedNullabilityUnderDatabaseAnsiNullDefaultOff_MatchesRealClientSessionStayingNullable()
     {
         const string procedureSql = """

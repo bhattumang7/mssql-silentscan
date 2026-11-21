@@ -9,7 +9,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/verdict/scan-forced")]
+[Trait("Rule", FindingRuleIds.VerdictScanForcedRuleId)]
 public sealed class ModuleCorpusVerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanModuleCorpusTest";

@@ -6,7 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/control-flow/unassigned-output-parameter")]
+[Trait("Rule", FindingRuleIds.OutputParameterRuleId)]
 public sealed class OutputParameterOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(OutputParameterOracleTests);

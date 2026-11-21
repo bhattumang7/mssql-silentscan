@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tvf-fence/nested-under-view-or-tvf")]
+[Trait("Rule", FindingRuleIds.TvfFenceNestedUnderViewOrTvfRuleId)]
 public sealed class TvfFenceSoleRowSourceOracleTests : OracleTestFixture
 {
     private static readonly string[] ConsumingOperators = ["Nested Loops", "Hash Match", "Merge Join", "Sort", "Stream Aggregate"];

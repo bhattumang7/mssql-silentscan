@@ -4,8 +4,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/write-loss/unicode-to-non-unicode")]
-[Trait("Rule", "silentscan/write-loss/numeric-scale-narrowing")]
+[Trait("Rule", FindingRuleIds.WriteLossUnicodeReplacementRuleId)]
+[Trait("Rule", FindingRuleIds.WriteLossNumericScaleNarrowingRuleId)]
 public sealed class WriteLossOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WriteLossOracleTests);
@@ -79,7 +79,7 @@ public sealed class WriteLossOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/write-loss/unicode-to-non-unicode")]
+    [Trait("Rule", FindingRuleIds.WriteLossUnicodeReplacementRuleId)]
     public async Task Insert_QuotenameOverVarcharColumn_RoundTripsExactly_WhileQuotenameOverNvarcharColumnIsReplaced()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));

@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/lineage/expression-derived-column")]
+[Trait("Rule", FindingRuleIds.ExpressionDerivedRuleId)]
 public sealed class ExpressionDerivedOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanExpressionDerivedOracleTest";

@@ -4,8 +4,8 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/dynamic-data-masking-predicate-exposure")]
-[Trait("Rule", "silentscan/predicates/dynamic-data-masking-computed-expression-collapse")]
+[Trait("Rule", FindingRuleIds.DynamicDataMaskingPredicateExposureRuleId)]
+[Trait("Rule", FindingRuleIds.DynamicDataMaskingComputedExpressionCollapseRuleId)]
 public sealed class DynamicDataMaskingScannerLiveOracleTests
 {
     private const string Ddl = """

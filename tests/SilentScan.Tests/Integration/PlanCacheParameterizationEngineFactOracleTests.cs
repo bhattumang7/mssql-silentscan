@@ -69,7 +69,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         await ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND st.text LIKE '{textLike}' AND st.text NOT LIKE '%dm_exec%';");
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/constant-foldable-expression-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationConstantFoldableExpressionLiteralRuleId)]
     public async Task ConstantFoldableExpression_ParameterizesAsTwoParameters_PlainLiteralControlAsOne()
     {
         var foldable = await PreparedTextAsync("FpConst", "SELECT Id FROM dbo.FpConst WHERE Id = 1 + 1008;");
@@ -82,7 +82,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/convert-style-code-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationConvertStyleCodeLiteralRuleId)]
     public async Task ConvertStyleCodeLiteral_StaysWhileSiblingWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpConvert", "SELECT CONVERT(VARCHAR(20), D, 101) FROM dbo.FpConvert WHERE Id = 5;");
@@ -92,7 +92,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/dml-output-list-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationDmlOutputListLiteralRuleId)]
     public async Task OutputListLiteral_StaysWhileValuesLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpOutput", "INSERT INTO dbo.FpOutput (Id) OUTPUT inserted.Id, 'insert' VALUES (1);");
@@ -102,7 +102,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/having-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationHavingLiteralRuleId)]
     public async Task HavingLiteral_StaysWhileWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpHaving", "SELECT Nm, COUNT(*) FROM dbo.FpHaving WHERE Id = 3 GROUP BY Nm HAVING COUNT(*) > 5;");
@@ -112,7 +112,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/like-pattern-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationLikePatternLiteralRuleId)]
     public async Task LikePatternLiteral_StaysWhileWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpLike", "SELECT Id FROM dbo.FpLike WHERE Nm LIKE 'Smith%' AND Id = 3;");
@@ -122,7 +122,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/order-by-expression-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationOrderByExpressionLiteralRuleId)]
     public async Task OrderByExpressionLiteral_StaysWhileWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpOrder", "SELECT Id FROM dbo.FpOrder WHERE Id = 3 ORDER BY (Val + 100);");
@@ -132,7 +132,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/select-list-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationSelectListLiteralRuleId)]
     public async Task SelectListLiteral_StaysWhileWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpSelect", "SELECT 'Active', Id FROM dbo.FpSelect WHERE Id = 3;");
@@ -142,7 +142,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/table-sample-size-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationTableSampleSizeLiteralRuleId)]
     public async Task TableSampleSizeLiteral_StaysWhileWhereLiteralIsParameterized()
     {
         var text = await PreparedTextAsync("FpSample", "SELECT Id FROM dbo.FpSample TABLESAMPLE (10 PERCENT) WHERE Val = 3;");
@@ -152,7 +152,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/forced-parameterization/top-or-paging-literal")]
+    [Trait("Rule", FindingRuleIds.ForcedParameterizationTopOrPagingLiteralRuleId)]
     public async Task TopAndOffsetFetchLiterals_StayWhileWhereLiteralIsParameterized()
     {
         var top = await PreparedTextAsync("FpTopTable", "SELECT TOP (7) Id FROM dbo.FpTopTable WHERE Id = 3;");
@@ -167,8 +167,8 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/dynamic-sql/concatenated-value-in-constant-sql")]
-    [Trait("Rule", "silentscan/dynamic-sql/exec-string-concatenates-parameterizable-value")]
+    [Trait("Rule", FindingRuleIds.ConcatenatedValueInConstantSqlRuleId)]
+    [Trait("Rule", FindingRuleIds.ExecStringConcatenatesParameterizableValueRuleId)]
     public async Task ConcatenatedExecStrings_CompileOnePlanPerValue_SpExecutesqlParameterControlCompilesOne()
     {
         await using var connection = await OpenConnectionAsync();
@@ -183,7 +183,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/unqualified-table-reference")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternUnqualifiedTableReferenceRuleId)]
     public async Task UnqualifiedTableReference_CompilesOnePlanPerSchemaContext_QualifiedControlSharesOne()
     {
         await using var connection = await OpenConnectionAsync();
@@ -195,7 +195,7 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/unqualified-table-reference")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternUnqualifiedTableReferenceRuleId)]
     public async Task UnqualifiedTableReference_InsideProcedureBody_SharesOnePlanAcrossDefaultSchemas()
     {
         await using var connection = await OpenConnectionAsync();

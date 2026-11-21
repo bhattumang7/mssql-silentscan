@@ -7,11 +7,11 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/function-wrapped-column")]
-[Trait("Rule", "silentscan/tier1/date-function-on-column")]
-[Trait("Rule", "silentscan/tier1/column-arithmetic")]
-[Trait("Rule", "silentscan/tier1/cast-or-convert-on-column")]
-[Trait("Rule", "silentscan/tier1/case-fold-on-column")]
+[Trait("Rule", FindingRuleIds.Tier1FunctionWrappedColumnRuleId)]
+[Trait("Rule", FindingRuleIds.Tier1DateFunctionOnColumnRuleId)]
+[Trait("Rule", FindingRuleIds.Tier1ColumnArithmeticRuleId)]
+[Trait("Rule", FindingRuleIds.Tier1CastOrConvertOnColumnRuleId)]
+[Trait("Rule", FindingRuleIds.Tier1CaseFoldOnColumnRuleId)]
 public sealed class NonSargableWrapSeekAvailabilityOracleTests : OracleTestFixture
 {
     private const string StaticDdl =

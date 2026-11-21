@@ -5,7 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/view/order-by-not-guaranteed")]
+[Trait("Rule", FindingRuleIds.ViewOrderingOrderByNotGuaranteedToConsumerRuleId)]
 public sealed class ViewOrderingOrderByNotGuaranteedToConsumerEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;

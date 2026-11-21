@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/scalar-udf/in-computed-column-or-constraint")]
+[Trait("Rule", FindingRuleIds.ScalarUdfSchemaDependencyRuleId)]
 public sealed class SchemaDependencyCheckConstraintSerialOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(SchemaDependencyCheckConstraintSerialOracleTests);

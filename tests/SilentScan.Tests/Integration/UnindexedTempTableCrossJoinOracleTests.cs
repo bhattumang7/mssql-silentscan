@@ -8,7 +8,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/temp-table/unindexed-join-operand")]
+[Trait("Rule", FindingRuleIds.UnindexedTempTableUsageJoinOperandRuleId)]
 public sealed class UnindexedTempTableCrossJoinOracleTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanTempCrossJoinOracleTest";

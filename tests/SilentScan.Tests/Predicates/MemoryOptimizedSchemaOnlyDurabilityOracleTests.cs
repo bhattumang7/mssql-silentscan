@@ -6,7 +6,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/catalog/memory-optimized-schema-only-durability")]
+[Trait("Rule", FindingRuleIds.MemoryOptimizedSchemaOnlyDurabilityRuleId)]
 public sealed class MemoryOptimizedSchemaOnlyDurabilityOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(MemoryOptimizedSchemaOnlyDurabilityOracleTests);

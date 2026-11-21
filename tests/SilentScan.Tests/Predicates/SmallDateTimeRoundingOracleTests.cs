@@ -3,7 +3,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/write-loss/smalldatetime-rounding")]
+[Trait("Rule", FindingRuleIds.WriteLossSmallDateTimeRoundingRuleId)]
 public sealed class SmallDateTimeRoundingOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(SmallDateTimeRoundingOracleTests);

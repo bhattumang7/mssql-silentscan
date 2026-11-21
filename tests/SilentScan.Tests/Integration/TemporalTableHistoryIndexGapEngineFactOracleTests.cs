@@ -5,7 +5,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/catalog/temporal-history-index-gap")]
+[Trait("Rule", FindingRuleIds.TemporalTableHistoryIndexGapRuleId)]
 public sealed partial class TemporalTableHistoryIndexGapEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TemporalTableHistoryIndexGapEngineFactOracleTests);

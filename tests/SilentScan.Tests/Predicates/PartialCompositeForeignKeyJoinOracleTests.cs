@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/join/partial-composite-fk")]
+[Trait("Rule", FindingRuleIds.PartialCompositeForeignKeyJoinRuleId)]
 public sealed class PartialCompositeForeignKeyJoinOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(PartialCompositeForeignKeyJoinOracleTests);

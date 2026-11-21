@@ -9,7 +9,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/call-graph/sp-executesql-parameter-type-mismatch")]
+[Trait("Rule", FindingRuleIds.SpExecuteSqlParameterMismatchRuleId)]
 public sealed class SpExecuteSqlParameterMismatchOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(SpExecuteSqlParameterMismatchOracleTests);

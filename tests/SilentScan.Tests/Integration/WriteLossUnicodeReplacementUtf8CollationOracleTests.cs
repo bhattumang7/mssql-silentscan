@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/write-loss/unicode-to-non-unicode")]
+[Trait("Rule", FindingRuleIds.WriteLossUnicodeReplacementRuleId)]
 public sealed class WriteLossUnicodeReplacementUtf8CollationOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(WriteLossUnicodeReplacementUtf8CollationOracleTests);

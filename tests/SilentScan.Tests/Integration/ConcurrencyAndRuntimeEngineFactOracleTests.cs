@@ -102,7 +102,7 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
     private static partial Regex LogicalReadsRegex();
 
     [Fact]
-    [Trait("Rule", "silentscan/control-flow/dirty-read-isolation-hint")]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskDirtyReadIsolationHintRuleId)]
     public async Task NolockReaderSeesUncommittedValue_DefaultReaderIsBlocked()
     {
         await using var writer = await OpenConnectionAsync();
@@ -121,7 +121,7 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/rbar-single-row-loop-dml")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternRbarSingleRowLoopDmlRuleId)]
     public async Task SingleRowLoopUpdateExecutesOncePerIteration_SetBasedUpdateExecutesOnce()
     {
         await ExecuteAsync("EXEC dbo.LoopProc; EXEC dbo.SetProc;");
@@ -133,7 +133,7 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/query/count-star-variable-existence-check")]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternCountStarVariableExistenceCheckRuleId)]
     public async Task CountStarIntoVariable_ReadsFullSet_ExistsAndInlineFormsShortCircuit()
     {
         await using var connection = await OpenConnectionAsync();

@@ -5,7 +5,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/index-design/no-recompute-statistics")]
+[Trait("Rule", FindingRuleIds.IndexDesignNoRecomputeStatisticsRuleId)]
 public sealed class IndexDesignNoRecomputeStatisticsOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IndexDesignNoRecomputeStatisticsOracleTests);

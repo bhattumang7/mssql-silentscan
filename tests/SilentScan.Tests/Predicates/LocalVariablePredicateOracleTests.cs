@@ -5,7 +5,7 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/local-variable-predicate")]
+[Trait("Rule", FindingRuleIds.LocalVariablePredicateRuleId)]
 public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(LocalVariablePredicateOracleTests);

@@ -6,8 +6,8 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/index-design/duplicate-index")]
-[Trait("Rule", "silentscan/index-design/subsumed-index")]
+[Trait("Rule", FindingRuleIds.IndexDesignDuplicateIndexRuleId)]
+[Trait("Rule", FindingRuleIds.IndexDesignSubsumedIndexRuleId)]
 public sealed class IndexDesignDuplicateIndexOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(IndexDesignDuplicateIndexOracleTests);

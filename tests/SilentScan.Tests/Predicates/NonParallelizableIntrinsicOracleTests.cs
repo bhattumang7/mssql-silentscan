@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/forced-serial/nonparallelizable-intrinsic")]
+[Trait("Rule", FindingRuleIds.ForcedSerialNonParallelizableIntrinsicRuleId)]
 public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(NonParallelizableIntrinsicOracleTests);

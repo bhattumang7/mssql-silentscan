@@ -8,8 +8,8 @@ using SilentScan.Verify.Oracle;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/tier1/function-wrapped-column")]
-[Trait("Rule", "silentscan/tier1/leading-wildcard-like")]
+[Trait("Rule", FindingRuleIds.Tier1FunctionWrappedColumnRuleId)]
+[Trait("Rule", FindingRuleIds.Tier1LeadingWildcardLikeRuleId)]
 public sealed class Tier1VerifierTests : IAsyncLifetime
 {
     private const string DatabaseName = "SilentScanTier1VerifierTest";

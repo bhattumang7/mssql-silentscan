@@ -61,7 +61,7 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         """;
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/check-constraint-null-not-handled")]
+    [Trait("Rule", FindingRuleIds.CheckConstraintNullNotHandledRuleId)]
     public async Task CheckConstraintWithoutNullTest_LetsNullThrough_WhileNullSafeControlRejectsIt()
     {
         Assert.Null(await SqlErrorNumberAsync("INSERT INTO dbo.ChkNull VALUES (1, NULL);"));
@@ -71,7 +71,7 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/check-constraint-on-identity-column")]
+    [Trait("Rule", FindingRuleIds.CheckConstraintOnIdentityColumnRuleId)]
     public async Task CheckOnIdentity_FailedInsertsStillAdvanceTheCounter()
     {
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkIdent (V) VALUES (1);"));
@@ -84,7 +84,7 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/with-recompile")]
+    [Trait("Rule", FindingRuleIds.ModuleCompileFlagRecompilesEveryCallRuleId)]
     public async Task WithRecompileProcedure_IsFlaggedAndLeavesNoCachedPlan_WhileControlIsCached()
     {
         await ExecuteAsync("EXEC dbo.ProcRecompile; EXEC dbo.ProcRecompile; EXEC dbo.ProcCached; EXEC dbo.ProcCached;");
@@ -99,7 +99,7 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/tvf-return-database-collation")]
+    [Trait("Rule", FindingRuleIds.ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId)]
     public async Task TvfReturnColumnWithoutCollate_BakesInDatabaseCollation_ExplicitCollateControlDoesNot()
     {
         var rows = await RowsAsync("SELECT OBJECT_NAME(object_id), CAST(uses_database_collation AS INT) FROM sys.sql_modules WHERE object_id IN (OBJECT_ID('dbo.TvfDbCollation'), OBJECT_ID('dbo.TvfExplicitCollation'));");
@@ -109,8 +109,8 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/stale-select-star-view")]
-    [Trait("Rule", "silentscan/lineage/select-star-view")]
+    [Trait("Rule", FindingRuleIds.StaleSelectStarViewRuleId)]
+    [Trait("Rule", FindingRuleIds.SelectStarViewRuleId)]
     public async Task SelectStarView_StaysFrozenAfterAlterTableAdd_UntilRefreshed()
     {
         await using var connection = await OpenConnectionAsync();

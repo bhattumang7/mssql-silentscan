@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/under-length-parameter")]
+[Trait("Rule", FindingRuleIds.UnderLengthParameterRuleId)]
 public sealed class UnderLengthParameterOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(UnderLengthParameterOracleTests);

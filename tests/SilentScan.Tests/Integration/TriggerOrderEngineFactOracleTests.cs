@@ -4,7 +4,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/catalog/trigger-firing-order-undefined")]
+[Trait("Rule", FindingRuleIds.TriggerOrderRuleId)]
 public sealed class TriggerOrderEngineFactOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(TriggerOrderEngineFactOracleTests);

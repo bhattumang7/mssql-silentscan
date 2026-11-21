@@ -9,7 +9,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/cross-module/inconsistent-lock-order")]
+[Trait("Rule", FindingRuleIds.CrossModuleLockOrderRuleId)]
 public sealed class CrossModuleLockOrderScannerTransactionScopeOracleTests : OracleTestFixture
 {
     private static readonly string[] SingleT1 = ["T1"];

@@ -71,7 +71,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
         ShowPlan.EstimatedRows(ShowPlan.Ops(plan, "Table-valued function").First());
 
     [Fact]
-    [Trait("Rule", "silentscan/catalog/rls-predicate-unindexed-column")]
+    [Trait("Rule", FindingRuleIds.SecurityPredicateIndexRuleId)]
     public async Task FilterPredicateOnUnindexedColumn_ScansTheTable_IndexedControlSeeks()
     {
         const string setup = "EXEC sp_set_session_context 'tid', 7;";
@@ -86,7 +86,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/tvf-fence/nested-under-view-or-tvf")]
+    [Trait("Rule", FindingRuleIds.TvfFenceNestedUnderViewOrTvfRuleId)]
     public async Task MultiStatementTvfBehindViews_KeepsTheSameFixedEstimate()
     {
         await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 130;");
@@ -100,7 +100,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/scalar-udf/nested-under-view-or-tvf")]
+    [Trait("Rule", FindingRuleIds.ScalarUdfNestedUnderViewOrTvfRuleId)]
     public async Task ScalarUdfInsideView_ForcesSerialPlanAtCompat140_PlainViewControlCanGoParallel()
     {
         await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 140;");
@@ -113,7 +113,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/lineage/post-expansion-join-width")]
+    [Trait("Rule", FindingRuleIds.PostExpansionJoinWidthRuleId)]
     public async Task ViewReference_ExpandsToEveryUnderlyingTable_BaseTableControlTouchesOne()
     {
         var expanded = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.VE2;");
@@ -124,7 +124,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/temp-table/unindexed-where-filter")]
+    [Trait("Rule", FindingRuleIds.UnindexedTempTableUsageFilteredInWhereRuleId)]
     public async Task UnindexedTempTableFilter_Scans_IndexedTempTableSeeks()
     {
         const string setup = "SELECT * INTO #t1 FROM dbo.Src; SELECT * INTO #t2 FROM dbo.Src; CREATE INDEX IX_t2 ON #t2(K);";
@@ -139,7 +139,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/predicates/filtered-index-parameter-mismatch")]
+    [Trait("Rule", FindingRuleIds.FilteredIndexParameterMismatchRuleId)]
     public async Task FilteredIndexIsUsedForLiteralButNotForVariable()
     {
         var literal = await PlanInSessionAsync(string.Empty, "SELECT K FROM dbo.Fp WHERE Status = 1;");
@@ -150,7 +150,7 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/set-option/ansi-padding-off")]
+    [Trait("Rule", FindingRuleIds.SetOptionAnsiPaddingOffBlocksIndexedFeatureRuleId)]
     public async Task FilteredIndexIsIgnoredUnderAnsiPaddingOff_UsedUnderOn()
     {
         const string probe = "SELECT K FROM dbo.Ansi WHERE S = 'a' AND K = 5;";

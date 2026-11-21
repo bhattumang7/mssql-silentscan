@@ -101,7 +101,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         ShowPlan.PhysicalOpsOnTable(plan, table).Contains("Index Seek");
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/unindexed-foreign-key")]
+    [Trait("Rule", FindingRuleIds.IndexDesignUnindexedForeignKeyRuleId)]
     public async Task ParentDelete_ScansUnindexedChild_SeeksIndexedChild()
     {
         var unindexed = await PlanInSessionAsync(string.Empty, "DELETE FROM dbo.ParNo WHERE Id = 5;");
@@ -114,7 +114,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/unindexed-foreign-key")]
+    [Trait("Rule", FindingRuleIds.IndexDesignUnindexedForeignKeyRuleId)]
     public async Task ParentDelete_DoesNotTouchChildOfDisabledForeignKey_EnabledUnindexedControlScansIt()
     {
         var disabled = await PlanInSessionAsync(string.Empty, "DELETE FROM dbo.ParOff WHERE Id = 5;");
@@ -125,7 +125,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/filter-column-not-in-index")]
+    [Trait("Rule", FindingRuleIds.IndexDesignFilterColumnNotInIndexRuleId)]
     public async Task FilteredIndexWithoutFilterColumn_NeedsKeyLookup_IncludeControlDoesNot()
     {
         var missing = await PlanInSessionAsync(string.Empty, "SELECT Status FROM dbo.Fi WITH (INDEX(IX_Fi_Other)) WHERE Status = 1 AND Other = 1;");
@@ -136,7 +136,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/subsumed-index")]
+    [Trait("Rule", FindingRuleIds.IndexDesignSubsumedIndexRuleId)]
     public async Task WiderIndexServesNarrowLeadingKeySeek_TrailingOnlyControlCannotSeek()
     {
         var wide = await PlanInSessionAsync(string.Empty, "SELECT K FROM dbo.SbWide WHERE K = 7;");
@@ -149,7 +149,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/duplicate-index")]
+    [Trait("Rule", FindingRuleIds.IndexDesignDuplicateIndexRuleId)]
     public async Task DuplicateIndexes_EachReceiveEveryInsert_FilteredControlReceivesFewer()
     {
         await ExecuteAsync("INSERT INTO dbo.Du SELECT TOP (1000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1 FROM sys.all_objects a, sys.all_objects b;");
@@ -162,7 +162,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/duplicate-index")]
+    [Trait("Rule", FindingRuleIds.IndexDesignDuplicateIndexRuleId)]
     public async Task SameKeyIndexes_ServeAQueryOnlyWhenTheirIncludesCoverIt()
     {
         var covered = await PlanInSessionAsync(string.Empty, "SELECT A FROM dbo.Mg WITH (INDEX(IX_Mg_A)) WHERE K = 7;");
@@ -173,7 +173,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/heap-with-nonclustered-indexes")]
+    [Trait("Rule", FindingRuleIds.IndexDesignHeapWithNonclusteredIndexesRuleId)]
     public async Task HeapRowsForwardAndChangeLocationWhenRebuilt_ClusteredControlHasNeither()
     {
         await ExecuteAsync("UPDATE dbo.Hp SET Pad = REPLICATE('x', 3000); UPDATE dbo.Cl SET Pad = REPLICATE('x', 3000);");
@@ -191,7 +191,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/monotonic-clustered-key-missing-sequential-optimization")]
+    [Trait("Rule", FindingRuleIds.IndexDesignMonotonicClusteredKeyMissingSequentialOptimizationRuleId)]
     public async Task IdentityClusteredKey_AppendsInOrderWithoutSequentialOptimization_OptionControlIsFlagged()
     {
         var backwards = await ScalarAsync<int>("SELECT COUNT(*) FROM (SELECT p.page_id, LAG(p.page_id) OVER (ORDER BY Id) AS prev FROM dbo.IdentityKey CROSS APPLY sys.fn_PhysLocCracker(%%physloc%%) p) x WHERE prev > page_id;");
@@ -203,7 +203,7 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
-    [Trait("Rule", "silentscan/index-design/random-clustered-key-guid-default")]
+    [Trait("Rule", FindingRuleIds.IndexDesignRandomClusteredKeyGuidDefaultRuleId)]
     public async Task NewidClusteredKey_PlacesRowsOutOfInsertOrder_IdentityControlDoesNot()
     {
         const string backwardsSql = "SELECT COUNT(*) FROM (SELECT p.page_id, LAG(p.page_id) OVER (ORDER BY Id) AS prev FROM {0} CROSS APPLY sys.fn_PhysLocCracker(%%physloc%%) p) x WHERE prev > page_id;";

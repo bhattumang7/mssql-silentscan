@@ -7,7 +7,7 @@ using SilentScan.Verify.Catalog;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/join/outer-join-predicate-collapse")]
+[Trait("Rule", FindingRuleIds.OuterJoinPredicateCollapseRuleId)]
 public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(OuterJoinPredicateCollapseOracleTests);

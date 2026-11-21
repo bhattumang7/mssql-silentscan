@@ -5,7 +5,7 @@ using SilentScan.Verify.Deployment;
 namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/string-builtin/regexp-default-case-sensitive-on-ci-collation")]
+[Trait("Rule", FindingRuleIds.RegexpDefaultCaseSensitiveOnCiColumnRuleId)]
 public sealed class RegexpDefaultCaseSensitiveOnCiColumnEngineFactOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
