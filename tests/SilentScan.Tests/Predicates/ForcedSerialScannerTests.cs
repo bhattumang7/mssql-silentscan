@@ -197,6 +197,28 @@ public sealed class ForcedSerialScannerTests
         Assert.Equal("@c", finding.DetailText);
     }
 
+    [Theory]
+    [InlineData("OBJECT_NAME(Id)")]
+    [InlineData("SCHEMA_NAME(Id)")]
+    [InlineData("OBJECTPROPERTY(Id, 'IsTable')")]
+    [InlineData("COLUMNPROPERTY(Id, 'a', 'AllowsNull')")]
+    public void EngineSerializingMetadataFunction_Fires(string call)
+    {
+        var findings = Scan("SELECT Id FROM dbo.T WHERE " + call + " IS NOT NULL;");
+
+        Assert.Single(findings);
+    }
+
+    [Theory]
+    [InlineData("DB_ID()")]
+    [InlineData("DATEPART(YEAR, GETDATE())")]
+    public void ParallelSafeFunction_NeverFires(string call)
+    {
+        var findings = Scan("SELECT Id FROM dbo.T WHERE " + call + " IS NOT NULL;");
+
+        Assert.Empty(findings);
+    }
+
     [Fact]
     public void Intrinsic_ObjectId_InsideQueryWithFrom_Fires()
     {

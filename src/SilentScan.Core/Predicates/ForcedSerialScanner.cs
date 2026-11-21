@@ -10,7 +10,7 @@ public static class ForcedSerialScanner
 {
     private static readonly HashSet<string> NonParallelizableIntrinsicFunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "OBJECT_ID", "IDENT_CURRENT",
+        "OBJECT_ID", "IDENT_CURRENT", "OBJECT_NAME", "SCHEMA_NAME", "OBJECTPROPERTY", "COLUMNPROPERTY",
         "ERROR_NUMBER", "ERROR_MESSAGE", "ERROR_LINE", "ERROR_SEVERITY", "ERROR_STATE", "ERROR_PROCEDURE",
     };
 
