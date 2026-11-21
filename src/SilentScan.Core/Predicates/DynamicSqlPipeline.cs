@@ -78,6 +78,7 @@ public static partial class DynamicSqlPipeline
             accumulator.Findings.AddRange(perCallSite.Findings);
             accumulator.Skipped.AddRange(perCallSite.Skipped);
             accumulator.Tier1.AddRange(DedupeTier1(PreferBestConfidencePerKey(perCallSite.Tier1, Tier1Key, f => f.Confidence)));
+            accumulator.TemporalBoundary.AddRange(perCallSite.TemporalBoundary);
             accumulator.Typed.AddRange(TypedFindingDeduplicator.Dedupe(PreferBestConfidencePerKey(perCallSite.Typed, TypedKey, f => f.Confidence)));
             accumulator.ExpressionDerived.AddRange(DedupeExpressionDerived(PreferBestConfidencePerKey(perCallSite.ExpressionDerived, ExpressionDerivedKey, f => f.Confidence)));
             accumulator.Unparameterized.AddRange(DedupeUnparameterized(PreferBestConfidencePerKey(perCallSite.Unparameterized, UnparameterizedKey, f => f.Confidence)));
@@ -203,6 +204,8 @@ public static partial class DynamicSqlPipeline
 
         public List<SargabilityFinding> Tier1 { get; } = [];
 
+        public List<TemporalBoundaryPrecisionFinding> TemporalBoundary { get; } = [];
+
         public List<TypedPredicateFinding> Typed { get; } = [];
 
         public List<ExpressionDerivedFinding> ExpressionDerived { get; } = [];
@@ -223,7 +226,8 @@ public static partial class DynamicSqlPipeline
         public DynamicSqlPipelineResult ToResult() =>
             new(
                 Findings, Tier1, Typed, ExpressionDerived, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped,
-                Harness.Count == 0 ? null : Harness.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<IFinding>)kv.Value, StringComparer.Ordinal));
+                Harness.Count == 0 ? null : Harness.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<IFinding>)kv.Value, StringComparer.Ordinal),
+                TemporalBoundary);
     }
 
     private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel);
@@ -492,9 +496,16 @@ public static partial class DynamicSqlPipeline
         DetectUnparameterizedConcatenation(script, innerParseResult, accumulator);
 
         var tier1Ledger = new SkipLedger();
-        foreach (var tier1Finding in NonSargablePredicateScanner.Scan(innerParseResult, context.Catalog, context.Lineage, script.Scope, tier1Ledger, context.CallerScopeByCalleeScope))
+        var (innerTier1Findings, innerTemporalFindings) = NonSargablePredicateScanner.ScanFull(
+            innerParseResult, context.Catalog, context.Lineage, script.Scope, tier1Ledger, context.CallerScopeByCalleeScope);
+        foreach (var tier1Finding in innerTier1Findings)
         {
             accumulator.Tier1.Add(Remap(tier1Finding, script, map));
+        }
+
+        foreach (var temporalFinding in innerTemporalFindings)
+        {
+            accumulator.TemporalBoundary.Add(Remap(temporalFinding, script, map));
         }
 
         foreach (var tier1Skipped in tier1Ledger.Entries)
@@ -540,6 +551,7 @@ public static partial class DynamicSqlPipeline
             : AnalyzeNested(innerParseResult, script, declaredParameters, context, depth);
         accumulator.Findings.AddRange(nested.Findings);
         accumulator.Tier1.AddRange(nested.Tier1Findings);
+        accumulator.TemporalBoundary.AddRange(nested.TemporalBoundaryFindings ?? []);
         accumulator.Typed.AddRange(nested.TypedFindings);
         accumulator.ExpressionDerived.AddRange(nested.ExpressionDerivedFindings);
         accumulator.WriteLoss.AddRange(nested.WriteLossFindings);
@@ -726,7 +738,8 @@ public static partial class DynamicSqlPipeline
             [.. nestedResult.ScalarUdfFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.UnparameterizedFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.SkippedConstructs.Select(s => Remap(s, script))],
-            RemapHarnessFindings(nestedResult.HarnessFindings, script));
+            RemapHarnessFindings(nestedResult.HarnessFindings, script),
+            [.. (nestedResult.TemporalBoundaryFindings ?? []).Select(f => RemapNested(f, script))]);
     }
 
     private static DynamicSqlPipelineResult RefuseNestedCandidates(SqlParseResult innerParseResult, DynamicSqlScript script, Func<int, int, SourceSpan> map)
@@ -888,4 +901,5 @@ public sealed record DynamicSqlPipelineResult(
     IReadOnlyList<ScalarUdfFinding> ScalarUdfFindings,
     IReadOnlyList<UnparameterizedDynamicSqlFinding> UnparameterizedFindings,
     IReadOnlyList<SkippedConstruct> SkippedConstructs,
-    IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? HarnessFindings = null);
+    IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? HarnessFindings = null,
+    IReadOnlyList<TemporalBoundaryPrecisionFinding>? TemporalBoundaryFindings = null);

@@ -161,6 +161,7 @@ public static class ScanReportBuilder
             new DynamicSqlPipeline.DynamicSqlHarnessOptions(ruleContext, outerTempTableDeclarationsByScope));
         dynamicSqlFindings = [.. dynamicSqlFindings, .. dynamicSqlResult.Findings];
         tier1Findings = [.. tier1Findings, .. dynamicSqlResult.Tier1Findings];
+        temporalBoundaryFindings = [.. temporalBoundaryFindings, .. dynamicSqlResult.TemporalBoundaryFindings ?? []];
         typedFindings = [.. typedFindings, .. dynamicSqlResult.TypedFindings];
         expressionDerivedFindings = [.. expressionDerivedFindings, .. dynamicSqlResult.ExpressionDerivedFindings];
         writeLossFindings = [.. writeLossFindings, .. dynamicSqlResult.WriteLossFindings];
