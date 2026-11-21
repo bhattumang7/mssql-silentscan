@@ -110,7 +110,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
 
     [Fact]
     [Trait("Rule", FindingRuleIds.StaleSelectStarViewRuleId)]
-    [Trait("Rule", FindingRuleIds.SelectStarViewRuleId)]
     public async Task SelectStarView_StaysFrozenAfterAlterTableAdd_UntilRefreshed()
     {
         await using var connection = await OpenConnectionAsync();

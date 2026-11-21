@@ -52,7 +52,6 @@ public static class RuleRegistry
         new PartialCompositeForeignKeyJoinRule(),
         new MultiReferencedCteRule(),
         new PostExpansionJoinWidthRule(),
-        new SelectStarViewRule(),
         new OutputParameterRule(),
         new UnindexedTempTableUsageRule(),
 

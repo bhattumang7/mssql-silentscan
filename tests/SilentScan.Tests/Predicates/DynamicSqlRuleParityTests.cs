@@ -25,7 +25,7 @@ public sealed class DynamicSqlRuleParityTests
         var ruleContext = new RuleContext(
             catalog, lineage, new SkipLedger(), procCallGraph,
             new Dictionary<string, TvfFenceOrigin>(), new Dictionary<string, ScalarUdfOrigin>(),
-            new Dictionary<string, ViewExpansionOrigin>(), [], new Dictionary<string, SelectStarViewCandidate>(),
+            new Dictionary<string, ViewExpansionOrigin>(), [],
             new Dictionary<string, IReadOnlyList<string>>());
 
         var outerTempTableDeclarationsByScope = withCrossBoundaryTempTableSeeding

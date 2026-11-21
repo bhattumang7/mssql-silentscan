@@ -14,5 +14,4 @@ public sealed record RuleContext(
     IReadOnlyDictionary<string, ScalarUdfOrigin> ScalarUdfMap,
     IReadOnlyDictionary<string, ViewExpansionOrigin> ViewExpansionMap,
     IReadOnlyList<ViewDefinition> ViewDefinitions,
-    IReadOnlyDictionary<string, SelectStarViewCandidate> SelectStarViewCandidates,
     IReadOnlyDictionary<string, IReadOnlyList<string>> CallerScopeByCalleeScope);

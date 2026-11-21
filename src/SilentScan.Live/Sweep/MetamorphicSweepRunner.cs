@@ -74,7 +74,7 @@ public static class MetamorphicSweepRunner
     {
         ["schema-qualification-remove"] = ["silentscan/query/unqualified-table-reference"],
         ["schema-qualification-add"] = ["silentscan/query/unqualified-table-reference"],
-        ["derived-table-wrap"] = ["silentscan/statement-shape/bare-select-star", "silentscan/lineage/select-star-view"],
+        ["derived-table-wrap"] = ["silentscan/statement-shape/bare-select-star"],
     };
 
     private static IReadOnlySet<string> StripCollateralRuleIds(IReadOnlySet<string> ruleIds, string mutationName)

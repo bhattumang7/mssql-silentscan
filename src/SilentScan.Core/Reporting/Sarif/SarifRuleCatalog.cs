@@ -75,7 +75,6 @@ public static class SarifRuleCatalog
     public const string UntrustedCheckConstraintRuleId = FindingRuleIds.UntrustedCheckConstraintRuleId;
     public const string MultiReferencedCteRuleId = FindingRuleIds.MultiReferencedCteRuleId;
     public const string PostExpansionJoinWidthRuleId = FindingRuleIds.PostExpansionJoinWidthRuleId;
-    public const string SelectStarViewRuleId = FindingRuleIds.SelectStarViewRuleId;
     public const string PartialCompositeForeignKeyJoinRuleId = FindingRuleIds.PartialCompositeForeignKeyJoinRuleId;
     public const string OuterJoinPredicateCollapseRuleId = FindingRuleIds.OuterJoinPredicateCollapseRuleId;
     public const string ConcatenatedValueInConstantSqlRuleId = FindingRuleIds.ConcatenatedValueInConstantSqlRuleId;

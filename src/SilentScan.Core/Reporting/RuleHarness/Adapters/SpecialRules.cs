@@ -97,62 +97,6 @@ internal sealed class PostExpansionJoinWidthRule : IPerFileRule
     });
 }
 
-internal sealed class SelectStarViewRule : IPerFileRule
-{
-    public string Id => "SelectStarViewScanner";
-
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
-        SelectStarViewScanner.Scan(parseResult, context.Catalog, context.Lineage, context.SelectStarViewCandidates);
-
-    public IModuleRule? CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) =>
-        context.SelectStarViewCandidates.Count == 0
-            ? null
-            : SelectStarViewScanner.CreateRule(parseResult.SourcePath, context.Catalog, context.Lineage, context.SelectStarViewCandidates);
-
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) =>
-        SelectStarViewScanner.Harvest((SelectStarViewScanner.Rule)moduleRule);
-
-    public IComparer<IFinding>? Comparer => Comparer<IFinding>.Create((x, y) =>
-    {
-        var a = (SelectStarViewFinding)x;
-        var b = (SelectStarViewFinding)y;
-        var cmp = string.CompareOrdinal(a.ViewQualifiedName, b.ViewQualifiedName);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = string.CompareOrdinal(a.ConsumerSourcePath, b.ConsumerSourcePath);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = a.ConsumerLine.CompareTo(b.ConsumerLine);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = a.ConsumerColumn.CompareTo(b.ConsumerColumn);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = a.ViewDepth.CompareTo(b.ViewDepth);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = string.CompareOrdinal(a.ViewSourcePath, b.ViewSourcePath);
-        return cmp != 0 ? cmp : a.ViewLine.CompareTo(b.ViewLine);
-    });
-}
-
 internal sealed class OutputParameterRule : IPerFileRule
 {
     public string Id => "OutputParameterScanner";

@@ -50,7 +50,6 @@ public static class RulePrecisionLedger
         new("silentscan/lineage/expression-derived-column", 3199, 2, 18, 0),
         new("silentscan/lineage/multi-referenced-cte", 151, 20, 0, 0),
         new("silentscan/lineage/post-expansion-join-width", 2985, 0, 0, 20),
-        new("silentscan/lineage/select-star-view", 1, 0, 1, 0),
         new("silentscan/predicate/plus-operator-null-propagation", 18, 17, 1, 0),
         new("silentscan/predicates/catch-all-parameter", 5, 5, 0, 0),
         new("silentscan/predicates/float-equality", 29, 2, 18, 0),

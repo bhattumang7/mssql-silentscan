@@ -54,7 +54,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Select(ToResult));
         results.AddRange(report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Select(ToResult));
-        results.AddRange(report.Find<SelectStarViewFinding>("SelectStarViewScanner").Select(ToResult));
         results.AddRange(report.Find<UnparameterizedDynamicSqlFinding>("DynamicSqlScanner").Select(ToResult));
         results.AddRange(report.Find<NonPersistedComputedColumnFinding>("NonPersistedComputedColumnScanner").Select(ToResult));
         results.AddRange(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner").Select(ToResult));
@@ -946,15 +945,6 @@ public static class SarifReportWriter
         var message = $"'{finding.ModuleQualifiedName}' writes {finding.WrittenCount} FROM/JOIN reference(s) but expands to {finding.ExpandedCount} base table(s) via [{string.Join(", ", finding.InflatingSources)}]{unexpandedNote}.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(SelectStarViewFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.SelectStarViewRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = $"'{finding.ViewQualifiedName}' (SELECT * at line {finding.ViewLine}, {finding.ViewFullColumns.Count} columns, {finding.ViewDepth} view/TVF layer(s) deep) is consumed here selecting only [{string.Join(", ", finding.ConsumerSelectedColumns)}] - the view's frozen column list forces the full width regardless.";
-
-        return BuildResult(ruleId, level, message, finding.ConsumerSourcePath, finding.ConsumerLine, startColumn: null);
     }
 
     private static SarifResult ToResult(UnparameterizedDynamicSqlFinding finding)

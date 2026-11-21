@@ -84,7 +84,6 @@ public static class FindingRuleIds
     public const string UntrustedCheckConstraintRuleId = "silentscan/catalog/untrusted-check-constraint";
     public const string MultiReferencedCteRuleId = "silentscan/lineage/multi-referenced-cte";
     public const string PostExpansionJoinWidthRuleId = "silentscan/lineage/post-expansion-join-width";
-    public const string SelectStarViewRuleId = "silentscan/lineage/select-star-view";
     public const string PartialCompositeForeignKeyJoinRuleId = "silentscan/join/partial-composite-fk";
     public const string OuterJoinPredicateCollapseRuleId = "silentscan/join/outer-join-predicate-collapse";
     public const string ConcatenatedValueInConstantSqlRuleId = "silentscan/dynamic-sql/concatenated-value-in-constant-sql";

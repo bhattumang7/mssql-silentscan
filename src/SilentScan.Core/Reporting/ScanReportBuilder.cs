@@ -42,7 +42,6 @@ public static class ScanReportBuilder
         IReadOnlyDictionary<string, Lineage.TvfFenceOrigin> tvfFenceMap;
         IReadOnlyDictionary<string, Lineage.ScalarUdfOrigin> scalarUdfMap;
         IReadOnlyDictionary<string, Lineage.ViewExpansionOrigin> viewExpansionMap;
-        IReadOnlyDictionary<string, SelectStarViewCandidate> selectStarViewCandidates;
         List<Lineage.ViewDefinition> viewDefinitions;
         using (var fenceMapStage = progress.Begin("mapping TVF fences and scalar UDFs", usableCount))
         {
@@ -50,7 +49,6 @@ public static class ScanReportBuilder
             tvfFenceMap = Lineage.TvfFenceMap.Build(viewDefinitions, catalog);
             scalarUdfMap = Lineage.ScalarUdfMap.Build(viewDefinitions, catalog);
             viewExpansionMap = Lineage.ViewExpansionMap.Build(viewDefinitions, catalog);
-            selectStarViewCandidates = SelectStarViewScanner.BuildCandidates(viewDefinitions, viewExpansionMap, lineage, catalog.IdentifierComparer);
             fenceMapStage.Complete($"{tvfFenceMap.Count:N0} view/TVF layers inherit a fence, {scalarUdfMap.Count:N0} inherit a scalar UDF");
         }
 
@@ -83,7 +81,7 @@ public static class ScanReportBuilder
         var ruleContext = new RuleHarness.RuleContext(
             catalog, lineage, new SkipLedger(), procCallGraph,
             tvfFenceMap, scalarUdfMap, viewExpansionMap, viewDefinitions,
-            selectStarViewCandidates, callerScopeByCalleeScope);
+            callerScopeByCalleeScope);
         var ruleResults = RuleHarness.RuleRunner.Run(RuleHarness.RuleRegistry.All, usableParseResults, ruleContext, progress);
         var ruleCrashes = ruleResults.Crashes;
 

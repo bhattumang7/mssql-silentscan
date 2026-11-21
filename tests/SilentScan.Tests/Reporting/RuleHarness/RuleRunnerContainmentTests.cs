@@ -39,7 +39,7 @@ public sealed class RuleRunnerContainmentTests
             catalog, lineage, new SkipLedger(), new ProcCallGraph([]),
             new Dictionary<string, TvfFenceOrigin>(), new Dictionary<string, ScalarUdfOrigin>(),
             new Dictionary<string, ViewExpansionOrigin>(), [],
-            new Dictionary<string, SelectStarViewCandidate>(), new Dictionary<string, IReadOnlyList<string>>());
+            new Dictionary<string, IReadOnlyList<string>>());
     }
 
     [Fact]

@@ -107,7 +107,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(UntrustedConstraint(report, headingLevel, pathBase));
         blocks.AddRange(MultiReferencedCte(report, headingLevel, pathBase));
         blocks.AddRange(PostExpansionJoinWidth(report, headingLevel, pathBase));
-        blocks.AddRange(SelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(PartialCompositeForeignKeyJoin(report, headingLevel, pathBase));
         blocks.AddRange(OuterJoinPredicateCollapse(report, headingLevel, pathBase));
         blocks.AddRange(SetOption(report, headingLevel, pathBase));
@@ -235,7 +234,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Untrusted FK/CHECK constraints", report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).Count);
         AddCount(counts, "CTEs referenced 2+ times downstream of their own WITH clause", report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Count);
         AddCount(counts, "Queries whose expanded join width exceeds their written FROM/JOIN count", report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count);
-        AddCount(counts, "Consumers narrowing a nested SELECT * view's frozen column list", report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Count);
         AddCount(counts, "JOINs matching some but not all of a composite foreign key's columns", report.Find<PartialCompositeForeignKeyJoinFinding>(nameof(PartialCompositeForeignKeyJoinScanner)).Count);
         AddCount(counts, "OUTER JOIN predicates that silently collapse to an INNER JOIN", report.Find<OuterJoinPredicateCollapseFinding>(nameof(OuterJoinPredicateCollapseScanner)).Count);
         AddCount(counts, "SET options silently disabling a filtered index/indexed view the module touches", report.Find<SetOptionFinding>(nameof(SetOptionScanner)).Count);
@@ -1718,29 +1716,6 @@ public static class ReadableScanReportWriter
                 f.ExpandedCount.ToString(CultureInfo.InvariantCulture),
                 string.Join(", ", f.InflatingSources),
                 f.PartiallyUnexpanded ? "yes" : "no",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> SelectStarView(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"SELECT * inside a nested view/TVF ({report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A view/inline TVF nested 1+ view/TVF layers deep whose own outermost SELECT is a bare or qualified * - its column list is frozen at CREATE/ALTER time and silently disagrees with the base table after any change, confirmed to survive even a live describe-only probe and real execution until sp_refreshview runs. Only listed here where a real consuming query explicitly selects a strict, named subset of the view's full column set - a consumer doing SELECT * from the view never narrows anything and is never matched.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SelectStarViewRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "View", "View columns", "Consumer selects"],
-            [.. report.Find<SelectStarViewFinding>(nameof(SelectStarViewScanner)).Select(f => new List<string>
-            {
-                Where(f.ConsumerSourcePath, f.ConsumerLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.ViewQualifiedName,
-                $"{f.ViewFullColumns.Count} ({string.Join(", ", f.ViewFullColumns)})",
-                string.Join(", ", f.ConsumerSelectedColumns),
             })]);
     }
 
