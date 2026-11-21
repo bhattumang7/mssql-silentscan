@@ -21,6 +21,39 @@ public sealed class TemporalBoundaryPrecisionTests
         return NonSargablePredicateScanner.ScanFull(parseResult, catalog, lineage).TemporalBoundaryFindings;
     }
 
+    private static IReadOnlyList<TemporalBoundaryPrecisionFinding> ScanSql(string upperBound)
+    {
+        var sql = $"CREATE TABLE dbo.Events (Id INT NOT NULL, OccurredAt DATETIME2(7) NOT NULL);{Environment.NewLine}GO{Environment.NewLine}SELECT Id FROM dbo.Events WHERE OccurredAt BETWEEN '2024-01-01' AND '{upperBound}';";
+        var parseResult = SqlScriptParser.ParseText("test.sql", sql);
+        Assert.False(parseResult.HasErrors, string.Join("; ", parseResult.Errors.Select(e => e.Message)));
+
+        var catalog = CatalogBuilder.Build([parseResult]);
+        var lineage = LineageResolver.Resolve(catalog, [parseResult]);
+
+        return NonSargablePredicateScanner.ScanFull(parseResult, catalog, lineage).TemporalBoundaryFindings;
+    }
+
+    [Theory]
+    [InlineData("2024-01-01 17:00")]
+    [InlineData("2024-01-01 17:00:00")]
+    [InlineData("2024-01-01 08:30:15.5")]
+    [InlineData("2024-01-01 23:00:00")]
+    public void ExplicitTimeOfDayThatIsNotTheEndOfTheDay_NeverFires(string upperBound)
+    {
+        Assert.Empty(ScanSql(upperBound));
+    }
+
+    [Theory]
+    [InlineData("2024-01-01 23:59:59")]
+    [InlineData("2024-01-01 23:59")]
+    [InlineData("2024-01-01 23:59:59.999")]
+    [InlineData("2024-01-01 23:59:59.997")]
+    [InlineData("2024-01-01")]
+    public void EndOfTheDayOrBareDateUpperBound_StillFires(string upperBound)
+    {
+        Assert.Single(ScanSql(upperBound));
+    }
+
     [Fact]
     public void ThreeDigitBoundaryAgainstDateTime2Scale7_Fires()
     {
