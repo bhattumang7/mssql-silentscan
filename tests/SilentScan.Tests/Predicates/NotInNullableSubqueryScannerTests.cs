@@ -83,6 +83,36 @@ public sealed class NotInNullableSubqueryScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("RefId > 0")]
+    [InlineData("RefId = 5")]
+    [InlineData("RefId <> 5")]
+    [InlineData("RefId BETWEEN 1 AND 9")]
+    [InlineData("RefId IN (1, 2)")]
+    [InlineData("0 < RefId")]
+    public void SubqueryFilterThatRejectsNull_NeverFires(string filter)
+    {
+        var findings = Scan($"SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE {filter});");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SubqueryFilterThatDoesNotRejectNull_StillFires()
+    {
+        var findings = Scan("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NULL OR RefId > 0);");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void SubqueryFilterWithNullSafeComparison_StillFires()
+    {
+        var findings = Scan("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT DISTINCT FROM 5);");
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void SubqueryNotNullFilterOnlyReachableThroughOr_StillFires()
     {

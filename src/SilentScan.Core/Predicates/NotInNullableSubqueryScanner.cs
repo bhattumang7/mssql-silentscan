@@ -114,21 +114,50 @@ public static class NotInNullableSubqueryScanner
         {
             foreach (var clause in PredicateTreeWalker.FlattenAnd(subqueryWhere))
             {
-                if (clause is not BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression filterColumnRef })
+                foreach (var filterColumnRef in NullRejectedColumns(clause))
                 {
-                    continue;
-                }
-
-                var provenance = ScalarExpressionResolver.ResolveColumnReference(filterColumnRef, subqueryScopeChain, sourcePath, ledger: null, catalog);
-                if (provenance is ColumnProvenance.BaseColumn { Depth: 0 } filterColumn
-                    && catalog.IdentifierComparer.Equals(filterColumn.TableQualifiedName, tableQualifiedName)
-                    && catalog.IdentifierComparer.Equals(filterColumn.ColumnName, columnName))
-                {
-                    return true;
+                    var provenance = ScalarExpressionResolver.ResolveColumnReference(filterColumnRef, subqueryScopeChain, sourcePath, ledger: null, catalog);
+                    if (provenance is ColumnProvenance.BaseColumn { Depth: 0 } filterColumn
+                        && catalog.IdentifierComparer.Equals(filterColumn.TableQualifiedName, tableQualifiedName)
+                        && catalog.IdentifierComparer.Equals(filterColumn.ColumnName, columnName))
+                    {
+                        return true;
+                    }
                 }
             }
 
             return false;
+        }
+
+        private static IEnumerable<ColumnReferenceExpression> NullRejectedColumns(BooleanExpression clause)
+        {
+            switch (clause)
+            {
+                case BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression isNotNullColumn }:
+                    yield return isNotNullColumn;
+                    break;
+                case BooleanComparisonExpression comparison when comparison.ComparisonType is not (BooleanComparisonType.IsDistinctFrom or BooleanComparisonType.IsNotDistinctFrom):
+                    if (comparison.FirstExpression is ColumnReferenceExpression left)
+                    {
+                        yield return left;
+                    }
+
+                    if (comparison.SecondExpression is ColumnReferenceExpression right)
+                    {
+                        yield return right;
+                    }
+
+                    break;
+                case BooleanTernaryExpression { FirstExpression: ColumnReferenceExpression betweenColumn }:
+                    yield return betweenColumn;
+                    break;
+                case InPredicate { NotDefined: false, Expression: ColumnReferenceExpression inColumn }:
+                    yield return inColumn;
+                    break;
+                case LikePredicate { NotDefined: false, FirstExpression: ColumnReferenceExpression likeColumn }:
+                    yield return likeColumn;
+                    break;
+            }
         }
     }
 }
