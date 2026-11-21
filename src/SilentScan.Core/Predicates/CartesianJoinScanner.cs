@@ -17,7 +17,7 @@ public static class CartesianJoinScanner
         parseResult.Fragment.Accept(walker);
     return Harvest(rule);
     }
-    internal static Rule CreateRule(string sourcePath, DatabaseCatalog? catalog = null) => new(sourcePath, catalog?.IdentifierComparer ?? StringComparer.OrdinalIgnoreCase);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog? catalog = null) => new(sourcePath, catalog ?? new DatabaseCatalog());
 
     internal static IReadOnlyList<CartesianJoinFinding> Harvest(Rule rule) =>
             [
@@ -30,8 +30,12 @@ public static class CartesianJoinScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath, StringComparer identifierComparer) : IModuleRule
+    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
+        private readonly StringComparer identifierComparer = catalog.IdentifierComparer;
+
+        private HashSet<string> _pinnedAliases = new(StringComparer.OrdinalIgnoreCase);
+
         public List<CartesianJoinFinding> Findings { get; } = [];
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
@@ -69,6 +73,13 @@ public static class CartesianJoinScanner
             {
                 return;
             }
+
+            var whereConjuncts = PredicateTreeWalker.FlattenAnd(whereClause?.SearchCondition).ToList();
+            _pinnedAliases = new HashSet<string>(
+                allNamed
+                    .Where(named => SingleRowKeyPinning.PinsAtMostOneRow([named], whereConjuncts, [], catalog))
+                    .Select(AliasKey),
+                identifierComparer);
 
             var unionFind = BuildConnectivity(allNamed, allPredicates, identifierComparer);
 
@@ -235,7 +246,9 @@ public static class CartesianJoinScanner
 
                     if (unqualified.FirstTableReference is NamedTableReference crossFirst
                         && unqualified.SecondTableReference is NamedTableReference crossSecond
-                        && !unionFind.SameComponent(AliasKey(crossFirst), AliasKey(crossSecond)))
+                        && !unionFind.SameComponent(AliasKey(crossFirst), AliasKey(crossSecond))
+                        && !_pinnedAliases.Contains(AliasKey(crossFirst))
+                        && !_pinnedAliases.Contains(AliasKey(crossSecond)))
                     {
                         Findings.Add(new CartesianJoinFinding(
                             CartesianJoinKind.ExplicitCrossJoin,
@@ -261,7 +274,9 @@ public static class CartesianJoinScanner
                 for (var j = i + 1; j < topLevel.Count; j++)
                 {
                     if (topLevel[j] is not NamedTableReference secondNamed
-                        || unionFind.SameComponent(AliasKey(firstNamed), AliasKey(secondNamed)))
+                        || unionFind.SameComponent(AliasKey(firstNamed), AliasKey(secondNamed))
+                        || _pinnedAliases.Contains(AliasKey(firstNamed))
+                        || _pinnedAliases.Contains(AliasKey(secondNamed)))
                     {
                         continue;
                     }

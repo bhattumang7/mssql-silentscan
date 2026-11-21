@@ -1,3 +1,4 @@
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 
@@ -10,6 +11,35 @@ public sealed class CartesianJoinScannerTests
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return CartesianJoinScanner.Scan(result);
+    }
+
+    private const string ConfigDdl = "CREATE TABLE dbo.Config (Id INT NOT NULL PRIMARY KEY, Val INT NOT NULL); CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Amount INT NOT NULL);";
+
+    private static IReadOnlyList<CartesianJoinFinding> ScanWithCatalog(string statement)
+    {
+        var ddl = SqlScriptParser.ParseText("ddl.sql", ConfigDdl);
+        var result = SqlScriptParser.ParseText("test.sql", statement);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        return CartesianJoinScanner.Scan(result, CatalogBuilder.Build([ddl]));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1;")]
+    [InlineData("SELECT * FROM dbo.Config c CROSS JOIN dbo.Orders o WHERE c.Id = 1;")]
+    [InlineData("SELECT * FROM dbo.Orders o, dbo.Config c WHERE c.Id = 1 AND o.Amount > 5;")]
+    public void OneSideKeyPinnedToASingleRow_NeverFires(string statement)
+    {
+        Assert.Empty(ScanWithCatalog(statement));
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o;")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Val = 1;")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1 OR c.Id = 2;")]
+    [InlineData("SELECT * FROM dbo.Config c CROSS JOIN dbo.Orders o WHERE c.Id > 1;")]
+    public void NeitherSidePinnedToASingleRow_StillFires(string statement)
+    {
+        Assert.Single(ScanWithCatalog(statement));
     }
 
     [Fact]
