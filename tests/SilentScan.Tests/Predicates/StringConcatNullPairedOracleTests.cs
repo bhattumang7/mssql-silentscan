@@ -18,9 +18,14 @@ public sealed class StringConcatNullPairedOracleTests : RuleOracle
 
     private const string ThreeOperands = "three-operand-chain";
 
-    private static readonly StringConcatNullFinding NullableClaim = new("dbo.T", "A", "claimed.sql", 1, 1);
+    private static IFinding OverNotNullColumn(IFinding finding) =>
+        ((StringConcatNullFinding)finding) with { ColumnName = "C" };
 
-    private static readonly StringConcatNullFinding NotNullClaim = new("dbo.T", "C", "claimed.sql", 1, 1);
+    protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations { get; } =
+    [
+        OverNotNullColumn,
+        finding => ((StringConcatNullFinding)finding) with { TableQualifiedName = "dbo.Other" },
+    ];
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
@@ -30,12 +35,12 @@ public sealed class StringConcatNullPairedOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("column-not-null", Setup, "SELECT B + C AS Joined FROM dbo.T;"), NotNullClaim, TwoOperands),
-        new(new("isnull-guard", Setup, "SELECT B + ISNULL(A, '') AS Joined FROM dbo.T;"), NullableClaim, TwoOperands),
-        new(new("coalesce-guard", Setup, "SELECT B + COALESCE(A, '') AS Joined FROM dbo.T;"), NullableClaim, TwoOperands),
-        new(new("is-not-null-filter", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A IS NOT NULL;"), NullableClaim, TwoOperands),
-        new(new("null-rejecting-comparison", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A <> 'zzz';"), NullableClaim, TwoOperands),
-        new(new("null-rejecting-like", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A LIKE '%';"), NullableClaim, TwoOperands),
-        new(new("null-rejecting-in", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A IN ('', 'x');"), NullableClaim, TwoOperands),
+        new(new("column-not-null", Setup, "SELECT B + C AS Joined FROM dbo.T;"), TwoOperands, OverNotNullColumn),
+        new(new("isnull-guard", Setup, "SELECT B + ISNULL(A, '') AS Joined FROM dbo.T;"), TwoOperands),
+        new(new("coalesce-guard", Setup, "SELECT B + COALESCE(A, '') AS Joined FROM dbo.T;"), TwoOperands),
+        new(new("is-not-null-filter", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A IS NOT NULL;"), TwoOperands),
+        new(new("null-rejecting-comparison", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A <> 'zzz';"), TwoOperands),
+        new(new("null-rejecting-like", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A LIKE '%';"), TwoOperands),
+        new(new("null-rejecting-in", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A IN ('', 'x');"), TwoOperands),
     ];
 }

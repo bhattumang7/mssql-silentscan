@@ -11,7 +11,7 @@ public enum RuleConditionKind
     Excluded,
 }
 
-public sealed record RuleCondition(string Name, RuleConditionKind Kind, string Text);
+public sealed record RuleCondition(string Name, RuleConditionKind Kind, string Text, string? Form = null);
 
 public sealed record RuleDefinition(
     string Id,

@@ -18,15 +18,30 @@ public static class EngineAuthoritativeScan
         return result.Report;
     }
 
-    public static async Task<LiveScanResult> RunAsync(string sql, string? collation = null, CancellationToken cancellationToken = default)
+    public static async Task<ScanReport> ScanOnAsync(string sql, SqlServerOptions options, int? compatibilityLevel, CancellationToken cancellationToken = default)
+    {
+        var result = await RunAsync(sql, null, options, compatibilityLevel, cancellationToken);
+        return result.Report;
+    }
+
+    public static Task<LiveScanResult> RunAsync(string sql, string? collation = null, CancellationToken cancellationToken = default) =>
+        RunAsync(sql, collation, Options, null, cancellationToken);
+
+    private static async Task<LiveScanResult> RunAsync(
+        string sql, string? collation, SqlServerOptions options, int? compatibilityLevel, CancellationToken cancellationToken)
     {
         var databaseName = $"SilentScanTest_{Guid.NewGuid():N}";
-        var provisioner = new DatabaseProvisioner(Options);
+        var provisioner = new DatabaseProvisioner(options);
         await provisioner.CreateFreshAsync(databaseName, collationName: collation, cancellationToken: cancellationToken);
         try
         {
-            await new ScriptDeployer(Options).DeployAsync(WrapBareStatementsInProcedures(sql), databaseName, cancellationToken);
-            return await LiveScanRunner.RunAsync(Options.BuildConnectionString(databaseName), cancellationToken: cancellationToken);
+            if (compatibilityLevel is { } level)
+            {
+                await provisioner.SetCompatibilityLevelAsync(databaseName, level, cancellationToken);
+            }
+
+            await new ScriptDeployer(options).DeployAsync(WrapBareStatementsInProcedures(sql), databaseName, cancellationToken);
+            return await LiveScanRunner.RunAsync(options.BuildConnectionString(databaseName), cancellationToken: cancellationToken);
         }
         finally
         {

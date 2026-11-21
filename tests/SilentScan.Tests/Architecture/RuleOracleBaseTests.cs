@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using SilentScan.Core.Predicates;
+using SilentScan.Core.Reporting;
 using SilentScan.Tests.Support;
 using SilentScan.Verify;
 using SilentScan.Verify.Oracle;
@@ -25,26 +26,41 @@ public sealed class RuleOracleBaseTests
 
     private const string FiringStatement = "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable);";
 
-    private const string QuietStatement = "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull);";
+    private const string QuietStatement = "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);";
+
+    private const string NotNullStatement = "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull);";
 
     private static readonly OracleCase Firing = new("firing", Setup, FiringStatement);
 
-    private static readonly SilentCase Quiet = new(
-        new OracleCase("quiet", Setup, QuietStatement),
-        new NotInNullableSubqueryFinding("Id", "dbo.ChildNotNull", "RefId", false, "claimed.sql", 1, 1),
-        "firing");
+    private static readonly SilentCase Quiet = new(new OracleCase("quiet", Setup, QuietStatement), "firing");
+
+    private static readonly SilentCase NotNull = new(new OracleCase("not-null", Setup, NotNullStatement), "firing", OverNotNullTable);
+
+    private static readonly Func<IFinding, IFinding>[] Mutations = [OverNotNullTable];
+
+    private static IFinding OverNotNullTable(IFinding finding) =>
+        ((NotInNullableSubqueryFinding)finding) with { SubqueryTableQualifiedName = "dbo.ChildNotNull" };
 
     [Trait("Rule", FindingRuleIds.NotInNullableSubqueryRuleId)]
-    private sealed class Probe(IReadOnlyList<OracleCase> firing, IReadOnlyList<SilentCase> silent, IRuleVerifier? verifier = null) : RuleOracle
+    private sealed class Probe(
+        IReadOnlyList<OracleCase> firing,
+        IReadOnlyList<SilentCase> silent,
+        IRuleVerifier? verifier = null,
+        IReadOnlyList<Func<IFinding, IFinding>>? mutations = null,
+        IReadOnlyList<RuleCondition>? conditions = null) : RuleOracle
     {
         protected override IReadOnlyList<OracleCase> FiringCases => firing;
 
         protected override IReadOnlyList<SilentCase> SilentCases => silent;
 
+        protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations => mutations ?? Mutations;
+
+        protected override IReadOnlyList<RuleCondition> Conditions => conditions ?? [];
+
         protected override IRuleVerifier Verifier => verifier ?? base.Verifier;
     }
 
-    private sealed class LookupVerifier : IRuleVerifier
+    private abstract class BadVerifier : IRuleVerifier
     {
         public string RuleId => FindingRuleIds.NotInNullableSubqueryRuleId;
 
@@ -52,7 +68,13 @@ public sealed class RuleOracleBaseTests
 
         public bool Judges(IFinding finding) => finding is NotInNullableSubqueryFinding;
 
-        public async Task<EngineVerification> VerifyAsync(
+        public abstract Task<EngineVerification> VerifyAsync(
+            SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken = default);
+    }
+
+    private sealed class LookupVerifier : BadVerifier
+    {
+        public override async Task<EngineVerification> VerifyAsync(
             SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken = default)
         {
             var claim = (NotInNullableSubqueryFinding)finding;
@@ -67,15 +89,9 @@ public sealed class RuleOracleBaseTests
         }
     }
 
-    private sealed class FieldsOnlyProbeVerifier : IRuleVerifier
+    private sealed class FieldsOnlyProbeVerifier : BadVerifier
     {
-        public string RuleId => FindingRuleIds.NotInNullableSubqueryRuleId;
-
-        public Type FindingType => typeof(NotInNullableSubqueryFinding);
-
-        public bool Judges(IFinding finding) => finding is NotInNullableSubqueryFinding;
-
-        public async Task<EngineVerification> VerifyAsync(
+        public override async Task<EngineVerification> VerifyAsync(
             SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken = default)
         {
             var claim = (NotInNullableSubqueryFinding)finding;
@@ -88,17 +104,27 @@ public sealed class RuleOracleBaseTests
         }
     }
 
-    private sealed class ConfirmsEverythingVerifier : IRuleVerifier
+    private sealed class ConfirmsEverythingVerifier : BadVerifier
     {
-        public string RuleId => FindingRuleIds.NotInNullableSubqueryRuleId;
-
-        public Type FindingType => typeof(NotInNullableSubqueryFinding);
-
-        public bool Judges(IFinding finding) => finding is NotInNullableSubqueryFinding;
-
-        public Task<EngineVerification> VerifyAsync(
+        public override Task<EngineVerification> VerifyAsync(
             SqlServerOptions options, string database, IFinding finding, string statement, CancellationToken cancellationToken = default) =>
             Task.FromResult(new EngineVerification(EngineVerdict.Confirmed, "never looked at the statement"));
+    }
+
+    private sealed class IgnoresTheFindingVerifier : RuleVerifier<NotInNullableSubqueryFinding>
+    {
+        public override string RuleId => FindingRuleIds.NotInNullableSubqueryRuleId;
+
+        protected override Perturbation Describe(NotInNullableSubqueryFinding finding)
+        {
+            var address = ColumnAddress.TryParse("dbo.ChildNullable", "RefId")!;
+            return new Perturbation(
+                [address.Touched],
+                Difference.ResultEmptied,
+                (connection, transaction, token) => ColumnAddress.ExecuteAsync(connection, transaction, $"DELETE FROM {address.Table} WHERE {address.Column} IS NULL;", token),
+                (connection, transaction, token) => ColumnAddress.ExecuteAsync(connection, transaction, $"INSERT INTO {address.Table} ({address.Column}) VALUES (NULL);", token),
+                address.NamesColumn);
+        }
     }
 
     private static Task<XunitException> FiringFailureAsync(params OracleCase[] cases) =>
@@ -113,7 +139,7 @@ public sealed class RuleOracleBaseTests
     [Fact]
     public async Task WellFormedCases_Pass()
     {
-        var oracle = new Probe([Firing], [Quiet]);
+        var oracle = new Probe([Firing], [Quiet, NotNull]);
 
         await oracle.FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding();
         await oracle.SilentCases_ScannerStaysSilentAndTheEngineRefutesEachClaim();
@@ -125,29 +151,34 @@ public sealed class RuleOracleBaseTests
         var failure = await FiringFailureAsync(Firing, new OracleCase("quiet-listed-as-firing", Setup, QuietStatement));
 
         Assert.Contains("quiet-listed-as-firing", failure.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("[firing]", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("[firing", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task SilentList_NamesTheCaseOnWhichTheScannerFires()
     {
-        var failure = await SilentFailureAsync(Quiet, new SilentCase(new OracleCase("firing-listed-as-silent", Setup, FiringStatement), Quiet.Claim, "firing"));
+        var failure = await SilentFailureAsync(Quiet, new SilentCase(new OracleCase("firing-listed-as-silent", Setup, FiringStatement), "firing"));
 
         Assert.Contains("firing-listed-as-silent", failure.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain("[quiet]", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("[quiet", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task SilentList_NamesTheCaseWhoseClaimTheEngineDoesNotRefute()
     {
-        var unrefutable = new SilentCase(
-            new OracleCase("claim-the-engine-confirms", Setup, QuietStatement),
-            new NotInNullableSubqueryFinding("Id", "dbo.ChildNullable", "RefId", false, "claimed.sql", 1, 1),
-            "firing");
+        var unrefutable = new SilentCase(new OracleCase("claim-the-engine-confirms", Setup, QuietStatement.Replace(" WHERE RefId IS NOT NULL", string.Empty, StringComparison.Ordinal)), "firing");
 
         var failure = await SilentFailureAsync(Quiet, unrefutable);
 
         Assert.Contains("claim-the-engine-confirms", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SilentCaseRefutedOnlyByTheEnginesRefusal_FailsTheConditionFreeControl()
+    {
+        var failure = await SilentFailureAsync(NotNull);
+
+        Assert.Contains("perturbation that took effect", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -209,6 +240,37 @@ public sealed class RuleOracleBaseTests
     }
 
     [Fact]
+    public async Task OracleWithNoClaimMutations_Fails()
+    {
+        var failure = await Assert.ThrowsAnyAsync<XunitException>(() =>
+            new Probe([Firing], [Quiet], mutations: []).FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding());
+
+        Assert.Contains("claim mutations", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExcludedFormInWhichTheScannerStillFires_IsFalse()
+    {
+        var conditions = new[] { new RuleCondition("no-procedures", RuleConditionKind.Excluded, "inside a procedure", StatementForms.Procedure) };
+
+        var failure = await Assert.ThrowsAnyAsync<XunitException>(() =>
+            new Probe([Firing], [Quiet], conditions: conditions).FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding());
+
+        Assert.Contains("excluding that form is false", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExcludedFormThatDoesNotExist_Fails()
+    {
+        var conditions = new[] { new RuleCondition("no-such-form", RuleConditionKind.Excluded, "somewhere", "inside a trigger") };
+
+        var failure = await Assert.ThrowsAnyAsync<XunitException>(() =>
+            new Probe([Firing], [Quiet], conditions: conditions).FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding());
+
+        Assert.Contains("unknown statement form", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task VerifierThatAnswersFromACatalogLookup_IsRejectedByTheStatementSwapControl()
     {
         var failure = await BadVerifierFailureAsync(new LookupVerifier());
@@ -230,5 +292,13 @@ public sealed class RuleOracleBaseTests
         var failure = await BadVerifierFailureAsync(new ConfirmsEverythingVerifier());
 
         Assert.Contains("not judging the statement", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task VerifierThatIgnoresTheFinding_IsRejectedByTheClaimSwapControl()
+    {
+        var failure = await BadVerifierFailureAsync(new IgnoresTheFindingVerifier());
+
+        Assert.Contains("not judging the claim", failure.Message, StringComparison.Ordinal);
     }
 }

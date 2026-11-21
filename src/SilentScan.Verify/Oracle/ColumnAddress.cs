@@ -34,10 +34,10 @@ public sealed partial class ColumnAddress
             "[" + column + "]");
     }
 
-    public static async Task ExecuteAsync(SqlConnection connection, SqlTransaction transaction, string sql, CancellationToken cancellationToken)
+    public static async Task<int> ExecuteAsync(SqlConnection connection, SqlTransaction transaction, string sql, CancellationToken cancellationToken)
     {
         await using var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = 120 };
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public bool NamesColumn(SqlException exception) =>

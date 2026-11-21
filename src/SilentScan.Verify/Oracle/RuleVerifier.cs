@@ -17,15 +17,18 @@ public enum EngineVerdict
 
 public sealed record EngineVerification
 {
-    internal EngineVerification(EngineVerdict verdict, string detail)
+    internal EngineVerification(EngineVerdict verdict, string detail, bool engineRefusal = false)
     {
         Verdict = verdict;
         Detail = detail;
+        EngineRefusal = engineRefusal;
     }
 
     public EngineVerdict Verdict { get; }
 
     public string Detail { get; }
+
+    public bool EngineRefusal { get; }
 }
 
 public enum Difference
@@ -35,24 +38,27 @@ public enum Difference
     ResultChanged,
 
     NullAppeared,
-
-    RowCountChanged,
 }
 
-public sealed record TouchedObject(string? Schema, string Name);
+public abstract record Touch;
 
-public delegate Task PerturbationStep(SqlConnection connection, SqlTransaction transaction, CancellationToken cancellationToken);
+public sealed record TouchedObject(string? Schema, string Name) : Touch;
+
+public sealed record TouchedExpression(string Text) : Touch;
+
+public delegate Task<int> PerturbationStep(SqlConnection connection, SqlTransaction transaction, CancellationToken cancellationToken);
 
 public sealed class Perturbation
 {
     public Perturbation(
-        IReadOnlyList<TouchedObject> touches,
+        IReadOnlyList<Touch> touches,
         Difference expected,
         PerturbationStep removeCondition,
         PerturbationStep applyCondition,
         Func<SqlException, bool> engineRefusalRefutes,
         Func<string, string?>? baselineStatement = null)
     {
+        ArgumentOutOfRangeException.ThrowIfZero(touches.Count);
         BaselineStatement = baselineStatement;
         Touches = touches;
         Expected = expected;
@@ -64,13 +70,13 @@ public sealed class Perturbation
     private Perturbation(string notApplicableReason)
     {
         Touches = [];
-        RemoveCondition = static (_, _, _) => Task.CompletedTask;
-        ApplyCondition = static (_, _, _) => Task.CompletedTask;
+        RemoveCondition = static (_, _, _) => Task.FromResult(0);
+        ApplyCondition = static (_, _, _) => Task.FromResult(0);
         EngineRefusalRefutes = static _ => false;
         NotApplicableReason = notApplicableReason;
     }
 
-    public IReadOnlyList<TouchedObject> Touches { get; }
+    public IReadOnlyList<Touch> Touches { get; }
 
     public Difference Expected { get; }
 
@@ -134,9 +140,15 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
         try
         {
-            if (!await PlanReadsEveryObjectAsync(connection, statement, perturbation.Touches, cancellationToken))
+            if (UnreadTouch(statement, perturbation.Touches) is { } missing)
             {
-                return NotDecided($"The statement's plan does not read {string.Join(", ", perturbation.Touches.Select(NameOf))}, so the claim cannot be observed through it.");
+                return NotDecided($"The statement does not contain exactly one {missing}, so the claim cannot be observed through it.");
+            }
+
+            var objects = perturbation.Touches.OfType<TouchedObject>().ToList();
+            if (objects.Count > 0 && !await PlanReadsEveryObjectAsync(connection, PlanText(statement), objects, cancellationToken))
+            {
+                return NotDecided($"The statement's plan does not read {string.Join(", ", objects.Select(NameOf))}, so the claim cannot be observed through it.");
             }
 
             await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
@@ -162,12 +174,17 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
     private static async Task<EngineVerification> JudgeAsync(
         SqlConnection connection, SqlTransaction transaction, string statement, Perturbation perturbation, CancellationToken cancellationToken)
     {
-        await perturbation.RemoveCondition(connection, transaction, cancellationToken);
+        _ = await perturbation.RemoveCondition(connection, transaction, cancellationToken);
 
         var baselineStatement = perturbation.BaselineStatement is { } rewrite ? rewrite(statement) : statement;
         if (baselineStatement is null)
         {
             return NotDecided("The statement has no single place where the condition can be removed, so there is nothing to compare it with.");
+        }
+
+        if (perturbation.BaselineStatement is not null && string.Equals(baselineStatement, statement, StringComparison.Ordinal))
+        {
+            return NotDecided("The rewrite left the statement as it was, so the condition was never removed.");
         }
 
         var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, cancellationToken);
@@ -177,13 +194,19 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return NotDecided("The statement returns different results on its own, with nothing changed, so a difference cannot be credited to the condition.");
         }
 
+        int changed;
         try
         {
-            await perturbation.ApplyCondition(connection, transaction, cancellationToken);
+            changed = await perturbation.ApplyCondition(connection, transaction, cancellationToken);
         }
         catch (SqlException ex) when (perturbation.EngineRefusalRefutes(ex))
         {
-            return new EngineVerification(EngineVerdict.Refuted, $"The engine refused the condition the claim depends on: {ex.Message}");
+            return new EngineVerification(EngineVerdict.Refuted, $"The engine refused the condition the claim depends on: {ex.Message}", engineRefusal: true);
+        }
+
+        if (changed <= 0 && perturbation.BaselineStatement is null)
+        {
+            return NotDecided("The condition changed no rows, so nothing was put in place to observe.");
         }
 
         var perturbed = await ObserveOnceAsync(connection, transaction, statement, cancellationToken);
@@ -202,13 +225,6 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return perturbed.NullCells > baseline.NullCells
                 ? new EngineVerification(EngineVerdict.Confirmed, "Applying the condition turned a value the statement returns into NULL.")
                 : new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not turn any value the statement returns into NULL.");
-        }
-
-        if (expected == Difference.RowCountChanged)
-        {
-            return perturbed.RowCount != baseline.RowCount
-                ? new EngineVerification(EngineVerdict.Confirmed, string.Create(CultureInfo.InvariantCulture, $"Applying the condition changed how many rows the statement returns or affects ({baseline.RowCount} before, {perturbed.RowCount} after)."))
-                : new EngineVerification(EngineVerdict.Refuted, "Applying the condition did not change how many rows the statement returns or affects.");
         }
 
         if (perturbed.SameAs(baseline))
@@ -301,14 +317,35 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private static string? Unbracket(string? name) => name?.Trim('[', ']');
 
+    private static string? UnreadTouch(string statement, IReadOnlyList<Touch> touches)
+    {
+        foreach (var expression in touches.OfType<TouchedExpression>())
+        {
+            var first = statement.IndexOf(expression.Text, StringComparison.OrdinalIgnoreCase);
+            if (first < 0 || statement.IndexOf(expression.Text, first + 1, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return $"expression '{expression.Text}'";
+            }
+        }
+
+        return null;
+    }
+
+    private static string PlanText(string statement)
+    {
+        const string Prefix = "EXEC sp_executesql N'";
+        var trimmed = statement.Trim().TrimEnd(';');
+        return trimmed.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) && trimmed[^1] == (char)39
+            ? trimmed.Substring(Prefix.Length, trimmed.Length - Prefix.Length - 1).Replace("''", "'", StringComparison.Ordinal)
+            : statement;
+    }
+
     private static string NameOf(TouchedObject touched) => touched.Schema is null ? touched.Name : touched.Schema + "." + touched.Name;
 
     private static EngineVerification NotDecided(string detail) => new(EngineVerdict.NotDecided, detail);
 
     private sealed record Observation(List<string> Rows, int RecordsAffected)
     {
-        public int RowCount => Rows.Count + Math.Max(RecordsAffected, 0);
-
         public int NullCells => Rows.Sum(row => row.Split('|').Count(cell => string.Equals(cell, NullCell, StringComparison.Ordinal)));
 
         public bool IsEmpty => Rows.Count == 0 && RecordsAffected <= 0;

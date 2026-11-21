@@ -41,12 +41,14 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     private static PerturbationStep Run(string sql) => async (connection, transaction, cancellationToken) =>
     {
         await using var command = new SqlCommand(sql, connection, transaction);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
     };
 
-    private static readonly PerturbationStep Nothing = (_, _, _) => Task.CompletedTask;
+    private static readonly PerturbationStep Nothing = (_, _, _) => Task.FromResult(0);
 
-    private static Perturbation Of(Difference expected, PerturbationStep apply, Func<SqlException, bool>? refusalRefutes = null, IReadOnlyList<TouchedObject>? touches = null) =>
+    private static readonly PerturbationStep NoOpWrite = Run("UPDATE dbo.T SET V = V;");
+
+    private static Perturbation Of(Difference expected, PerturbationStep apply, Func<SqlException, bool>? refusalRefutes = null, IReadOnlyList<Touch>? touches = null) =>
         new(touches ?? TouchesT, expected, Nothing, apply, refusalRefutes ?? (_ => false));
 
     private Task<EngineVerification> VerifyAsync(Perturbation perturbation, string statement) =>
@@ -63,7 +65,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     [Fact]
     public async Task AppliedConditionLeavesTheStatementUnchanged_IsRefuted()
     {
-        var result = await VerifyAsync(Of(Difference.ResultEmptied, Nothing), Select);
+        var result = await VerifyAsync(Of(Difference.ResultEmptied, NoOpWrite), Select);
 
         Assert.Equal(EngineVerdict.Refuted, result.Verdict);
     }
@@ -79,7 +81,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     [Fact]
     public async Task AppliedConditionLeavesTheResultUnchanged_IsRefutedWhenAChangeIsExpected()
     {
-        var result = await VerifyAsync(Of(Difference.ResultChanged, Nothing), Select);
+        var result = await VerifyAsync(Of(Difference.ResultChanged, NoOpWrite), Select);
 
         Assert.Equal(EngineVerdict.Refuted, result.Verdict);
     }
@@ -138,19 +140,65 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task AppliedConditionChangesHowManyRowsComeBack_IsConfirmedWhenARowCountChangeIsExpected()
+    public async Task DataStepThatChangedNoRows_IsNotDecidedNotRefuted()
     {
-        var result = await VerifyAsync(Of(Difference.RowCountChanged, Run("DELETE FROM dbo.T WHERE V = 1;")), Select);
+        var result = await VerifyAsync(Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T WHERE V = -1;")), Select);
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+        Assert.Contains("no rows", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RewriteThatLeavesTheStatementAsItWas_IsNotDecidedNotRefuted()
+    {
+        var result = await VerifyAsync(Rewriting(IsNullToCoalesce, new TouchedObject("dbo", "W")), "SELECT Long FROM dbo.W;");
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+        Assert.Contains("rewrite", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PerturbationThatNamesNothingItTouches_IsRejected()
+    {
+        Assert.ThrowsAny<ArgumentException>(() => new Perturbation([], Difference.ResultEmptied, Nothing, Nothing, _ => false));
+    }
+
+    [Fact]
+    public async Task ExpressionTouchPresentOnceInTheStatement_IsJudged()
+    {
+        var perturbation = Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;"), touches: [new TouchedExpression("V + 0")]);
+
+        var result = await VerifyAsync(perturbation, "SELECT V + 0 AS X FROM dbo.T;");
 
         Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
     }
 
     [Fact]
-    public async Task AppliedConditionChangesValuesButNotTheRowCount_IsRefutedWhenARowCountChangeIsExpected()
+    public async Task ExpressionTouchAbsentFromTheStatement_IsNotDecided()
     {
-        var result = await VerifyAsync(Of(Difference.RowCountChanged, Run("UPDATE dbo.T SET V = V + 10;")), Select);
+        var perturbation = Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;"), touches: [new TouchedExpression("V + 0")]);
 
-        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+        var result = await VerifyAsync(perturbation, "SELECT V AS X FROM dbo.T;");
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+    }
+
+    [Fact]
+    public async Task ExpressionTouchAppearingTwice_IsNotDecidedBecauseTheFindingCannotBeLocated()
+    {
+        var perturbation = Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;"), touches: [new TouchedExpression("V + 0")]);
+
+        var result = await VerifyAsync(perturbation, "SELECT V + 0 AS X, V + 0 AS Y FROM dbo.T;");
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementRunAsDynamicSql_IsJudgedThroughTheTableItReads()
+    {
+        var result = await VerifyAsync(Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;")), "EXEC sp_executesql N'SELECT V FROM dbo.T;';");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
     }
 
     [Fact]

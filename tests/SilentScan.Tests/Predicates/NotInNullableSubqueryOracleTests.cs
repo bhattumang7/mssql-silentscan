@@ -26,11 +26,14 @@ public sealed class NotInNullableSubqueryOracleTests : RuleOracle
 
     private const string UpdateFiring = "update-over-nullable-column";
 
-    private static readonly NotInNullableSubqueryFinding NullableClaim =
-        new("Id", "dbo.ChildNullable", "RefId", false, "claimed.sql", 1, 1);
+    private static IFinding OverNotNullColumn(IFinding finding) =>
+        ((NotInNullableSubqueryFinding)finding) with { SubqueryTableQualifiedName = "dbo.ChildNotNull" };
 
-    private static readonly NotInNullableSubqueryFinding NotNullClaim =
-        new("Id", "dbo.ChildNotNull", "RefId", false, "claimed.sql", 1, 1);
+    protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations { get; } =
+    [
+        OverNotNullColumn,
+        finding => ((NotInNullableSubqueryFinding)finding) with { SubqueryTableQualifiedName = "dbo.Parent", SubqueryColumnName = "Tag" },
+    ];
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
@@ -41,11 +44,11 @@ public sealed class NotInNullableSubqueryOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("column-is-not-null", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull);"), NotNullClaim, SelectFiring),
-        new(new("is-not-null-filter", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);"), NullableClaim, SelectFiring),
-        new(new("null-rejecting-comparison", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId > 0);"), NullableClaim, SelectFiring),
-        new(new("null-rejecting-between", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId BETWEEN 0 AND 100);"), NullableClaim, SelectFiring),
-        new(new("delete-behind-is-not-null-filter", Setup, "DELETE FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);", "is-not-null-filter"), NullableClaim, DeleteFiring),
-        new(new("update-behind-is-not-null-filter", Setup, "UPDATE dbo.Parent SET Tag = 1 WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);", "is-not-null-filter"), NullableClaim, UpdateFiring),
+        new(new("column-is-not-null", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNotNull);"), SelectFiring, OverNotNullColumn),
+        new(new("is-not-null-filter", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);"), SelectFiring),
+        new(new("null-rejecting-comparison", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId > 0);"), SelectFiring),
+        new(new("null-rejecting-between", Setup, "SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId BETWEEN 0 AND 100);"), SelectFiring),
+        new(new("delete-behind-is-not-null-filter", Setup, "DELETE FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);", "is-not-null-filter"), DeleteFiring),
+        new(new("update-behind-is-not-null-filter", Setup, "UPDATE dbo.Parent SET Tag = 1 WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);", "is-not-null-filter"), UpdateFiring),
     ];
 }

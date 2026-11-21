@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Core.Reporting;
 using SilentScan.Tests.Support;
 
@@ -12,11 +11,9 @@ public sealed class RuleConditionCoverageTests
         new("excluded-b", RuleConditionKind.Excluded, "b"),
     ];
 
-    private static readonly NotInNullableSubqueryFinding Claim = new("Id", "dbo.T", "V", false, "claimed.sql", 1, 1);
-
     private static OracleCase Firing(string name, string? proves = null) => new(name, string.Empty, "SELECT 1;", proves);
 
-    private static SilentCase Silent(string name, string? proves = null) => new(Firing(name, proves), Claim, "fires-a");
+    private static SilentCase Silent(string name, string? proves = null) => new(Firing(name, proves), "fires-a");
 
     [Fact]
     public void EveryCaseAndEveryEntryLineUp_NoProblems()
