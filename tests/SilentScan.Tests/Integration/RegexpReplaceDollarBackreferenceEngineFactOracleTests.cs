@@ -8,11 +8,7 @@ namespace SilentScan.Tests.Integration;
 [Trait("Rule", "silentscan/string-builtin/regexp-replace-dollar-backreference")]
 public sealed class RegexpReplaceDollarBackreferenceEngineFactOracleTests : IAsyncLifetime
 {
-    private static readonly SqlServerOptions Options = new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var port) ? port : 14331,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
 
     private readonly string _databaseName = $"{nameof(RegexpReplaceDollarBackreferenceEngineFactOracleTests)}_{Guid.NewGuid():N}";
 

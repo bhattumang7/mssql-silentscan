@@ -11,11 +11,7 @@ namespace SilentScan.Tests.Integration;
 [Trait("Rule", "silentscan/catalog/max-typed-column")]
 public sealed class MaxTypedColumnJsonOracleTests : IAsyncLifetime
 {
-    private static readonly SqlServerOptions Options = new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var port) ? port : 14331,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
 
     private readonly string _databaseName = $"{nameof(MaxTypedColumnJsonOracleTests)}_{Guid.NewGuid():N}";
 

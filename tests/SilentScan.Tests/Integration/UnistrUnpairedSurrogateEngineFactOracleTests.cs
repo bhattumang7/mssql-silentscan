@@ -7,11 +7,7 @@ namespace SilentScan.Tests.Integration;
 [Trait("Rule", "silentscan/string-builtin/unistr-unpaired-surrogate")]
 public sealed class UnistrUnpairedSurrogateEngineFactOracleTests
 {
-    private static readonly SqlServerOptions Options = new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var port) ? port : 14331,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
 
     [Fact]
     public async Task UnistrWithUnpairedHighSurrogate_IsAcceptedByLiveEngineWithNoError()

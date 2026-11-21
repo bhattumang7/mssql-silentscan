@@ -9,11 +9,7 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", "silentscan/set-option/concat-null-yields-null-off")]
 public sealed class StringConcatNullOracleTests : IAsyncLifetime
 {
-    private static readonly SqlServerOptions Options = new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var port) ? port : 14331,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
 
     private readonly string _databaseName = $"{nameof(StringConcatNullOracleTests)}_{Guid.NewGuid():N}";
 
