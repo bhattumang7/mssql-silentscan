@@ -33,26 +33,26 @@ public static class IndexHintScanner
         public List<IndexHintFinding> Findings { get; } = [];
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
-            Inspect(node.FromClause, node.WhereClause?.SearchCondition, walker.CurrentCteRelations());
+            Inspect(node, node.FromClause, node.WhereClause?.SearchCondition, walker.CurrentCteRelations());
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             var spec = node.UpdateSpecification;
             var (byAlias, ordered) = FromScopeResolver.ResolveForDataModification(spec.Target, spec.FromClause, ResolutionContext(walker));
-            InspectResolved(byAlias, ordered, spec.FromClause, spec.WhereClause?.SearchCondition, spec.Target);
+            InspectResolved(spec, byAlias, ordered, spec.FromClause, spec.WhereClause?.SearchCondition, spec.Target);
         }
 
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             var spec = node.DeleteSpecification;
             var (byAlias, ordered) = FromScopeResolver.ResolveForDataModification(spec.Target, spec.FromClause, ResolutionContext(walker));
-            InspectResolved(byAlias, ordered, spec.FromClause, spec.WhereClause?.SearchCondition, spec.Target);
+            InspectResolved(spec, byAlias, ordered, spec.FromClause, spec.WhereClause?.SearchCondition, spec.Target);
         }
 
         private FromScopeResolver.ResolutionContext ResolutionContext(ModuleWalker walker) =>
             new(catalog, EmptyResolvedViews, sourcePath, Ledger: null, walker.CurrentCteRelations(), ProcScope: null);
 
-        private void Inspect(FromClause? fromClause, BooleanExpression? whereCondition, IReadOnlyDictionary<string, ResolvedRelation> cteRelations)
+        private void Inspect(TSqlFragment statement, FromClause? fromClause, BooleanExpression? whereCondition, IReadOnlyDictionary<string, ResolvedRelation> cteRelations)
         {
             if (fromClause is null)
             {
@@ -60,10 +60,11 @@ public static class IndexHintScanner
             }
 
             var (byAlias, ordered) = FromScopeResolver.Resolve(fromClause, catalog, EmptyResolvedViews, sourcePath, ledger: null, cteRelations, procScope: null);
-            InspectResolved(byAlias, ordered, fromClause, whereCondition, target: null);
+            InspectResolved(statement, byAlias, ordered, fromClause, whereCondition, target: null);
         }
 
         private void InspectResolved(
+            TSqlFragment statement,
             IReadOnlyDictionary<string, ScopeEntry> byAlias, IReadOnlyList<ScopeEntry> ordered,
             FromClause? fromClause, BooleanExpression? whereCondition, TableReference? target)
         {
@@ -79,17 +80,24 @@ public static class IndexHintScanner
                 join.SearchCondition.Accept(referenceVisitor);
             }
 
+            var statementColumns = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(catalog));
+            statement.Accept(new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, statementColumns, catalog));
+            var wildcardDetector = new WildcardDetector();
+            statement.Accept(wildcardDetector);
+
             var namedTables = (fromClause is null ? [] : fromClause.TableReferences.SelectMany(PredicateTreeWalker.FlattenNamedTables))
                 .Concat(target is NamedTableReference targetNamed ? [targetNamed] : [])
                 .ToList();
 
             foreach (var namedTable in namedTables)
             {
-                InspectNamedTable(namedTable, byAlias, anyReferencedColumns);
+                InspectNamedTable(namedTable, byAlias, anyReferencedColumns, statementColumns, wildcardDetector.Found);
             }
         }
 
-        private void InspectNamedTable(NamedTableReference namedTable, IReadOnlyDictionary<string, ScopeEntry> byAlias, HashSet<(string Table, string Column)> anyReferencedColumns)
+        private void InspectNamedTable(
+            NamedTableReference namedTable, IReadOnlyDictionary<string, ScopeEntry> byAlias,
+            HashSet<(string Table, string Column)> anyReferencedColumns, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
         {
             var indexHints = namedTable.TableHints.OfType<IndexTableHint>().ToList();
             if (indexHints.Count == 0)
@@ -111,11 +119,13 @@ public static class IndexHintScanner
 
             foreach (var hint in indexHints)
             {
-                InspectHint(hint, table, anyReferencedColumns);
+                InspectHint(hint, table, anyReferencedColumns, statementColumns, hasWildcard);
             }
         }
 
-        private void InspectHint(IndexTableHint hint, CatalogTable table, HashSet<(string Table, string Column)> anyReferencedColumns)
+        private void InspectHint(
+            IndexTableHint hint, CatalogTable table,
+            HashSet<(string Table, string Column)> anyReferencedColumns, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
         {
             foreach (var indexValue in hint.IndexValues)
             {
@@ -138,7 +148,8 @@ public static class IndexHintScanner
                 }
 
                 var leadingColumn = matchedIndex.KeyColumns[0];
-                if (!anyReferencedColumns.Contains((table.QualifiedName, leadingColumn)))
+                if (!anyReferencedColumns.Contains((table.QualifiedName, leadingColumn))
+                    && !IsCoveringScanWithNoPredicate(matchedIndex, table, anyReferencedColumns, statementColumns, hasWildcard))
                 {
                     Findings.Add(new IndexHintFinding(
                         IndexHintFindingKind.HintedIndexNotSeekable, table.QualifiedName, hintedName, leadingColumn,
@@ -147,5 +158,32 @@ public static class IndexHintScanner
             }
         }
 
+
+        private bool IsCoveringScanWithNoPredicate(
+            CatalogIndex index, CatalogTable table,
+            HashSet<(string Table, string Column)> anyReferencedColumns, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
+        {
+            var comparer = catalog.IdentifierComparer;
+            if (hasWildcard || anyReferencedColumns.Any(c => comparer.Equals(c.Table, table.QualifiedName)))
+            {
+                return false;
+            }
+
+            var covered = index.KeyColumns
+                .Concat(index.IncludedColumns)
+                .Concat(table.Indexes.Where(i => i.IsClustered && !i.IsColumnstore).SelectMany(i => i.KeyColumns))
+                .ToHashSet(comparer);
+
+            return statementColumns
+                .Where(c => comparer.Equals(c.Table, table.QualifiedName))
+                .All(c => covered.Contains(c.Column));
+        }
+
+        private sealed class WildcardDetector : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(SelectStarExpression node) => Found = true;
+        }
     }
 }

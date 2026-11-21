@@ -32,6 +32,24 @@ public sealed class IndexHintScannerTests
         return catalog;
     }
 
+    [Theory]
+    [InlineData("SELECT COUNT(*) FROM dbo.Orders WITH (INDEX(IX_Orders_Status));")]
+    [InlineData("SELECT Status FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) ORDER BY Status;")]
+    [InlineData("SELECT Status, COUNT(*) FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) GROUP BY Status;")]
+    public void HintedIndexCoversAStatementWithNoPredicate_NeverFires(string statement)
+    {
+        Assert.Empty(Scan(statement, CatalogWithIndex()));
+    }
+
+    [Theory]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE OrderId = 1;")]
+    [InlineData("SELECT * FROM dbo.Orders WITH (INDEX(IX_Orders_Status));")]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status));")]
+    public void HintedIndexThatDoesNotCoverOrIsPairedWithAnotherAccessPath_StillFires(string statement)
+    {
+        Assert.Single(Scan(statement, CatalogWithIndex()));
+    }
+
     [Fact]
     public void HintNamesNonexistentIndex_NeverFires()
     {
@@ -127,7 +145,7 @@ public sealed class IndexHintScannerTests
         catalog.AddOrReplace(Table("dbo", "OrderLines", [Col("OrderId")], []));
 
         var findings = Scan(
-            "SELECT 1 FROM dbo.OrderLines ol CROSS APPLY dbo.Orders o WITH (INDEX(IX_Orders_Status));", catalog);
+            "SELECT o.OrderId FROM dbo.OrderLines ol CROSS APPLY dbo.Orders o WITH (INDEX(IX_Orders_Status));", catalog);
 
         var finding = Assert.Single(findings);
         Assert.Equal(IndexHintFindingKind.HintedIndexNotSeekable, finding.Kind);

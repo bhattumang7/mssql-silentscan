@@ -53,6 +53,30 @@ public sealed class IndexHintOracleTests : OracleTestFixture
         Assert.Contains("PhysicalOp=\"Clustered Index Seek\"", planXml);
     }
 
+    [Theory]
+    [InlineData("SELECT COUNT(*) FROM dbo.Orders")]
+    [InlineData("SELECT Region FROM dbo.Orders ORDER BY Region")]
+    public async Task HintForcingACoveringIndexWithNoPredicate_ProducesTheSamePlanAsNoHint(string statement)
+    {
+        var capture = new PlanXmlCapture(Options);
+
+        var unhinted = await capture.CaptureAsync(DatabaseName, statement + ";");
+        var hinted = await capture.CaptureAsync(DatabaseName, statement.Replace("dbo.Orders", "dbo.Orders WITH (INDEX(IX_Orders_Region))") + ";");
+
+        Assert.Contains("IX_Orders_Region", unhinted);
+        Assert.Contains("IX_Orders_Region", hinted);
+        Assert.DoesNotContain("Key Lookup", hinted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HintForcingACoveringIndexAgainstAPredicateOnAnotherAccessPath_StillDegradesToScan()
+    {
+        var planXml = await new PlanXmlCapture(Options).CaptureAsync(
+            DatabaseName, "SELECT Id FROM dbo.Orders WITH (INDEX(IX_Orders_Region)) WHERE Id = 5;");
+
+        Assert.Contains("PhysicalOp=\"Index Scan\"", planXml);
+    }
+
     [Fact]
     public async Task HintForcesIndexWhoseLeadingColumnIsUnbound_DegradesToScan()
     {
