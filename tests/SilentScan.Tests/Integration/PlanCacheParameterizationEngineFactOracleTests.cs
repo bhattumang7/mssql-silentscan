@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Integration;
@@ -66,25 +65,8 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         return ((string)rows[0][0]!).Replace(" ", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
 
-    private const int DatabaseInTransitionErrorNumber = 952;
-
-    private const int CachedPlanQueryAttempts = 5;
-
-    private async Task<int> CachedPlanCountAsync(string textLike)
-    {
-        var sql = $"SELECT COUNT(*) {CachedPlansWhere} AND st.text LIKE '{textLike}' AND st.text NOT LIKE '%dm_exec%';";
-        for (var attempt = 1; ; attempt++)
-        {
-            try
-            {
-                return await ScalarAsync<int>(sql);
-            }
-            catch (SqlException ex) when (ex.Number == DatabaseInTransitionErrorNumber && attempt < CachedPlanQueryAttempts)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(250));
-            }
-        }
-    }
+    private async Task<int> CachedPlanCountAsync(string textLike) =>
+        await ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND st.text LIKE '{textLike}' AND st.text NOT LIKE '%dm_exec%';");
 
     [Fact]
     [Trait("Rule", "silentscan/forced-parameterization/constant-foldable-expression-literal")]

@@ -54,12 +54,32 @@ public abstract class OracleTestFixture : IAsyncLifetime
         return await ScalarAsync<T>(connection, sql);
     }
 
-    protected static async Task<T?> ScalarAsync<T>(SqlConnection connection, string sql)
+    private const int DatabaseInTransitionErrorNumber = 952;
+
+    private const int ReadAttempts = 5;
+
+    private static async Task<TResult> RetryWhileAnotherDatabaseIsInTransitionAsync<TResult>(Func<Task<TResult>> read)
     {
-        await using var command = new SqlCommand(sql, connection) { CommandTimeout = 120 };
-        var value = await command.ExecuteScalarAsync();
-        return value is null or DBNull ? default : (T)Convert.ChangeType(value, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await read();
+            }
+            catch (SqlException ex) when (ex.Number == DatabaseInTransitionErrorNumber && attempt < ReadAttempts)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(250));
+            }
+        }
     }
+
+    protected static Task<T?> ScalarAsync<T>(SqlConnection connection, string sql) =>
+        RetryWhileAnotherDatabaseIsInTransitionAsync(async () =>
+        {
+            await using var command = new SqlCommand(sql, connection) { CommandTimeout = 120 };
+            var value = await command.ExecuteScalarAsync();
+            return value is null or DBNull ? default : (T)Convert.ChangeType(value, Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+        });
 
     protected async Task<List<object?[]>> RowsAsync(string sql)
     {
@@ -67,24 +87,25 @@ public abstract class OracleTestFixture : IAsyncLifetime
         return await RowsAsync(connection, sql);
     }
 
-    protected static async Task<List<object?[]>> RowsAsync(SqlConnection connection, string sql)
-    {
-        var rows = new List<object?[]>();
-        await using var command = new SqlCommand(sql, connection) { CommandTimeout = 120 };
-        await using var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+    protected static Task<List<object?[]>> RowsAsync(SqlConnection connection, string sql) =>
+        RetryWhileAnotherDatabaseIsInTransitionAsync(async () =>
         {
-            var row = new object?[reader.FieldCount];
-            for (var i = 0; i < row.Length; i++)
+            var rows = new List<object?[]>();
+            await using var command = new SqlCommand(sql, connection) { CommandTimeout = 120 };
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                var row = new object?[reader.FieldCount];
+                for (var i = 0; i < row.Length; i++)
+                {
+                    row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                }
+
+                rows.Add(row);
             }
 
-            rows.Add(row);
-        }
-
-        return rows;
-    }
+            return rows;
+        });
 
     protected async Task<int?> SqlErrorNumberAsync(string sql)
     {
