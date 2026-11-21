@@ -14,8 +14,9 @@ internal static class FloatEquality
             of powers of two within its available bits; most decimal fractions (0.1, 0.2, 10.5 divided
             by 3, and countless others) have no exact binary representation and are stored as the
             nearest representable value instead. The textbook illustration applies here exactly as it
-            does anywhere else: `0.1 + 0.2` does not produce a value that compares equal to `0.3` in
-            IEEE-754 arithmetic, because each of the three literals is already rounded to its nearest
+            does anywhere else: `CAST(0.1 AS FLOAT) + CAST(0.2 AS FLOAT)` does not produce a value that
+            compares equal to `0.3` in IEEE-754 arithmetic (a bare `0.1 + 0.2` in T-SQL is exact decimal
+            arithmetic and does compare equal), because each of the three literals is already rounded to its nearest
             representable binary approximation before the addition even happens, and the rounding
             errors don't cancel out.
 
@@ -40,13 +41,13 @@ internal static class FloatEquality
                         ReadingId  INT   NOT NULL PRIMARY KEY,
                         Threshold  FLOAT NOT NULL
                     );
-                    INSERT INTO dbo.SensorReadings (ReadingId, Threshold) VALUES (1, 0.1 + 0.2);
+                    INSERT INTO dbo.SensorReadings (ReadingId, Threshold) VALUES (1, CAST(0.1 AS FLOAT) + CAST(0.2 AS FLOAT));
 
                     SELECT ReadingId
                     FROM dbo.SensorReadings
                     WHERE Threshold = 0.3;
                     """,
-                NoncompliantExplanation: "0.1 + 0.2 does not produce the exact IEEE-754 bit pattern for 0.3 - the row inserted with a value any person would call 0.3 fails to match this predicate, silently, with no error anywhere.",
+                NoncompliantExplanation: "Adding the FLOAT values 0.1 and 0.2 does not produce the exact IEEE-754 bit pattern for 0.3 - the row inserted with a value any person would call 0.3 fails to match this predicate, silently, with no error anywhere.",
                 CompliantSql: """
                     CREATE TABLE dbo.SensorReadings
                     (
