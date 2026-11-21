@@ -48,11 +48,44 @@ public sealed class OraclePairingAnalyzerTests
             }
         }
 
+        namespace SilentScan.Verify
+        {
+            public sealed class SqlServerOptions
+            {
+            }
+        }
+
         namespace SilentScan.Verify.Oracle
         {
             public abstract class RuleVerifier<TFinding>
             {
                 protected abstract System.Threading.Tasks.Task<bool> ObserveAsync(object connection, TFinding finding);
+            }
+
+            public enum EngineVerdict
+            {
+                Confirmed,
+            }
+
+            public sealed class EngineVerification
+            {
+            }
+
+            public enum Difference
+            {
+                ResultEmptied,
+            }
+
+            public sealed record TouchedObject(string? Schema, string Name);
+
+            public static class UnlistedHelper
+            {
+                public static int Go() => 1;
+            }
+
+            [System.AttributeUsage(System.AttributeTargets.Class)]
+            public sealed class VerifierSupportAttribute : System.Attribute
+            {
             }
         }
         """;
@@ -222,6 +255,87 @@ public sealed class OraclePairingAnalyzerTests
             "BetaRuleId\n");
 
         Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task VerifierUsingAVerifyTypeThatIsNotOnTheAllowlist_IsRejected()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving("return System.Threading.Tasks.Task.FromResult(SilentScan.Verify.Oracle.UnlistedHelper.Go() == 1);"),
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
+    }
+
+    [Fact]
+    public async Task VerifierUsingTheNamedVerifyTypes_IsAccepted()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving(
+                "var difference = SilentScan.Verify.Oracle.Difference.ResultEmptied; var touched = new SilentScan.Verify.Oracle.TouchedObject(null, \"T\"); var options = new SilentScan.Verify.SqlServerOptions(); return System.Threading.Tasks.Task.FromResult(touched is not null && options is not null && difference == SilentScan.Verify.Oracle.Difference.ResultEmptied);"),
+            "BetaRuleId\n");
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task VerifierBuildingAVerdictByHand_IsRejected()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving("var verdict = new SilentScan.Verify.Oracle.EngineVerification(); return System.Threading.Tasks.Task.FromResult(verdict is not null);"),
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
+    }
+
+    [Fact]
+    public async Task SupportHelperUsingScannerCode_IsRejectedLikeAVerifier()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + """
+
+            [SilentScan.Verify.Oracle.VerifierSupport]
+            public static class SharedHelper
+            {
+                public static int Go() => SilentScan.Core.Reporting.ConversionModel.Go();
+            }
+            """,
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
+    }
+
+    [Fact]
+    public async Task VerifierUsingAnAnnotatedSupportHelperThatStaysWithinTheAllowlist_IsAccepted()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving("return System.Threading.Tasks.Task.FromResult(SharedHelper.Go() == 1);") + """
+
+            [SilentScan.Verify.Oracle.VerifierSupport]
+            public static class SharedHelper
+            {
+                public static int Go() => System.Math.Abs(-1);
+            }
+            """,
+            "BetaRuleId\n");
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task VerifierUsingAHelperThatIsNotAnnotated_IsRejected()
+    {
+        var diagnostics = await AnalyzeAsync(
+            PairedAlpha() + "\n" + VerifierObserving("return System.Threading.Tasks.Task.FromResult(PlainHelper.Go() == 1);") + """
+
+            public static class PlainHelper
+            {
+                public static int Go() => 1;
+            }
+            """,
+            "BetaRuleId\n");
+
+        Assert.Contains(diagnostics, d => d.Id == OraclePairingAnalyzer.EngineSideUsesScannerId);
     }
 
     [Fact]

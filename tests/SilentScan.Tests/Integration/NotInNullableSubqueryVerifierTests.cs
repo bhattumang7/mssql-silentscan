@@ -79,6 +79,26 @@ public sealed class NotInNullableSubqueryVerifierTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task DeleteStatement_NullEmptiesItsEffect_IsConfirmed()
+    {
+        var result = await VerifyAsync(
+            Claim("dbo.ChildNullable", "RefId"),
+            "DELETE FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable);");
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task DeleteStatementBehindAnIsNotNullFilter_IsRefutedNotMistakenForAnEmptiedEffect()
+    {
+        var result = await VerifyAsync(
+            Claim("dbo.ChildNullable", "RefId"),
+            "DELETE FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId IS NOT NULL);");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
     public async Task StatementNeverTouchesTheClaimedTable_IsNotDecided()
     {
         var result = await VerifyAsync(

@@ -24,13 +24,24 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
     private const string TraitMetadataName = "Xunit.TraitAttribute";
     private const string BaselineFileName = "oracle-pairing-baseline.txt";
     private const string RuleTraitName = "Rule";
-    private const string FindingInterfaceName = "SilentScan.Core.Predicates.IFinding";
+
+    private const string VerifierSupportAttributeName = "VerifierSupportAttribute";
 
     private static readonly string[] AllowedVerifierNamespaces =
     [
         "System",
         "Microsoft.Data",
-        "SilentScan.Verify",
+    ];
+
+    private static readonly string[] AllowedVerifierTypes =
+    [
+        "SilentScan.Verify.Oracle.Difference",
+        "SilentScan.Verify.Oracle.Perturbation",
+        "SilentScan.Verify.Oracle.PerturbationStep",
+        "SilentScan.Verify.Oracle.RuleVerifier<TFinding>",
+        "SilentScan.Verify.Oracle.TouchedObject",
+        "SilentScan.Verify.Oracle.VerifierSupportAttribute",
+        "SilentScan.Verify.SqlServerOptions",
     ];
 
     private static DiagnosticDescriptor Describe(string id, string title) => new(
@@ -253,7 +264,7 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         var declaration = context.Node.FirstAncestorOrSelf<TypeDeclarationSyntax>();
         if (declaration is null
             || context.SemanticModel.GetDeclaredSymbol(declaration, context.CancellationToken) is not { } owner
-            || !DerivesFromGeneric(owner, verifier))
+            || !(DerivesFromGeneric(owner, verifier) || IsVerifierSupport(owner)))
         {
             return;
         }
@@ -280,8 +291,11 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
             EngineSideUsesScanner,
             context.Node.GetLocation(),
             "Verifier " + owner.Name + " references " + symbol.ToDisplayString()
-                + "; a verifier may use only its finding type, FindingRuleIds, SilentScan.Verify, SqlClient and the base library, so its expected answer comes from SQL Server alone."));
+                + "; a verifier may use only its finding type, FindingRuleIds, the named verdict, base and options types, annotated support helpers, SqlClient and the base library, so its expected answer comes from SQL Server alone."));
     }
+
+    private static bool IsVerifierSupport(INamedTypeSymbol type) =>
+        type.GetAttributes().Any(a => string.Equals(a.AttributeClass?.Name, VerifierSupportAttributeName, StringComparison.Ordinal));
 
     private static bool IsOwnOrNeutral(ISymbol symbol, INamedTypeSymbol owner)
     {
@@ -301,15 +315,23 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
                 return true;
         }
 
-        var type = symbol as INamedTypeSymbol ?? symbol.ContainingType;
-        return type is not null && SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, owner.OriginalDefinition);
+        for (var current = symbol as INamedTypeSymbol ?? symbol.ContainingType; current is not null; current = current.ContainingType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, owner.OriginalDefinition))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsAllowedForVerifier(INamedTypeSymbol type, INamedTypeSymbol? findingType, INamedTypeSymbol ruleIds)
     {
         var original = type.OriginalDefinition;
         if (SymbolEqualityComparer.Default.Equals(original, ruleIds)
-            || string.Equals(original.ToDisplayString(), FindingInterfaceName, StringComparison.Ordinal)
+            || IsVerifierSupport(original)
+            || AllowedVerifierTypes.Contains(original.ToDisplayString(), StringComparer.Ordinal)
             || (findingType is not null && SymbolEqualityComparer.Default.Equals(original, findingType.OriginalDefinition)))
         {
             return true;

@@ -35,6 +35,7 @@ public sealed partial class DatabaseProvisioner
         await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
 
         await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+        await ExecuteAsync(connection, $"EXEC [{databaseName}].sys.sp_addextendedproperty @name = N'{Oracle.HarnessDatabaseGuard.MarkerName}', @value = N'1';", cancellationToken);
     }
 
     public async Task SetCompatibilityLevelAsync(string databaseName, int compatibilityLevel, CancellationToken cancellationToken = default)

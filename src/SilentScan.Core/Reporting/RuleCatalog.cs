@@ -4,9 +4,50 @@ using SilentScan.Core.Rules;
 
 namespace SilentScan.Core.Reporting;
 
-public sealed record RuleDefinition(string Id, string Rationale, string? FixGuidance = null, IReadOnlyList<string>? ExampleFixturePaths = null)
+public enum RuleConditionKind
+{
+    Fires,
+
+    Excluded,
+}
+
+public sealed record RuleCondition(string Name, RuleConditionKind Kind, string Text);
+
+public sealed record RuleDefinition(
+    string Id,
+    string Summary,
+    string? FixGuidance = null,
+    IReadOnlyList<string>? ExampleFixturePaths = null,
+    IReadOnlyList<RuleCondition>? Conditions = null)
 {
     public IReadOnlyList<string> Examples => ExampleFixturePaths ?? [];
+
+    public IReadOnlyList<RuleCondition> DeclaredConditions => Conditions ?? [];
+
+    public string Rationale => Compose(Summary, DeclaredConditions);
+
+    private static string Compose(string summary, IReadOnlyList<RuleCondition> conditions)
+    {
+        if (conditions.Count == 0)
+        {
+            return summary;
+        }
+
+        var fires = conditions.Where(c => c.Kind == RuleConditionKind.Fires).Select(c => c.Text).ToList();
+        var excluded = conditions.Where(c => c.Kind == RuleConditionKind.Excluded).Select(c => c.Text).ToList();
+        var parts = new List<string> { summary };
+        if (fires.Count > 0)
+        {
+            parts.Add("Fires when " + string.Join("; ", fires) + ".");
+        }
+
+        if (excluded.Count > 0)
+        {
+            parts.Add("Never fires when " + string.Join("; ", excluded) + ".");
+        }
+
+        return string.Join(' ', parts);
+    }
 }
 
 public static class RuleCatalog
@@ -76,7 +117,16 @@ public static class RuleCatalog
  new RuleDefinition(SarifRuleCatalog.CatchAllPredicateRuleId, "A predicate of the shape (Col = @p OR @p IS NULL) - the 'catch-all'/'kitchen-sink' optional-filter idiom. One cached plan must stay correct for every possible NULL/non-NULL state of @p, which typically forces a scan regardless of what value is actually passed. Suppressed when the statement carries OPTION (RECOMPILE) or the procedure is WITH RECOMPILE, both of which let the optimizer see the real value on each call.", "Add OPTION (RECOMPILE) to the statement, or WITH RECOMPILE to the procedure, so the optimizer compiles against the real parameter value on each call instead of one plan that must suit every NULL/non-NULL state."),
  new RuleDefinition(SarifRuleCatalog.LocalVariablePredicateRuleId, "A predicate compares a column against a DECLARE'd local variable's value, never a formal parameter - the value is invisible to the cardinality estimator, which falls back to the column's average-density statistic instead of a value-specific estimate. The predicate is still fully sargable; only the row-count ESTIMATE is at risk, not the access path. Suppressed when the statement carries OPTION (RECOMPILE) or the procedure is WITH RECOMPILE.", "Add OPTION (RECOMPILE) to the statement, or WITH RECOMPILE to the procedure, so the cardinality estimate is built from the real value instead of the column's average density."),
  new RuleDefinition(SarifRuleCatalog.FilteredIndexParameterMismatchRuleId, "A predicate compares a column against a parameter or local variable, but that same column carries a filtered index whose own filter is a literal-equality restatement of this exact comparison - the optimizer can only match a filtered index against a query that restates its filter with a LITERAL, never a parameter/variable, so this query can never use that index regardless of the runtime value. Not suppressed by OPTION (RECOMPILE) - a compile-time limitation, not a cardinality-estimate one."),
- new RuleDefinition(SarifRuleCatalog.NotInNullableSubqueryRuleId, "WHERE x NOT IN (SELECT y FROM t) where y is a nullable column - a three-valued-logic correctness trap. The instant the subquery produces one NULL row, the whole NOT IN evaluates to UNKNOWN for every outer row, so the query silently returns zero rows instead of the expected anti-join result. Never fires when the subquery column is NOT NULL, or when the subquery already filters it with an unconditional WHERE y IS NOT NULL.", "Add a WHERE y IS NOT NULL filter to the subquery (or rewrite the NOT IN as a NOT EXISTS), so a NULL row can't collapse the whole predicate to UNKNOWN."),
+ new RuleDefinition(SarifRuleCatalog.NotInNullableSubqueryRuleId, "WHERE x NOT IN (SELECT y FROM t) where y is a nullable column - a three-valued-logic correctness trap. The instant the subquery produces one NULL row, the whole NOT IN evaluates to UNKNOWN for every outer row, so the query silently returns zero rows instead of the expected anti-join result.", "Add a WHERE y IS NOT NULL filter to the subquery (or rewrite the NOT IN as a NOT EXISTS), so a NULL row can't collapse the whole predicate to UNKNOWN.", null,
+ [
+ new RuleCondition("select-over-nullable-column", RuleConditionKind.Fires, "a SELECT filters with x NOT IN (SELECT y ...) over a nullable column y"),
+ new RuleCondition("delete-over-nullable-column", RuleConditionKind.Fires, "a DELETE filters with x NOT IN (SELECT y ...) over a nullable column y"),
+ new RuleCondition("update-over-nullable-column", RuleConditionKind.Fires, "an UPDATE filters with x NOT IN (SELECT y ...) over a nullable column y"),
+ new RuleCondition("column-is-not-null", RuleConditionKind.Excluded, "the subquery column is declared NOT NULL"),
+ new RuleCondition("is-not-null-filter", RuleConditionKind.Excluded, "the subquery filters the column with WHERE y IS NOT NULL"),
+ new RuleCondition("null-rejecting-comparison", RuleConditionKind.Excluded, "the subquery filters the column with a comparison, which discards NULL rows"),
+ new RuleCondition("null-rejecting-between", RuleConditionKind.Excluded, "the subquery filters the column with BETWEEN, which discards NULL rows"),
+ ]),
  new RuleDefinition(SarifRuleCatalog.NonUniqueUpdateSourceRuleId, "UPDATE ... FROM ... JOIN where the joined source's own join columns carry no unique index/constraint - if a target row matches more than one source row, SQL Server silently picks a value from an unspecified one of them (plan-dependent, not guaranteed stable across executions). MERGE raises a hard error in this exact situation instead of picking silently. Never fires when the source's join columns are covered by a genuine unique index/constraint, or when the SET clause never reads from the non-unique source.", "Add a unique index/constraint covering the source's join columns, or switch to MERGE, which raises a hard error instead of silently picking an unspecified row."),
  new RuleDefinition(SarifRuleCatalog.CheckConstraintPredicateContradictionIntervalRuleId, "A WHERE predicate compares a column to a literal (or literal range/BETWEEN) that is provably disjoint from a trusted, enabled CHECK constraint's own single-column numeric interval on that same column - oracle-confirmed the optimizer itself proves this unsatisfiable at compile time and folds the statement to a Constant Scan, so the branch can never return a row. Scoped to single-column CHECK constraints built purely from AND/OR/BETWEEN comparisons against numeric literals; a CHECK constraint that is disabled, marked NOT TRUSTED (WITH NOCHECK, not revalidated), spans more than one column, or uses a function call/string literal/IN-list is never used as a source of trusted facts.", "Remove or correct the contradicting literal - it can never match a row the CHECK constraint allows to exist. If the constraint itself is stale, alter it instead of leaving a predicate that silently returns nothing."),
  new RuleDefinition(SarifRuleCatalog.NotNullPredicateContradictionRuleId, "A WHERE predicate tests IS NULL against a column the catalog declares NOT NULL (and, for an outer join's null-supplying side, the join itself doesn't reintroduce NULL) - oracle-confirmed the optimizer folds this to a Constant Scan at compile time, so the branch can never return a row.", "Remove the IS NULL test, or correct the column reference - a NOT NULL column can never satisfy it."),
