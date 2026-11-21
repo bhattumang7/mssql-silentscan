@@ -97,8 +97,53 @@ internal static class BaseColumnResolver
         string sourcePath,
         IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
         HashSet<(string Table, string Column)> sink,
-        DatabaseCatalog? catalog = null) : TSqlFragmentVisitor
+        DatabaseCatalog? catalog = null,
+        bool valuePositionsOnly = false) : TSqlFragmentVisitor
     {
+        public override void ExplicitVisit(SearchedCaseExpression node)
+        {
+            if (!valuePositionsOnly)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            foreach (var whenClause in node.WhenClauses)
+            {
+                whenClause.ThenExpression?.Accept(this);
+            }
+
+            node.ElseExpression?.Accept(this);
+        }
+
+        public override void ExplicitVisit(SimpleCaseExpression node)
+        {
+            if (!valuePositionsOnly)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            foreach (var whenClause in node.WhenClauses)
+            {
+                whenClause.ThenExpression?.Accept(this);
+            }
+
+            node.ElseExpression?.Accept(this);
+        }
+
+        public override void ExplicitVisit(IIfCall node)
+        {
+            if (!valuePositionsOnly)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            node.ThenExpression?.Accept(this);
+            node.ElseExpression?.Accept(this);
+        }
+
         public override void ExplicitVisit(ColumnReferenceExpression node)
         {
 

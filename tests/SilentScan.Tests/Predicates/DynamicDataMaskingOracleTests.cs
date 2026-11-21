@@ -103,6 +103,44 @@ public sealed class DynamicDataMaskingOracleTests : OracleTestFixture
         Assert.Equal(new DateTime(1900, 1, 1), dtPlusOneDay);
     }
 
+    [Theory]
+    [InlineData("SELECT CASE WHEN Amt > 50 THEN 1 ELSE 0 END FROM dbo.MaskProbe WHERE Id = 1;", 1)]
+    [InlineData("SELECT CASE Amt WHEN 100 THEN 1 ELSE 0 END FROM dbo.MaskProbe WHERE Id = 1;", 1)]
+    [InlineData("SELECT IIF(Amt > 500, 1, 0) FROM dbo.MaskProbe WHERE Id = 1;", 0)]
+    [InlineData("SELECT SUM(CASE WHEN Amt = 100 THEN 7 ELSE 0 END) FROM dbo.MaskProbe;", 7)]
+    public async Task MaskedColumnUsedOnlyAsACondition_ReturnsARealComputedValue_NotASentinel(string sql, int expected)
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        var value = await RunAsLowPrivAsync(
+            connection,
+            sql,
+            async reader =>
+            {
+                await reader.ReadAsync();
+                return reader.GetInt32(0);
+            });
+
+        Assert.Equal(expected, value);
+    }
+
+    [Fact]
+    public async Task MaskedColumnInAValuePositionInsideCase_CollapsesToTheSentinel()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        var value = await RunAsLowPrivAsync(
+            connection,
+            "SELECT CASE WHEN Id = 1 THEN Amt + 1 ELSE 5 END FROM dbo.MaskProbe WHERE Id = 1;",
+            async reader =>
+            {
+                await reader.ReadAsync();
+                return reader.GetInt32(0);
+            });
+
+        Assert.Equal(0, value);
+    }
+
     [Fact]
     public async Task GroupByMaskedColumn_GroupsByRealValue_DespiteIdenticalDisplayedSentinel()
     {

@@ -73,7 +73,7 @@ public static class DynamicDataMaskingScanner
 
             var scopeChain = walker.CurrentScopeChain();
             var sink = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(catalog));
-            expression.Accept(new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, sink, catalog));
+            expression.Accept(new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, sink, catalog, valuePositionsOnly: true));
 
             foreach (var (table, columnName) in sink)
             {

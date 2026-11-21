@@ -135,6 +135,35 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
         Assert.Equal("Total", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("CASE WHEN Total > 150 THEN 1 ELSE 0 END")]
+    [InlineData("CASE Total WHEN 100 THEN 1 ELSE 0 END")]
+    [InlineData("IIF(Total > 150, 1, 0)")]
+    [InlineData("SUM(CASE WHEN Total > 150 THEN 1 ELSE 0 END)")]
+    public async Task MaskedColumnUsedOnlyAsAConditionInTheSelectList_DoesNotCollapseTheResult(string expression)
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync(
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT {expression} AS Flag FROM dbo.MaskedOrders;");
+
+        Assert.DoesNotContain(
+            report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
+            f => f.Kind == DynamicDataMaskingFindingKind.ComputedExpressionCollapse);
+    }
+
+    [Theory]
+    [InlineData("CASE WHEN OrderId = 1 THEN Total + 1 ELSE 0 END")]
+    [InlineData("IIF(OrderId = 1, Total + 1, 0)")]
+    [InlineData("COALESCE(Total, 0) + 1")]
+    public async Task MaskedColumnInAValuePositionOfTheSelectList_StillCollapsesTheResult(string expression)
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync(
+            $"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS SELECT {expression} AS Adjusted FROM dbo.MaskedOrders;");
+
+        Assert.Contains(
+            report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
+            f => f.Kind == DynamicDataMaskingFindingKind.ComputedExpressionCollapse && f.ColumnName == "Total");
+    }
+
     [Fact]
     public async Task AggregateOverMaskedColumnInSelectList_Fires()
     {
