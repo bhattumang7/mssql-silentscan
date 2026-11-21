@@ -61,9 +61,11 @@ public sealed class Perturbation
         PerturbationStep applyCondition,
         Func<SqlException, bool> engineRefusalRefutes,
         Func<string, string?>? baselineStatement = null,
-        string? afterStatementQuery = null)
+        string? afterStatementQuery = null,
+        bool touchesReadAfterCondition = false)
     {
         AfterStatementQuery = afterStatementQuery;
+        TouchesReadAfterCondition = touchesReadAfterCondition;
         ArgumentOutOfRangeException.ThrowIfZero(touches.Count);
         BaselineStatement = baselineStatement;
         Touches = touches;
@@ -95,6 +97,8 @@ public sealed class Perturbation
     public Func<string, string?>? BaselineStatement { get; }
 
     public string? AfterStatementQuery { get; }
+
+    public bool TouchesReadAfterCondition { get; }
 
     public string? NotApplicableReason { get; }
 
@@ -154,7 +158,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             }
 
             var objects = perturbation.Touches.OfType<TouchedObject>().ToList();
-            if (objects.Count > 0 && !await PlanReadsEveryObjectAsync(connection, PlanText(statement), objects, cancellationToken))
+            if (objects.Count > 0 && !perturbation.TouchesReadAfterCondition && !await PlanReadsEveryObjectAsync(connection, PlanText(statement), objects, cancellationToken))
             {
                 return NotDecided($"The statement's plan does not read {string.Join(", ", objects.Select(NameOf))}, so the claim cannot be observed through it.");
             }
@@ -216,6 +220,16 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         if (changed == 0 && perturbation.BaselineStatement is null)
         {
             return NotDecided("The condition changed no rows, so nothing was put in place to observe.");
+        }
+
+        if (perturbation.TouchesReadAfterCondition)
+        {
+            var touched = perturbation.Touches.OfType<TouchedObject>().ToList();
+            var planXml = await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
+            if (planXml is null || !PlanReadsObjects(planXml, touched))
+            {
+                return NotDecided($"Even with the condition applied the statement's plan does not read {string.Join(", ", touched.Select(NameOf))}, so the claim cannot be observed through it.");
+            }
         }
 
         var perturbed = await ObserveOnceAsync(connection, transaction, statement, observe, cancellationToken);
@@ -359,6 +373,11 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return false;
         }
 
+        return PlanReadsObjects(planXml, touches);
+    }
+
+    private static bool PlanReadsObjects(string planXml, IReadOnlyList<TouchedObject> touches)
+    {
         var objects = XDocument.Parse(planXml).Descendants().Where(e => e.Name.LocalName == "Object").ToList();
         return touches.All(t => objects.Exists(e =>
             string.Equals(Unbracket((string?)e.Attribute("Table")), t.Name, StringComparison.OrdinalIgnoreCase)

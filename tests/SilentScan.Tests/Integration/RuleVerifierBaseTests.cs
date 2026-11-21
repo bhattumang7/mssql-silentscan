@@ -27,6 +27,8 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         GO
         CREATE UNIQUE INDEX IX_Keyed ON dbo.Keyed (K) WITH (IGNORE_DUP_KEY = ON);
         GO
+        CREATE TABLE dbo.Folded (V INT NOT NULL);
+        GO
         INSERT INTO dbo.W (Short, Long) VALUES (NULL, 'abcdef');
         INSERT INTO dbo.T (V) VALUES (1), (2);
         INSERT INTO dbo.Other (V) VALUES (7);
@@ -325,6 +327,37 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         await connection.OpenAsync();
         await using var command = new SqlCommand("SELECT COUNT(*) FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.T') AND name IS NOT NULL;", connection);
         return (int)(await command.ExecuteScalarAsync())!;
+    }
+
+    private const string FoldedSelect = "SELECT V FROM dbo.Folded WHERE V IS NULL;";
+
+    private static Perturbation Unfolding(PerturbationStep apply, bool readsAfter) =>
+        new([new TouchedObject("dbo", "Folded")], Difference.PlanChanged, Nothing, apply, _ => false, touchesReadAfterCondition: readsAfter);
+
+    private static readonly PerturbationStep RelaxNotNull = Run("ALTER TABLE dbo.Folded ALTER COLUMN V INT NULL;");
+
+    [Fact]
+    public async Task StatementWhosePlanFoldsAwayTheTable_IsNotDecidedWhenTheTouchIsRequiredBefore()
+    {
+        var result = await VerifyAsync(Unfolding(RelaxNotNull, readsAfter: false), FoldedSelect);
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementWhosePlanReadsTheTableOnceTheConditionIsApplied_IsConfirmedWhenTheTouchIsRequiredAfter()
+    {
+        var result = await VerifyAsync(Unfolding(RelaxNotNull, readsAfter: true), FoldedSelect);
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementWhosePlanStillDoesNotReadTheTableAfterTheCondition_IsNotDecided()
+    {
+        var result = await VerifyAsync(Unfolding(Run("SELECT 1;"), readsAfter: true), FoldedSelect);
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
     }
 
     [Fact]
