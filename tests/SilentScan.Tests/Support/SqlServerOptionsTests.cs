@@ -30,4 +30,15 @@ public sealed class SqlServerOptionsTests
         Assert.Contains("Server=localhost,1433;", connectionString);
         Assert.Contains("Database=db;", connectionString);
     }
+
+    [Fact]
+    public void BuildConnectionString_WithNoPort_NamesTheServerWithoutOne()
+    {
+        var options = SqlServerOptions.WindowsLogin("(localdb)\\MSSQLLocalDB", 0);
+
+        var connectionString = options.BuildConnectionString("db");
+
+        Assert.StartsWith("Server=(localdb)\\MSSQLLocalDB;", connectionString, StringComparison.Ordinal);
+        Assert.Contains("Integrated Security=True;", connectionString);
+    }
 }
