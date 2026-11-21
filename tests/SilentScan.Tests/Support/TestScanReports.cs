@@ -36,7 +36,6 @@ public static class TestScanReports
         IReadOnlyList<ForcedSerialFinding>? ForcedSerialFindings = null,
         IReadOnlyList<UntrustedConstraintFinding>? UntrustedConstraintFindings = null,
         IReadOnlyList<MultiReferencedCteFinding>? MultiReferencedCteFindings = null,
-        IReadOnlyList<PostExpansionJoinWidthFinding>? PostExpansionJoinWidthFindings = null,
         IReadOnlyList<UnparameterizedDynamicSqlFinding>? UnparameterizedDynamicSqlFindings = null,
         IReadOnlyList<NonPersistedComputedColumnFinding>? NonPersistedComputedColumnFindings = null,
         IReadOnlyList<TempTableExecShapeFinding>? TempTableExecShapeFindings = null,
@@ -129,7 +128,6 @@ public static class TestScanReports
         Set("ForcedSerialScanner", ForcedSerialFindings);
         Set("UntrustedConstraintScanner", UntrustedConstraintFindings);
         Set("MultiReferencedCteScanner", MultiReferencedCteFindings);
-        Set("PostExpansionJoinWidthScanner", PostExpansionJoinWidthFindings);
         Set("NonPersistedComputedColumnScanner", NonPersistedComputedColumnFindings);
         Set("TempTableExecShapeScanner", TempTableExecShapeFindings);
         Set("ExecResultSetsShapeScanner", ExecResultSetsShapeFindings);

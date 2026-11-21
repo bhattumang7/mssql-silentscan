@@ -67,36 +67,6 @@ internal sealed class MultiReferencedCteRule : IPerFileRule
     });
 }
 
-internal sealed class PostExpansionJoinWidthRule : IPerFileRule
-{
-    public string Id => "PostExpansionJoinWidthScanner";
-
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) =>
-        PostExpansionJoinWidthScanner.Scan(parseResult, context.Catalog, context.ViewExpansionMap);
-
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) =>
-        PostExpansionJoinWidthScanner.CreateRule(parseResult.SourcePath, context.Catalog, context.ViewExpansionMap);
-
-    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) =>
-        PostExpansionJoinWidthScanner.Harvest((PostExpansionJoinWidthScanner.Rule)moduleRule);
-
-    public IComparer<IFinding>? Comparer => Comparer<IFinding>.Create((x, y) =>
-    {
-        var a = (PostExpansionJoinWidthFinding)x;
-        var b = (PostExpansionJoinWidthFinding)y;
-        var cmp = (b.ExpandedCount - b.WrittenCount).CompareTo(a.ExpandedCount - a.WrittenCount);
-        if (cmp != 0)
-        {
-            return cmp;
-        }
-
-        cmp = DefaultLocationComparer.Instance.Compare(x, y);
-        return cmp != 0 ? cmp : string.CompareOrdinal(a.ModuleQualifiedName, b.ModuleQualifiedName);
-    });
-}
-
 internal sealed class OutputParameterRule : IPerFileRule
 {
     public string Id => "OutputParameterScanner";

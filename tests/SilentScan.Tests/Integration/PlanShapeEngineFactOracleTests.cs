@@ -65,7 +65,6 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
         GO
         """;
 
-    private static readonly string[] ExpandedTables = ["E1", "E2", "E3"];
 
     private static double FenceEstimate(System.Xml.Linq.XDocument plan) =>
         ShowPlan.EstimatedRows(ShowPlan.Ops(plan, "Table-valued function").First());
@@ -110,17 +109,6 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
 
         Assert.Equal("TSQLUserDefinedFunctionsNotParallelizable", ShowPlan.NonParallelPlanReason(udf));
         Assert.NotEqual("TSQLUserDefinedFunctionsNotParallelizable", ShowPlan.NonParallelPlanReason(plain));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.PostExpansionJoinWidthRuleId)]
-    public async Task ViewReference_ExpandsToEveryUnderlyingTable_BaseTableControlTouchesOne()
-    {
-        var expanded = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.VE2;");
-        var direct = await PlanInSessionAsync(string.Empty, "SELECT Id FROM dbo.E1;");
-
-        Assert.True(ExpandedTables.All(ShowPlan.TableNames(expanded).Contains));
-        Assert.Equal(["E1"], ShowPlan.TableNames(direct).ToArray());
     }
 
     [Fact]

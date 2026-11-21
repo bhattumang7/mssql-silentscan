@@ -106,7 +106,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ForcedSerial(report, headingLevel, pathBase));
         blocks.AddRange(UntrustedConstraint(report, headingLevel, pathBase));
         blocks.AddRange(MultiReferencedCte(report, headingLevel, pathBase));
-        blocks.AddRange(PostExpansionJoinWidth(report, headingLevel, pathBase));
         blocks.AddRange(PartialCompositeForeignKeyJoin(report, headingLevel, pathBase));
         blocks.AddRange(OuterJoinPredicateCollapse(report, headingLevel, pathBase));
         blocks.AddRange(SetOption(report, headingLevel, pathBase));
@@ -233,7 +232,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Constructs that force a statement/query plan serial", report.Find<ForcedSerialFinding>(nameof(ForcedSerialScanner)).Count);
         AddCount(counts, "Untrusted FK/CHECK constraints", report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).Count);
         AddCount(counts, "CTEs referenced 2+ times downstream of their own WITH clause", report.Find<MultiReferencedCteFinding>(nameof(MultiReferencedCteScanner)).Count);
-        AddCount(counts, "Queries whose expanded join width exceeds their written FROM/JOIN count", report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count);
         AddCount(counts, "JOINs matching some but not all of a composite foreign key's columns", report.Find<PartialCompositeForeignKeyJoinFinding>(nameof(PartialCompositeForeignKeyJoinScanner)).Count);
         AddCount(counts, "OUTER JOIN predicates that silently collapse to an INNER JOIN", report.Find<OuterJoinPredicateCollapseFinding>(nameof(OuterJoinPredicateCollapseScanner)).Count);
         AddCount(counts, "SET options silently disabling a filtered index/indexed view the module touches", report.Find<SetOptionFinding>(nameof(SetOptionScanner)).Count);
@@ -1692,30 +1690,6 @@ public static class ReadableScanReportWriter
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.CteName,
                 f.ReferenceCount.ToString(CultureInfo.InvariantCulture),
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> PostExpansionJoinWidth(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Post-expansion join width ({report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "The written FROM/JOIN table count is meaningless when half the sources are views - the number that matters is the EXPANDED one, base tables after resolving every view/inline-TVF reference transitively. Ranked by the gap between written and expanded count. Deliberately makes no claim about a specific 'past N the optimizer gives up exhaustive search' threshold - that number is unconfirmed folklore, not yet oracle-verified on this engine.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.PostExpansionJoinWidthRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Written", "Expanded", "Inflating source(s)", "Unexpanded?"],
-            [.. report.Find<PostExpansionJoinWidthFinding>(nameof(PostExpansionJoinWidthScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.WrittenCount.ToString(CultureInfo.InvariantCulture),
-                f.ExpandedCount.ToString(CultureInfo.InvariantCulture),
-                string.Join(", ", f.InflatingSources),
-                f.PartiallyUnexpanded ? "yes" : "no",
             })]);
     }
 

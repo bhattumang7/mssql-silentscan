@@ -53,7 +53,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ForcedSerialFinding>("ForcedSerialScanner").Select(ToResult));
         results.AddRange(report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Select(ToResult));
-        results.AddRange(report.Find<PostExpansionJoinWidthFinding>("PostExpansionJoinWidthScanner").Select(ToResult));
         results.AddRange(report.Find<UnparameterizedDynamicSqlFinding>("DynamicSqlScanner").Select(ToResult));
         results.AddRange(report.Find<NonPersistedComputedColumnFinding>("NonPersistedComputedColumnScanner").Select(ToResult));
         results.AddRange(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner").Select(ToResult));
@@ -933,16 +932,6 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.MultiReferencedCteRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = $"CTE '{finding.CteName}' is referenced {finding.ReferenceCount} times downstream of its own WITH clause - each reference independently re-runs the CTE's own defining query, SQL Server does not materialize it once and reuse it.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(PostExpansionJoinWidthFinding finding)
-    {
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.PostExpansionJoinWidthRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var unexpandedNote = finding.PartiallyUnexpanded ? " (partially unexpanded - the real count may be higher)" : string.Empty;
-        var message = $"'{finding.ModuleQualifiedName}' writes {finding.WrittenCount} FROM/JOIN reference(s) but expands to {finding.ExpandedCount} base table(s) via [{string.Join(", ", finding.InflatingSources)}]{unexpandedNote}.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }

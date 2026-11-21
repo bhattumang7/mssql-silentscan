@@ -51,7 +51,6 @@ public static class RuleRegistry
 
         new PartialCompositeForeignKeyJoinRule(),
         new MultiReferencedCteRule(),
-        new PostExpansionJoinWidthRule(),
         new OutputParameterRule(),
         new UnindexedTempTableUsageRule(),
 

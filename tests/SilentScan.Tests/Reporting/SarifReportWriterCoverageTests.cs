@@ -742,24 +742,6 @@ public sealed class SarifReportWriterCoverageTests
         Assert.StartsWith("'@Local'", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
     }
 
-    [Fact]
-    public void Write_PostExpansionJoinWidthFindingPartiallyUnexpanded_AppendsCaveatNote()
-    {
-        var finding = new PostExpansionJoinWidthFinding("dbo.vw_Test", 2, 5, ["dbo.A", "dbo.B"], ["dbo.vw_Inner"], PartiallyUnexpanded: true, "test.sql", 1, 1);
-        var report = TestScanReports.Build(PostExpansionJoinWidthFindings: [finding]);
-
-        Assert.Contains("(partially unexpanded - the real count may be higher)", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
-    [Fact]
-    public void Write_PostExpansionJoinWidthFindingFullyExpanded_OmitsCaveatNote()
-    {
-        var finding = new PostExpansionJoinWidthFinding("dbo.vw_Test", 2, 5, ["dbo.A", "dbo.B"], ["dbo.vw_Inner"], PartiallyUnexpanded: false, "test.sql", 1, 1);
-        var report = TestScanReports.Build(PostExpansionJoinWidthFindings: [finding]);
-
-        Assert.DoesNotContain("partially unexpanded", FirstResult(report).GetProperty("message").GetProperty("text").GetString());
-    }
-
     [Theory]
     [InlineData(true, false, "no explicit length (defaults to 1)", "the compared value is silently truncated")]
     [InlineData(false, false, "length 5", "the compared value is silently truncated")]

@@ -141,7 +141,6 @@ public static class RuleDocCatalog
 
         [Lineage.ExpressionDerivedColumn.RuleId] = Lineage.ExpressionDerivedColumn.Content,
         [Lineage.MultiReferencedCte.RuleId] = Lineage.MultiReferencedCte.Content,
-        [Lineage.PostExpansionJoinWidth.RuleId] = Lineage.PostExpansionJoinWidth.Content,
 
         [DynamicSql.ConcatenatedValueInConstantSql.RuleId] = DynamicSql.ConcatenatedValueInConstantSql.Content,
         [DynamicSql.ExecStringConcatenatesParameterizableValue.RuleId] = DynamicSql.ExecStringConcatenatesParameterizableValue.Content,
