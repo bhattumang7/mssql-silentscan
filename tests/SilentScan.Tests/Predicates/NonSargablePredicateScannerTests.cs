@@ -478,7 +478,7 @@ public sealed class NonSargablePredicateScannerTests
     }
 
     [Fact]
-    public void LeadingWildcardLike_LeadingCharacterClassWildcard_Fires()
+    public void LeadingWildcardLike_LeadingCharacterClass_DoesNotFire()
     {
         var sql = """
             CREATE TABLE dbo.Users (UserId INT NOT NULL PRIMARY KEY, DisplayName NVARCHAR(40) NOT NULL);
@@ -486,6 +486,21 @@ public sealed class NonSargablePredicateScannerTests
             CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);
             GO
             SELECT UserId FROM dbo.Users WHERE DisplayName LIKE '[ab]ozar';
+            """;
+        var findings = ScanSql(sql);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void LeadingWildcardLike_LeadingNegatedCharacterClass_Fires()
+    {
+        var sql = """
+            CREATE TABLE dbo.Users (UserId INT NOT NULL PRIMARY KEY, DisplayName NVARCHAR(40) NOT NULL);
+            GO
+            CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);
+            GO
+            SELECT UserId FROM dbo.Users WHERE DisplayName LIKE '[^ab]ozar';
             """;
         var findings = ScanSql(sql);
 

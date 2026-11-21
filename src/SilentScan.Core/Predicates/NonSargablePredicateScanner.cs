@@ -338,8 +338,8 @@ public static class NonSargablePredicateScanner
 
             switch (node.SecondExpression)
             {
-                case StringLiteral { Value: [var firstPatternChar, ..] } literal
-                    when node.EscapeExpression is null && IsLikeWildcardChar(firstPatternChar):
+                case StringLiteral literal
+                    when node.EscapeExpression is null && StartsWithUnseekableWildcard(literal.Value):
                     Add(SargabilityFindingKind.LeadingWildcardLike, columnName, literal.Value, node, columnRef, scopeChain, walker);
                     break;
                 case StringLiteral:
@@ -348,7 +348,8 @@ public static class NonSargablePredicateScanner
             }
         }
 
-        private static bool IsLikeWildcardChar(char value) => value is '%' or '_' or '[';
+        private static bool StartsWithUnseekableWildcard(string pattern) =>
+            pattern is ['%' or '_', ..] or ['[', '^', ..];
 
         private static readonly SearchValues<char> RegexMetacharacters = SearchValues.Create("$*+.?()[]{}|\\^");
 
