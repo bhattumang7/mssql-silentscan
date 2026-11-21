@@ -69,7 +69,12 @@ public sealed class CastOrConvertOnColumnOracleTests : IAsyncLifetime
             GO
             CREATE PROCEDURE dbo.ProbeCastDatetimeToDateTruncation @x DATE AS
             BEGIN
-                SELECT Code FROM dbo.Orders WHERE CAST(PlacedAt AS DATE) = @x;
+                SELECT COUNT(*) FROM dbo.Orders WHERE CAST(PlacedAt AS DATE) = @x;
+            END
+            GO
+            CREATE PROCEDURE dbo.ProbeCastDatetimeToTimeTruncation @x TIME AS
+            BEGIN
+                SELECT COUNT(*) FROM dbo.Orders WHERE CAST(PlacedAt AS TIME) = @x;
             END
             GO
             CREATE PROCEDURE dbo.ProbeCastNarrowingDecimalScale @x DECIMAL(5,0) AS
@@ -120,8 +125,12 @@ public sealed class CastOrConvertOnColumnOracleTests : IAsyncLifetime
         Assert.True(await HasIndexSeek("EXEC dbo.ProbeCastToNarrowerNumericInRange @x = 100;", "IX_Orders_OrderNo"));
 
     [Fact]
-    public async Task CastDatetimeToDateTruncation_NeverSeeks() =>
-        Assert.False(await HasIndexSeek("EXEC dbo.ProbeCastDatetimeToDateTruncation @x = '2020-01-01';", "IX_Orders_PlacedAt"));
+    public async Task CastDatetimeToDateTruncation_SeeksADerivedRange() =>
+        Assert.True(await HasIndexSeek("EXEC dbo.ProbeCastDatetimeToDateTruncation @x = '2020-01-02';", "IX_Orders_PlacedAt"));
+
+    [Fact]
+    public async Task CastDatetimeToTimeTruncation_NeverSeeks() =>
+        Assert.False(await HasIndexSeek("EXEC dbo.ProbeCastDatetimeToTimeTruncation @x = '01:00';", "IX_Orders_PlacedAt"));
 
     [Fact]
     public async Task CastNarrowingDecimalScale_StillSeeks() =>

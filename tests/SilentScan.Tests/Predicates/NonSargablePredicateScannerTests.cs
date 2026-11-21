@@ -179,7 +179,7 @@ public sealed class NonSargablePredicateScannerTests
     }
 
     [Fact]
-    public void CastOnColumn_DateTime2TruncatedToDate_Fires()
+    public void CastOnColumn_DateTime2TruncatedToDate_DoesNotFire()
     {
         var sql = """
             CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CreatedAt DATETIME2(3) NOT NULL);
@@ -187,6 +187,21 @@ public sealed class NonSargablePredicateScannerTests
             CREATE INDEX IX_Orders_CreatedAt ON dbo.Orders(CreatedAt);
             GO
             SELECT OrderId FROM dbo.Orders WHERE CAST(CreatedAt AS DATE) = '2021-01-01';
+            """;
+        var findings = ScanSqlWithCatalog(sql);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void CastOnColumn_DateTimeTruncatedToTime_Fires()
+    {
+        var sql = """
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CreatedAt DATETIME2(3) NOT NULL);
+            GO
+            CREATE INDEX IX_Orders_CreatedAt ON dbo.Orders(CreatedAt);
+            GO
+            SELECT OrderId FROM dbo.Orders WHERE CAST(CreatedAt AS TIME) = '01:00';
             """;
         var findings = ScanSqlWithCatalog(sql);
 

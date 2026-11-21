@@ -401,7 +401,7 @@ public static class NonSargablePredicateScanner
             (targetType.IsNumericFamily && sourceType.IsNumericFamily)
             || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
                 && sourceType.Category != SqlTypeCategory.DateTimeOffset
-                && targetType.Category is not (SqlTypeCategory.Date or SqlTypeCategory.Time));
+                && targetType.Category is not SqlTypeCategory.Time);
 
         private void InspectSide(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
         {
