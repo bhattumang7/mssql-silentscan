@@ -19,9 +19,57 @@ public sealed record OracleCase(string Name, string Setup, string Statement, str
 
 public sealed record SilentCase(OracleCase Case, IFinding Claim, string FiringPartner);
 
+public sealed record EngineTarget(SqlServerOptions Options, int? CompatibilityLevel)
+{
+    public string Label => $"{Options.Host}:{Options.Port} compatibility {(CompatibilityLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "default")}";
+}
+
+public sealed record StatementForm(string Name, Func<string, bool> Applies, Func<OracleCase, OracleCase> Apply);
+
+public static class StatementForms
+{
+    private const string ProcedureName = "dbo.SilentScanCaseProcedure";
+
+    private const string ViewName = "dbo.SilentScanCaseView";
+
+    private const string Line = "\n";
+
+    private const string Break = "\nGO\n";
+
+    public static IReadOnlyList<StatementForm> All { get; } =
+    [
+        new("procedure", static _ => true, static c => c with
+        {
+            Setup = c.Setup + Break + "CREATE PROCEDURE " + ProcedureName + " AS BEGIN" + Line + c.Statement + Line + "END" + Break,
+            Statement = "EXEC " + ProcedureName + ";",
+        }),
+        new("view", IsQuery, static c => c with
+        {
+            Setup = c.Setup + Break + "CREATE VIEW " + ViewName + " AS" + Line + Body(c.Statement) + Break,
+            Statement = "SELECT * FROM " + ViewName + ";",
+        }),
+        new("common table expression", IsQuery, static c => c with { Statement = "WITH SilentScanCase AS (" + Line + Body(c.Statement) + Line + ") SELECT * FROM SilentScanCase;" }),
+        new("derived table", IsQuery, static c => c with { Statement = "SELECT * FROM (" + Line + Body(c.Statement) + Line + ") AS SilentScanCase;" }),
+    ];
+
+    private static bool IsQuery(string statement) => statement.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase);
+
+    private static string Body(string statement) => statement.TrimEnd().TrimEnd(';');
+}
+
 public abstract class RuleOracle
 {
     private const string UnrelatedStatement = "SELECT 1;";
+
+    private static readonly int?[] CompatibilityLevels = [null, 130];
+
+    private static readonly EngineTarget[] Targets =
+    [
+        .. new[] { SqlServerOptions.LocalDocker, SqlServerOptions.LocalDockerLatest }
+            .SelectMany(options => CompatibilityLevels.Select(level => new EngineTarget(options, level))),
+    ];
+
+    private static readonly EngineTarget[] PrimaryTarget = [new(SqlServerOptions.LocalDocker, null)];
 
     protected abstract IReadOnlyList<OracleCase> FiringCases { get; }
 
@@ -65,9 +113,18 @@ public abstract class RuleOracle
         foreach (var oracleCase in cases)
         {
             var partners = silent.Where(s => string.Equals(s.FiringPartner, oracleCase.Name, StringComparison.Ordinal)).Select(s => s.Case).ToList();
-            if (await CheckFiringAsync(oracleCase, partners) is { } failure)
+            if (await CheckFiringAsync(oracleCase, partners, Targets, true) is { } failure)
             {
                 failures.Add($"[{oracleCase.Name}] {failure}");
+            }
+
+            foreach (var form in StatementForms.All.Where(f => f.Applies(oracleCase.Statement)))
+            {
+                var shaped = form.Apply(oracleCase);
+                if (await CheckFiringAsync(shaped, [], PrimaryTarget, false) is { } formFailure)
+                {
+                    failures.Add($"[{oracleCase.Name} as {form.Name}] {formFailure}");
+                }
             }
 
             executed++;
@@ -88,9 +145,17 @@ public abstract class RuleOracle
         var executed = 0;
         foreach (var silentCase in cases)
         {
-            if (await CheckSilentAsync(silentCase) is { } failure)
+            if (await CheckSilentAsync(silentCase, Targets) is { } failure)
             {
                 failures.Add($"[{silentCase.Case.Name}] {failure}");
+            }
+
+            foreach (var form in StatementForms.All.Where(f => f.Applies(silentCase.Case.Statement)))
+            {
+                if (await CheckSilentAsync(silentCase with { Case = form.Apply(silentCase.Case) }, PrimaryTarget) is { } formFailure)
+                {
+                    failures.Add($"[{silentCase.Case.Name} as {form.Name}] {formFailure}");
+                }
             }
 
             executed++;
@@ -131,7 +196,8 @@ public abstract class RuleOracle
         }
     }
 
-    private async Task<string?> CheckFiringAsync(OracleCase oracleCase, IReadOnlyList<OracleCase> partners)
+    private async Task<string?> CheckFiringAsync(
+        OracleCase oracleCase, IReadOnlyList<OracleCase> partners, IReadOnlyList<EngineTarget> targets, bool swapControls)
     {
         var verifier = Verifier;
         var report = await ScanAsync(oracleCase);
@@ -149,16 +215,19 @@ public abstract class RuleOracle
 
         var statements = new List<(string Label, string Statement)> { ("judged statement", oracleCase.Statement) };
         statements.AddRange(partners.Select(p => ($"swapped for silent partner '{p.Name}'", p.Statement)));
-        statements.Add(("swapped for a statement that touches nothing", UnrelatedStatement));
+        if (swapControls)
+        {
+            statements.Add(("swapped for a statement that touches nothing", UnrelatedStatement));
+        }
 
-        var results = await VerifyAgainstEngineAsync(oracleCase.Setup, verifier, findings, [.. statements.Select(s => s.Statement)]);
+        var results = await VerifyAgainstEngineAsync(oracleCase.Setup, verifier, findings, [.. statements.Select(s => s.Statement)], targets);
         for (var i = 0; i < statements.Count; i++)
         {
             var failure = i == 0
-                ? results[i].FirstOrDefault(r => r.Verdict != EngineVerdict.Confirmed) is { } unconfirmed
-                    ? $"the engine did not confirm a finding ({unconfirmed.Verdict}): {unconfirmed.Detail}"
+                ? results[i].FirstOrDefault(r => r.Verification.Verdict != EngineVerdict.Confirmed) is { } unconfirmed
+                    ? $"the engine did not confirm a finding on {unconfirmed.Target} ({unconfirmed.Verification.Verdict}): {unconfirmed.Verification.Detail}"
                     : null
-                : results[i].FirstOrDefault(r => r.Verdict == EngineVerdict.Confirmed) is not null
+                : results[i].FirstOrDefault(r => r.Verification.Verdict == EngineVerdict.Confirmed) is not null
                     ? $"the verifier confirmed the finding when its statement was {statements[i].Label}; it is not judging the statement."
                     : null;
             if (failure is not null)
@@ -170,7 +239,7 @@ public abstract class RuleOracle
         return null;
     }
 
-    private async Task<string?> CheckSilentAsync(SilentCase silentCase)
+    private async Task<string?> CheckSilentAsync(SilentCase silentCase, IReadOnlyList<EngineTarget> targets)
     {
         var verifier = Verifier;
         var report = await ScanAsync(silentCase.Case);
@@ -180,8 +249,9 @@ public abstract class RuleOracle
             return "the scanner reported this rule on a silent case.";
         }
 
-        var result = Assert.Single(Assert.Single(await VerifyAgainstEngineAsync(silentCase.Case.Setup, verifier, [silentCase.Claim], [silentCase.Case.Statement])));
-        return result.Verdict == EngineVerdict.Refuted ? null : $"the engine did not refute the claim ({result.Verdict}): {result.Detail}";
+        var results = Assert.Single(await VerifyAgainstEngineAsync(silentCase.Case.Setup, verifier, [silentCase.Claim], [silentCase.Case.Statement], targets));
+        var unrefuted = results.FirstOrDefault(r => r.Verification.Verdict != EngineVerdict.Refuted);
+        return unrefuted is null ? null : $"the engine did not refute the claim on {unrefuted.Target} ({unrefuted.Verification.Verdict}): {unrefuted.Verification.Detail}";
     }
 
     private static async Task<ScanReport> ScanAsync(OracleCase oracleCase)
@@ -203,38 +273,50 @@ public abstract class RuleOracle
             .Any(result => string.Equals(result.GetProperty("ruleId").GetString(), ruleId, StringComparison.Ordinal));
     }
 
-    private static async Task<List<List<EngineVerification>>> VerifyAgainstEngineAsync(
-        string setup, IRuleVerifier verifier, IReadOnlyList<IFinding> findings, IReadOnlyList<string> statements)
-    {
-        var options = SqlServerOptions.LocalDocker;
-        var databaseName = $"SilentScanRuleOracle_{Guid.NewGuid():N}";
-        var provisioner = new DatabaseProvisioner(options);
-        await provisioner.CreateFreshAsync(databaseName);
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(setup))
-            {
-                await new ScriptDeployer(options).DeployAsync(setup, databaseName);
-            }
+    private sealed record TargetVerdict(string Target, EngineVerification Verification);
 
-            var results = new List<List<EngineVerification>>();
-            foreach (var statement in statements)
+    private static async Task<List<List<TargetVerdict>>> VerifyAgainstEngineAsync(
+        string setup,
+        IRuleVerifier verifier,
+        List<IFinding> findings,
+        IReadOnlyList<string> statements,
+        IReadOnlyList<EngineTarget> targets)
+    {
+        var results = statements.Select(_ => new List<TargetVerdict>()).ToList();
+        foreach (var target in targets)
+        {
+            var databaseName = $"SilentScanRuleOracle_{Guid.NewGuid():N}";
+            var provisioner = new DatabaseProvisioner(target.Options);
+            await provisioner.CreateFreshAsync(databaseName);
+            try
             {
-                var perStatement = new List<EngineVerification>();
-                foreach (var finding in findings)
+                if (target.CompatibilityLevel is { } level)
                 {
-                    perStatement.Add(await verifier.VerifyAsync(options, databaseName, finding, statement));
+                    await provisioner.SetCompatibilityLevelAsync(databaseName, level);
                 }
 
-                results.Add(perStatement);
-            }
+                if (!string.IsNullOrWhiteSpace(setup))
+                {
+                    await new ScriptDeployer(target.Options).DeployAsync(setup, databaseName);
+                }
 
-            return results;
+                for (var i = 0; i < statements.Count; i++)
+                {
+                    foreach (var finding in findings)
+                    {
+                        results[i].Add(new TargetVerdict(target.Label, await verifier.VerifyAsync(target.Options, databaseName, finding, statements[i])));
+                    }
+                }
+            }
+            finally
+            {
+                SqlConnection.ClearAllPools();
+                await provisioner.DropIfExistsAsync(databaseName);
+            }
         }
-        finally
-        {
-            SqlConnection.ClearAllPools();
-            await provisioner.DropIfExistsAsync(databaseName);
-        }
+
+        var expected = findings.Count * targets.Count;
+        Assert.True(results.All(r => r.Count == expected), $"Expected {expected} engine verdict(s) per statement; some verifications did not execute.");
+        return results;
     }
 }
