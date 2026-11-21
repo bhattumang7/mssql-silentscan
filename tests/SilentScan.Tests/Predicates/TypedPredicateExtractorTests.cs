@@ -1851,6 +1851,26 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_LocalVariableWithOptimizeForValue_NeverFiresLocalVariablePredicate()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
+            "DECLARE @v VARCHAR(20) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @v OPTION (OPTIMIZE FOR (@v = 'ABC'));");
+
+        Assert.Empty(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_LocalVariableWithOptimizeForUnknown_StillFires()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL);",
+            "DECLARE @v VARCHAR(20) = 'ABC'; SELECT 1 FROM dbo.Customers WHERE Code = @v OPTION (OPTIMIZE FOR UNKNOWN);");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
     public void Extract_UniqueKeyRangeToDeclaredLocalVariable_StillFires()
     {
         var result = ExtractAll(

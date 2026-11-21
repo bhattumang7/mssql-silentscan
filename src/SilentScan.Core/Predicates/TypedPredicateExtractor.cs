@@ -469,7 +469,8 @@ public static class TypedPredicateExtractor
         private bool BeginStatementOptimizerHints(IList<OptimizerHint> hints)
         {
             var previous = _statementHasOptionRecompile;
-            _statementHasOptionRecompile = hints.Any(h => h.HintKind == OptimizerHintKind.Recompile);
+            _statementHasOptionRecompile = hints.Any(h => h.HintKind == OptimizerHintKind.Recompile
+                || h is OptimizeForOptimizerHint { Pairs.Count: > 0 });
             return previous;
         }
 
