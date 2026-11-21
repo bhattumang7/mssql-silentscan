@@ -41,19 +41,43 @@ scanner's model. The case is the only thing they have in common.
    scanner detected.
 4. **Perturb one thing.** The verifier changes exactly the condition the rule
    names and compares the statement's behaviour with and without it. The
-   difference is the evidence.
+   difference is the evidence. Before writing a perturbation, answer one
+   question: *if the engine behaved the way the user wrongly expects, would
+   this perturbation still produce the difference?* If yes, it proves nothing.
+   Changing the values a predicate compares, so that the answer has to
+   change, fails this question for every column type and every engine.
 5. **Prove the claim applies.** Before judging, the verifier shows the
-   statement really touches what the finding names. A claim about something
-   the statement never reads is undecided, not refuted.
-6. **Give one of three answers.**
+   statement really touches what the finding names: the table and column it
+   names, or, when the finding names an expression, the expression at the
+   finding's position. A verifier always names at least one thing it touches.
+   A claim about something the statement never reads is undecided, not
+   refuted.
+6. **Use the finding's specifics.** The verifier reads the finding's fields
+   (the kind, the column, the function, the claimed lengths or scales) and
+   the observation must match them. A truncation claim is confirmed only by a
+   value cut to the claimed length, not by any change; a scale claim only by
+   lost digits at the claimed scale. A verifier that never reads the finding
+   judges the statement, not the claim.
+7. **Show the perturbation took effect.** Refuted means the condition was put
+   in place and nothing happened. If the perturbation changed nothing (a data
+   step that touched no rows, a rewrite that left the statement text as it
+   was, a rewrite that found nothing to rewrite), the verdict is Not decided.
+   Doing nothing is never evidence that the effect is absent.
+8. **Rewrites follow the finding, not a pattern.** A verifier may compare the
+   statement with a rewritten form of itself, the rule's own fix applied.
+   The rewrite is made at the finding's position, on the construct the
+   finding names. Finding "the first match" with a regular expression is not
+   locating the finding; a statement with two matches, or a match hidden
+   behind a procedure or view, defeats it.
+9. **Give one of three answers.**
    - *Confirmed*: the engine showed the effect.
    - *Refuted*: the engine showed the effect is absent.
    - *Not decided*: anything else, with the reason. Not decided is never
      rounded to either side.
-7. **Leave no trace.** Every change is undone, and a test proves the database
+10. **Leave no trace.** Every change is undone, and a test proves the database
    is the same afterwards. A verifier that writes runs only against a
    database the harness created, and refuses any other.
-8. **Stand alone.** A verifier may use its finding type, the rule ids, the
+11. **Stand alone.** A verifier may use its finding type, the rule ids, the
    verdict types, the database client and the base library. It may not use
    the scanner, the parser, the type model, or any helper that reaches them.
 
@@ -79,6 +103,25 @@ replace any that exist.
   case must be the claim the scanner would have made on that exact statement.
 - **A helper that hides the dependency.** Calling into shared verification
   code that itself uses the scanner's model is the same as using it directly.
+- **A manufactured consequence.** A perturbation that forces the difference
+  regardless of the rule's condition, such as changing the stored value an
+  equality compares. See the question under "Perturb one thing".
+- **A refutation from doing nothing.** A Refuted verdict where the
+  perturbation never took effect. It passes silent cases for the wrong
+  reason.
+- **Any change as confirmation.** Accepting any difference in the result when
+  the rule claims a specific one. The observation must be the claimed
+  consequence, sized by the finding's fields.
+- **A verifier that ignores the finding.** If changing the finding's kind,
+  column or claimed size would not change the verdict, the claim was never
+  judged.
+- **A placeholder claim.** A silent case's claim filled with dummy values.
+  It must be the scanner's real finding from the firing partner, changed only
+  in the fields the pair differs in.
+- **Excluding a form the verifier cannot handle.** A statement form may be
+  excluded only when the scanner rightly stays silent in that form. If the
+  scanner fires in a form and the verifier cannot judge it there, fix the
+  verifier; never exclude the form.
 
 ## What a rule's cases must cover
 
@@ -139,6 +182,26 @@ the rule was written.
   observation twice with no perturbation applied. The two must match. This
   proves the difference seen comes from the perturbation and not from the
   statement varying on its own.
+- **The took-effect check.** The base, not the verifier, checks that the
+  perturbation did something: each data step reports the rows it changed, and
+  a rewrite must produce text different from the statement. If not, the base
+  returns Not decided, and a silent case passing that way fails.
+- **A touch is required.** The base rejects a verifier that names nothing it
+  touches. For a finding about an expression, the touch is the expression at
+  the finding's position, and the base checks the statement contains it
+  there.
+- **The claim-swap control.** For every firing case the base also hands the
+  verifier the scanner's real finding with one field changed (another kind,
+  another column, another claimed size) on the same statement. It must not
+  come back Confirmed. A verifier that ignores the finding fails.
+- **Silent claims come from real findings.** A silent case does not hand-build
+  its claim from scratch. It names its firing partner and the fields that
+  differ; the base takes the scanner's real finding on the partner, applies
+  only those changes, and verifies that. With no differing fields, the claim
+  is the partner's finding unchanged.
+- **A condition-free control.** At least one silent case per rule must be
+  refuted by a perturbation that took effect, not by an engine refusal. This
+  proves the perturbation can come out negative at all.
 - **The harness is itself tested.** A deliberately bad verifier of each kind
   under "What does not count" exists in the tests, and the base must reject
   each one.
@@ -163,17 +226,23 @@ the rule was written.
   statement through a shared set of meaning-preserving forms (inside a stored
   procedure, behind a view, in a common table expression, in a derived table,
   with aliases and bracketed names, as dynamic SQL) and requires the same
-  agreement on each. A form a rule genuinely cannot support is declared as an
-  exclusion in the catalog, with its own silent case; it is never skipped.
+  agreement on each. A test fails if any form named here is missing from the
+  shared set. A form may be excluded only in the rule's catalog entry, as an
+  exclusion condition with its own silent case. The base runs every excluded
+  form anyway and requires the scanner to stay silent in it; if the scanner
+  fires there, the exclusion is false and the test fails. A test class cannot
+  exclude a form.
 - **A miss found in the wild becomes a case first.** Any disagreement found
   outside the tests is added as a failing case, and if its shape is general,
   as a new shared form, before the scanner is changed.
 
 ### The answer holds on every engine
 
-- **Every case runs on every engine.** The base runs each case against every
-  local instance and every compatibility level the product supports. All must
-  agree with the scanner.
+- **Every case runs on every engine.** The base runs each case, in every
+  statement form, against every local instance and every compatibility level
+  the product supports. The scanner scans each target too, since its findings
+  can depend on the engine; on each target the scanner and the verifier must
+  agree.
 - **A version difference is declared.** If the engine's behaviour differs by
   version or compatibility level, the rule's catalog entry says so, the
   scanner honours it, and the cases prove both sides.
@@ -244,6 +313,10 @@ true.
 6. **Oracle tests run where the build is trusted.** Confirm the oracle
    category is not filtered out of the run that gates a change.
 
+Whenever this document gains a mechanism, step one is not finished until the
+mechanism exists, and every rule already paired is re-run under it. A paired
+rule that fails a new mechanism goes back to the baseline until fixed.
+
 ### Step two: undo the pairings that do not count
 
 Find every verifier that falls under "What does not count". For each rule it
@@ -286,6 +359,21 @@ For each rule:
 8. If the engine refutes a firing case or confirms a silent one, the scanner
    or the rationale is wrong. Fix that; never bend the case or the verifier
    to agree.
+9. If the base cannot express what the rule needs, extend the base, with its
+   own red tests, before writing the verifier. Never add an option that lets
+   a rule skip a check; an option that loosens a check for one rule loosens
+   it for all of them.
+10. Before committing, answer each of these for the rule in the commit
+    message's terms, and stop if any answer is no:
+    - Would the perturbation still produce the difference if the engine
+      behaved as the user expects? (must be no)
+    - Does each silent case's Refuted come from a perturbation that took
+      effect, or from an engine refusal that is itself the claim?
+    - Would changing the finding's kind, column or claimed size change the
+      verdict?
+    - Does every statement form the scanner fires in get judged?
+    - Does the observation match the claimed consequence, sized by the
+      finding, rather than any change?
 
 Building and testing is slow. Finish a whole family before building, run only
 that family's tests while working, and run the full suite and the Sonar scan
