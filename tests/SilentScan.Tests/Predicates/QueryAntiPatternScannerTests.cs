@@ -280,6 +280,28 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Id = 5;")]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Id = 5 AND Col = 'x';")]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.B WHERE AId = 7;")]
+    public void CountStarOverAKeyPinnedSingleRowLookup_NeverFires(string assignment)
+    {
+        var findings = Scan($"DECLARE @cnt INT; {assignment} IF @cnt > 0 SELECT 1;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck);
+    }
+
+    [Theory]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Id > 5;")]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x';")]
+    [InlineData("SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Id = 5 OR Id = 6;")]
+    public void CountStarOverARangeOrNonKeyLookup_StillFires(string assignment)
+    {
+        var findings = Scan($"DECLARE @cnt INT; {assignment} IF @cnt > 0 SELECT 1;");
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck);
+    }
+
+    [Theory]
     [InlineData("IF @cnt >= 1 SELECT 1;")]
     [InlineData("IF @cnt = 0 SELECT 1;")]
     [InlineData("IF @cnt <> 0 SELECT 1;")]

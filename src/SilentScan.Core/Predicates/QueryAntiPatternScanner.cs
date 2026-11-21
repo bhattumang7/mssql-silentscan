@@ -653,7 +653,8 @@ public static class QueryAntiPatternScanner
         {
             for (var i = 0; i + 1 < statements.Count; i++)
             {
-                if (CountStarAssignedVariable(statements[i]) is not { } variableName)
+                if (CountStarAssignedVariable(statements[i]) is not { } variableName
+                    || ReadsAtMostOneRow(statements[i]))
                 {
                     continue;
                 }
@@ -728,6 +729,10 @@ public static class QueryAntiPatternScanner
                 }
             }
         }
+
+        private bool ReadsAtMostOneRow(TSqlStatement statement) =>
+            statement is SelectStatement { QueryExpression: QuerySpecification { FromClause: not null } spec }
+            && SingleRowKeyPinning.QueryReadsAtMostOneRow(spec, catalog);
 
         private static string? CountStarAssignedVariable(TSqlStatement statement)
         {

@@ -134,6 +134,18 @@ public sealed partial class ConcurrencyAndRuntimeEngineFactOracleTests : OracleT
 
     [Fact]
     [Trait("Rule", FindingRuleIds.QueryAntiPatternCountStarVariableExistenceCheckRuleId)]
+    public async Task CountStarIntoVariable_OverAPrimaryKeyLookup_CostsTheSameAsExists()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        var assign = await LogicalReadsAsync(connection, "DECLARE @c INT; SELECT @c = COUNT(*) FROM dbo.Dr WHERE Id = 1; IF @c > 0 SELECT 1;");
+        var exists = await LogicalReadsAsync(connection, "IF EXISTS (SELECT 1 FROM dbo.Dr WHERE Id = 1) SELECT 1;");
+
+        Assert.Equal(exists, assign);
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.QueryAntiPatternCountStarVariableExistenceCheckRuleId)]
     public async Task CountStarIntoVariable_ReadsFullSet_ExistsAndInlineFormsShortCircuit()
     {
         await using var connection = await OpenConnectionAsync();
