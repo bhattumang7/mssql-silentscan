@@ -1831,6 +1831,26 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_CompositeUniqueKeyFullyPinnedByLocalVariables_NeverFiresLocalVariablePredicate()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Region INT NOT NULL, PRIMARY KEY (Id, Region));",
+            "DECLARE @v INT = 7; DECLARE @w INT = 8; SELECT 1 FROM dbo.Customers WHERE Id = @v AND Region = @w;");
+
+        Assert.Empty(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_CompositeUniqueKeyPinnedOnlyThroughOr_StillFires()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Region INT NOT NULL, PRIMARY KEY (Id, Region));",
+            "DECLARE @v INT = 7; DECLARE @w INT = 8; SELECT 1 FROM dbo.Customers WHERE Id = @v OR Region = @w;");
+
+        Assert.Equal(2, result.LocalVariablePredicateFindings.Count);
+    }
+
+    [Fact]
     public void Extract_UniqueKeyRangeToDeclaredLocalVariable_StillFires()
     {
         var result = ExtractAll(

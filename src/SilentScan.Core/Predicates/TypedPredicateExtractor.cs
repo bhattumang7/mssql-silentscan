@@ -232,13 +232,39 @@ public static class TypedPredicateExtractor
             _position = _positionStack.Pop();
         }
 
+        private readonly Stack<WhereEqualityScope> _whereEqualityScopes = new();
+
+        private sealed record WhereEqualityScope(
+            HashSet<BooleanExpression> TopLevelConjuncts,
+            List<(LocalVariablePredicateFinding Finding, string Table, string Column)> Equalities);
+
         public void OnEnterWhereClause(WhereClause node, ModuleWalker walker)
         {
             _positionStack.Push(_position);
             _position = PredicatePosition.Seekable;
+            _whereEqualityScopes.Push(new WhereEqualityScope([.. PredicateTreeWalker.FlattenAnd(node.SearchCondition)], []));
         }
 
-        public void OnLeaveWhereClause(WhereClause node, ModuleWalker walker) => _position = _positionStack.Pop();
+        public void OnLeaveWhereClause(WhereClause node, ModuleWalker walker)
+        {
+            _position = _positionStack.Pop();
+            var scope = _whereEqualityScopes.Pop();
+            foreach (var tableGroup in scope.Equalities.GroupBy(e => e.Table, catalog.IdentifierComparer))
+            {
+                var pinnedColumns = tableGroup.Select(e => e.Column).ToHashSet(catalog.IdentifierComparer);
+                if (catalog.Find(tableGroup.Key) is { } table && table.Indexes.Any(index => IsFullyPinnedUniqueKey(index, pinnedColumns)))
+                {
+                    LocalVariablePredicateFindings.RemoveAll(f => tableGroup.Any(e => ReferenceEquals(e.Finding, f)));
+                }
+            }
+        }
+
+        private static bool IsFullyPinnedUniqueKey(CatalogIndex index, HashSet<string> pinnedColumns) =>
+            index.IsUnique
+            && !index.IsFiltered
+            && !index.IsDisabled
+            && index.KeyColumns.Count > 1
+            && index.KeyColumns.All(pinnedColumns.Contains);
 
         public void OnEnterHavingClause(HavingClause node, ModuleWalker walker)
         {
@@ -933,9 +959,18 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            LocalVariablePredicateFindings.Add(new LocalVariablePredicateFinding(
+            var finding = new LocalVariablePredicateFinding(
                 column.TableQualifiedName, column.ColumnName, column.Indexed, column.Depth,
-                variableName, operatorText, sourcePath, node.StartLine, node.StartColumn));
+                variableName, operatorText, sourcePath, node.StartLine, node.StartColumn);
+            LocalVariablePredicateFindings.Add(finding);
+
+            if (operatorText == "="
+                && node is BooleanExpression comparison
+                && _whereEqualityScopes.TryPeek(out var scope)
+                && scope.TopLevelConjuncts.Contains(comparison))
+            {
+                scope.Equalities.Add((finding, column.TableQualifiedName, column.ColumnName));
+            }
         }
 
         private bool IsUniqueSingleColumnEquality(PredicateOperand.Column column, string operatorText) =>
