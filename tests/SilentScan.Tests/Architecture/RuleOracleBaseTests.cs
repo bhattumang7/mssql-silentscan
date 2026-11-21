@@ -47,7 +47,8 @@ public sealed class RuleOracleBaseTests
         IReadOnlyList<SilentCase> silent,
         IRuleVerifier? verifier = null,
         IReadOnlyList<Func<IFinding, IFinding>>? mutations = null,
-        IReadOnlyList<RuleCondition>? conditions = null) : RuleOracle
+        IReadOnlyList<RuleCondition>? conditions = null,
+        int? minimumLevel = null) : RuleOracle
     {
         protected override IReadOnlyList<OracleCase> FiringCases => firing;
 
@@ -56,6 +57,8 @@ public sealed class RuleOracleBaseTests
         protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations => mutations ?? Mutations;
 
         protected override IReadOnlyList<RuleCondition> Conditions => conditions ?? [];
+
+        protected override int? MinimumCompatibilityLevel => minimumLevel;
 
         protected override IReadOnlyList<EngineTarget> Targets { get; } =
         [
@@ -141,6 +144,43 @@ public sealed class RuleOracleBaseTests
 
     private static Task<XunitException> BadVerifierFailureAsync(IRuleVerifier verifier) =>
         Assert.ThrowsAnyAsync<XunitException>(() => new Probe([Firing], [Quiet], verifier).FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding());
+
+    [Fact]
+    public void RuleDeclaringAMinimumCompatibilityLevel_RunsOnlyOnTargetsThatReachIt()
+    {
+        var oracle = new Probe([Firing], [Quiet], minimumLevel: 170);
+
+        var labels = oracle.EffectiveTargets.Select(t => t.Label).ToList();
+
+        Assert.Equal(["localhost:14331 compatibility 170"], labels.Where(l => l.Contains("14331", StringComparison.Ordinal)));
+        Assert.DoesNotContain(labels, l => l.Contains("14330", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RuleDeclaringNoMinimum_RunsOnEveryTarget()
+    {
+        var oracle = new Probe([Firing], [Quiet]);
+
+        Assert.Equal(2, oracle.EffectiveTargets.Count);
+    }
+
+    [Fact]
+    public void RuleWhoseMinimumNoTargetReaches_FailsInsteadOfRunningNothing()
+    {
+        var oracle = new Probe([Firing], [Quiet], minimumLevel: 999);
+
+        var failure = Assert.ThrowsAny<XunitException>(() => oracle.EffectiveTargets);
+
+        Assert.Contains("no engine target", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CatalogMinimumLevel_IsStatedInThePublishedRationale()
+    {
+        var rule = new RuleDefinition("silentscan/test/version", "Some summary.", MinimumCompatibilityLevel: 170);
+
+        Assert.Contains("compatibility level 170", rule.Rationale, StringComparison.Ordinal);
+    }
 
     [Fact]
     public async Task WellFormedCases_Pass()

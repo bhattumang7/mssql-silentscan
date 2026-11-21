@@ -18,13 +18,16 @@ public sealed record RuleDefinition(
     string Summary,
     string? FixGuidance = null,
     IReadOnlyList<string>? ExampleFixturePaths = null,
-    IReadOnlyList<RuleCondition>? Conditions = null)
+    IReadOnlyList<RuleCondition>? Conditions = null,
+    int? MinimumCompatibilityLevel = null)
 {
     public IReadOnlyList<string> Examples => ExampleFixturePaths ?? [];
 
     public IReadOnlyList<RuleCondition> DeclaredConditions => Conditions ?? [];
 
-    public string Rationale => Compose(Summary, DeclaredConditions);
+    public string Rationale => Compose(Summary, DeclaredConditions) + (MinimumCompatibilityLevel is { } level
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" Applies only at database compatibility level {level} or higher.")
+        : string.Empty);
 
     private static string Compose(string summary, IReadOnlyList<RuleCondition> conditions)
     {

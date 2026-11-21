@@ -99,6 +99,20 @@ public abstract class RuleOracle
 
     protected virtual IReadOnlyList<EngineTarget> Targets => AllTargets;
 
+    protected virtual int? MinimumCompatibilityLevel =>
+        RuleCatalog.BaseRules.Single(rule => string.Equals(rule.Id, RuleId, StringComparison.Ordinal)).MinimumCompatibilityLevel;
+
+    public IReadOnlyList<EngineTarget> EffectiveTargets
+    {
+        get
+        {
+            var minimum = MinimumCompatibilityLevel ?? 0;
+            var reached = Targets.Where(t => (t.CompatibilityLevel ?? DefaultLevel(t.Options)) >= minimum).ToList();
+            Assert.True(reached.Count > 0, $"{RuleId} declares compatibility level {minimum} or higher, but no engine target reaches it.");
+            return reached;
+        }
+    }
+
     protected abstract IReadOnlyList<OracleCase> FiringCases { get; }
 
     protected abstract IReadOnlyList<SilentCase> SilentCases { get; }
@@ -147,7 +161,7 @@ public abstract class RuleOracle
         foreach (var oracleCase in cases)
         {
             var partners = SilentCases.Where(s => string.Equals(s.FiringPartner, oracleCase.Name, StringComparison.Ordinal)).Select(s => s.Case).ToList();
-            var perTarget = await Task.WhenAll(Targets.Select(target => FiringOnTargetAsync(oracleCase, partners, target, excluded)));
+            var perTarget = await Task.WhenAll(EffectiveTargets.Select(target => FiringOnTargetAsync(oracleCase, partners, target, excluded)));
             failures.AddRange(perTarget.SelectMany(f => f));
 
             executed++;
@@ -171,7 +185,7 @@ public abstract class RuleOracle
         foreach (var silentCase in cases)
         {
             var partner = FiringCases.Single(f => string.Equals(f.Name, silentCase.FiringPartner, StringComparison.Ordinal));
-            var perTarget = await Task.WhenAll(Targets.Select(target => SilentOnTargetAsync(silentCase, partner, target, excluded)));
+            var perTarget = await Task.WhenAll(EffectiveTargets.Select(target => SilentOnTargetAsync(silentCase, partner, target, excluded)));
             failures.AddRange(perTarget.SelectMany(r => r.Failures));
             refutedByPerturbation += perTarget.Sum(r => r.RefutedByPerturbation);
 
@@ -218,6 +232,8 @@ public abstract class RuleOracle
 
         return new SilentTargetResult(failures, refuted);
     }
+
+    private static int DefaultLevel(SqlServerOptions options) => options == SqlServerOptions.LocalDockerLatest ? 170 : 160;
 
     private static IEnumerable<EngineTarget> WithLevels(SqlServerOptions options, int[] extraLevels) =>
         new int?[] { null }.Concat(CommonCompatibilityLevels.Concat(extraLevels).Select(level => (int?)level)).Select(level => new EngineTarget(options, level));
