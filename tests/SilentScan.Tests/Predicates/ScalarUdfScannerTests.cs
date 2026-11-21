@@ -43,6 +43,28 @@ public sealed class ScalarUdfScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("DISABLE_TSQL_SCALAR_UDF_INLINING")]
+    [InlineData("QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_140")]
+    public void EngineInlineableFunctionWithInliningDisablingHint_StillFires(string hint)
+    {
+        var findings = ScanSql(
+            ComputeFunctionAndTable + $"SELECT Id FROM dbo.T WHERE dbo.fn_Compute(Id) = 1 OPTION (USE HINT('{hint}'));",
+            compatibilityLevel: 150, engineIsInlineable: true);
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public void EngineInlineableFunctionWithCompat150Hint_NeverFires()
+    {
+        var findings = ScanSql(
+            ComputeFunctionAndTable + "SELECT Id FROM dbo.T WHERE dbo.fn_Compute(Id) = 1 OPTION (USE HINT('QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_150'));",
+            compatibilityLevel: 150, engineIsInlineable: true);
+
+        Assert.Empty(findings);
+    }
+
     [Fact]
     public void EngineNonInlineableFunctionAtCompat150_StillFires()
     {

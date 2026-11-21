@@ -44,6 +44,35 @@ public static class ScalarUdfScanner
 
         private bool _scanForcingHintSeen;
 
+        private readonly List<(int Start, int End)> _inliningDisabledStatements = [];
+
+        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
+            RecordInliningHints(node, node.OptimizerHints);
+
+        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            RecordInliningHints(node, node.OptimizerHints);
+
+        private void RecordInliningHints(TSqlFragment statement, IList<OptimizerHint> hints)
+        {
+            if (hints.OfType<UseHintList>().SelectMany(list => list.Hints).Any(hint => DisablesInlining(hint.Value)))
+            {
+                _inliningDisabledStatements.Add((statement.StartOffset, statement.StartOffset + statement.FragmentLength));
+            }
+        }
+
+        private static bool DisablesInlining(string hint)
+        {
+            if (string.Equals(hint, "DISABLE_TSQL_SCALAR_UDF_INLINING", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            const string CompatPrefix = "QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_";
+            return hint.StartsWith(CompatPrefix, StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(hint.AsSpan(CompatPrefix.Length), out var level)
+                && level < 150;
+        }
+
         public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker)
         {
             if (node.TableHints.Any(hint => hint.HintKind is TableHintKind.ForceScan || hint is IndexTableHint))
@@ -289,7 +318,8 @@ public static class ScalarUdfScanner
             }
 
             var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel);
-            if (inlineability == ScalarUdfInlineability.Inlineable)
+            if (inlineability == ScalarUdfInlineability.Inlineable
+                && !_inliningDisabledStatements.Any(r => node.StartOffset >= r.Start && node.StartOffset < r.End))
             {
                 return;
             }
