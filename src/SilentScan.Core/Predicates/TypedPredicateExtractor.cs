@@ -926,7 +926,9 @@ public static class TypedPredicateExtractor
 
         private void TryAddLocalVariablePredicateFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
         {
-            if (HasActiveRecompileGuard || other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: false })
+            if (HasActiveRecompileGuard
+                || other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: false }
+                || IsUniqueSingleColumnEquality(column, operatorText))
             {
                 return;
             }
@@ -935,6 +937,16 @@ public static class TypedPredicateExtractor
                 column.TableQualifiedName, column.ColumnName, column.Indexed, column.Depth,
                 variableName, operatorText, sourcePath, node.StartLine, node.StartColumn));
         }
+
+        private bool IsUniqueSingleColumnEquality(PredicateOperand.Column column, string operatorText) =>
+            operatorText == "="
+            && catalog.Find(column.TableQualifiedName) is { } table
+            && table.Indexes.Any(index =>
+                index.IsUnique
+                && !index.IsFiltered
+                && !index.IsDisabled
+                && index.KeyColumns.Count == 1
+                && catalog.IdentifierComparer.Equals(index.KeyColumns[0], column.ColumnName));
 
         private void TryAddFilteredIndexParameterMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
         {

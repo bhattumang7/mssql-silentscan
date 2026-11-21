@@ -1811,6 +1811,36 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_UniqueKeyEqualityToDeclaredLocalVariable_NeverFiresLocalVariablePredicate()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL PRIMARY KEY, Code VARCHAR(20) NOT NULL);",
+            "DECLARE @v INT = 7; SELECT 1 FROM dbo.Customers WHERE Id = @v;");
+
+        Assert.Empty(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_CompositeKeyPartEqualityToDeclaredLocalVariable_StillFires()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Region INT NOT NULL, PRIMARY KEY (Id, Region));",
+            "DECLARE @v INT = 7; SELECT 1 FROM dbo.Customers WHERE Id = @v;");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_UniqueKeyRangeToDeclaredLocalVariable_StillFires()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL PRIMARY KEY, Code VARCHAR(20) NOT NULL);",
+            "DECLARE @v INT = 7; SELECT 1 FROM dbo.Customers WHERE Id > @v;");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
     public void Extract_ColumnComparedToFormalParameter_NeverFiresLocalVariablePredicate()
     {
         var result = ExtractAll(

@@ -15,6 +15,8 @@ public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
         GO
         CREATE INDEX IX_Customers_Region ON dbo.Customers(Region);
         GO
+        CREATE TABLE dbo.Keyed (Id INT NOT NULL PRIMARY KEY, Payload VARCHAR(20) NOT NULL);
+        GO
         """;
 
     public override async Task InitializeAsync()
@@ -35,7 +37,12 @@ public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
                    'Rare' + CAST(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS VARCHAR(10))
             FROM sys.all_objects a CROSS JOIN sys.all_objects b;
 
+            INSERT INTO dbo.Keyed (Id, Payload)
+            SELECT TOP (2000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 'x'
+            FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+
             UPDATE STATISTICS dbo.Customers WITH FULLSCAN;
+            UPDATE STATISTICS dbo.Keyed WITH FULLSCAN;
             """, connection);
         await seedCommand.ExecuteNonQueryAsync();
     }
@@ -58,6 +65,21 @@ public sealed class LocalVariablePredicateOracleTests : OracleTestFixture
         Assert.True(
             localVariableEstimate < literalEstimate / 2,
             $"expected the local-variable probe's estimate ({localVariableEstimate}) to diverge materially from the literal probe's ({literalEstimate}) - if they're close, the estimator premise this finding relies on no longer holds.");
+    }
+
+    [Fact]
+    public async Task UniqueKeyEquality_LocalVariableAndSniffedLiteralEstimateTheSameRow()
+    {
+        var capture = new PlanXmlCapture(Options);
+
+        var literalPlan = await capture.CaptureAsync(
+            DatabaseName, "SELECT Payload FROM dbo.Keyed WHERE Id = 7;");
+
+        var localVariablePlan = await capture.CaptureAsync(
+            DatabaseName, "DECLARE @p INT = 7; SELECT Payload FROM dbo.Keyed WHERE Id = @p;");
+
+        Assert.Equal(1d, ExtractEstimateRows(literalPlan));
+        Assert.Equal(1d, ExtractEstimateRows(localVariablePlan));
     }
 
     private static double ExtractEstimateRows(string planXml)
