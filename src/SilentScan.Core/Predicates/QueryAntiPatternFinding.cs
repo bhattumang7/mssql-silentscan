@@ -39,7 +39,9 @@ public sealed record QueryAntiPatternFinding(
     [property: JsonIgnore] int Column,
     string DetailText,
     FindingConfidence Confidence = FindingConfidence.Medium,
-    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<QueryAntiPatternFinding>, IFinding
+    SourceSpan? DynamicSqlCallSite = null,
+    [property: JsonIgnore] string? TableQualifiedName = null,
+    [property: JsonIgnore] string? IndexName = null) : IRelocatableFinding<QueryAntiPatternFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.QueryAntiPatternRuleId(Kind);
 

@@ -38,6 +38,8 @@ public enum Difference
     ResultChanged,
 
     NullAppeared,
+
+    FailureSuppressed,
 }
 
 public abstract record Touch;
@@ -187,8 +189,9 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return NotDecided("The rewrite left the statement as it was, so the condition was never removed.");
         }
 
-        var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, cancellationToken);
-        var control = await ObserveOnceAsync(connection, transaction, baselineStatement, cancellationToken);
+        var allowFailure = perturbation.Expected == Difference.FailureSuppressed;
+        var baseline = await ObserveOnceAsync(connection, transaction, baselineStatement, allowFailure, cancellationToken);
+        var control = await ObserveOnceAsync(connection, transaction, baselineStatement, allowFailure, cancellationToken);
         if (!baseline.SameAs(control))
         {
             return NotDecided("The statement returns different results on its own, with nothing changed, so a difference cannot be credited to the condition.");
@@ -204,17 +207,22 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return new EngineVerification(EngineVerdict.Refuted, $"The engine refused the condition the claim depends on: {ex.Message}", engineRefusal: true);
         }
 
-        if (changed <= 0 && perturbation.BaselineStatement is null)
+        if (changed == 0 && perturbation.BaselineStatement is null)
         {
             return NotDecided("The condition changed no rows, so nothing was put in place to observe.");
         }
 
-        var perturbed = await ObserveOnceAsync(connection, transaction, statement, cancellationToken);
+        var perturbed = await ObserveOnceAsync(connection, transaction, statement, allowFailure, cancellationToken);
         return Classify(perturbation.Expected, baseline, perturbed);
     }
 
     private static EngineVerification Classify(Difference expected, Observation baseline, Observation perturbed)
     {
+        if (expected == Difference.FailureSuppressed)
+        {
+            return ClassifyFailure(baseline, perturbed);
+        }
+
         if (expected is Difference.ResultEmptied or Difference.NullAppeared && baseline.IsEmpty)
         {
             return NotDecided("The statement returns nothing even before the condition, so there is nothing for the condition to act on.");
@@ -244,8 +252,22 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             : NotDecided("The condition changed the statement's result, but did not empty it as the claim describes.");
     }
 
+    private static EngineVerification ClassifyFailure(Observation baseline, Observation perturbed)
+    {
+        if (baseline.FailureNumber is null)
+        {
+            return perturbed.FailureNumber is null
+                ? new EngineVerification(EngineVerdict.Refuted, "The statement does not fail even without the condition, so nothing is being silently skipped.")
+                : NotDecided("The statement succeeds without the condition but fails with it, which is the opposite of what the claim describes.");
+        }
+
+        return perturbed.FailureNumber is null
+            ? new EngineVerification(EngineVerdict.Confirmed, string.Create(CultureInfo.InvariantCulture, $"Without the condition the statement fails with error {baseline.FailureNumber}; with it the statement succeeds silently."))
+            : new EngineVerification(EngineVerdict.Refuted, string.Create(CultureInfo.InvariantCulture, $"The statement still fails with error {perturbed.FailureNumber} when the condition is applied."));
+    }
+
     private static async Task<Observation> ObserveOnceAsync(
-        SqlConnection connection, SqlTransaction transaction, string statement, CancellationToken cancellationToken)
+        SqlConnection connection, SqlTransaction transaction, string statement, bool allowFailure, CancellationToken cancellationToken)
     {
         transaction.Save(StatementSavepoint);
         try
@@ -265,6 +287,10 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             while (await reader.NextResultAsync(cancellationToken));
 
             return new Observation(rows, reader.RecordsAffected);
+        }
+        catch (SqlException ex) when (allowFailure)
+        {
+            return new Observation([], -1, ex.Number);
         }
         finally
         {
@@ -344,14 +370,14 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private static EngineVerification NotDecided(string detail) => new(EngineVerdict.NotDecided, detail);
 
-    private sealed record Observation(List<string> Rows, int RecordsAffected)
+    private sealed record Observation(List<string> Rows, int RecordsAffected, int? FailureNumber = null)
     {
         public int NullCells => Rows.Sum(row => row.Split('|').Count(cell => string.Equals(cell, NullCell, StringComparison.Ordinal)));
 
         public bool IsEmpty => Rows.Count == 0 && RecordsAffected <= 0;
 
         public bool SameAs(Observation other) =>
-            RecordsAffected == other.RecordsAffected && Rows.SequenceEqual(other.Rows, StringComparer.Ordinal);
+            RecordsAffected == other.RecordsAffected && FailureNumber == other.FailureNumber && Rows.SequenceEqual(other.Rows, StringComparer.Ordinal);
     }
 }
 

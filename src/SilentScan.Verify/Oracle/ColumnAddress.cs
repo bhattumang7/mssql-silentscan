@@ -34,11 +34,8 @@ public sealed partial class ColumnAddress
             "[" + column + "]");
     }
 
-    public static async Task<int> ExecuteAsync(SqlConnection connection, SqlTransaction transaction, string sql, CancellationToken cancellationToken)
-    {
-        await using var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = 120 };
-        return await command.ExecuteNonQueryAsync(cancellationToken);
-    }
+    public static Task<int> ExecuteAsync(SqlConnection connection, SqlTransaction transaction, string sql, CancellationToken cancellationToken) =>
+        TableAddress.ExecuteAsync(connection, transaction, sql, cancellationToken);
 
     public bool NamesColumn(SqlException exception) =>
         exception.Number == NullIntoNotNullColumnError && exception.Message.Contains($"'{Column.Trim('[', ']')}'", StringComparison.OrdinalIgnoreCase);

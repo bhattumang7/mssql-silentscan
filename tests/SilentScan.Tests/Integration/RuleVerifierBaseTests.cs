@@ -23,6 +23,10 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         GO
         CREATE TABLE dbo.W (Short VARCHAR(3) NULL, Long VARCHAR(10) NOT NULL);
         GO
+        CREATE TABLE dbo.Keyed (K INT NOT NULL);
+        GO
+        CREATE UNIQUE INDEX IX_Keyed ON dbo.Keyed (K) WITH (IGNORE_DUP_KEY = ON);
+        GO
         INSERT INTO dbo.W (Short, Long) VALUES (NULL, 'abcdef');
         INSERT INTO dbo.T (V) VALUES (1), (2);
         INSERT INTO dbo.Other (V) VALUES (7);
@@ -199,6 +203,55 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
         var result = await VerifyAsync(Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;")), "EXEC sp_executesql N'SELECT V FROM dbo.T;';");
 
         Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    private static Perturbation Suppressing(string removeSql, string applySql) =>
+        new([new TouchedObject("dbo", "Keyed")], Difference.FailureSuppressed, Run(removeSql), Run(applySql), _ => false);
+
+    private const string RebuildOff = "ALTER INDEX IX_Keyed ON dbo.Keyed REBUILD WITH (IGNORE_DUP_KEY = OFF);";
+
+    private const string RebuildOn = "ALTER INDEX IX_Keyed ON dbo.Keyed REBUILD WITH (IGNORE_DUP_KEY = ON);";
+
+    private const string DuplicateInsert = "INSERT INTO dbo.Keyed (K) VALUES (1), (1), (2);";
+
+    [Fact]
+    public async Task StatementFailsWithoutTheConditionAndSucceedsWithIt_IsConfirmedWhenASuppressedFailureIsExpected()
+    {
+        var result = await VerifyAsync(Suppressing(RebuildOff, RebuildOn), DuplicateInsert);
+
+        Assert.Equal(EngineVerdict.Confirmed, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementFailsEvenWithTheCondition_IsRefutedWhenASuppressedFailureIsExpected()
+    {
+        var result = await VerifyAsync(Suppressing(RebuildOff, RebuildOff), DuplicateInsert);
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementSucceedsWithAndWithoutTheCondition_IsRefutedWhenASuppressedFailureIsExpected()
+    {
+        var result = await VerifyAsync(Suppressing(RebuildOff, RebuildOn), "INSERT INTO dbo.Keyed (K) VALUES (7);");
+
+        Assert.Equal(EngineVerdict.Refuted, result.Verdict);
+    }
+
+    [Fact]
+    public async Task StatementThatFailsOnlyAfterTheConditionIsApplied_IsNotDecided()
+    {
+        var result = await VerifyAsync(Suppressing(RebuildOn, RebuildOff), DuplicateInsert);
+
+        Assert.Equal(EngineVerdict.NotDecided, result.Verdict);
+    }
+
+    [Fact]
+    public async Task SchemaStepThatReportsNoRowCount_StillCountsAsHavingTakenEffect()
+    {
+        var result = await VerifyAsync(Suppressing(RebuildOff, RebuildOn), DuplicateInsert);
+
+        Assert.NotEqual(EngineVerdict.NotDecided, result.Verdict);
     }
 
     [Fact]

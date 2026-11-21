@@ -304,7 +304,9 @@ public static class QueryAntiPatternScanner
                     QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop, sourcePath,
                     node.StartLine, node.StartColumn,
                     $"Multi-row INSERT into '{qualifiedName}' - unique index '{hazardIndex.Name}' has IGNORE_DUP_KEY=ON, so a row whose key duplicates an existing (or an earlier row in this same batch's) value is silently skipped instead of raising an error.",
-                    FindingConfidence.High));
+                    FindingConfidence.High,
+                    TableQualifiedName: qualifiedName,
+                    IndexName: hazardIndex.Name));
             }
         }
 
