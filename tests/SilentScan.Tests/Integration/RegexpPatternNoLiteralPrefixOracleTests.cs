@@ -83,6 +83,9 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
     [InlineData("^ab[^x]c")]
     [InlineData("^a[^x]")]
     [InlineData("^abc[[]")]
+    [InlineData(@"^\e12")]
+    [InlineData(@"^\g12")]
+    [InlineData(@"^\y12")]
     [InlineData("^[[]bc")]
     public async Task VerifyAsync_AnchoredClassOrQuantifiedLiteral_IsNotConfirmed(string pattern)
     {
@@ -104,6 +107,9 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
     [InlineData("^[^a]")]
     [InlineData("^[^x]bc")]
     [InlineData("^ab[[:alpha:]]")]
+    [InlineData(@"^\t12")]
+    [InlineData(@"^\w12")]
+    [InlineData(@"^\Qab\E")]
     [InlineData("^[[:alpha:]]")]
     public async Task VerifyAsync_PatternWithoutASeekableLeadingRun_ConfirmsNoIndexSeek(string pattern)
     {

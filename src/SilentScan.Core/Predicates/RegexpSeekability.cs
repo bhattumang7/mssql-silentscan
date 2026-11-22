@@ -55,8 +55,10 @@ internal static class RegexpSeekability
         return false;
     }
 
+    private const string EscapesWithoutALiteralRange = "abdfnprstvwxzABCDEPQSW";
+
     private static bool IsUnsupportedEscape(char escaped) =>
-        escaped != 'Z' && char.IsAsciiLetterOrDigit(escaped);
+        EscapesWithoutALiteralRange.Contains(escaped, StringComparison.Ordinal);
 
     private static bool TrySkipClass(string pattern, ref int index, int precedingAtoms)
     {

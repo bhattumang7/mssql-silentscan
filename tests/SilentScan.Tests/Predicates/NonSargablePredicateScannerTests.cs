@@ -657,6 +657,9 @@ public sealed class NonSargablePredicateScannerTests
     [InlineData("^ab[^x]c")]
     [InlineData("^a[^x]")]
     [InlineData("^abc[[]")]
+    [InlineData(@"^\e12")]
+    [InlineData(@"^\g12")]
+    [InlineData(@"^\y12")]
     [InlineData("^[[]bc")]
     public void RegexpLikePattern_AnchoredClassOrQuantifiedLiteral_DoesNotFire(string pattern)
     {
@@ -677,6 +680,9 @@ public sealed class NonSargablePredicateScannerTests
     [InlineData("^a*")]
     [InlineData("^[^a]")]
     [InlineData("^[^x]bc")]
+    [InlineData(@"^\t12")]
+    [InlineData(@"^\w12")]
+    [InlineData(@"^\Qab\E")]
     [InlineData("^ab[[:alpha:]]")]
     public void RegexpLikePattern_NoSeekableLeadingRun_Fires(string pattern)
     {
