@@ -47,6 +47,7 @@ public static class BareTopNoOrderByScanner
 
         private bool CannotVaryByRowChoice(QuerySpecification node, TopRowFilter top) =>
             IsZero(top.Expression)
+            || node.FromClause is null
             || existsSubqueries.Contains(node)
             || node.SelectElements.All(IsLiteralSelectElement)
             || (node.GroupByClause is null && node.SelectElements.All(IsAggregateSelectElement));

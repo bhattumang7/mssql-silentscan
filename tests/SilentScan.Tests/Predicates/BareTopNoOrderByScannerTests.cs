@@ -28,6 +28,14 @@ public sealed class BareTopNoOrderByScannerTests
         Assert.Single(findings);
     }
 
+    [Theory]
+    [InlineData("DECLARE @x INT = 4; SELECT TOP (3) @x + 1;")]
+    [InlineData("SELECT TOP (2) SYSDATETIME();")]
+    public void TopOverASourceWithNoFromClause_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
     [Fact]
     public void TopWithOrderBy_NeverFires()
     {

@@ -20,6 +20,22 @@ public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
         """;
 
     [Fact]
+    public async Task TopOverNoFromClause_ReturnsOneRowWhateverTheTopValue()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new Microsoft.Data.SqlClient.SqlCommand("SELECT TOP (50) 1 + 1 AS Two;", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+
+        var rows = 0;
+        while (await reader.ReadAsync())
+        {
+            rows++;
+        }
+
+        Assert.Equal(1, rows);
+    }
+
+    [Fact]
     public async Task SameBareTopQueryText_ReturnsADifferentRowSetOnceASupportingIndexExists()
     {
         const string Query = "SELECT TOP (5) Id FROM dbo.Items WHERE Val = 3;";
