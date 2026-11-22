@@ -193,7 +193,6 @@ public static class FindingRuleIds
     public const string IndexDesignFilterColumnNotInIndexRuleId = "silentscan/index-design/filter-column-not-in-index";
     public const string IndexDesignFloatOrRealIndexKeyColumnRuleId = "silentscan/index-design/float-or-real-index-key-column";
     public const string IndexDesignNoRecomputeStatisticsRuleId = "silentscan/index-design/no-recompute-statistics";
-    public const string IndexDesignMonotonicClusteredKeyMissingSequentialOptimizationRuleId = "silentscan/index-design/monotonic-clustered-key-missing-sequential-optimization";
     public const string IndexDesignRowOrPageLockingDisabledRuleId = "silentscan/index-design/row-or-page-locking-disabled";
     public static string IndexDesignRuleId(IndexDesignFindingKind kind) => kind switch
     {
@@ -205,7 +204,6 @@ public static class FindingRuleIds
         IndexDesignFindingKind.FilterColumnNotInIndex => IndexDesignFilterColumnNotInIndexRuleId,
         IndexDesignFindingKind.FloatOrRealIndexKeyColumn => IndexDesignFloatOrRealIndexKeyColumnRuleId,
         IndexDesignFindingKind.NoRecomputeStatistics => IndexDesignNoRecomputeStatisticsRuleId,
-        IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization => IndexDesignMonotonicClusteredKeyMissingSequentialOptimizationRuleId,
         IndexDesignFindingKind.RowOrPageLockingDisabled => IndexDesignRowOrPageLockingDisabledRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };

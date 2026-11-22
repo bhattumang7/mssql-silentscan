@@ -41,7 +41,6 @@ public static class IndexDesignScanner
             ScanFilteredIndexColumnCoverage(table, catalog.CompatibilityLevel, catalog.IdentifierComparer, findings);
             ScanFloatOrRealIndexKeyColumns(table, catalog.IdentifierComparer, findings);
             ScanNoRecomputeStatistics(table, findings);
-            ScanMonotonicClusteredKeyMissingSequentialOptimization(table, catalog.IdentifierComparer, findings);
             ScanRowOrPageLockingDisabled(table, findings);
         }
 
@@ -417,30 +416,6 @@ public static class IndexDesignScanner
             table.SourcePath,
             table.SourceLine,
             Confidence: FindingConfidence.Medium)));
-
-    private static void ScanMonotonicClusteredKeyMissingSequentialOptimization(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        var clusteredIndex = table.Indexes.FirstOrDefault(i => i.IsClustered && !i.IsColumnstore && !i.IsDisabled);
-        if (clusteredIndex is null || clusteredIndex.KeyColumns.Count == 0 || clusteredIndex.OptimizeForSequentialKey)
-        {
-            return;
-        }
-
-        var leadingColumn = table.FindColumn(clusteredIndex.KeyColumns[0], identifierComparer);
-        if (leadingColumn is not { IsIdentity: true, IdentityIncrement: > 0 })
-        {
-            return;
-        }
-
-        findings.Add(new IndexDesignFinding(
-            IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization,
-            table.QualifiedName,
-            clusteredIndex.Name,
-            $"'{table.QualifiedName}' clustered index '{clusteredIndex.Name ?? UnnamedIndexPlaceholder}' leads on '{leadingColumn.Name}', an always-ascending IDENTITY column, with OPTIMIZE_FOR_SEQUENTIAL_KEY not enabled - every insert lands on the same trailing page, so concurrent inserts can serialize on that page's latch. Structural risk flag only: whether this actually causes contention depends on concurrent insert rate, which is workload data out of reach for this static pass.",
-            table.SourcePath,
-            table.SourceLine,
-            FindingConfidence.Medium));
-    }
 
     private static void ScanRowOrPageLockingDisabled(CatalogTable table, List<IndexDesignFinding> findings)
     {

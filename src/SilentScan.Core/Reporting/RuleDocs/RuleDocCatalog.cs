@@ -153,7 +153,6 @@ public static class RuleDocCatalog
         [IndexDesign.FilterColumnNotInIndex.RuleId] = IndexDesign.FilterColumnNotInIndex.Content,
         [IndexDesign.FloatOrRealIndexKeyColumn.RuleId] = IndexDesign.FloatOrRealIndexKeyColumn.Content,
         [IndexDesign.NoRecomputeStatistics.RuleId] = IndexDesign.NoRecomputeStatistics.Content,
-        [IndexDesign.MonotonicClusteredKeyMissingSequentialOptimization.RuleId] = IndexDesign.MonotonicClusteredKeyMissingSequentialOptimization.Content,
         [IndexDesign.RowOrPageLockingDisabled.RuleId] = IndexDesign.RowOrPageLockingDisabled.Content,
         [ForcedParameterization.LikePatternLiteral.RuleId] = ForcedParameterization.LikePatternLiteral.Content,
         [ForcedParameterization.TopOrPagingLiteral.RuleId] = ForcedParameterization.TopOrPagingLiteral.Content,

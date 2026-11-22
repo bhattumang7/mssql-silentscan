@@ -81,7 +81,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         CREATE TABLE dbo.PkClustered (Id INT NOT NULL, Pad VARCHAR(10), CONSTRAINT PK_PkClustered PRIMARY KEY CLUSTERED (Id));
         GO
         CREATE TABLE dbo.IdentityKey (Id INT IDENTITY(1,1) NOT NULL, Pad CHAR(500) NOT NULL DEFAULT 'x', CONSTRAINT PK_IdentityKey PRIMARY KEY CLUSTERED (Id));
-        CREATE TABLE dbo.SequentialKey (Id INT IDENTITY(1,1) NOT NULL, Pad CHAR(500) NOT NULL DEFAULT 'x', CONSTRAINT PK_SequentialKey PRIMARY KEY CLUSTERED (Id) WITH (OPTIMIZE_FOR_SEQUENTIAL_KEY = ON));
         CREATE TABLE dbo.GuidKey (Id UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(), Pad CHAR(500) NOT NULL DEFAULT 'x', CONSTRAINT PK_GuidKey PRIMARY KEY CLUSTERED (Id));
         DECLARE @i INT = 0;
         WHILE @i < 300
@@ -207,18 +206,6 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         Assert.True(forwarded > 0);
         Assert.Equal(0, clusteredForwarded);
         Assert.NotEqual(before, after);
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.IndexDesignMonotonicClusteredKeyMissingSequentialOptimizationRuleId)]
-    public async Task IdentityClusteredKey_AppendsInOrderWithoutSequentialOptimization_OptionControlIsFlagged()
-    {
-        var backwards = await ScalarAsync<int>("SELECT COUNT(*) FROM (SELECT p.page_id, LAG(p.page_id) OVER (ORDER BY Id) AS prev FROM dbo.IdentityKey CROSS APPLY sys.fn_PhysLocCracker(%%physloc%%) p) x WHERE prev > page_id;");
-        var flags = await RowsAsync("SELECT name, CAST(optimize_for_sequential_key AS INT) FROM sys.indexes WHERE name IN ('PK_IdentityKey', 'PK_SequentialKey');");
-
-        Assert.Equal(0, backwards);
-        Assert.Equal(0, flags.Single(r => (string)r[0]! == "PK_IdentityKey")[1]);
-        Assert.Equal(1, flags.Single(r => (string)r[0]! == "PK_SequentialKey")[1]);
     }
 
     [Fact]

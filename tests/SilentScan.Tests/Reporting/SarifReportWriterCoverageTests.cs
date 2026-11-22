@@ -593,7 +593,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization, "warning")]
     [InlineData(IndexDesignFindingKind.HeapWithNonclusteredIndexes, "error")]
     public void Write_IndexDesignFinding_MapsKindToItsOwnLevelBucket(IndexDesignFindingKind kind, string expectedLevel)
     {

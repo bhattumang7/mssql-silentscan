@@ -23,8 +23,6 @@ public enum IndexDesignFindingKind
     NoRecomputeStatistics,
 
 
-    MonotonicClusteredKeyMissingSequentialOptimization,
-
     RowOrPageLockingDisabled,
 }
 

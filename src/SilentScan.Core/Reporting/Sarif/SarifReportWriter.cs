@@ -944,12 +944,7 @@ public static class SarifReportWriter
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.IndexDesignRuleId(finding.Kind), finding.Confidence);
 
-        var baseLevel = finding.Kind switch
-        {
-            IndexDesignFindingKind.MonotonicClusteredKeyMissingSequentialOptimization => LevelWarning,
-            _ => LevelError,
-        };
-        var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
 
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: null);
     }
