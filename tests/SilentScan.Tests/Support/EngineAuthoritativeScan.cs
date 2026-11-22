@@ -103,7 +103,7 @@ public static class EngineAuthoritativeScan
     private static bool IsNonDdlStatement(TSqlStatement statement)
     {
         if (statement is PredicateSetStatement { Options: var options }
-            && (options & (SetOptions.AnsiNulls | SetOptions.QuotedIdentifier)) != 0)
+            && (options & (SetOptions.AnsiNulls | SetOptions.QuotedIdentifier | SetOptions.AnsiPadding)) != 0)
         {
             return false;
         }
