@@ -11,6 +11,9 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
 
     protected override string Ddl => """
         CREATE TABLE dbo.Inventory (Sku VARCHAR(20) NOT NULL PRIMARY KEY, Quantity INT NOT NULL);
+        CREATE TABLE dbo.KeyedTarget (K INT NOT NULL PRIMARY KEY, V INT NOT NULL);
+        CREATE TABLE dbo.HeapTarget (K INT NOT NULL, V INT NOT NULL);
+        CREATE TABLE dbo.HeapTargetLocked (K INT NOT NULL, V INT NOT NULL);
         GO
         """;
 
@@ -71,5 +74,66 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
     public async Task ExistenceCheckWithHoldlock_KeepsItsKeyLockGrantedUntilTheTransactionCommits()
     {
         Assert.True(await KeyLockStillHeldMidTransactionAsync(targetHint: "WITH (HOLDLOCK)"));
+    }
+
+    private async Task<(int DuplicateKeys, int Errors)> RaceAsync(string table, string hint)
+    {
+        const int Sessions = 6;
+        const int Keys = 300;
+        var errors = 0;
+        var barriers = Enumerable.Range(0, Keys).Select(_ => new Barrier(Sessions)).ToArray();
+
+        await Task.WhenAll(Enumerable.Range(0, Sessions).Select(_ => Task.Run(async () =>
+        {
+            await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+            await connection.OpenAsync();
+            for (var key = 0; key < Keys; key++)
+            {
+                barriers[key].SignalAndWait();
+                await using var command = new SqlCommand(
+                    $"MERGE dbo.{table} {hint} AS t USING (VALUES (@k, 1)) AS s (K, V) ON t.K = s.K WHEN NOT MATCHED THEN INSERT (K, V) VALUES (s.K, s.V);",
+                    connection);
+                command.Parameters.AddWithValue("@k", key);
+                try
+                {
+                    await command.ExecuteNonQueryAsync();
+                }
+                catch (SqlException)
+                {
+                    Interlocked.Increment(ref errors);
+                }
+            }
+        })));
+
+        await using var verify = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await verify.OpenAsync();
+        await using var count = new SqlCommand($"SELECT COUNT(*) FROM (SELECT K FROM dbo.{table} GROUP BY K HAVING COUNT(*) > 1) d;", verify);
+        return ((int)(await count.ExecuteScalarAsync())!, errors);
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithoutHoldlock_OnAHeapTarget_SilentlyInsertsDuplicateKeys()
+    {
+        var (duplicateKeys, errors) = await RaceAsync("HeapTarget", string.Empty);
+
+        Assert.True(duplicateKeys > 0, $"duplicate keys {duplicateKeys}, errors {errors}");
+        Assert.Equal(0, errors);
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithHoldlock_OnAHeapTarget_InsertsNoDuplicateKeys()
+    {
+        var (duplicateKeys, _) = await RaceAsync("HeapTargetLocked", "WITH (HOLDLOCK)");
+
+        Assert.Equal(0, duplicateKeys);
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithoutHoldlock_OnAKeyedTarget_FailsLoudlyInsteadOfDuplicating()
+    {
+        var (duplicateKeys, errors) = await RaceAsync("KeyedTarget", string.Empty);
+
+        Assert.Equal(0, duplicateKeys);
+        Assert.True(errors > 0);
     }
 }

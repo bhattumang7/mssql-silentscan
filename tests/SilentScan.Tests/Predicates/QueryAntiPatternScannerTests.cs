@@ -11,7 +11,8 @@ public sealed class QueryAntiPatternScannerTests
         + "CREATE TABLE dbo.A (Id INT NOT NULL PRIMARY KEY);"
         + "CREATE TABLE dbo.B (Id INT NOT NULL PRIMARY KEY, AId INT NOT NULL);"
         + "CREATE UNIQUE INDEX UX_B_AId ON dbo.B(AId);"
-        + "CREATE TABLE dbo.C (Id INT NOT NULL PRIMARY KEY, AId INT NOT NULL);";
+        + "CREATE TABLE dbo.C (Id INT NOT NULL PRIMARY KEY, AId INT NOT NULL);"
+        + "CREATE TABLE dbo.H (Id INT NOT NULL, V INT NULL);";
 
     private static IReadOnlyList<QueryAntiPatternFinding> Scan(string sql, int? compatibilityLevel = null)
     {
@@ -498,8 +499,8 @@ public sealed class QueryAntiPatternScannerTests
     public void MergeTargetWithNoHoldlockHint_Fires()
     {
         var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
+            "MERGE dbo.H AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.V = 1 "
             + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
 
         var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
@@ -507,10 +508,40 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void MergeMatchingOnTheFullPrimaryKey_NeverFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "MERGE dbo.A AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
+    public void MergeMatchingOnAColumnThatIsNotAUniqueKey_FiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "MERGE dbo.H AS t USING dbo.B AS s ON t.V = s.AId "
+            + "WHEN NOT MATCHED THEN INSERT (Id, V) VALUES (s.AId, s.AId);");
+
+        Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
+    public void MergeWithAnUnqualifiedMatchColumn_NeverFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "MERGE dbo.H AS t USING dbo.B AS s ON Id = s.AId "
+            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
     public void MergeTargetWithHoldlockHint_NeverFires()
     {
         var findings = Scan(
-            "MERGE dbo.A WITH (HOLDLOCK) AS t USING dbo.B AS s ON t.Id = s.AId "
+            "MERGE dbo.H WITH (HOLDLOCK) AS t USING dbo.B AS s ON t.Id = s.AId "
             + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id "
             + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
 
@@ -521,8 +552,8 @@ public sealed class QueryAntiPatternScannerTests
     public void MergeWithoutAnInsertBranch_NeverFiresMissingHoldlock()
     {
         var findings = Scan(
-            "MERGE dbo.A AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN UPDATE SET t.Id = t.Id;");
+            "MERGE dbo.H AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.V = 1;");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
     }
@@ -542,7 +573,8 @@ public sealed class QueryAntiPatternScannerTests
     public void MergeTargetIsGlobalTemporaryTable_StillFiresMissingHoldlock()
     {
         var findings = Scan(
-            "MERGE ##t AS t USING dbo.B AS s ON t.Id = s.AId "
+            "CREATE TABLE ##t (Id INT NOT NULL, AId INT NOT NULL); "
+            + "MERGE ##t AS t USING dbo.B AS s ON t.Id = s.AId "
             + "WHEN NOT MATCHED THEN INSERT (Id, AId) VALUES (s.AId, s.AId);");
 
         Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);

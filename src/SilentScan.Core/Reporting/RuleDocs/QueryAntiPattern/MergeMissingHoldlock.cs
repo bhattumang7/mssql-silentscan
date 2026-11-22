@@ -22,10 +22,11 @@ internal static class MergeMissingHoldlock
             target, finds nothing, and prepares to insert. Session B runs the same MERGE targeting
             key 42 at nearly the same moment: it also checks the target, also finds nothing (A
             hasn't committed yet), and also prepares to insert. Both sessions now insert a row with
-            key 42. If key 42 is protected by a primary key or unique constraint, one of the two
-            inserts fails with a primary-key violation at the moment it commits - not because the
-            logic was wrong, but because the existence check and the insert weren't executed as one
-            atomic, isolated unit against concurrent access.
+            key 42. Oracle-confirmed: on a target with no unique index on the matched columns,
+            both inserts succeed with no error and the table silently holds two rows for the same
+            key. On a target whose matched columns are a primary key or unique index, one insert
+            fails loudly with a duplicate-key error instead, so this rule does not report that
+            case.
 
             This is exactly the kind of race READ COMMITTED is not designed to prevent: it
             guarantees each individual read sees only committed data, but says nothing about two
@@ -55,7 +56,9 @@ internal static class MergeMissingHoldlock
             new RuleDocExample(
                 Title: "A MERGE upsert with no concurrency protection on the target",
                 NoncompliantSql: """
-                    CREATE TABLE dbo.Inventory (Sku VARCHAR(20) NOT NULL PRIMARY KEY, Quantity INT NOT NULL);
+                    CREATE TABLE dbo.Inventory (Sku VARCHAR(20) NOT NULL, Quantity INT NOT NULL);
+
+                    GO
 
                     MERGE dbo.Inventory AS target
                     USING (SELECT '42' AS Sku, 10 AS Quantity) AS source
@@ -65,7 +68,7 @@ internal static class MergeMissingHoldlock
                     WHEN NOT MATCHED THEN
                         INSERT (Sku, Quantity) VALUES (source.Sku, source.Quantity);
                     """,
-                NoncompliantExplanation: "Under READ COMMITTED, two sessions running this same MERGE for Sku '42' at nearly the same time can each see no existing row, both take WHEN NOT MATCHED, and one of the two concurrent inserts fails on the PRIMARY KEY constraint.",
+                NoncompliantExplanation: "Under READ COMMITTED, two sessions running this same MERGE for Sku '42' at nearly the same time can each see no existing row, both take WHEN NOT MATCHED, and both insert it, leaving two rows for one key because nothing unique rejects the second.",
                 CompliantSql: """
                     MERGE dbo.Inventory WITH (HOLDLOCK) AS target
                     USING (SELECT '42' AS Sku, 10 AS Quantity) AS source

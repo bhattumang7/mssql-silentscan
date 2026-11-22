@@ -397,11 +397,67 @@ public static class QueryAntiPatternScanner
                 return;
             }
 
+            if (!MatchKeyIsNotEnforcedUnique(spec, targetRef))
+            {
+                return;
+            }
+
             Findings.Add(new QueryAntiPatternFinding(
                 QueryAntiPatternFindingKind.MergeMissingHoldlock, sourcePath,
                 spec.StartLine, spec.StartColumn,
-                "MERGE target carries no WITH (HOLDLOCK)/SERIALIZABLE hint - two concurrent sessions can both take the WHEN NOT MATCHED branch under READ COMMITTED and race a primary-key violation.",
+                "MERGE target carries no WITH (HOLDLOCK)/SERIALIZABLE hint - two concurrent sessions can both take the WHEN NOT MATCHED branch under READ COMMITTED and both insert the same key, because no unique index on the matched columns rejects the second row.",
                 FindingConfidence.Medium));
+        }
+
+        private bool MatchKeyIsNotEnforcedUnique(MergeSpecification spec, NamedTableReference targetRef)
+        {
+            if (catalog.Find(SchemaObjectNameHelper.Qualify(targetRef.SchemaObject)) is not { } table)
+            {
+                return false;
+            }
+
+            var targetNames = new List<string> { targetRef.SchemaObject.BaseIdentifier.Value };
+            if (spec.TableAlias is { } alias)
+            {
+                targetNames.Add(alias.Value);
+            }
+
+            var matchedColumns = new HashSet<string>(catalog.IdentifierComparer);
+            var collector = new MatchColumnCollector(targetNames, catalog.IdentifierComparer, matchedColumns);
+            spec.SearchCondition.Accept(collector);
+            if (collector.HasUnqualifiedColumn)
+            {
+                return false;
+            }
+
+            return !table.Indexes.Any(index =>
+                index.IsUnique && !index.IsFiltered && !index.IsDisabled && index.KeyColumns.Count > 0
+                && index.KeyColumns.All(matchedColumns.Contains));
+        }
+
+        private sealed class MatchColumnCollector(List<string> targetNames, StringComparer comparer, HashSet<string> matchedColumns) : TSqlFragmentVisitor
+        {
+            public bool HasUnqualifiedColumn { get; private set; }
+
+            public override void ExplicitVisit(ColumnReferenceExpression node)
+            {
+                var identifiers = node.MultiPartIdentifier?.Identifiers;
+                if (identifiers is null || identifiers.Count == 0)
+                {
+                    return;
+                }
+
+                if (identifiers.Count == 1)
+                {
+                    HasUnqualifiedColumn = true;
+                    return;
+                }
+
+                if (targetNames.Contains(identifiers[^2].Value, comparer))
+                {
+                    matchedColumns.Add(identifiers[^1].Value);
+                }
+            }
         }
 
         private void InspectMergeUnconditionalDelete(MergeSpecification spec)
