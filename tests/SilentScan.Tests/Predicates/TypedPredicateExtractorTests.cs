@@ -43,6 +43,20 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_ScanForcedFinding_ExposesFlatTableColumnTypeAndOperandText()
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY, Code VARCHAR(20) NOT NULL);",
+            "SELECT Id FROM dbo.T WHERE Code = N'x';");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("dbo.T", finding.TableQualifiedName);
+        Assert.Equal("Code", finding.ColumnName);
+        Assert.StartsWith("VarChar(20)", finding.ColumnTypeText, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("N'x'", finding.OtherOperandText);
+    }
+
+    [Fact]
     public void Extract_ConvertedColumn_IsReportedAtHighConfidenceWhetherOrNotItLeadsAnIndex()
     {
         var findings = Extract(

@@ -24,6 +24,18 @@ public sealed record TypedPredicateFinding(
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);
     int IRelocatableFinding.PositionColumn => ColumnPosition;
 
+    [JsonIgnore]
+    public string TableQualifiedName => Column.TableQualifiedName;
+
+    [JsonIgnore]
+    public string ColumnName => Column.ColumnName;
+
+    [JsonIgnore]
+    public string? ColumnTypeText => Column.Type?.ToString();
+
+    [JsonIgnore]
+    public string? OtherOperandText => OtherOperand is PredicateOperand.Value value ? value.LiteralText ?? value.VariableName : null;
+
     TypedPredicateFinding IRelocatableFinding<TypedPredicateFinding>.Relocated(SourceSpan span, SourceSpan? callSite, FindingConfidence confidence) =>
         this with { SourcePath = span.SourcePath, Line = span.Line, ColumnPosition = span.Column, DynamicSqlCallSite = callSite, Confidence = confidence };
 }
