@@ -23,10 +23,7 @@ public sealed class TableVariableLowCompatEstimatePairedOracleTests : RuleOracle
 
     private const string Statement = "EXEC dbo.P;";
 
-    private static readonly IReadOnlyList<EngineTarget> BelowDeferredCompilation =
-        [.. new[] { 110, 120, 130, 140 }.Select(level => new EngineTarget(SqlServerOptions.LocalDocker, level))];
-
-    protected override IReadOnlyList<EngineTarget> Targets => BelowDeferredCompilation;
+    protected override int? MaximumCompatibilityLevel => 140;
 
     protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations { get; } =
     [

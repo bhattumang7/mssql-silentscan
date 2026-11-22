@@ -109,12 +109,15 @@ public abstract class RuleOracle
     protected virtual int? MinimumCompatibilityLevel =>
         RuleCatalog.BaseRules.Single(rule => string.Equals(rule.Id, RuleId, StringComparison.Ordinal)).MinimumCompatibilityLevel;
 
+    protected virtual int? MaximumCompatibilityLevel => null;
+
     public IReadOnlyList<EngineTarget> EffectiveTargets
     {
         get
         {
             var minimum = MinimumCompatibilityLevel ?? 0;
-            var reached = Targets.Where(t => (t.CompatibilityLevel ?? DefaultLevel(t.Options)) >= minimum).ToList();
+            var maximum = MaximumCompatibilityLevel ?? int.MaxValue;
+            var reached = Targets.Where(t => (t.CompatibilityLevel ?? DefaultLevel(t.Options)) is var level && level >= minimum && level <= maximum).ToList();
             Assert.True(reached.Count > 0, $"{RuleId} declares compatibility level {minimum} or higher, but no engine target reaches it.");
             return reached;
         }

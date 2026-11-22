@@ -26,10 +26,7 @@ public sealed class CatchAllPredicatePairedOracleTests : RuleOracle
 
     private const string Statement = "EXEC dbo.P @p = 5;";
 
-    private static readonly IReadOnlyList<EngineTarget> BelowOptionalParameterOptimization =
-        [.. new[] { 110, 120, 130, 140, 150, 160 }.Select(level => new EngineTarget(SqlServerOptions.LocalDocker, level))];
-
-    protected override IReadOnlyList<EngineTarget> Targets => BelowOptionalParameterOptimization;
+    protected override int? MaximumCompatibilityLevel => 160;
 
     protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations { get; } =
     [
