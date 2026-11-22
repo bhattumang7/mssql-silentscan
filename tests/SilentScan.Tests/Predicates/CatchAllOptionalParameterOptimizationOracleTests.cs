@@ -69,6 +69,23 @@ public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLif
     }
 
     [Fact]
+    public async Task DisablingTheDatabaseScopedOptimization_MakesCompat170ScanLikeTheOlderLevels()
+    {
+        var enabled = await LogicalReadsAsync(170, "EXEC dbo.FindByA @p = 7;");
+
+        await using (var connection = new SqlConnection(Options.BuildConnectionString(_databaseName)))
+        {
+            await connection.OpenAsync();
+            await using var off = new SqlCommand("ALTER DATABASE SCOPED CONFIGURATION SET OPTIONAL_PARAMETER_OPTIMIZATION = OFF;", connection);
+            await off.ExecuteNonQueryAsync();
+        }
+
+        var disabled = await LogicalReadsAsync(170, "EXEC dbo.FindByA @p = 7;");
+
+        Assert.True(disabled > enabled * 5, $"optimization on read {enabled} pages, off read {disabled}");
+    }
+
+    [Fact]
     public async Task SelectiveCallOnAProcedureParameter_ScansAtCompat150_ButSeeksAtCompat170()
     {
         var before = await LogicalReadsAsync(150, "EXEC dbo.FindByA @p = 7;");

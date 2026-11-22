@@ -450,6 +450,8 @@ public sealed class DatabaseCatalog
 
     public int? CompatibilityLevel { get; set; }
 
+    public bool IsOptionalParameterOptimizationDisabled { get; set; }
+
     public int? EngineMajorVersion { get; set; }
 
 

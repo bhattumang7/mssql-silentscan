@@ -40,7 +40,7 @@ public static class CatchAllPredicateScanner
 
         private bool _statementHasOptionRecompile;
 
-        private bool OptionalParameterOptimizationApplies => catalog.CompatibilityLevel >= 170;
+        private bool OptionalParameterOptimizationApplies => catalog.CompatibilityLevel >= 170 && !catalog.IsOptionalParameterOptimizationDisabled;
 
         private bool HasActiveRecompileGuard => _procedureHasWithRecompile || _statementHasOptionRecompile;
 

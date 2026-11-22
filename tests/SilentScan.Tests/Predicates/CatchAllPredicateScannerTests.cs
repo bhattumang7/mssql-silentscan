@@ -13,13 +13,14 @@ public sealed class CatchAllPredicateScannerTests
         return ScanWithDdl(ddl, sql, compatibilityLevel);
     }
 
-    private static IReadOnlyList<CatchAllPredicateFinding> ScanWithDdl(string ddl, string sql, int? compatibilityLevel = null)
+    private static IReadOnlyList<CatchAllPredicateFinding> ScanWithDdl(string ddl, string sql, int? compatibilityLevel = null, bool optionalParameterOptimizationDisabled = false)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{ddl}\nGO\n{sql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
+        catalog.IsOptionalParameterOptimizationDisabled = optionalParameterOptimizationDisabled;
         return CatchAllPredicateScanner.Scan(result, catalog);
     }
 
@@ -49,6 +50,14 @@ public sealed class CatchAllPredicateScannerTests
     public void SelectAtACompatibilityLevelWithOptionalParameterOptimization_NeverFires(int compatibilityLevel)
     {
         Assert.Empty(Scan(SelectProcedure, compatibilityLevel));
+    }
+
+    [Fact]
+    public void SelectAtCompatibilityLevel170WithTheDatabaseScopedOptimizationDisabled_StillFires()
+    {
+        var ddl = "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code));";
+
+        Assert.Single(ScanWithDdl(ddl, SelectProcedure, 170, optionalParameterOptimizationDisabled: true));
     }
 
     [Theory]
