@@ -18,7 +18,7 @@ public sealed record OracleCase(string Name, string Setup, string Statement, str
     public string Entry => Proves ?? Name;
 }
 
-public sealed record SilentCase(OracleCase Case, string FiringPartner, Func<IFinding, IFinding>? Differing = null);
+public sealed record SilentCase(OracleCase Case, string FiringPartner, Func<IFinding, IFinding>? Differing = null, bool OwnSetup = false);
 
 public sealed record EngineTarget(SqlServerOptions Options, int? CompatibilityLevel)
 {
@@ -167,7 +167,7 @@ public abstract class RuleOracle
         var executed = 0;
         foreach (var oracleCase in cases)
         {
-            var partners = SilentCases.Where(s => string.Equals(s.FiringPartner, oracleCase.Name, StringComparison.Ordinal)).Select(s => s.Case).ToList();
+            var partners = SilentCases.Where(s => !s.OwnSetup && string.Equals(s.FiringPartner, oracleCase.Name, StringComparison.Ordinal)).Select(s => s.Case).ToList();
             var perTarget = await Task.WhenAll(EffectiveTargets.Select(target => FiringOnTargetAsync(oracleCase, partners, target, excluded)));
             failures.AddRange(perTarget.SelectMany(f => f));
 
@@ -290,7 +290,7 @@ public abstract class RuleOracle
             var partner = firing.FirstOrDefault(f => string.Equals(f.Name, silentCase.FiringPartner, StringComparison.Ordinal));
             Assert.True(partner is not null, $"[{silentCase.Case.Name}] names firing partner '{silentCase.FiringPartner}', which does not exist.");
             Assert.True(
-                string.Equals(partner!.Setup, silentCase.Case.Setup, StringComparison.Ordinal),
+                silentCase.OwnSetup || string.Equals(partner!.Setup, silentCase.Case.Setup, StringComparison.Ordinal),
                 $"[{silentCase.Case.Name}] must share its setup with firing partner '{silentCase.FiringPartner}' so the pair differs only in the statement.");
         }
     }
@@ -397,7 +397,7 @@ public abstract class RuleOracle
         using var document = JsonDocument.Parse(SarifReportWriter.Write(report));
         var ruleId = RuleId;
         return document.RootElement.GetProperty("runs")[0].GetProperty("results").EnumerateArray()
-            .Any(result => string.Equals(result.GetProperty("ruleId").GetString(), ruleId, StringComparison.Ordinal));
+            .Any(result => SarifRuleCatalog.BaseRuleId(result.GetProperty("ruleId").GetString()!) == ruleId);
     }
 
     private static async Task<List<List<EngineVerification>>> VerifyAgainstEngineAsync(

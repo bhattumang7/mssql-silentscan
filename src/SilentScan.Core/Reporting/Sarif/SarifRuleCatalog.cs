@@ -132,6 +132,19 @@ public static class SarifRuleCatalog
         _ => throw new ArgumentOutOfRangeException(nameof(confidence), confidence, "Unhandled FindingConfidence."),
     };
 
+    public static string BaseRuleId(string ruleId)
+    {
+        foreach (var suffix in new[] { "/medium-confidence", "/low-confidence" })
+        {
+            if (ruleId.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return ruleId[..^suffix.Length];
+            }
+        }
+
+        return ruleId;
+    }
+
     public static IReadOnlyList<SarifRule> AllRules { get; } = BuildAllRules();
 
     private static IReadOnlyList<SarifRule> BuildAllRules()
