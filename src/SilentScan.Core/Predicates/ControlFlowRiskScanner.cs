@@ -318,7 +318,8 @@ public static class ControlFlowRiskScanner
             {
                 if (FoundFunctionName is null
                     && node.FunctionName?.Value is { } name
-                    && NonDeterministicFunctionNames.Contains(name))
+                    && NonDeterministicFunctionNames.Contains(name)
+                    && !(name.Equals("RAND", StringComparison.OrdinalIgnoreCase) && node.Parameters.Count > 0))
                 {
                     FoundFunctionName = name.ToUpperInvariant();
                 }

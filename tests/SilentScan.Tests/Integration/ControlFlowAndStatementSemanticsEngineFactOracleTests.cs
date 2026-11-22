@@ -102,6 +102,15 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
+    [Trait("Rule", FindingRuleIds.ControlFlowRiskNonDeterministicCaseInputRuleId)]
+    public async Task SimpleCaseOverSeededRand_ReSeedsPerWhen_SoItMatchesLikeADeterministicInput_WhileUnseededRandDoesNot()
+    {
+        Assert.Equal("matched", await ScalarAsync<string>("DECLARE @v FLOAT = RAND(5); SELECT CASE RAND(5) WHEN @v THEN 'matched' ELSE 'no' END;"));
+        Assert.Equal("equal", await ScalarAsync<string>("SELECT CASE WHEN RAND(5) = RAND(5) THEN 'equal' ELSE 'differ' END;"));
+        Assert.Equal("differ", await ScalarAsync<string>("SELECT CASE WHEN RAND() = RAND() THEN 'equal' ELSE 'differ' END;"));
+    }
+
+    [Fact]
     [Trait("Rule", FindingRuleIds.ControlFlowRiskLegacyIdentityIntrinsicRuleId)]
     public async Task AtAtIdentityReturnsTriggerScopeValue_ScopeIdentityReturnsOwnScopeValue()
     {

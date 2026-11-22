@@ -272,6 +272,21 @@ public sealed class ControlFlowRiskScannerTests
         Assert.Contains(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
     }
 
+    [Theory]
+    [InlineData("RAND(5)")]
+    [InlineData("RAND(@seed)")]
+    public void SeededRandAsSimpleCaseInput_NeverFires(string input)
+    {
+        var findings = Scan($"""
+            CREATE PROCEDURE dbo.P @seed INT AS
+            BEGIN
+                SELECT CASE {input} WHEN 0.5 THEN 'a' WHEN 0.7 THEN 'b' ELSE 'c' END;
+            END
+            """);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
+    }
+
     [Fact]
     public void CryptGenRandomAsSimpleCaseInput_Fires()
     {
