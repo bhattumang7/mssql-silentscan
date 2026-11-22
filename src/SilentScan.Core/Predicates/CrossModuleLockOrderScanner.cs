@@ -9,7 +9,7 @@ namespace SilentScan.Core.Predicates;
 public static class CrossModuleLockOrderScanner
 {
     internal sealed record ProcedureWriteOrder(
-        string ProcedureQualifiedName, string SourcePath, int ProcedureLine, IReadOnlyList<(string TableQualifiedName, int Line)> Writes);
+        string ProcedureQualifiedName, string SourcePath, int ProcedureLine, IReadOnlyList<(string TableQualifiedName, int Line)> Writes, bool TakesApplock = false);
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
@@ -33,6 +33,11 @@ public static class CrossModuleLockOrderScanner
                 if (catalog.IdentifierComparer.Equals(procedures[i].ProcedureQualifiedName, procedures[j].ProcedureQualifiedName))
                 {
 
+                    continue;
+                }
+
+                if (procedures[i].TakesApplock && procedures[j].TakesApplock)
+                {
                     continue;
                 }
 
@@ -104,6 +109,8 @@ public static class CrossModuleLockOrderScanner
 
         private string? _procedureQualifiedName;
         private int _procedureLine;
+        private int _procedureFirstOrdering;
+        private bool _procedureTakesApplock;
         private int _openTransactionDepth;
         private List<(string TableQualifiedName, int Line)>? _currentTransactionWrites;
         private Dictionary<string, int>? _savepointMarks;
@@ -197,10 +204,22 @@ public static class CrossModuleLockOrderScanner
             return name?.Value is { } value && _savepointMarks is { } marks && marks.TryGetValue(value, out mark);
         }
 
+        public void OnEnterExecuteStatement(ExecuteStatement node, ModuleWalker walker)
+        {
+            if (_procedureQualifiedName is not null
+                && node.ExecuteSpecification.ExecutableEntity is ExecutableProcedureReference { ProcedureReference.ProcedureReference.Name.BaseIdentifier.Value: { } name }
+                && name.Equals("sp_getapplock", StringComparison.OrdinalIgnoreCase))
+            {
+                _procedureTakesApplock = true;
+            }
+        }
+
         private void EnterProcedure(string qualifiedName, int line)
         {
             _procedureQualifiedName = qualifiedName;
             _procedureLine = line;
+            _procedureFirstOrdering = Orderings.Count;
+            _procedureTakesApplock = false;
             _openTransactionDepth = 0;
             _currentTransactionWrites = null;
             _savepointMarks = null;
@@ -209,6 +228,14 @@ public static class CrossModuleLockOrderScanner
         private void LeaveProcedure()
         {
             FinalizeCurrentTransaction();
+            if (_procedureTakesApplock)
+            {
+                for (var i = _procedureFirstOrdering; i < Orderings.Count; i++)
+                {
+                    Orderings[i] = Orderings[i] with { TakesApplock = true };
+                }
+            }
+
             _procedureQualifiedName = null;
             _openTransactionDepth = 0;
             _savepointMarks = null;

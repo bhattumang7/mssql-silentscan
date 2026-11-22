@@ -69,6 +69,29 @@ public sealed class CrossModuleLockOrderScannerTransactionScopeOracleTests : Ora
         await new SqlCommand("COMMIT;", work).ExecuteNonQueryAsync();
     }
 
+    [Fact]
+    public async Task OppositeOrderWrites_SerializedByASharedApplock_SecondSessionIsExcludedUntilTheFirstCommits()
+    {
+        await using var first = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await first.OpenAsync();
+        await using var second = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await second.OpenAsync();
+
+        const string takeLock = "DECLARE @r INT; EXEC @r = sp_getapplock @Resource = 'order', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 0; SELECT @r;";
+
+        await new SqlCommand("BEGIN TRAN;", first).ExecuteNonQueryAsync();
+        Assert.True((int)(await new SqlCommand(takeLock, first).ExecuteScalarAsync())! >= 0);
+        await new SqlCommand("UPDATE dbo.T1 SET Id = Id;", first).ExecuteNonQueryAsync();
+
+        await new SqlCommand("BEGIN TRAN;", second).ExecuteNonQueryAsync();
+        Assert.True((int)(await new SqlCommand(takeLock, second).ExecuteScalarAsync())! < 0);
+
+        await new SqlCommand("UPDATE dbo.T2 SET Id = Id; COMMIT;", first).ExecuteNonQueryAsync();
+
+        Assert.True((int)(await new SqlCommand(takeLock, second).ExecuteScalarAsync())! >= 0);
+        await new SqlCommand("UPDATE dbo.T2 SET Id = Id; UPDATE dbo.T1 SET Id = Id; COMMIT;", second).ExecuteNonQueryAsync();
+    }
+
     private async Task<IReadOnlyList<string>> ReadIntentExclusiveLockedTableNamesAsync(int sessionId)
     {
         await using var observer = new SqlConnection(Options.BuildConnectionString(DatabaseName));

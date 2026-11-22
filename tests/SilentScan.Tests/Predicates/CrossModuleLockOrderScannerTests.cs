@@ -46,6 +46,51 @@ public sealed class CrossModuleLockOrderScannerTests
     }
 
     [Fact]
+    public void OppositeOrderWrites_BothProceduresSerializedByAnApplock_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.ProcA AS BEGIN "
+            + "BEGIN TRANSACTION; "
+            + "EXEC sp_getapplock @Resource = 'k', @LockMode = 'Exclusive', @LockOwner = 'Transaction'; "
+            + "UPDATE dbo.T1 SET Id = Id; "
+            + "UPDATE dbo.T2 SET Id = Id; "
+            + "COMMIT TRANSACTION; "
+            + "END; "
+            + "\nGO\n"
+            + "CREATE PROCEDURE dbo.ProcB AS BEGIN "
+            + "BEGIN TRANSACTION; "
+            + "EXEC sp_getapplock @Resource = 'k', @LockMode = 'Exclusive', @LockOwner = 'Transaction'; "
+            + "UPDATE dbo.T2 SET Id = Id; "
+            + "UPDATE dbo.T1 SET Id = Id; "
+            + "COMMIT TRANSACTION; "
+            + "END;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void OppositeOrderWrites_OnlyOneProcedureTakesAnApplock_StillFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.ProcA AS BEGIN "
+            + "BEGIN TRANSACTION; "
+            + "EXEC sp_getapplock @Resource = 'k', @LockMode = 'Exclusive', @LockOwner = 'Transaction'; "
+            + "UPDATE dbo.T1 SET Id = Id; "
+            + "UPDATE dbo.T2 SET Id = Id; "
+            + "COMMIT TRANSACTION; "
+            + "END; "
+            + "\nGO\n"
+            + "CREATE PROCEDURE dbo.ProcB AS BEGIN "
+            + "BEGIN TRANSACTION; "
+            + "UPDATE dbo.T2 SET Id = Id; "
+            + "UPDATE dbo.T1 SET Id = Id; "
+            + "COMMIT TRANSACTION; "
+            + "END;");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
     public void TwoProceduresWriteSameTablesInSameOrder_NeverFires()
     {
         var findings = Scan(
