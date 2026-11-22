@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using SilentScan.Core.Predicates;
 using SilentScan.Core.Rules;
 
@@ -8,41 +7,16 @@ public sealed class WriteLossLengthTruncationVerifier : RuleVerifier<WriteLossFi
 {
     public override string RuleId => FindingRuleIds.WriteLossLengthTruncationRuleId;
 
-    protected override Perturbation Describe(WriteLossFinding finding)
-    {
-        if (finding.TableQualifiedName is not null || !finding.ColumnName.StartsWith('@'))
-        {
-            return Perturbation.NotApplicable("The finding does not name a variable target.");
-        }
-
-        var declaration = new Regex(
-            @"(\bDECLARE\s+" + Regex.Escape(finding.ColumnName) + @"\s+(?:AS\s+)?)(n?var(?:char|binary)|n?char|binary)\s*\(\s*\d+\s*\)",
-            RegexOptions.IgnoreCase);
-        string? original = null;
-        return new Perturbation(
-            [],
-            Difference.ResultChanged,
-            (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
-                connection,
-                transaction,
-                finding.SourcePath,
-                string.Empty,
-                definition =>
-                {
-                    original = definition;
-                    return declaration.Replace(definition, match => match.Groups[1].Value + WideFamily(match.Groups[2].Value) + "(MAX)");
-                },
-                cancellationToken),
-            (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
-                connection, transaction, finding.SourcePath, string.Empty, definition => original ?? definition, cancellationToken),
-            static _ => false);
-    }
-
-    private static string WideFamily(string type) =>
-        type.ToUpperInvariant() switch
-        {
-            "NVARCHAR" or "NCHAR" => "NVARCHAR",
-            "VARBINARY" or "BINARY" => "VARBINARY",
-            _ => "VARCHAR",
-        };
+    protected override Perturbation Describe(WriteLossFinding finding) =>
+        WidenedVariableProbe.Describe(
+            finding.TableQualifiedName,
+            finding.ColumnName,
+            finding.SourcePath,
+            @"(?:n?var(?:char|binary)|n?char|binary)\s*\(\s*\d+\s*\)",
+            static type => type.ToUpperInvariant() switch
+            {
+                var t when t.StartsWith("NVARCHAR", StringComparison.Ordinal) || t.StartsWith("NCHAR", StringComparison.Ordinal) => "NVARCHAR(MAX)",
+                var t when t.StartsWith("VARBINARY", StringComparison.Ordinal) || t.StartsWith("BINARY", StringComparison.Ordinal) => "VARBINARY(MAX)",
+                _ => "VARCHAR(MAX)",
+            });
 }
