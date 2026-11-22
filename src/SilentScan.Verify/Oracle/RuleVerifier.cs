@@ -68,7 +68,6 @@ public sealed class Perturbation
         PlanCompiledInModule = planCompiledInModule;
         AfterStatementQuery = afterStatementQuery;
         TouchesReadAfterCondition = touchesReadAfterCondition;
-        ArgumentOutOfRangeException.ThrowIfZero(touches.Count);
         BaselineStatement = baselineStatement;
         Touches = touches;
         Expected = expected;

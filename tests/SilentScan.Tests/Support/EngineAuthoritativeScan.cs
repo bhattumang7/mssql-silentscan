@@ -102,6 +102,12 @@ public static class EngineAuthoritativeScan
 
     private static bool IsNonDdlStatement(TSqlStatement statement)
     {
+        if (statement is PredicateSetStatement { Options: var options }
+            && (options & (SetOptions.AnsiNulls | SetOptions.QuotedIdentifier)) != 0)
+        {
+            return false;
+        }
+
         var name = statement.GetType().Name;
         return !name.StartsWith("Create", StringComparison.Ordinal)
             && !name.StartsWith("Alter", StringComparison.Ordinal)

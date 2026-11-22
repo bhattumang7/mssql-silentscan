@@ -120,6 +120,8 @@ public abstract class RuleOracle
         }
     }
 
+    protected virtual IReadOnlyList<string> ScannerOnlyForms => [];
+
     protected abstract IReadOnlyList<OracleCase> FiringCases { get; }
 
     protected abstract IReadOnlyList<SilentCase> SilentCases { get; }
@@ -212,7 +214,11 @@ public abstract class RuleOracle
 
         foreach (var form in JudgedForms(oracleCase.Statement, excluded))
         {
-            Collect(failures, $"{oracleCase.Name} as {form.Name} on {target.Label}", await CheckFiringAsync(form.Apply(oracleCase), [], target, false));
+            var shaped = form.Apply(oracleCase);
+            Collect(
+                failures,
+                $"{oracleCase.Name} as {form.Name} on {target.Label}",
+                ScannerOnlyForms.Contains(form.Name) ? await CheckScannerFlaggedAsync(shaped, target) : await CheckFiringAsync(shaped, [], target, false));
         }
 
         foreach (var form in excluded.Where(f => f.Applies(oracleCase.Statement)))
@@ -233,7 +239,9 @@ public abstract class RuleOracle
 
         foreach (var form in JudgedForms(silentCase.Case.Statement, excluded).Where(f => f.Applies(partner.Statement)))
         {
-            var shaped = await CheckSilentAsync(silentCase, partner, target, form);
+            var shaped = ScannerOnlyForms.Contains(form.Name)
+                ? new SilentOutcome(await CheckScannerSilentAsync(form.Apply(silentCase.Case), target, form.Name), null)
+                : await CheckSilentAsync(silentCase, partner, target, form);
             Collect(failures, $"{silentCase.Case.Name} as {form.Name} on {target.Label}", shaped.Failure);
         }
 
@@ -338,6 +346,12 @@ public abstract class RuleOracle
         }
 
         return null;
+    }
+
+    private async Task<string?> CheckScannerFlaggedAsync(OracleCase oracleCase, EngineTarget target)
+    {
+        var report = await ScanAsync(oracleCase, target);
+        return FlaggedInSarif(report) && FindingsOf(report, Verifier).Count > 0 ? null : "the scanner did not report this rule.";
     }
 
     private async Task<string?> CheckScannerSilentAsync(OracleCase oracleCase, EngineTarget target, string formName)
