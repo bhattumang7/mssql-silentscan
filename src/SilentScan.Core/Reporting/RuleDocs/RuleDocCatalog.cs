@@ -77,7 +77,6 @@ public static class RuleDocCatalog
         [ForcedSerial.TableVariableModification.RuleId] = ForcedSerial.TableVariableModification.Content,
         [ForcedSerial.FastForwardCursor.RuleId] = ForcedSerial.FastForwardCursor.Content,
         [ForcedSerial.NonParallelizableIntrinsic.RuleId] = ForcedSerial.NonParallelizableIntrinsic.Content,
-        [CrossModule.InconsistentLockOrder.RuleId] = CrossModule.InconsistentLockOrder.Content,
 
         [TvfFence.CorrelatedApply.RuleId] = TvfFence.CorrelatedApply.Content,
         [TvfFence.NestedUnderViewOrTvf.RuleId] = TvfFence.NestedUnderViewOrTvf.Content,

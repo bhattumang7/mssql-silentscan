@@ -64,7 +64,6 @@ public static class RuleRegistry
         new SecurityPredicateIndexRule(),
         new TemporalTableHistoryIndexGapRule(),
 
-        new CrossModuleLockOrderRule(),
 
         new TvfFenceRule(),
         new ScalarUdfRule(),

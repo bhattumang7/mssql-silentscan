@@ -138,7 +138,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(QueryAntiPattern(report, headingLevel, pathBase));
         blocks.AddRange(IndexCoverage(report, headingLevel, pathBase));
         blocks.AddRange(TriggerCorrectness(report, headingLevel, pathBase));
-        blocks.AddRange(CrossModuleLockOrder(report, headingLevel, pathBase));
         blocks.AddRange(CheckConstraint(report, headingLevel, pathBase));
         blocks.AddRange(StaleSelectStarView(report, headingLevel, pathBase));
         blocks.AddRange(BareTopNoOrderBy(report, headingLevel, pathBase));
@@ -207,7 +206,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Query anti-patterns", report.Find<QueryAntiPatternFinding>(nameof(QueryAntiPatternScanner)).Count);
         AddCount(counts, "Index-coverage shapes", report.Find<IndexCoverageFinding>(nameof(IndexCoverageScanner)).Count);
         AddCount(counts, "Trigger correctness", report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).Count);
-        AddCount(counts, "Cross-module lock ordering", report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Count);
         AddCount(counts, "CHECK constraint text correctness (NULL handling, IDENTITY-column placement)", report.Find<CheckConstraintFinding>(nameof(CheckConstraintScanner)).Count);
         AddCount(counts, "SELECT * view stale against base table's current shape", report.Find<StaleSelectStarViewFinding>(nameof(StaleSelectStarViewScanner)).Count);
         AddCount(counts, "Bare TOP with no ORDER BY", report.Find<BareTopNoOrderByFinding>(nameof(BareTopNoOrderByScanner)).Count);
@@ -1167,29 +1165,6 @@ public static class ReadableScanReportWriter
                     f.DetailText,
                 })]);
         }
-    }
-
-    private static IEnumerable<ReadableBlock> CrossModuleLockOrder(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Cross-module lock ordering ({report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Two top-level procedures' own direct explicit-transaction write orders disagree on the relative lock order of the same two base tables - the textbook cross-session deadlock shape. V1 scope: direct DML targets only (never through a view or dynamic SQL), base tables only, writes inside an explicit BEGIN TRANSACTION only, and only top-level procedures' own direct bodies (not traced transitively through the call graph) - see the finding's own doc comment for the full precision story.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CrossModuleLockOrderRuleId));
-        yield return new ReadableBlock.Table(
-            ["First table", "Second table", "Writes first-then-second", "Writes second-then-first"],
-            [.. report.Find<CrossModuleLockOrderFinding>(nameof(CrossModuleLockOrderScanner)).Select(f => new List<string>
-            {
-                f.FirstTableQualifiedName,
-                f.SecondTableQualifiedName,
-                $"{f.FirstTableFirstOrdering.ProcedureQualifiedName} ({Where(f.FirstTableFirstOrdering.SourcePath, f.FirstTableFirstOrdering.FirstWriteLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence)})",
-                $"{f.SecondTableFirstOrdering.ProcedureQualifiedName} ({Where(f.SecondTableFirstOrdering.SourcePath, f.SecondTableFirstOrdering.SecondWriteLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence)})",
-            })]);
     }
 
     private static IEnumerable<ReadableBlock> NotInNullableSubquery(ScanReport report, int level, string? pathBase)

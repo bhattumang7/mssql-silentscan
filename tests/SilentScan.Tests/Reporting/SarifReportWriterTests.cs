@@ -229,12 +229,6 @@ public sealed class SarifReportWriterTests
     }
 
     [Fact]
-    public void Write_RuleCatalog_CoversCrossModuleLockOrderRuleId()
-    {
-        Assert.Contains(SarifRuleCatalog.AllRules, r => r.Id == SarifRuleCatalog.CrossModuleLockOrderRuleId);
-    }
-
-    [Fact]
     public void Write_RuleCatalog_CoversEveryCheckConstraintFindingKind()
     {
         foreach (var kind in Enum.GetValues<CheckConstraintFindingKind>())

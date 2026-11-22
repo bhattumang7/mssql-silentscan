@@ -87,7 +87,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<QueryAntiPatternFinding>("QueryAntiPatternScanner").Select(ToResult));
         results.AddRange(report.Find<IndexCoverageFinding>("IndexCoverageScanner").Select(ToResult));
         results.AddRange(report.Find<TriggerCorrectnessFinding>("TriggerCorrectnessScanner").Select(ToResult));
-        results.AddRange(report.Find<CrossModuleLockOrderFinding>("CrossModuleLockOrderScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintFinding>("CheckConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<CheckConstraintPredicateContradictionFinding>(nameof(CheckConstraintPredicateContradictionScanner)).Select(ToResult));
         results.AddRange(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner").Select(ToResult));
@@ -1014,20 +1013,6 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(baseLevel, finding.Confidence);
 
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(CrossModuleLockOrderFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CrossModuleLockOrderRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var first = finding.FirstTableFirstOrdering;
-        var second = finding.SecondTableFirstOrdering;
-        var message =
-            $"'{first.ProcedureQualifiedName}' ({first.SourcePath}:{first.FirstWriteLine}) writes '{finding.FirstTableQualifiedName}' then '{finding.SecondTableQualifiedName}' (line {first.SecondWriteLine}) inside an explicit transaction, but " +
-            $"'{second.ProcedureQualifiedName}' ({second.SourcePath}:{second.SecondWriteLine}) writes them in the opposite order ('{finding.SecondTableQualifiedName}' at line {second.SecondWriteLine} then '{finding.FirstTableQualifiedName}' at line {second.FirstWriteLine}) - the textbook cross-session deadlock shape.";
-
-        return BuildResult(ruleId, level, message, first.SourcePath, first.ProcedureLine, startColumn: null);
     }
 
     private static SarifResult ToResult(TempTableExecShapeFinding finding)

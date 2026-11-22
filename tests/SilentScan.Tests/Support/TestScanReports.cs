@@ -61,7 +61,6 @@ public static class TestScanReports
         IReadOnlyList<QueryAntiPatternFinding>? QueryAntiPatternFindings = null,
         IReadOnlyList<IndexCoverageFinding>? IndexCoverageFindings = null,
         IReadOnlyList<TriggerCorrectnessFinding>? TriggerCorrectnessFindings = null,
-        IReadOnlyList<CrossModuleLockOrderFinding>? CrossModuleLockOrderFindings = null,
         IReadOnlyList<CheckConstraintFinding>? CheckConstraintFindings = null,
         IReadOnlyList<CheckConstraintPredicateContradictionFinding>? CheckConstraintPredicateContradictionFindings = null,
         IReadOnlyList<StaleSelectStarViewFinding>? StaleSelectStarViewFindings = null,
@@ -149,7 +148,6 @@ public static class TestScanReports
         Set("QueryAntiPatternScanner", QueryAntiPatternFindings);
         Set("IndexCoverageScanner", IndexCoverageFindings);
         Set("TriggerCorrectnessScanner", TriggerCorrectnessFindings);
-        Set("CrossModuleLockOrderScanner", CrossModuleLockOrderFindings);
         Set("CheckConstraintScanner", CheckConstraintFindings);
         Set(nameof(CheckConstraintPredicateContradictionScanner), CheckConstraintPredicateContradictionFindings);
         Set("StaleSelectStarViewScanner", StaleSelectStarViewFindings);
