@@ -43,6 +43,9 @@ public sealed class TransactionHygieneScannerTests
     [InlineData("SET IMPLICIT_TRANSACTIONS ON; UPDATE dbo.T SET a = 1; ROLLBACK TRANSACTION;")]
     [InlineData("SET IMPLICIT_TRANSACTIONS ON; DECLARE @x INT = 1; SELECT @x;")]
     [InlineData("UPDATE dbo.T SET a = 1;")]
+    [InlineData("SET IMPLICIT_TRANSACTIONS ON; UPDATE dbo.T SET a = 1; IF @@TRANCOUNT > 0 COMMIT TRANSACTION;")]
+    [InlineData("SET IMPLICIT_TRANSACTIONS ON; UPDATE dbo.T SET a = 1; IF @@TRANCOUNT > 0 BEGIN COMMIT TRANSACTION; END;")]
+    [InlineData("SET IMPLICIT_TRANSACTIONS ON; UPDATE dbo.T SET a = 1; WHILE @@TRANCOUNT > 0 COMMIT TRANSACTION;")]
     public void ImplicitTransactionResolvedOrNeverOpened_NeverFires(string body)
     {
         Assert.Empty(Scan(body));

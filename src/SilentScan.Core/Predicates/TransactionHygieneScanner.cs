@@ -257,7 +257,8 @@ public static class TransactionHygieneScanner
             }
 
             var bodyResult = AnalyzeSequential(ToStatementList(whileStatement.Statement), enteringState);
-            return MergeBranches(enteringState, bodyResult);
+            var exitState = MergeBranches(enteringState, bodyResult);
+            return ImpliesNoOpenTransactionWhenFalse(whileStatement.Predicate) ? exitState with { OpenSite = null } : exitState;
         }
 
         private FlowState AnalyzeTryCatch(TryCatchStatement tryCatch, FlowState enteringState)

@@ -36,6 +36,14 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
             RETURN;
         END
         GO
+        CREATE PROCEDURE dbo.p_implicit_transaction_drained_by_loop AS
+        BEGIN
+            SET IMPLICIT_TRANSACTIONS ON;
+            UPDATE dbo.T1 SET Id = Id;
+            WHILE @@TRANCOUNT > 0 COMMIT TRANSACTION;
+            RETURN;
+        END
+        GO
         CREATE PROCEDURE dbo.p_implicit_transaction_no_dml AS
         BEGIN
             SET IMPLICIT_TRANSACTIONS ON;
@@ -119,6 +127,27 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
 
         var finding = Assert.Single(findings);
         Assert.Equal(TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath, finding.Kind);
+    }
+
+    [Fact]
+    public async Task ImplicitTransactions_DrainedByAWhileTranCountLoop_LeavesNothingOpenAndNeverFires()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        await using var exec = new SqlCommand("EXEC dbo.p_implicit_transaction_drained_by_loop;", connection);
+        await exec.ExecuteNonQueryAsync();
+
+        Assert.Equal(0, await ReadTranCountAsync(connection));
+
+        var findings = Scan(
+            """
+            SET IMPLICIT_TRANSACTIONS ON;
+            UPDATE dbo.T1 SET Id = Id;
+            WHILE @@TRANCOUNT > 0 COMMIT TRANSACTION;
+            RETURN;
+            """);
+
+        Assert.Empty(findings);
     }
 
     [Fact]
