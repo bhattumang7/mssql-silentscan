@@ -111,6 +111,18 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    [Trait("Rule", FindingRuleIds.TvfFenceNestedUnderViewOrTvfRuleId)]
+    public async Task MultiStatementTvfBehindAView_KeepsTheFixedEstimateAtCompat160WhenInterleavedExecutionIsSwitchedOff()
+    {
+        await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 160;");
+        await ExecuteAsync("ALTER DATABASE SCOPED CONFIGURATION SET INTERLEAVED_EXECUTION_TVF = OFF;");
+
+        var planXml = await CaptureActualPlanAsync("SELECT s.Id FROM dbo.Src s JOIN dbo.VMsBig v ON v.Id = s.Id;");
+
+        Assert.DoesNotMatch("PhysicalOp=\"Table-valued function\"[^>]*EstimateRows=\"5000\"", planXml);
+    }
+
+    [Fact]
     [Trait("Rule", FindingRuleIds.ScalarUdfNestedUnderViewOrTvfRuleId)]
     public async Task ScalarUdfInsideView_ForcesSerialPlanAtCompat140_PlainViewControlCanGoParallel()
     {

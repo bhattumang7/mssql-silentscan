@@ -29,7 +29,9 @@ internal static class NestedUnderViewOrTvf
             This finding is reported only when the connected database is known to be below
             compatibility level 140: oracle-confirmed on SQL Server 2022, from level 140 on,
             interleaved execution gives a multi-statement TVF behind a view its real row count in
-            the actual plan, so the fixed estimate is no longer inherited.
+            the actual plan, so the fixed estimate is no longer inherited. A database that has
+            switched the INTERLEAVED_EXECUTION_TVF database scoped configuration off keeps the
+            fixed estimate at any level, and is reported as well.
             """,
         HowToFixIt: """
             Trace the view (or inline TVF) down to whichever underlying object is a multi-statement

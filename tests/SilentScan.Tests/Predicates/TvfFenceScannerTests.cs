@@ -88,16 +88,30 @@ public sealed class TvfFenceScannerTests
 
         """;
 
-    private static List<TvfFenceFinding> ScanText(string sql, int? compatibilityLevel = 130)
+    private static List<TvfFenceFinding> ScanText(string sql, int? compatibilityLevel = 130, bool interleavedExecutionDisabled = false)
     {
         var result = SqlScriptParser.ParseText("test.sql", SoleSourceSetup + sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
+        if (interleavedExecutionDisabled)
+        {
+            catalog.DisabledScopedConfigurations.Add("INTERLEAVED_EXECUTION_TVF");
+        }
+
         var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
         var fenceMap = TvfFenceMap.Build(views, catalog);
         return TvfFenceScanner.Scan(result, catalog, fenceMap).Where(f => f.Kind == TvfFenceFindingKind.NestedUnderViewOrTvf).ToList();
+    }
+
+    [Fact]
+    public void NestedUnderViewOrTvf_AtCompat160WithInterleavedExecutionDisabled_Fires()
+    {
+        const string sql = "SELECT o.OrderId FROM dbo.Orders o JOIN dbo.vw_Tier t ON t.CustomerId = o.CustomerId;";
+
+        Assert.NotEmpty(ScanText(sql, 160, interleavedExecutionDisabled: true));
+        Assert.Empty(ScanText(sql, 160));
     }
 
     [Theory]

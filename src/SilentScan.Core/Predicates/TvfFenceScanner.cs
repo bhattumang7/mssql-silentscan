@@ -182,9 +182,13 @@ public static class TvfFenceScanner
             TryEmitNestedFinding(qualifiedName, named, FragmentTextRenderer.Render(named));
         }
 
+        private bool EstimateIsInheritedFromTheFence =>
+            catalog.CompatibilityLevel is { } level
+            && (level < 140 || catalog.IsScopedConfigurationDisabled("INTERLEAVED_EXECUTION_TVF"));
+
         private void TryEmitNestedFinding(string qualifiedName, TableReference reference, string fragmentText)
         {
-            if (catalog.CompatibilityLevel is not < 140 || !fenceMap.TryGetValue(qualifiedName, out var origin))
+            if (!EstimateIsInheritedFromTheFence || !fenceMap.TryGetValue(qualifiedName, out var origin))
             {
                 return;
             }
