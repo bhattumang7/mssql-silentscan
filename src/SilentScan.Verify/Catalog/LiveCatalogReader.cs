@@ -746,6 +746,7 @@ public sealed class LiveCatalogReader
         "DEFERRED_COMPILATION_TV",
         "INTERLEAVED_EXECUTION_TVF",
         "TSQL_SCALAR_UDF_INLINING",
+        "PARAMETER_SNIFFING",
     ];
 
     private static async Task<List<string>> ReadDisabledScopedConfigurationsAsync(SqlConnection connection, CancellationToken cancellationToken)

@@ -8,17 +8,38 @@ public sealed class ParameterReassignmentPredicateScannerTests
 {
     private const string Ddl = "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code));";
 
-    private static IReadOnlyList<ParameterReassignmentPredicateFinding> Scan(string sql)
+    private static IReadOnlyList<ParameterReassignmentPredicateFinding> Scan(string sql, bool sniffingSwitchedOff = false)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\n{sql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
+        if (sniffingSwitchedOff)
+        {
+            catalog.DisabledScopedConfigurations.Add("PARAMETER_SNIFFING");
+        }
+
         return ParameterReassignmentPredicateScanner.Scan(result, catalog);
     }
 
     private static int LineOf(string sql, string marker) =>
         $"{Ddl}\nGO\n{sql}".Split('\n').ToList().FindIndex(l => l.Contains(marker, StringComparison.Ordinal)) + 1;
+
+    [Fact]
+    public void SetReassignsParameter_WithParameterSniffingSwitchedOff_NeverFires()
+    {
+        const string sql =
+            """
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                SET @p = 'OVERWRITTEN';
+                SELECT 1 FROM dbo.Customers WHERE Code = @p;
+            END
+            """;
+
+        Assert.Single(Scan(sql));
+        Assert.Empty(Scan(sql, sniffingSwitchedOff: true));
+    }
 
     [Fact]
     public void SetReassignsParameter_ThenPredicateUse_Fires()

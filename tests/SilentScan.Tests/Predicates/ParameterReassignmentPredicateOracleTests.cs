@@ -78,6 +78,17 @@ public sealed class ParameterReassignmentPredicateOracleTests : OracleTestFixtur
             $"expected the reassigned-parameter probe's estimate ({reassignedEstimate}) to STILL reflect the original sniffed 'Common' argument (~1900), not the reassigned value's own near-zero density - this is the staleness ParameterReassignmentPredicateFinding exists to report.");
     }
 
+    [Fact]
+    public async Task WithParameterSniffingSwitchedOff_EvenADirectParameterUseIgnoresTheSniffedArgument()
+    {
+        var capture = new PlanXmlCapture(Options);
+        await ExecuteAsync("ALTER DATABASE SCOPED CONFIGURATION SET PARAMETER_SNIFFING = OFF;");
+
+        var directPlan = await capture.CaptureAsync(DatabaseName, "EXEC dbo.usp_FindDirect @p = 'Common';");
+
+        Assert.True(ExtractEstimateRows(directPlan) < 500);
+    }
+
     private static double ExtractEstimateRows(string planXml)
     {
         const string Marker = "EstimateRows=\"";

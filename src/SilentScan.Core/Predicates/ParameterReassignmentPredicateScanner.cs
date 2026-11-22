@@ -288,6 +288,11 @@ public static class ParameterReassignmentPredicateScanner
             ScopeChain scopeChain,
             FlowState state)
         {
+            if (catalog.IsScopedConfigurationDisabled("PARAMETER_SNIFFING"))
+            {
+                return;
+            }
+
             if (columnSide is not ColumnReferenceExpression columnRef
                 || variableSide is not VariableReference variableRef
                 || !state.Reassigned!.Contains(variableRef.Name))
