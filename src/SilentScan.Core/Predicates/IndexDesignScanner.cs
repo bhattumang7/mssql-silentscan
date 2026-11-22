@@ -316,7 +316,7 @@ public static class IndexDesignScanner
                 IndexDesignFindingKind.FilterColumnNotInIndex,
                 table.QualifiedName,
                 index.Name,
-                $"'{table.QualifiedName}' filtered index '{index.Name ?? UnnamedIndexPlaceholder}' has filter '{filterDefinition}' referencing column(s) not in its own key/INCLUDE list: {string.Join(", ", missing)} - the engine can only substitute this index for a query whose own WHERE clause restates the filter predicate, and it cannot cheaply confirm that without reading those column(s) from the base table.",
+                $"'{table.QualifiedName}' filtered index '{index.Name ?? UnnamedIndexPlaceholder}' has filter '{filterDefinition}' referencing column(s) not in its own key/INCLUDE list: {string.Join(", ", missing)} - the engine can only substitute this index for a query whose own WHERE clause restates the filter predicate, and a query that returns or otherwise needs those column(s) pays a key lookup per row to read them from the base table.",
                 table.SourcePath,
                 table.SourceLine));
         }
