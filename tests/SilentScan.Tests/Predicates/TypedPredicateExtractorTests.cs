@@ -2063,6 +2063,20 @@ public sealed class TypedPredicateExtractorTests
         Assert.Equal("=", finding.Operator);
     }
 
+    [Theory]
+    [InlineData("DECLARE @p VARCHAR(20) = 'Active'; SELECT 1 FROM dbo.Customers WHERE Status = @p OPTION (RECOMPILE);")]
+    [InlineData("CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE Status = @p OPTION (RECOMPILE); END")]
+    [InlineData("CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) WITH RECOMPILE AS BEGIN SELECT 1 FROM dbo.Customers WHERE Status = @p; END")]
+    public void Extract_FilteredIndexMismatchUnderRecompile_NeverFires(string sql)
+    {
+        var result = ExtractWithFilteredIndex(
+            "CREATE TABLE dbo.Customers (Status VARCHAR(20) NOT NULL);",
+            "([Status]='Active')",
+            sql);
+
+        Assert.Empty(result.FilteredIndexParameterMismatchFindings);
+    }
+
     [Fact]
     public void Extract_ColumnComparedToFormalParameter_SameColumnHasLiteralFilteredIndex_AlsoFires()
     {
@@ -2098,18 +2112,6 @@ public sealed class TypedPredicateExtractorTests
             "DECLARE @p VARCHAR(20) = 'X'; SELECT 1 FROM dbo.Customers WHERE Code = @p;");
 
         Assert.Empty(result.FilteredIndexParameterMismatchFindings);
-    }
-
-    [Fact]
-    public void Extract_ColumnComparedToVariable_OptionRecompile_StillFires()
-    {
-
-        var result = ExtractWithFilteredIndex(
-            "CREATE TABLE dbo.Customers (Status VARCHAR(20) NOT NULL);",
-            "([Status]='Active')",
-            "DECLARE @p VARCHAR(20) = 'Active'; SELECT 1 FROM dbo.Customers WHERE Status = @p OPTION (RECOMPILE);");
-
-        Assert.Single(result.FilteredIndexParameterMismatchFindings);
     }
 
     [Fact]

@@ -23,20 +23,23 @@ internal static class FilteredIndexParameterMismatch
             for every future execution, even if in practice it always does.
 
             So a predicate on a column that carries a filtered index whose filter is a literal
-            restatement of that exact comparison can never use that index when written against a
-            parameter or variable, no matter what value is actually passed at runtime - not because
-            the value happens to be wrong on some call, but because the query shape itself doesn't
-            qualify for the match. The optimizer falls back to whatever other access path is
-            available (a different, non-filtered index, or a scan), permanently, for every call.
+            restatement of that exact comparison cannot use that index when written against a
+            parameter or variable in a cached plan, no matter what value is actually passed at
+            runtime - not because the value happens to be wrong on some call, but because the
+            cached plan has to stay valid for every future value. The optimizer falls back to
+            whatever other access path is available (a different, non-filtered index, or a scan)
+            for every call.
 
-            This is worth calling out explicitly because it looks exactly like the two prior
-            findings (catch-all predicates and local-variable predicates), both of which are fixed
-            by OPTION (RECOMPILE) - and this one is not. RECOMPILE only helps when the problem is
-            that the optimizer needs to see the real runtime value to build a better plan or a
-            better estimate, which it does for both of those. Here the plan is not being built with
-            a stale or generic assumption; the filtered index is structurally unusable for a
-            parameterized predicate at compile time regardless of when compilation happens, so
-            recompiling changes nothing.
+            This finding is suppressed when the statement carries OPTION (RECOMPILE) or the
+            enclosing procedure is created WITH RECOMPILE: oracle-confirmed on SQL Server 2025, a
+            statement that compiles against the real runtime value of the variable or parameter
+            matches the filtered index and uses it, while the same statement without RECOMPILE
+            scans the clustered index instead.
+            """,
+        HowToFixIt: """
+            Add OPTION (RECOMPILE) to the statement, or WITH RECOMPILE to the procedure, so the
+            statement compiles against the real value and can match the filtered index, or write
+            the filter literal into the query (dynamic SQL, or one statement per filter value).
             """,
         Examples:
         [

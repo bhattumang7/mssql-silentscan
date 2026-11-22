@@ -138,6 +138,19 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    [Trait("Rule", FindingRuleIds.FilteredIndexParameterMismatchRuleId)]
+    public async Task FilteredIndexIsUsedForAVariableWhenTheStatementRecompiles()
+    {
+        var recompiled = await CaptureActualPlanAsync("DECLARE @s INT = 1; SELECT K FROM dbo.Fp WHERE Status = @s OPTION (RECOMPILE);");
+        var plain = await CaptureActualPlanAsync("DECLARE @s INT = 1; SELECT K FROM dbo.Fp WHERE Status = @s;");
+
+        Assert.DoesNotContain("UnmatchedIndexes", recompiled);
+        Assert.Contains("<IndexScan", recompiled);
+        Assert.Contains("Index=\"[IX_Fp]\"", recompiled);
+        Assert.Contains("UnmatchedIndexes", plain);
+    }
+
+    [Fact]
     [Trait("Rule", FindingRuleIds.SetOptionAnsiPaddingOffBlocksIndexedFeatureRuleId)]
     public async Task FilteredIndexIsIgnoredUnderAnsiPaddingOff_UsedUnderOn()
     {

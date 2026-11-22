@@ -997,7 +997,8 @@ public static class TypedPredicateExtractor
 
         private void TryAddFilteredIndexParameterMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
         {
-            if (other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: var isFormalParameter }
+            if (HasActiveRecompileGuard
+                || other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: var isFormalParameter }
                 || !LiteralEqualityFilteredIndexesByColumn.TryGetValue((column.TableQualifiedName, column.ColumnName), out var candidates))
             {
                 return;
