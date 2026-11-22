@@ -37,6 +37,10 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         CREATE TABLE dbo.SbWide (K INT NOT NULL, L INT NOT NULL, Id INT PRIMARY KEY);
         INSERT INTO dbo.SbWide SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 500, 1, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a, sys.all_objects b;
         CREATE INDEX IX_SbWide ON dbo.SbWide(K, L);
+        CREATE TABLE dbo.SbScan (K INT NOT NULL, Pad CHAR(400) NOT NULL DEFAULT 'x', Id INT PRIMARY KEY);
+        INSERT INTO dbo.SbScan (K, Id) SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) % 500, ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a, sys.all_objects b;
+        CREATE INDEX IX_SbScanNarrow ON dbo.SbScan(K);
+        CREATE INDEX IX_SbScanWide ON dbo.SbScan(K, Pad);
         CREATE TABLE dbo.SbTrailing (K INT NOT NULL, L INT NOT NULL, Id INT PRIMARY KEY);
         INSERT INTO dbo.SbTrailing SELECT K, L, Id FROM dbo.SbWide;
         CREATE INDEX IX_SbTrailing ON dbo.SbTrailing(L, K);
@@ -136,6 +140,18 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         Assert.True(ShowPlan.HasKeyLookup(missing));
         Assert.False(ShowPlan.HasKeyLookup(included));
         Assert.False(ShowPlan.HasKeyLookup(filterOnly));
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.IndexDesignSubsumedIndexRuleId)]
+    public async Task NarrowerIndexStillWinsAScanOverItsKeyOnly_SoItIsRedundantForSeeksNotForScans()
+    {
+        var seek = await PlanInSessionAsync(string.Empty, "SELECT K FROM dbo.SbScan WHERE K = 7;");
+        var scan = await PlanInSessionAsync(string.Empty, "SELECT COUNT(*) FROM dbo.SbScan;");
+
+        Assert.Contains("IX_SbScanNarrow", ShowPlan.IndexNames(scan));
+        Assert.DoesNotContain("IX_SbScanWide", ShowPlan.IndexNames(scan));
+        Assert.NotEmpty(ShowPlan.IndexNames(seek));
     }
 
     [Fact]

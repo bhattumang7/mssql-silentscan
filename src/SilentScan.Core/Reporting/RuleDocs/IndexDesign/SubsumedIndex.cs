@@ -16,14 +16,16 @@ internal static class SubsumedIndex
             the sibling `duplicate-index` rule uses. Any seek the shorter (subsumed) index could
             serve, the longer index can also serve: it carries every one of the shorter index's key
             columns as its own leading prefix, in the same order, plus everything the shorter index
-            put in INCLUDE - so the shorter index isn't merely similar to the longer one, it's
-            strictly redundant.
+            put in INCLUDE - so for seeks the shorter index adds nothing the longer one lacks.
+            Oracle-confirmed it is not redundant for scans: a scan over only its key columns reads
+            the narrower index, which is smaller than the wide one, so dropping it can make such
+            scans read more pages. Every DML on the table still maintains both.
 
             Unlike `duplicate-index` (exact key-list equality), this rule catches the more common
             real-world shape: someone adds `IX_Orders_Status` on `(Status)`, and later - not knowing
             it already exists, or before it existed - adds `IX_Orders_Status_Date` on `(Status,
-            OrderDate)`. The first index is now dead weight; the second one already answers every
-            query the first one could.
+            OrderDate)`. The first index is now mostly dead weight; the second one already answers
+            every seek the first one could.
             """,
         HowToFixIt: """
             Drop the narrower, redundant index - the wider index already covers it.
