@@ -23,6 +23,10 @@ internal static class AnsiNullsOff
             Ensure ANSI_NULLS is ON at the time the module is created or altered - most commonly by
             removing an explicit `SET ANSI_NULLS OFF` ahead of the `CREATE`/`ALTER` statement - then
             redeploy so the compiled setting on the object changes.
+
+            Check first that the code does not rely on the old setting's behaviour: flipping it
+            changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or
+            rounding.
             """,
         Examples:
         [

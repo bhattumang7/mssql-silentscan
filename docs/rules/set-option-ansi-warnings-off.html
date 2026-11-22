@@ -94,6 +94,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">A filtered index or an indexed view also requires ANSI_WARNINGS to be ON at the point a statement touches them. Like NUMERIC_ROUNDABORT, this one is triggered by an explicit `SET ANSI_WARNINGS OFF` inside the module body. When it&#x27;s OFF, the optimizer silently falls back to a base-table or clustered-index scan instead of using either feature - no error is raised.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Remove the `SET ANSI_WARNINGS OFF` statement, or explicitly set it ON, before the module touches the filtered index or indexed view.</p>
+  <p class="rationale">Check first that the code does not rely on the old setting&#x27;s behaviour: flipping it changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or rounding.</p>
   <h3>A procedure with SET ANSI_WARNINGS OFF that touches a filtered index</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
   <div class="fires-block"><pre><code>CREATE TABLE dbo.Orders (Id INT NOT NULL, Amount DECIMAL(10,2) NULL);&#xA;CREATE INDEX IX_Orders_Amount_Filtered ON dbo.Orders(Amount) WHERE Amount IS NOT NULL;&#xA;GO&#xA;&#xA;CREATE PROCEDURE dbo.usp_GetOrders AS&#xA;BEGIN&#xA;    SET ANSI_WARNINGS OFF;&#xA;    SELECT Id FROM dbo.Orders WHERE Amount IS NOT NULL;&#xA;END;</code></pre></div>

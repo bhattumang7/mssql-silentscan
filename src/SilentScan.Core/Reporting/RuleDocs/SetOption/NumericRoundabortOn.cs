@@ -19,6 +19,10 @@ internal static class NumericRoundabortOn
         HowToFixIt: """
             Remove the `SET NUMERIC_ROUNDABORT ON` statement, or explicitly set it OFF, before the
             module touches the filtered index or indexed view.
+
+            Check first that the code does not rely on the old setting's behaviour: flipping it
+            changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or
+            rounding.
             """,
         Examples:
         [

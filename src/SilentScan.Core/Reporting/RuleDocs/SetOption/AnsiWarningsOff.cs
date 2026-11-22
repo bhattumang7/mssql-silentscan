@@ -18,6 +18,10 @@ internal static class AnsiWarningsOff
         HowToFixIt: """
             Remove the `SET ANSI_WARNINGS OFF` statement, or explicitly set it ON, before the module
             touches the filtered index or indexed view.
+
+            Check first that the code does not rely on the old setting's behaviour: flipping it
+            changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or
+            rounding.
             """,
         Examples:
         [

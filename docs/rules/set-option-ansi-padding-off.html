@@ -95,6 +95,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rationale">This is distinct from the AnsiPaddingMismatch finding, which is a data-semantics claim about which rows a LIKE pattern matches under trailing-space padding, not a plan-shape one - the two can both apply to the same module for entirely different reasons.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Remove the `SET ANSI_PADDING OFF` statement, or explicitly set it ON, before the module touches the filtered index or indexed view.</p>
+  <p class="rationale">Check first that the code does not rely on the old setting&#x27;s behaviour: flipping it changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or rounding.</p>
   <h3>A procedure with SET ANSI_PADDING OFF that touches a filtered index</h3>
   <p class="example-label fires-label">Noncompliant code example</p>
   <div class="fires-block"><pre><code>CREATE TABLE dbo.Orders (Id INT NOT NULL, Amount DECIMAL(10,2) NULL);&#xA;CREATE INDEX IX_Orders_Amount_Filtered ON dbo.Orders(Amount) WHERE Amount IS NOT NULL;&#xA;GO&#xA;&#xA;CREATE PROCEDURE dbo.usp_GetOrders AS&#xA;BEGIN&#xA;    SET ANSI_PADDING OFF;&#xA;    SELECT Id FROM dbo.Orders WHERE Amount IS NOT NULL;&#xA;END;</code></pre></div>

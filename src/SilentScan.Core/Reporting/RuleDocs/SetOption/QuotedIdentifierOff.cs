@@ -25,6 +25,10 @@ internal static class QuotedIdentifierOff
             Ensure QUOTED_IDENTIFIER is ON at the time the module is created or altered - most
             commonly by removing an explicit `SET QUOTED_IDENTIFIER OFF` ahead of the `CREATE`/
             `ALTER` statement - then redeploy so the compiled setting on the object changes.
+
+            Check first that the code does not rely on the old setting's behaviour: flipping it
+            changes how the module evaluates NULLs, concatenation, padding, quoting, warnings or
+            rounding.
             """,
         Examples:
         [
