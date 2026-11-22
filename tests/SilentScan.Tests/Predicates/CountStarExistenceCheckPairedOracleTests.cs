@@ -17,6 +17,10 @@ public sealed class CountStarExistenceCheckPairedOracleTests : RuleOracle
 
     private const string Assigned = Base + "\nCREATE PROCEDURE dbo.P AS BEGIN DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x'; IF @cnt > 0 SELECT 1 AS One; END\nGO\n";
 
+    private const string AssignedEqualsZero = Base + "\nCREATE PROCEDURE dbo.P AS BEGIN DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x'; IF @cnt = 0 SELECT 1 AS One; END\nGO\n";
+
+    private const string AssignedZeroLessThan = Base + "\nCREATE PROCEDURE dbo.P AS BEGIN DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x'; IF 0 < @cnt SELECT 1 AS One; END\nGO\n";
+
     private const string Inline = Base + "\nCREATE PROCEDURE dbo.P AS BEGIN IF (SELECT COUNT(*) FROM dbo.Big WHERE Col = 'x') > 0 SELECT 1 AS One; END\nGO\n";
 
     private const string Aggregating = "count-assigned-then-compared-to-zero";
@@ -32,6 +36,8 @@ public sealed class CountStarExistenceCheckPairedOracleTests : RuleOracle
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
         new(Aggregating, Assigned, Statement),
+        new("count-assigned-then-tested-for-zero", AssignedEqualsZero, Statement),
+        new("count-assigned-then-compared-with-zero-on-the-left", AssignedZeroLessThan, Statement),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =

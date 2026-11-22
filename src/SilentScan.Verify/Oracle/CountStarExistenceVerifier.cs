@@ -8,11 +8,17 @@ public sealed class CountStarExistenceVerifier : RuleVerifier<QueryAntiPatternFi
 {
     public override string RuleId => FindingRuleIds.QueryAntiPatternCountStarVariableExistenceCheckRuleId;
 
+    private static string Inline(Match match) =>
+        match.Groups[2].Success
+            ? $"IF (SELECT COUNT(*) {match.Groups[1].Value}) {match.Groups[2].Value} {match.Groups[3].Value}"
+            : $"IF {match.Groups[4].Value} {match.Groups[5].Value} (SELECT COUNT(*) {match.Groups[1].Value})";
+
     protected override Perturbation Describe(QueryAntiPatternFinding finding)
     {
         var variable = finding.DetailText.Split(' ', 2)[0];
+        var name = Regex.Escape(variable);
         var assignment = new Regex(
-            @"SELECT\s+" + Regex.Escape(variable) + @"\s*=\s*COUNT\s*\(\s*\*\s*\)\s+(FROM\s+[^;]+?)\s*;\s*IF\s+" + Regex.Escape(variable) + @"\s*>\s*0\b",
+            @"SELECT\s+" + name + @"\s*=\s*COUNT\s*\(\s*\*\s*\)\s+(FROM\s+[^;]+?)\s*;\s*IF\s+(?:" + name + @"\s*(>=|>|=|<>|!=)\s*([01])\b|([01])\s*(<=|<|=|<>|!=)\s*" + name + @"(?![\w@]))",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(
             [],
@@ -23,7 +29,7 @@ public sealed class CountStarExistenceVerifier : RuleVerifier<QueryAntiPatternFi
                 transaction,
                 finding.SourcePath,
                 string.Empty,
-                definition => assignment.Replace(definition, "IF (SELECT COUNT(*) $1) > 0", 1),
+                definition => assignment.Replace(definition, Inline, 1),
                 cancellationToken),
             static _ => false,
             planCompiledInModule: true);
