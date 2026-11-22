@@ -99,6 +99,36 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
             SELECT OrderId FROM dbo.Orders WHERE Amount > 2000 OR Amount < -100;
         END
         GO
+        CREATE PROCEDURE dbo.P_AntiJoinNoFire AS
+        BEGIN
+            SELECT n.NoteId FROM dbo.Notes n LEFT JOIN dbo.Orders o ON o.OrderId = n.NoteId + 1 WHERE o.OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_RightJoinAntiNoFire AS
+        BEGIN
+            SELECT n.NoteId FROM dbo.Orders o RIGHT JOIN dbo.Notes n ON o.OrderId = n.NoteId + 1 WHERE o.OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_FullJoinAntiNoFire AS
+        BEGIN
+            SELECT n.NoteId FROM dbo.Orders o FULL JOIN dbo.Notes n ON o.OrderId = n.NoteId + 1 WHERE o.OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_DerivedAntiNoFire AS
+        BEGIN
+            SELECT d.NoteId FROM (SELECT n.NoteId, o.OrderId FROM dbo.Notes n LEFT JOIN dbo.Orders o ON o.OrderId = n.NoteId + 1) d WHERE d.OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_CteAntiNoFire AS
+        BEGIN
+            WITH d AS (SELECT n.NoteId, o.OrderId FROM dbo.Notes n LEFT JOIN dbo.Orders o ON o.OrderId = n.NoteId + 1) SELECT NoteId FROM d WHERE OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_OuterApplyAntiNoFire AS
+        BEGIN
+            SELECT n.NoteId FROM dbo.Notes n OUTER APPLY (SELECT TOP (1) o.OrderId FROM dbo.Orders o WHERE o.OrderId = n.NoteId + 1) x WHERE x.OrderId IS NULL;
+        END
+        GO
         INSERT INTO dbo.Orders (OrderId, Amount, Qty, Status) VALUES (1, 500, 200, 'Open'), (2, 700, 200, 'Open');
         INSERT INTO dbo.Notes (NoteId, Body) VALUES (1, NULL), (2, 5);
         GO
@@ -216,6 +246,21 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
         var procedures = await ProcedureNamesWithFindingsAsync();
 
         Assert.DoesNotContain(procedures, p => p.Contains("P_NullableColumnQueriedForNull", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("P_AntiJoinNoFire")]
+    [InlineData("P_RightJoinAntiNoFire")]
+    [InlineData("P_FullJoinAntiNoFire")]
+    [InlineData("P_DerivedAntiNoFire")]
+    [InlineData("P_CteAntiNoFire")]
+    [InlineData("P_OuterApplyAntiNoFire")]
+    public async Task NotNullColumnQueriedForNullAcrossAnOuterJoin_NeverFires_AndTheEngineReturnsTheUnmatchedRows(string procedure)
+    {
+        var procedures = await ProcedureNamesWithFindingsAsync();
+
+        Assert.DoesNotContain(procedures, p => p.Contains(procedure, StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(await RowsAsync($"EXEC dbo.{procedure};"));
     }
 
     [Fact]
