@@ -106,6 +106,10 @@ public static class OuterJoinPredicateCollapseScanner
                 case LikePredicate like:
                     InspectOperand(like.FirstExpression, nullSupplyingAliases);
                     break;
+
+                case BooleanIsNullExpression { IsNot: true } isNotNull:
+                    InspectOperand(isNotNull.Expression, nullSupplyingAliases);
+                    break;
             }
         }
 

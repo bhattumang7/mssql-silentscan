@@ -86,6 +86,11 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
             SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE ISNULL(c.Status, 'X') = 'X';
         END
         GO
+        CREATE PROCEDURE dbo.P_IsNotNullFires AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS NOT NULL;
+        END
+        GO
         CREATE PROCEDURE dbo.P_InPredicateFires AS
         BEGIN
             SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IN ('X', 'Y');
@@ -256,6 +261,30 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
         var findings = await FindingsForAsync("P_BetweenFires");
 
         Assert.Single(findings);
+    }
+
+    [Fact]
+    public async Task IsNotNullPredicateOnNullSupplyingSide_Fires()
+    {
+        var findings = await FindingsForAsync("P_IsNotNullFires");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
+    public async Task IsNotNullOnNullSuppliedColumn_ReturnsExactlyTheInnerJoinRows_IsNullControlKeepsUnmatchedRows()
+    {
+        await ExecuteAsync("DELETE FROM dbo.Child; DELETE FROM dbo.Parent; INSERT INTO dbo.Parent (Id, Flag) VALUES (1, 0), (2, 0), (3, 0); INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (10, 1, 'A', 1);");
+
+        var leftIsNotNull = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS NOT NULL;");
+        var inner = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Parent p INNER JOIN dbo.Child c ON c.ParentId = p.Id;");
+        var leftPlain = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id;");
+        var leftIsNull = await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS NULL;");
+
+        Assert.Equal(inner, leftIsNotNull);
+        Assert.Equal(1, leftIsNotNull);
+        Assert.Equal(3, leftPlain);
+        Assert.Equal(2, leftIsNull);
     }
 
     [Fact]

@@ -28,6 +28,7 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     [Theory]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y = 1;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y <> 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NOT NULL;")]
     public void NullRejectingPredicateOnTheNullSuppliedSide_Fires(string sql)
     {
         Assert.NotEmpty(Scan(sql));
