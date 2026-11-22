@@ -160,7 +160,6 @@ public static class FindingRuleIds
     public const string DatabaseConfigurationAutoCreateStatisticsOffRuleId = "silentscan/database/auto-create-statistics-off";
     public const string DatabaseConfigurationAutoUpdateStatisticsOffRuleId = "silentscan/database/auto-update-statistics-off";
     public const string DatabaseConfigurationSpatialPersistedComputedColumnDisabledOnCompatibilityLevelChangeRuleId = "silentscan/database/spatial-persisted-computed-column-compatibility-change";
-    public const string DatabaseConfigurationPlanGuideAltersOptimizationRuleId = "silentscan/database/plan-guide-alters-optimization";
     public static string DatabaseConfigurationRuleId(DatabaseConfigurationFindingKind kind) => kind switch
     {
         DatabaseConfigurationFindingKind.AutoShrinkOn => DatabaseConfigurationAutoShrinkOnRuleId,
@@ -168,7 +167,6 @@ public static class FindingRuleIds
         DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => DatabaseConfigurationAutoCreateStatisticsOffRuleId,
         DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => DatabaseConfigurationAutoUpdateStatisticsOffRuleId,
         DatabaseConfigurationFindingKind.SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange => DatabaseConfigurationSpatialPersistedComputedColumnDisabledOnCompatibilityLevelChangeRuleId,
-        DatabaseConfigurationFindingKind.PlanGuideAltersOptimization => DatabaseConfigurationPlanGuideAltersOptimizationRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
     public const string UnindexedTempTableUsageJoinOperandRuleId = "silentscan/temp-table/unindexed-join-operand";

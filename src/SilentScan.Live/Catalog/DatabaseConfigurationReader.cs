@@ -36,7 +36,6 @@ public sealed class DatabaseConfigurationReader
                 connection, snapshot.DatabaseName, engineDefaultCompatibilityLevel.Value, findings, cancellationToken);
         }
 
-        await AddPlanGuideFindingsAsync(connection, snapshot.DatabaseName, findings, cancellationToken);
 
         return findings;
     }
@@ -142,32 +141,6 @@ public sealed class DatabaseConfigurationReader
         catch (SqlException ex)
         {
             _ = ex;
-        }
-    }
-
-    private static async Task AddPlanGuideFindingsAsync(
-        SqlConnection connection,
-        string databaseName,
-        List<DatabaseConfigurationFinding> findings,
-        CancellationToken cancellationToken)
-    {
-        await using var command = connection.CreateReadOnlyCommand(
-            """
-            SELECT name, scope_type_desc, hints
-            FROM sys.plan_guides
-            WHERE is_disabled = 0
-            ORDER BY plan_guide_id;
-            """);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            findings.Add(new DatabaseConfigurationFinding(
-                DatabaseConfigurationFindingKind.PlanGuideAltersOptimization,
-                databaseName,
-                AffectedObjectName: reader.GetString(0),
-                PlanGuideScopeType: reader.GetString(1),
-                PlanGuideHints: await reader.IsDBNullAsync(2, cancellationToken) ? null : reader.GetString(2)));
         }
     }
 

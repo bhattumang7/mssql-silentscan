@@ -2191,7 +2191,6 @@ public static class ReadableScanReportWriter
         DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => "AUTO_CREATE_STATISTICS = OFF",
         DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => "AUTO_UPDATE_STATISTICS = OFF",
         DatabaseConfigurationFindingKind.SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange => $"{finding.AffectedObjectName} disabled at compatibility level {finding.TargetCompatibilityLevel} ({finding.Dependency})",
-        DatabaseConfigurationFindingKind.PlanGuideAltersOptimization => $"Plan guide '{finding.AffectedObjectName}' enabled ({finding.PlanGuideScopeType}; hints: {finding.PlanGuideHints})",
         _ => finding.Kind.ToString(),
     };
 

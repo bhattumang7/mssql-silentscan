@@ -131,7 +131,6 @@ public static class RuleDocCatalog
         [Database.AutoCreateStatisticsOff.RuleId] = Database.AutoCreateStatisticsOff.Content,
         [Database.AutoUpdateStatisticsOff.RuleId] = Database.AutoUpdateStatisticsOff.Content,
         [Database.SpatialPersistedComputedColumnCompatibilityChange.RuleId] = Database.SpatialPersistedComputedColumnCompatibilityChange.Content,
-        [Database.PlanGuideAltersOptimization.RuleId] = Database.PlanGuideAltersOptimization.Content,
 
         [Lineage.ExpressionDerivedColumn.RuleId] = Lineage.ExpressionDerivedColumn.Content,
         [Lineage.MultiReferencedCte.RuleId] = Lineage.MultiReferencedCte.Content,
