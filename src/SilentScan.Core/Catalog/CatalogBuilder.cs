@@ -1428,9 +1428,7 @@ public static class CatalogBuilder
             MaskingFunctionName: MaskingFunctionNameNormalizer.Normalize(columnDefinition.MaskingFunction?.Value),
             IsGeneratedAlwaysPeriod: columnDefinition.GeneratedAlways is GeneratedAlwaysType.RowStart or GeneratedAlwaysType.RowEnd,
             IsHidden: columnDefinition.IsHidden,
-            IsSparse: columnDefinition.StorageOptions?.SparseOption == SparseColumnOption.Sparse,
-            IsComputedNonDeterministic: columnDefinition.ComputedColumnExpression is { } expressionForDeterminism
-                && ComputedColumnDeterminismChecker.IsNonDeterministic(expressionForDeterminism));
+            IsSparse: columnDefinition.StorageOptions?.SparseOption == SparseColumnOption.Sparse);
     }
 
     private static ColumnEncryptionEnclaveSupport ResolveEnclaveSupport(ColumnEncryptionDefinition? encryption, DatabaseCatalog? catalog) =>
@@ -1459,12 +1457,6 @@ public static class CatalogBuilder
         columns = [.. columns.Select(c => c.Type is { IsStringFamily: true, Collation: null } && context.DefaultCollation is not null
             ? c with { Type = c.Type with { Collation = context.DefaultCollation } }
             : c)];
-
-        var typesByName = columns.ToDictionary(c => c.Name, c => c.Type, Collation.IdentifierComparer(context.DefaultCollation));
-        columns = [.. columns.Select(c => computedExpressions.TryGetValue(c.Name, out var expression) && !c.IsComputedNonDeterministic
-            && ComputedColumnDeterminismChecker.IsNonDeterministic(expression, name => typesByName.GetValueOrDefault(name))
-                ? c with { IsComputedNonDeterministic = true }
-                : c)];
 
         if (context.SourcePath is null)
         {

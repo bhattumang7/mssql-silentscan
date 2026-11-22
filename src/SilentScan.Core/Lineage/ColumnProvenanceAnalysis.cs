@@ -91,15 +91,6 @@ public static class ColumnProvenanceAnalysis
         return agreedType with { Precision = precision, Scale = scale };
     }
 
-    public static bool IsNonDeterministic(ColumnProvenance provenance) => provenance switch
-    {
-        ColumnProvenance.BaseColumn baseColumn => baseColumn.IsNonDeterministic,
-        ColumnProvenance.Cast cast => IsNonDeterministic(cast.Inner),
-        ColumnProvenance.Expression expression => expression.Inputs.Any(IsNonDeterministic),
-        ColumnProvenance.Union union => union.Branches.Any(IsNonDeterministic),
-        _ => false,
-    };
-
     public static IReadOnlyList<ColumnProvenance.BaseColumn> FindUnderlyingBaseColumns(ColumnProvenance provenance) => provenance switch
     {
         ColumnProvenance.BaseColumn baseColumn => [baseColumn],
