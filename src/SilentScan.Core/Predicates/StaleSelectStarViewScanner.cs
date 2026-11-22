@@ -47,7 +47,8 @@ public static class StaleSelectStarViewScanner
             }
 
             var starExpandedColumns = viewColumns.Where(column => !extraNames.Contains(column, catalog.IdentifierComparer)).ToList();
-            if (starExpandedColumns.SequenceEqual(baseTableColumns, catalog.IdentifierComparer))
+            if (starExpandedColumns.SequenceEqual(baseTableColumns, catalog.IdentifierComparer)
+                || baseTableColumns.Count < starExpandedColumns.Count)
             {
                 continue;
             }

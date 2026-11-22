@@ -31,6 +31,12 @@ internal static class StaleSelectStarView
             (now really C) surfaced under the view's stale, frozen label B. A consumer reading this
             view's "B" column today is silently reading real "C" data.
 
+            A base table that has lost a column with nothing added back is not reported: oracle-
+            confirmed the engine then rejects every read of the view with Msg 4502, a loud error
+            rather than a silent one. A view that gains a missing column's slot by an added column
+            (same or greater column count) is reported, because the view then binds by position and
+            returns the wrong column's data without any error.
+
             Deliberately scoped to v1: only the view's own outermost query specification's bare or
             qualified `*`, selecting from exactly one real base table (no join, no derived table, no
             CTE), is inspected - a join or a nested-subquery star is a known v1 scope limit, not

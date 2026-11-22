@@ -88,6 +88,17 @@ public sealed class StaleSelectStarViewScannerTests
     }
 
     [Fact]
+    public void BaseTableLostAColumnWithNoReplacement_NeverFires()
+    {
+        var view = View("CREATE VIEW dbo.V AS SELECT * FROM dbo.Base;");
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Base", ["Id", "A"]));
+        catalog.AddViewCompiledColumns("dbo.V", ["Id", "A", "B"]);
+
+        Assert.Empty(StaleSelectStarViewScanner.Scan([view], catalog));
+    }
+
+    [Fact]
     public void DropThenAddShiftsIdentity_StillFires()
     {
 
@@ -197,6 +208,37 @@ public sealed class StaleSelectStarViewScannerTests
             """);
 
         Assert.Empty(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner"));
+    }
+
+    [Fact]
+    public async Task LiveDeployment_ColumnDroppedWithNoReplacement_NeverFiresBecauseTheEngineRejectsTheView()
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync(
+            """
+            CREATE TABLE dbo.StaleViewDropBase (Id INT NOT NULL PRIMARY KEY, A INT NULL, B INT NULL);
+            GO
+            CREATE VIEW dbo.StaleViewDropOverBase AS SELECT * FROM dbo.StaleViewDropBase;
+            GO
+            ALTER TABLE dbo.StaleViewDropBase DROP COLUMN B;
+            """);
+
+        Assert.Empty(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner"));
+    }
+
+    [Fact]
+    public async Task LiveDeployment_ColumnDroppedAndAnotherAdded_FiresBecauseTheViewSilentlyBindsByPosition()
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync(
+            """
+            CREATE TABLE dbo.StaleViewSwapBase (Id INT NOT NULL PRIMARY KEY, A INT NULL, B INT NULL);
+            GO
+            CREATE VIEW dbo.StaleViewSwapOverBase AS SELECT * FROM dbo.StaleViewSwapBase;
+            GO
+            ALTER TABLE dbo.StaleViewSwapBase DROP COLUMN B;
+            ALTER TABLE dbo.StaleViewSwapBase ADD C INT NULL;
+            """);
+
+        Assert.Single(report.Find<StaleSelectStarViewFinding>("StaleSelectStarViewScanner"));
     }
 
     [Fact]
