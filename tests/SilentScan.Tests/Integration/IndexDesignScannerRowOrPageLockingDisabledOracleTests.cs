@@ -26,6 +26,11 @@ public sealed class IndexDesignScannerRowOrPageLockingDisabledOracleTests : Orac
         GO
         ALTER INDEX IX_T1_DisabledRowLocksOff ON dbo.T1 DISABLE;
         GO
+        CREATE TABLE dbo.LkOff (Id INT NOT NULL, V INT NOT NULL, CONSTRAINT PK_LkOff PRIMARY KEY CLUSTERED (Id) WITH (ALLOW_ROW_LOCKS = OFF));
+        CREATE TABLE dbo.LkOn (Id INT NOT NULL, V INT NOT NULL, CONSTRAINT PK_LkOn PRIMARY KEY CLUSTERED (Id));
+        INSERT INTO dbo.LkOff SELECT TOP (500) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1 FROM sys.all_objects;
+        INSERT INTO dbo.LkOn SELECT Id, V FROM dbo.LkOff;
+        GO
         """;
 
     [Fact]
@@ -89,5 +94,42 @@ public sealed class IndexDesignScannerRowOrPageLockingDisabledOracleTests : Orac
         var pageLocksFinding = Assert.Single(lockFindings, f => string.Equals(f.IndexName, "IX_T1_PageLocksOffViaAlter", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("ALLOW_PAGE_LOCKS", pageLocksFinding.DetailText);
         Assert.DoesNotContain("ALLOW_ROW_LOCKS", pageLocksFinding.DetailText);
+    }
+
+    private async Task<IReadOnlyList<string>> ReadLockResourceTypesAfterSingleRowUpdateAsync(string table)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var begin = new SqlCommand($"BEGIN TRANSACTION; UPDATE dbo.{table} SET V = 2 WHERE Id = 5;", connection))
+        {
+            await begin.ExecuteNonQueryAsync();
+        }
+
+        var resourceTypes = new List<string>();
+        await using (var read = new SqlCommand(
+            "SELECT DISTINCT resource_type FROM sys.dm_tran_locks WHERE request_session_id = @@SPID AND resource_type IN ('KEY', 'PAGE', 'RID') AND request_mode IN ('X', 'U');",
+            connection))
+        await using (var reader = await read.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                resourceTypes.Add(reader.GetString(0));
+            }
+        }
+
+        await using (var rollback = new SqlCommand("ROLLBACK TRANSACTION;", connection))
+        {
+            await rollback.ExecuteNonQueryAsync();
+        }
+
+        return resourceTypes;
+    }
+
+    [Fact]
+    public async Task SingleRowUpdate_WithRowLocksDisabled_TakesAPageLockWhereTheDefaultTakesAKeyLock()
+    {
+        Assert.Equal(["PAGE"], await ReadLockResourceTypesAfterSingleRowUpdateAsync("LkOff"));
+        Assert.Equal(["KEY"], await ReadLockResourceTypesAfterSingleRowUpdateAsync("LkOn"));
     }
 }
