@@ -355,7 +355,7 @@ public static class NonSargablePredicateScanner
         }
 
         private static bool StartsWithUnseekableWildcard(string pattern) =>
-            pattern is ['%' or '_', ..] or ['[', '^', ..];
+            pattern != "%" && pattern is ['%' or '_', ..] or ['[', '^', ..];
 
         private void InspectRegexpLikePredicate(RegexpLikePredicate node, ScopeChain scopeChain, ModuleWalker walker)
         {

@@ -24,6 +24,9 @@ internal static class LeadingWildcardLike
             wildcard can never answer it with an index seek, no matter what index exists on the
             column. The cost scales with table size exactly like a table scan, because that's
             functionally what it is.
+
+            A pattern that is exactly '%' is not reported: it matches every non-NULL value, so it
+            reads the same pages as the query with no predicate and no rewrite could seek.
             """,
         HowToFixIt: """
             There is no rewrite of a genuine leading-wildcard search that restores a seek on a

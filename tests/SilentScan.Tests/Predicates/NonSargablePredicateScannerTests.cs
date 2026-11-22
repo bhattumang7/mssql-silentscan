@@ -453,6 +453,21 @@ public sealed class NonSargablePredicateScannerTests
     }
 
     [Fact]
+    public void LikeOfJustAPercent_NeverFiresLeadingWildcard()
+    {
+        Assert.Empty(ScanSql("SELECT Id FROM dbo.Names WHERE Code LIKE '%';"));
+    }
+
+    [Theory]
+    [InlineData("%a")]
+    [InlineData("%%")]
+    [InlineData("_")]
+    public void LikeStartingWithAWildcardAndMore_StillFiresLeadingWildcard(string pattern)
+    {
+        Assert.Single(ScanSql($"SELECT Id FROM dbo.Names WHERE Code LIKE '{pattern}';"));
+    }
+
+    [Fact]
     public void LeadingWildcardLike_TrailingWildcardOnly_DoesNotFire()
     {
         var findings = ScanFixture("LEADING_WILDCARD_LIKE_clean.sql");
