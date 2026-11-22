@@ -27,7 +27,11 @@ public sealed class LiveCatalogReader
         catalog.CurrentDatabaseName = connection.Database;
         catalog.DefaultCollation = await ReadDatabaseDefaultCollationAsync(connection, cancellationToken);
         catalog.CompatibilityLevel = await ReadCompatibilityLevelAsync(connection, cancellationToken);
-        catalog.IsOptionalParameterOptimizationDisabled = await ReadIsOptionalParameterOptimizationDisabledAsync(connection, cancellationToken);
+        foreach (var name in await ReadDisabledScopedConfigurationsAsync(connection, cancellationToken))
+        {
+            catalog.DisabledScopedConfigurations.Add(name);
+        }
+
         catalog.EngineMajorVersion = await ReadEngineMajorVersionAsync(connection, cancellationToken);
         catalog.IsNestedTriggersEnabled = await ReadIsNestedTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsDisallowResultsFromTriggersEnabled = await ReadIsDisallowResultsFromTriggersEnabledAsync(connection, cancellationToken);
@@ -735,12 +739,28 @@ public sealed class LiveCatalogReader
         return result is byte level ? level : null;
     }
 
-    private static async Task<bool> ReadIsOptionalParameterOptimizationDisabledAsync(SqlConnection connection, CancellationToken cancellationToken)
+    private static readonly string[] BooleanScopedConfigurations =
+    [
+        "OPTIONAL_PARAMETER_OPTIMIZATION",
+        "PARAMETER_SENSITIVE_PLAN_OPTIMIZATION",
+        "DEFERRED_COMPILATION_TV",
+        "INTERLEAVED_EXECUTION_TVF",
+        "TSQL_SCALAR_UDF_INLINING",
+    ];
+
+    private static async Task<List<string>> ReadDisabledScopedConfigurationsAsync(SqlConnection connection, CancellationToken cancellationToken)
     {
+        var names = string.Join(", ", BooleanScopedConfigurations.Select(name => $"N'{name}'"));
         await using var command = connection.CreateReadOnlyCommand(
-            "SELECT CAST(value AS INT) FROM sys.database_scoped_configurations WHERE name = N'OPTIONAL_PARAMETER_OPTIMIZATION';");
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is int value && value == 0;
+            $"SELECT name FROM sys.database_scoped_configurations WHERE name IN ({names}) AND LOWER(CAST(value AS NVARCHAR(60))) IN (N'0', N'off');");
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var disabled = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            disabled.Add(reader.GetString(0));
+        }
+
+        return disabled;
     }
 
     private static async Task<int?> ReadEngineMajorVersionAsync(SqlConnection connection, CancellationToken cancellationToken)

@@ -98,6 +98,26 @@ public sealed class TableVariablePspSkipEngineFactOracleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WithParameterSensitivePlanOptimizationDisabled_EvenAStatementNeverReadingTheTableValuedParameterGetsNoDispatcher()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using (var off = new SqlCommand("ALTER DATABASE SCOPED CONFIGURATION SET PARAMETER_SENSITIVE_PLAN_OPTIMIZATION = OFF;", connection))
+        {
+            await off.ExecuteNonQueryAsync();
+        }
+
+        await ExecuteAsync(connection, "StatementIgnoresTvp", customerId: 1);
+        await ExecuteAsync(connection, "StatementIgnoresTvp", customerId: 2);
+
+        var planTypes = await CapturePlanTypesAsync(connection, "StatementIgnoresTvp");
+
+        Assert.NotEmpty(planTypes);
+        Assert.DoesNotContain("Dispatcher Plan", planTypes);
+    }
+
+    [Fact]
     public async Task StatementNeverReadingTheTableValuedParameter_StillGetsAParameterSensitivePlanDispatcher()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));

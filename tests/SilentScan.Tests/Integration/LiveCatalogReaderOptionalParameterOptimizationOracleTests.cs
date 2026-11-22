@@ -33,7 +33,7 @@ public sealed class LiveCatalogReaderOptionalParameterOptimizationOracleTests : 
 
         var after = await new LiveCatalogReader(Options.BuildConnectionString(_databaseName)).ReadAsync();
 
-        Assert.False(before.IsOptionalParameterOptimizationDisabled);
-        Assert.True(after.IsOptionalParameterOptimizationDisabled);
+        Assert.False(before.IsScopedConfigurationDisabled("OPTIONAL_PARAMETER_OPTIMIZATION"));
+        Assert.True(after.IsScopedConfigurationDisabled("OPTIONAL_PARAMETER_OPTIMIZATION"));
     }
 }

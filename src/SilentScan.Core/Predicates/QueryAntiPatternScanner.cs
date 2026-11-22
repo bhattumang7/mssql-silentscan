@@ -82,7 +82,8 @@ public static class QueryAntiPatternScanner
                     }
 
                     if (_tableValuedParameterNames.Contains(variableRef.Variable.Name)
-                        && catalog.CompatibilityLevel is >= 170)
+                        && catalog.CompatibilityLevel is >= 170
+                        && !catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
                     {
                         Findings.Add(new QueryAntiPatternFinding(
                             QueryAntiPatternFindingKind.TableVariablePspSkip, sourcePath,

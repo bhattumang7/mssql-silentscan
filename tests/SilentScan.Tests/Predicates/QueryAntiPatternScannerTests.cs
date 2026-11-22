@@ -14,13 +14,18 @@ public sealed class QueryAntiPatternScannerTests
         + "CREATE TABLE dbo.C (Id INT NOT NULL PRIMARY KEY, AId INT NOT NULL);"
         + "CREATE TABLE dbo.H (Id INT NOT NULL, V INT NULL);";
 
-    private static IReadOnlyList<QueryAntiPatternFinding> Scan(string sql, int? compatibilityLevel = null)
+    private static IReadOnlyList<QueryAntiPatternFinding> Scan(string sql, int? compatibilityLevel = null, params string[] disabledScopedConfigurations)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\n{sql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
+        foreach (var name in disabledScopedConfigurations)
+        {
+            catalog.DisabledScopedConfigurations.Add(name);
+        }
+
         return QueryAntiPatternScanner.Scan(result, catalog);
     }
 
@@ -35,6 +40,18 @@ public sealed class QueryAntiPatternScannerTests
         var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
         Assert.Equal("@ids", finding.DetailText);
         Assert.Equal(FindingConfidence.High, finding.Confidence);
+    }
+
+    [Fact]
+    public void TableValuedParameterReadAsTableSource_AtCompat170WithParameterSensitivePlanOptimizationDisabled_NeverFiresTableVariablePspSkip()
+    {
+        var findings = Scan(
+            "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);" + (char)10 + "GO" + (char)10
+            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            170,
+            "PARAMETER_SENSITIVE_PLAN_OPTIMIZATION");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
 
     [Fact]

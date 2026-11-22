@@ -20,7 +20,11 @@ public sealed class CatchAllPredicateScannerTests
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
-        catalog.IsOptionalParameterOptimizationDisabled = optionalParameterOptimizationDisabled;
+        if (optionalParameterOptimizationDisabled)
+        {
+            catalog.DisabledScopedConfigurations.Add("OPTIONAL_PARAMETER_OPTIMIZATION");
+        }
+
         return CatchAllPredicateScanner.Scan(result, catalog);
     }
 
