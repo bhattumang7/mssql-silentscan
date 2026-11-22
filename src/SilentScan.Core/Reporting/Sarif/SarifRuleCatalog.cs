@@ -84,7 +84,6 @@ public static class SarifRuleCatalog
     public const string SelfReferencingDmlRuleId = FindingRuleIds.SelfReferencingDmlRuleId;
     public const string TemporalTableHistoryIndexGapRuleId = FindingRuleIds.TemporalTableHistoryIndexGapRuleId;
     public const string CheckConstraintNullNotHandledRuleId = FindingRuleIds.CheckConstraintNullNotHandledRuleId;
-    public const string CheckConstraintOnIdentityColumnRuleId = FindingRuleIds.CheckConstraintOnIdentityColumnRuleId;
     public const string StaleSelectStarViewRuleId = FindingRuleIds.StaleSelectStarViewRuleId;
     public const string BareTopNoOrderByRuleId = FindingRuleIds.BareTopNoOrderByRuleId;
     public const string StringAggMissingOrderRuleId = FindingRuleIds.StringAggMissingOrderRuleId;
@@ -100,7 +99,6 @@ public static class SarifRuleCatalog
     public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => FindingRuleIds.ModuleCompileFlagRuleId(kind);
     public static string WindowFrameRuleId(WindowFrameFindingKind kind) => FindingRuleIds.WindowFrameRuleId(kind);
     public static string BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind kind) => FindingRuleIds.BoundedStringBuiltinTruncationRuleId(kind);
-    public const string CursorCloseOnCommitRuleId = FindingRuleIds.CursorCloseOnCommitRuleId;
     public static string TransactionHygieneRuleId(TransactionHygieneFindingKind kind) => FindingRuleIds.TransactionHygieneRuleId(kind);
     public const string OutputParameterRuleId = FindingRuleIds.OutputParameterRuleId;
     public const string CompositeIndexLeadingColumnRuleId = FindingRuleIds.CompositeIndexLeadingColumnRuleId;

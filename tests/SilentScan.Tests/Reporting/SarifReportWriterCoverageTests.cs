@@ -465,7 +465,6 @@ public sealed class SarifReportWriterCoverageTests
 
     [Theory]
     [InlineData(CheckConstraintFindingKind.NullNotHandled, "no IS NULL/IS NOT NULL test")]
-    [InlineData(CheckConstraintFindingKind.ConstraintOnIdentityColumn, "references the IDENTITY column")]
     public void Write_CheckConstraintFinding_MapsKindToDistinctMessageAndErrorLevel(CheckConstraintFindingKind kind, string expectedSubstring)
     {
         var finding = new CheckConstraintFinding(kind, "CK_Test", "dbo.T", "Col", "test.sql", 1);

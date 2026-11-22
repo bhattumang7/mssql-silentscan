@@ -13,7 +13,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE TABLE dbo.ChkNullSafe (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkNullSafe CHECK (Qty IS NOT NULL AND Qty > 0));
         GO
-        CREATE TABLE dbo.ChkIdent (Id INT IDENTITY(1,1) NOT NULL, V INT NULL, CONSTRAINT CK_ChkIdent CHECK (Id > 2));
         GO
         CREATE TABLE dbo.DfNullable (Id INT NOT NULL, Status INT NULL CONSTRAINT DF_DfNullable DEFAULT 5);
         GO
@@ -68,19 +67,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChkNull WHERE Qty IS NULL;"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNull VALUES (2, -1);"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullSafe VALUES (1, NULL);"));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.CheckConstraintOnIdentityColumnRuleId)]
-    public async Task CheckOnIdentity_FailedInsertsStillAdvanceTheCounter()
-    {
-        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkIdent (V) VALUES (1);"));
-        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkIdent (V) VALUES (1);"));
-        Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChkIdent;"));
-
-        var id = await ScalarAsync<int>("INSERT INTO dbo.ChkIdent (V) OUTPUT inserted.Id VALUES (1);");
-
-        Assert.Equal(3, id);
     }
 
     [Fact]

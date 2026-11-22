@@ -65,7 +65,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner").Select(ToResult));
         results.AddRange(report.Find<WindowFrameFinding>("WindowFrameScanner").Select(ToResult));
         results.AddRange(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Select(ToResult));
-        results.AddRange(report.Find<CursorCloseOnCommitFinding>("CursorCloseOnCommitScanner").Select(ToResult));
         results.AddRange(report.Find<ViewOrderingFinding>("ViewOrderingScanner").Select(ToResult));
         results.AddRange(report.Find<TransactionHygieneFinding>("TransactionHygieneScanner").Select(ToResult));
         results.AddRange(report.Find<CompositeIndexLeadingColumnFinding>("CompositeIndexLeadingColumnScanner").Select(ToResult));
@@ -582,8 +581,6 @@ public static class SarifReportWriter
         {
             CheckConstraintFindingKind.NullNotHandled =>
                 $"'{finding.ConstraintName}' (CHECK on '{finding.TableQualifiedName}.{finding.ColumnName}') has no IS NULL/IS NOT NULL test against '{finding.ColumnName}' anywhere in its predicate, and '{finding.ColumnName}' is nullable - a NULL value silently passes this constraint under SQL Server's three-valued logic, even though the constraint reads as if it forbids bad data.",
-            CheckConstraintFindingKind.ConstraintOnIdentityColumn =>
-                IdentityColumnCheckMessage(finding),
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled CheckConstraintFindingKind."),
         };
 
@@ -763,17 +760,6 @@ public static class SarifReportWriter
         };
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
-    }
-
-    private static SarifResult ToResult(CursorCloseOnCommitFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.CursorCloseOnCommitRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var closer = finding.ClosedByRollback ? "ROLLBACK" : "COMMIT";
-        var message = $"Cursor '{finding.CursorName}' (opened at line {finding.OpenLine}) was silently closed by CURSOR_CLOSE_ON_COMMIT ON when this {closer} ran at line {finding.ClosingStatementLine} - this FETCH fails at runtime with Msg 16917 (\"Cursor is not open\") unless the cursor is re-opened first.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.FetchLine, finding.FetchColumn);
     }
 
     private static SarifResult ToResult(TransactionHygieneFinding finding)
@@ -1193,21 +1179,6 @@ public static class SarifReportWriter
         var featureKind = finding.TouchedIsIndexedView ? "indexed view" : "filtered index";
         var indexSuffix = finding.TouchedIndexName is { } idx ? $".{idx}" : string.Empty;
         return $" - touches {featureKind} '{touched}'{indexSuffix}";
-    }
-
-    private static string IdentityColumnCheckMessage(CheckConstraintFinding finding)
-    {
-        var prefix = $"'{finding.ConstraintName}' (CHECK on '{finding.TableQualifiedName}.{finding.ColumnName}') references the IDENTITY column '{finding.ColumnName}' directly - the identity counter advances even on a failed insert (Msg 547), so the value it reserves for a rejected row is never reused.";
-
-        return finding.ThresholdDirection switch
-        {
-            IdentityCheckThresholdDirection.Increasing =>
-                $"{prefix} Every insert whose auto-generated identity value doesn't yet satisfy this predicate fails deterministically, consuming the identity counter on each failed attempt, until the counter catches up and failures silently stop forever.",
-            IdentityCheckThresholdDirection.Decreasing =>
-                $"{prefix} Inserts succeed only while the identity counter is still below this threshold; once the counter passes it, every subsequent insert fails deterministically and permanently, with no code change and no way for that direction to ever pass again.",
-            _ =>
-                $"{prefix} Because the counter keeps consuming values on both successful and failed inserts, whether and when this predicate ends up permanently satisfied, permanently failing, or neither depends entirely on the predicate's own shape - it is not guaranteed to eventually stop mattering.",
-        };
     }
 
     private static string FloorLevelForConfidence(string level, FindingConfidence confidence) =>

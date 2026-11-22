@@ -117,7 +117,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ModuleCompileFlag(report, headingLevel, pathBase));
         blocks.AddRange(WindowFrame(report, headingLevel, pathBase));
         blocks.AddRange(BoundedStringBuiltinTruncation(report, headingLevel, pathBase));
-        blocks.AddRange(CursorCloseOnCommit(report, headingLevel, pathBase));
         blocks.AddRange(ViewOrdering(report, headingLevel, pathBase));
         blocks.AddRange(TransactionHygiene(report, headingLevel, pathBase));
         blocks.AddRange(CompositeIndexLeadingColumn(report, headingLevel, pathBase));
@@ -243,7 +242,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Module compile flags (WITH RECOMPILE / TVF database-collation return)", report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count);
         AddCount(counts, "RANGE window-function frames", report.Find<WindowFrameFinding>(nameof(WindowFrameScanner)).Count);
         AddCount(counts, "REPLICATE/REPLACE/SPACE constant-provable result truncation", report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count);
-        AddCount(counts, "Cursors silently closed by CURSOR_CLOSE_ON_COMMIT then fetched", report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count);
         AddCount(counts, "View/inline TVF ordering not guaranteed", report.Find<ViewOrderingFinding>(nameof(ViewOrderingScanner)).Count);
         AddCount(counts, "Composite index leading-column violations", report.Find<CompositeIndexLeadingColumnFinding>(nameof(CompositeIndexLeadingColumnScanner)).Count);
         AddCount(counts, "Predicate columns with no applicable statistic and auto-create disabled", report.Find<MissingStatisticsFinding>(nameof(MissingStatisticsScanner)).Count);
@@ -1902,28 +1900,6 @@ public static class ReadableScanReportWriter
                     f.CapBytes.ToString(CultureInfo.InvariantCulture),
                 })]);
         }
-    }
-
-    private static IEnumerable<ReadableBlock> CursorCloseOnCommit(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Cursor silently closed by CURSOR_CLOSE_ON_COMMIT ({report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "SET CURSOR_CLOSE_ON_COMMIT ON silently closes every open cursor the instant a COMMIT/full ROLLBACK runs - the next FETCH from that cursor fails at runtime (Msg 16917, \"Cursor is not open\") with no error at the cursor's own OPEN site.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.CursorCloseOnCommitRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Cursor", "Closed by"],
-            [.. report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.FetchLine, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.CursorName,
-                f.ClosedByRollback ? "ROLLBACK" : "COMMIT",
-            })]);
     }
 
     private static IEnumerable<ReadableBlock> ViewOrdering(ScanReport report, int level, string? pathBase)

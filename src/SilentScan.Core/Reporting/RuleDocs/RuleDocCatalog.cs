@@ -104,7 +104,6 @@ public static class RuleDocCatalog
 
         [Catalog.UntrustedCheckConstraint.RuleId] = Catalog.UntrustedCheckConstraint.Content,
         [Catalog.CheckConstraintNullNotHandled.RuleId] = Catalog.CheckConstraintNullNotHandled.Content,
-        [Catalog.CheckConstraintOnIdentityColumn.RuleId] = Catalog.CheckConstraintOnIdentityColumn.Content,
         [Predicates.CatchAllParameter.RuleId] = Predicates.CatchAllParameter.Content,
         [Predicates.LocalVariablePredicate.RuleId] = Predicates.LocalVariablePredicate.Content,
         [Predicates.FilteredIndexParameterMismatch.RuleId] = Predicates.FilteredIndexParameterMismatch.Content,
@@ -125,7 +124,6 @@ public static class RuleDocCatalog
         [ControlFlow.LegacyIdentityIntrinsic.RuleId] = ControlFlow.LegacyIdentityIntrinsic.Content,
         [ControlFlow.CaseExpressionMissingElse.RuleId] = ControlFlow.CaseExpressionMissingElse.Content,
         [ControlFlow.NonDeterministicCaseInput.RuleId] = ControlFlow.NonDeterministicCaseInput.Content,
-        [ControlFlow.CursorCloseOnCommit.RuleId] = ControlFlow.CursorCloseOnCommit.Content,
         [ControlFlow.TransactionHygieneImplicit.RuleId] = ControlFlow.TransactionHygieneImplicit.Content,
         [ControlFlow.TruncateSwallowed.RuleId] = ControlFlow.TruncateSwallowed.Content,
         [ControlFlow.OutputParameter.RuleId] = ControlFlow.OutputParameter.Content,

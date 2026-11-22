@@ -14,10 +14,8 @@ internal static class StaleSelectStarView
             rule catches a view whose frozen column list no longer matches the base table's real,
             current shape - a genuinely different claim from generic "don't SELECT *" style advice
             (deliberately out of scope elsewhere in this codebase): this is specifically about
-            metadata drift between a view and its own base table, not query-time cost, and unlike
-            the sibling `select-star-view` rule (a frozen list disagreeing with a DIFFERENT
-            consuming query's own narrower column selection), this drift already exists between the
-            view and its base table with no second consumer site needed at all.
+            metadata drift between a view and its own base table, not query-time cost, and the drift
+            already exists between the view and its base table with no consumer query needed.
 
             This is stronger than a milder "a new column is invisible through the view" gap - it's
             oracle-confirmed to produce silently WRONG data under an unchanged column NAME. A real

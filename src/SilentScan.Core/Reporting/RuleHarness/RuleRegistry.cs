@@ -6,7 +6,6 @@ public static class RuleRegistry
 {
     public static IReadOnlyList<IRule> All { get; } =
     [
-        new CursorCloseOnCommitRule(),
         new CompositeIndexLeadingColumnRule(),
         new MissingStatisticsRule(),
         new AmbiguousDateLiteralConversionRule(),

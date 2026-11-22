@@ -44,7 +44,6 @@ public static class TestScanReports
         IReadOnlyList<TemporalTableHistoryIndexGapFinding>? TemporalTableHistoryIndexGapFindings = null,
         IReadOnlyList<ModuleCompileFlagFinding>? ModuleCompileFlagFindings = null,
         IReadOnlyList<WindowFrameFinding>? WindowFrameFindings = null,
-        IReadOnlyList<CursorCloseOnCommitFinding>? CursorCloseOnCommitFindings = null,
         IReadOnlyList<ViewOrderingFinding>? ViewOrderingFindings = null,
         IReadOnlyList<TransactionHygieneFinding>? TransactionHygieneFindings = null,
         IReadOnlyList<CompositeIndexLeadingColumnFinding>? CompositeIndexLeadingColumnFindings = null,
@@ -135,7 +134,6 @@ public static class TestScanReports
         Set("TemporalTableHistoryIndexGapScanner", TemporalTableHistoryIndexGapFindings);
         Set("ModuleCompileFlagScanner", ModuleCompileFlagFindings);
         Set("WindowFrameScanner", WindowFrameFindings);
-        Set("CursorCloseOnCommitScanner", CursorCloseOnCommitFindings);
         Set("ViewOrderingScanner", ViewOrderingFindings);
         Set("TransactionHygieneScanner", TransactionHygieneFindings);
         Set("CompositeIndexLeadingColumnScanner", CompositeIndexLeadingColumnFindings);

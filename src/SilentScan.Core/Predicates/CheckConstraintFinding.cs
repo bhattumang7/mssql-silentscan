@@ -6,19 +6,6 @@ namespace SilentScan.Core.Predicates;
 public enum CheckConstraintFindingKind
 {
     NullNotHandled,
-
-    ConstraintOnIdentityColumn,
-}
-
-public enum IdentityCheckThresholdDirection
-{
-    NotApplicable,
-
-    Increasing,
-
-    Decreasing,
-
-    Other,
 }
 
 public sealed record CheckConstraintFinding(
@@ -28,8 +15,7 @@ public sealed record CheckConstraintFinding(
     string ColumnName,
     [property: JsonIgnore] string SourcePath,
     [property: JsonIgnore] int Line,
-    FindingConfidence Confidence = FindingConfidence.High,
-    IdentityCheckThresholdDirection ThresholdDirection = IdentityCheckThresholdDirection.NotApplicable) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High) : IFinding
 {
     public string RuleId { get; } = FindingRuleIds.CheckConstraintRuleId(Kind);
 

@@ -93,7 +93,6 @@ public static class FindingRuleIds
     public const string SelfReferencingDmlRuleId = "silentscan/dml/self-referencing";
     public const string TemporalTableHistoryIndexGapRuleId = "silentscan/catalog/temporal-history-index-gap";
     public const string CheckConstraintNullNotHandledRuleId = "silentscan/catalog/check-constraint-null-not-handled";
-    public const string CheckConstraintOnIdentityColumnRuleId = "silentscan/catalog/check-constraint-on-identity-column";
     public const string StaleSelectStarViewRuleId = "silentscan/catalog/stale-select-star-view";
     public const string BareTopNoOrderByRuleId = "silentscan/query/bare-top-no-order-by";
     public const string StringAggMissingOrderRuleId = "silentscan/string-builtin/string-agg-missing-order";
@@ -130,7 +129,6 @@ public static class FindingRuleIds
         BoundedStringBuiltinTruncationFindingKind.SpaceResultTruncated => BoundedStringBuiltinTruncationSpaceResultTruncatedRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
-    public const string CursorCloseOnCommitRuleId = "silentscan/control-flow/cursor-close-on-commit";
     public const string TransactionHygieneImplicitTransactionUnresolvedOnSomePathRuleId = "silentscan/control-flow/unresolved-implicit-transaction";
     public static string TransactionHygieneRuleId(TransactionHygieneFindingKind kind) => kind switch
     {
@@ -332,7 +330,6 @@ public static class FindingRuleIds
     public static string CheckConstraintRuleId(CheckConstraintFindingKind kind) => kind switch
     {
         CheckConstraintFindingKind.NullNotHandled => CheckConstraintNullNotHandledRuleId,
-        CheckConstraintFindingKind.ConstraintOnIdentityColumn => CheckConstraintOnIdentityColumnRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled CheckConstraintFindingKind."),
     };
     public static string CheckConstraintPredicateContradictionRuleId(CheckConstraintPredicateContradictionKind kind) => kind switch

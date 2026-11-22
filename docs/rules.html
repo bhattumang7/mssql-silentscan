@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">157 rules. 120 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">155 rules. 118 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -102,7 +102,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <h2>catalog</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/catalog-check-constraint-null-not-handled.html">Check Constraint Null Not Handled</a> <code class="rule-key">silentscan/catalog/check-constraint-null-not-handled</code><span class="snippet">A nullable column&#x27;s own CHECK constraint predicate has no IS NULL/IS NOT NULL test against that column anywhere in the predicate.</span></li>
-      <li><a class="id" href="rules/catalog-check-constraint-on-identity-column.html">Check Constraint On Identity Column</a> <code class="rule-key">silentscan/catalog/check-constraint-on-identity-column</code><span class="snippet">A CHECK constraint&#x27;s own definition directly references an IDENTITY column.</span></li>
       <li><a class="id" href="rules/catalog-column-ansi-padding-off.html">Column ANSI Padding Off</a> <code class="rule-key">silentscan/catalog/column-ansi-padding-off</code><span class="snippet">A VARCHAR/NVARCHAR/VARBINARY column&#x27;s own ANSI_PADDING state (sys.columns.is_ansi_padded) is OFF.</span></li>
       <li><a class="id" href="rules/catalog-max-typed-column.html">Max Typed Column</a> <code class="rule-key">silentscan/catalog/max-typed-column</code><span class="snippet">A string/binary column is declared MAX-typed, or a column is declared the native json type.</span></li>
       <li><a class="id" href="rules/catalog-memory-optimized-schema-only-durability.html">Memory Optimized Schema Only Durability</a> <code class="rule-key">silentscan/catalog/memory-optimized-schema-only-durability</code><span class="snippet">A memory-optimized table declares WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_ONLY).</span></li>
@@ -121,7 +120,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <h2>control-flow</h2>
     <ul class="rule-list">
       <li><a class="id" href="rules/control-flow-case-expression-missing-else.html">Case Expression Missing Else</a> <code class="rule-key">silentscan/control-flow/case-expression-missing-else</code><span class="snippet">A simple CASE expression has no ELSE.</span></li>
-      <li><a class="id" href="rules/control-flow-cursor-close-on-commit.html">Cursor Close On Commit</a> <code class="rule-key">silentscan/control-flow/cursor-close-on-commit</code><span class="snippet">SET CURSOR_CLOSE_ON_COMMIT ON is in effect (set earlier in the same script/module) when a COMMIT or full ROLLBACK (not one naming a savepoint) runs while a local, name-declared cursor is open.</span></li>
       <li><a class="id" href="rules/control-flow-dirty-read-isolation-hint.html">Dirty Read Isolation Hint</a> <code class="rule-key">silentscan/control-flow/dirty-read-isolation-hint</code><span class="snippet">NOLOCK/READUNCOMMITTED allows dirty reads and can miss or double-count rows during a concurrent page split.</span></li>
       <li><a class="id" href="rules/control-flow-legacy-identity-intrinsic.html">Legacy Identity Intrinsic</a> <code class="rule-key">silentscan/control-flow/legacy-identity-intrinsic</code><span class="snippet">@@IDENTITY returns the last identity value inserted in this session across any table/scope.</span></li>
       <li><a class="id" href="rules/control-flow-non-deterministic-case-input.html">Non Deterministic Case Input</a> <code class="rule-key">silentscan/control-flow/non-deterministic-case-input</code><span class="snippet">A non-deterministic function (NEWID/RAND/CRYPT_GEN_RANDOM) is used as a simple CASE expression&#x27;s input.</span></li>
