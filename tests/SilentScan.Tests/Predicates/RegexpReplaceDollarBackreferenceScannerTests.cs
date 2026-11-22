@@ -22,6 +22,25 @@ public sealed class RegexpReplaceDollarBackreferenceScannerTests
         Assert.Contains(findings, f => f.DollarToken == "$2");
     }
 
+    [Theory]
+    [InlineData("(?i)b", "$1")]
+    [InlineData("(?i:a)b", "$1")]
+    [InlineData("(?i:a)(b)", "$2")]
+    [InlineData("(?s)(?i)b", "$1")]
+    public void DollarToken_BeyondTheCapturingGroups_NeverFires(string pattern, string replacement)
+    {
+        Assert.Empty(Scan($"SELECT REGEXP_REPLACE('abc', '{pattern}', '[{replacement}]');"));
+    }
+
+    [Theory]
+    [InlineData("(?i:a)(b)", "$1")]
+    [InlineData("(?P<x>b)", "$1")]
+    [InlineData("(?i)(b)", "$1")]
+    public void DollarToken_OnACapturingGroup_StillFires(string pattern, string replacement)
+    {
+        Assert.Single(Scan($"SELECT REGEXP_REPLACE('abc', '{pattern}', '[{replacement}]');"));
+    }
+
     [Fact]
     public void BackslashBackreference_NeverFires()
     {

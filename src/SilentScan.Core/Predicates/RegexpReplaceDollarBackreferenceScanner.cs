@@ -78,9 +78,14 @@ public static class RegexpReplaceDollarBackreferenceScanner
 
                 if (c == '(')
                 {
-                    if (i + 2 < pattern.Length && pattern[i + 1] == '?' && pattern[i + 2] == ':')
+                    if (i + 1 < pattern.Length && pattern[i + 1] == '?')
                     {
-                        i += 3;
+                        if (string.CompareOrdinal(pattern, i + 2, "P<", 0, 2) == 0)
+                        {
+                            groupCount++;
+                        }
+
+                        i += 2;
                         continue;
                     }
 

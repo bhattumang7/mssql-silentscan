@@ -50,4 +50,20 @@ public sealed class RegexpReplaceDollarBackreferenceEngineFactOracleTests : IAsy
 
         Assert.Equal("123-abcdef", await ReplaceAsync(connection, "\\2-\\1"));
     }
+
+    [Theory]
+    [InlineData("(?i)b", "[\\1]", "a[]c")]
+    [InlineData("(?i:a)b", "[\\1]", "[]c")]
+    [InlineData("(?i:a)(b)", "[\\1]", "[b]c")]
+    [InlineData("(?i:a)(b)", "[\\2]", "[]c")]
+    [InlineData("(?P<x>b)", "[\\1]", "a[b]c")]
+    public async Task FlagGroups_AreNotCapturingGroups_AndNamedGroupsAre(string pattern, string replacement, string expected)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand($"SELECT REGEXP_REPLACE('abc', '{pattern}', '{replacement}');", connection);
+
+        Assert.Equal(expected, (string)(await command.ExecuteScalarAsync())!);
+    }
 }
