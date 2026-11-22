@@ -78,7 +78,6 @@ public static class TestScanReports
         IReadOnlyList<StringConcatNullFinding>? StringConcatNullFindings = null,
         IReadOnlyList<SecurityPredicateIndexFinding>? SecurityPredicateIndexFindings = null,
         IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null,
-        IReadOnlyList<TriggerOrderFinding>? TriggerOrderFindings = null,
         IReadOnlyList<MissingStatisticsFinding>? MissingStatisticsFindings = null,
         IReadOnlyList<MemoryOptimizedSchemaOnlyDurabilityFinding>? MemoryOptimizedSchemaOnlyDurabilityFindings = null,
         IReadOnlyList<BoundedStringBuiltinTruncationFinding>? BoundedStringBuiltinTruncationFindings = null,
@@ -168,7 +167,6 @@ public static class TestScanReports
         Set("StringConcatNullScanner", StringConcatNullFindings);
         Set("SecurityPredicateIndexScanner", SecurityPredicateIndexFindings);
         Set("ForcedParameterizationScanner", ForcedParameterizationFindings);
-        Set("TriggerOrderScanner", TriggerOrderFindings);
         Set("MissingStatisticsScanner", MissingStatisticsFindings);
         Set("MemoryOptimizedSchemaOnlyDurabilityScanner", MemoryOptimizedSchemaOnlyDurabilityFindings);
         Set("BoundedStringBuiltinTruncationScanner", BoundedStringBuiltinTruncationFindings);

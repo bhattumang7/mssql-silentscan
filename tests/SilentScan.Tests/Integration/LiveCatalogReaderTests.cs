@@ -235,9 +235,6 @@ public sealed class LiveCatalogReaderTests : OracleTestFixture
         var unpinned = Assert.Single(catalog.TriggerEvents, e => e.TriggerQualifiedName == "dbo.trg_OrderedTriggers_2");
         Assert.False(unpinned.IsFirst);
         Assert.False(unpinned.IsLast);
-
-        var findings = TriggerOrderScanner.Scan(catalog);
-        Assert.DoesNotContain(findings, f => f.TableQualifiedName == "dbo.OrderedTriggers");
     }
 
     [Fact]

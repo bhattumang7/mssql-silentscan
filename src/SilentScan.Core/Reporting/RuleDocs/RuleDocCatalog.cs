@@ -163,7 +163,6 @@ public static class RuleDocCatalog
         [ForcedParameterization.GroupByExpressionLiteral.RuleId] = ForcedParameterization.GroupByExpressionLiteral.Content,
 
 
-        [Catalog.TriggerOrder.RuleId] = Catalog.TriggerOrder.Content,
         [Catalog.MemoryOptimizedSchemaOnlyDurability.RuleId] = Catalog.MemoryOptimizedSchemaOnlyDurability.Content,
         [IndexShape.CompositeIndexLeadingColumn.RuleId] = IndexShape.CompositeIndexLeadingColumn.Content,
         [Statistics.MissingStatistics.RuleId] = Statistics.MissingStatistics.Content,

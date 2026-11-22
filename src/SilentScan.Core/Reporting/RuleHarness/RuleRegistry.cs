@@ -54,7 +54,6 @@ public static class RuleRegistry
         new UnindexedTempTableUsageRule(),
 
         new AnsiPaddingOffColumnRule(),
-        new TriggerOrderRule(),
         new ProcCallArgumentMismatchRule(),
         new ProcCallTableValuedArgumentMismatchRule(),
         new SpExecuteSqlParameterMismatchRule(),

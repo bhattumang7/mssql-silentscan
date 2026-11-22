@@ -9,13 +9,6 @@ internal sealed class AnsiPaddingOffColumnRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => AnsiPaddingOffColumnScanner.Scan(context.Catalog);
 }
 
-internal sealed class TriggerOrderRule : ICatalogRule
-{
-    public string Id => "TriggerOrderScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => TriggerOrderScanner.Scan(context.Catalog);
-}
-
 internal sealed class ProcCallArgumentMismatchRule : ICatalogRule
 {
     public string Id => "ProcCallArgumentMismatchScanner";

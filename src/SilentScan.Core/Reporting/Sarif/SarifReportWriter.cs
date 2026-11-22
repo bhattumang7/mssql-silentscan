@@ -103,7 +103,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<RegexpAccentInsensitiveColumnFinding>("RegexpAccentInsensitiveColumnScanner").Select(ToResult));
         results.AddRange(report.Find<StringConcatNullFinding>("StringConcatNullScanner").Select(ToResult));
         results.AddRange(report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner").Select(ToResult));
-        results.AddRange(report.Find<TriggerOrderFinding>("TriggerOrderScanner").Select(ToResult));
         results.AddRange(report.Find<MissingStatisticsFinding>("MissingStatisticsScanner").Select(ToResult));
 
         results = AnnotateDynamicSqlOrigins(results, report);
@@ -986,17 +985,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-
-    private static SarifResult ToResult(TriggerOrderFinding finding)
-    {
-
-        var triggerList = string.Join(", ", finding.UnorderedTriggerNames);
-        var message = $"'{finding.TableQualifiedName}' has {finding.UnorderedTriggerNames.Count} AFTER {finding.EventTypeDescription} triggers with no sp_settriggerorder pin between them ({triggerList}) - their relative firing order is undefined by the engine.";
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TriggerOrderRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: 1);
-    }
 
     private static SarifResult ToResult(QueryAntiPatternFinding finding)
     {

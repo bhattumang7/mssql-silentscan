@@ -86,7 +86,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TvfFence(report, headingLevel, pathBase));
         blocks.AddRange(ScalarUdf(report, headingLevel, pathBase));
         blocks.AddRange(AnsiPaddingOffColumn(report, headingLevel, pathBase));
-        blocks.AddRange(TriggerOrder(report, headingLevel, pathBase));
         blocks.AddRange(ProcCallArgumentMismatch(report, headingLevel, pathBase));
         blocks.AddRange(TvfCallArgumentMismatch(report, headingLevel, pathBase));
         blocks.AddRange(ProcCallTableValuedArgumentMismatch(report, headingLevel, pathBase));
@@ -185,7 +184,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Multi-statement/CLR TVF references acting as optimization fences", report.Find<TvfFenceFinding>(nameof(TvfFenceScanner)).Count);
         AddCount(counts, "Scalar UDF calls (per-row cost, non-sargable when predicate-context)", report.Find<ScalarUdfFinding>(nameof(ScalarUdfScanner)).Count);
         AddCount(counts, "Columns with ANSI_PADDING OFF in their own catalog state", report.Find<AnsiPaddingOffColumnFinding>(nameof(AnsiPaddingOffColumnScanner)).Count);
-        AddCount(counts, "Tables with undefined AFTER trigger firing order", report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Count);
         AddCount(counts, "EXEC call-site arguments risking silent data loss at the parameter boundary", report.Find<ProcCallArgumentMismatchFinding>(nameof(ProcCallArgumentMismatchScanner)).Count);
         AddCount(counts, "Inline TVF call-site arguments risking silent data loss at the parameter boundary", report.Find<TvfCallArgumentMismatchFinding>(nameof(TvfCallArgumentMismatchScanner)).Count);
         AddCount(counts, "EXEC call-site table-valued parameter columns risking silent data loss when their caller-side table variable was populated", report.Find<ProcCallTableValuedArgumentMismatchFinding>(nameof(ProcCallTableValuedArgumentMismatchScanner)).Count);
@@ -565,28 +563,6 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 $"{f.TableQualifiedName}.{f.ColumnName}",
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> TriggerOrder(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Tables with undefined trigger firing order ({report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "Two or more enabled AFTER triggers on the same table+event with no sp_settriggerorder pin narrowing their relative order down to a single pair - the engine documents this order as undefined. Read live from sys.triggers/sys.trigger_events - always empty for a file-mode scan.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TriggerOrderRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, "Event", "Unordered triggers"],
-            [.. report.Find<TriggerOrderFinding>(nameof(TriggerOrderScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                f.EventTypeDescription,
-                string.Join(", ", f.UnorderedTriggerNames),
             })]);
     }
 
