@@ -115,6 +115,16 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
             WHERE c.Status = 'X';
         END
         GO
+        CREATE PROCEDURE dbo.P_LeftJoinIsDistinctFromNoFire AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS DISTINCT FROM 'Y';
+        END
+        GO
+        CREATE PROCEDURE dbo.P_LeftJoinIsNotDistinctFromNullNoFire AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS NOT DISTINCT FROM NULL;
+        END
+        GO
         INSERT INTO dbo.Parent (Id, Flag) VALUES (1, NULL), (2, NULL);
         INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (1, 1, 'X', 5), (2, NULL, 'X', 7);
         GO
@@ -270,6 +280,26 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
         var findings = await FindingsForAsync("P_DeleteFromFires");
 
         Assert.Single(findings);
+    }
+
+    [Theory]
+    [InlineData("P_LeftJoinIsDistinctFromNoFire")]
+    [InlineData("P_LeftJoinIsNotDistinctFromNullNoFire")]
+    public async Task NullSafeDistinctnessPredicateOnNullSupplyingSide_DoesNotFire_BecauseTheUnmatchedRowSurvives(string procedure)
+    {
+        Assert.Empty(await FindingsForAsync(procedure));
+
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand($"EXEC dbo.{procedure};", connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        var ids = new List<int>();
+        while (await reader.ReadAsync())
+        {
+            ids.Add(reader.GetInt32(0));
+        }
+
+        Assert.Contains(2, ids);
     }
 
     [Fact]
