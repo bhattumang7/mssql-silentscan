@@ -112,6 +112,21 @@ public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
     [InlineData("DATABASE_PRINCIPAL_ID() IS NULL")]
     [InlineData("FILE_ID('master') IS NULL")]
     [InlineData("INDEX_COL('dbo.BigTable', 1, 1) IS NULL")]
+    [InlineData("APPLOCK_MODE('public', 'x', 'Session') IS NULL")]
+    [InlineData("APPLOCK_TEST('public', 'x', 'Shared', 'Session') IS NULL")]
+    [InlineData("LOGINPROPERTY('sa', 'IsLocked') IS NULL")]
+    [InlineData("SESSIONPROPERTY('ANSI_NULLS') IS NULL")]
+    [InlineData("CERT_ID('x') IS NULL")]
+    [InlineData("ASYMKEY_ID('x') IS NULL")]
+    [InlineData("KEY_ID('x') IS NULL")]
+    [InlineData("KEY_GUID('x') IS NULL")]
+    [InlineData("CHANGE_TRACKING_CURRENT_VERSION() IS NULL")]
+    [InlineData("HAS_DBACCESS('master') IS NULL")]
+    [InlineData("CERTPROPERTY(1, 'Expiry_Date') IS NULL")]
+    [InlineData("ASYMKEYPROPERTY(1, 'algorithm_desc') IS NULL")]
+    [InlineData("USER_SID(1) IS NULL")]
+    [InlineData("INDEXKEY_PROPERTY(1, 1, 1, 'ColumnId') IS NULL")]
+    [InlineData("CERTENCODED(1) IS NULL")]
     public async Task ConfirmedIntrinsic_InsideQueryWithFrom_ForcesSerial(string predicate)
     {
         var planXml = await CaptureRealExecutionPlanAsync(

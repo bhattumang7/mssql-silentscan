@@ -221,6 +221,21 @@ public sealed class ForcedSerialScannerTests
     [InlineData("DATABASE_PRINCIPAL_ID()")]
     [InlineData("FILE_ID('master')")]
     [InlineData("INDEX_COL('dbo.BigTable', 1, 1)")]
+    [InlineData("APPLOCK_MODE('public', 'x', 'Session')")]
+    [InlineData("APPLOCK_TEST('public', 'x', 'Shared', 'Session')")]
+    [InlineData("LOGINPROPERTY('sa', 'IsLocked')")]
+    [InlineData("SESSIONPROPERTY('ANSI_NULLS')")]
+    [InlineData("CERT_ID('x')")]
+    [InlineData("ASYMKEY_ID('x')")]
+    [InlineData("KEY_ID('x')")]
+    [InlineData("KEY_GUID('x')")]
+    [InlineData("CHANGE_TRACKING_CURRENT_VERSION()")]
+    [InlineData("HAS_DBACCESS('master')")]
+    [InlineData("CERTPROPERTY(1, 'Expiry_Date')")]
+    [InlineData("ASYMKEYPROPERTY(1, 'algorithm_desc')")]
+    [InlineData("USER_SID(1)")]
+    [InlineData("INDEXKEY_PROPERTY(1, 1, 1, 'ColumnId')")]
+    [InlineData("CERTENCODED(1)")]
     public void EngineSerializingMetadataFunction_Fires(string call)
     {
         var findings = Scan("SELECT Id FROM dbo.T WHERE " + call + " IS NOT NULL;");
