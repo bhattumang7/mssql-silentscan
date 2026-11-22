@@ -209,6 +209,18 @@ public sealed class ForcedSerialScannerTests
     [InlineData("OBJECTPROPERTYEX(Id, 'IsTable')")]
     [InlineData("TYPE_ID('int')")]
     [InlineData("OBJECT_DEFINITION(Id)")]
+    [InlineData("COL_NAME(1, 1)")]
+    [InlineData("OBJECT_SCHEMA_NAME(1)")]
+    [InlineData("IDENT_INCR('dbo.BigTable')")]
+    [InlineData("IDENTITYPROPERTY(1, 'IsIdentity')")]
+    [InlineData("HAS_PERMS_BY_NAME('dbo.BigTable', 'OBJECT', 'SELECT')")]
+    [InlineData("IS_ROLEMEMBER('public')")]
+    [InlineData("IS_SRVROLEMEMBER('sysadmin')")]
+    [InlineData("PERMISSIONS()")]
+    [InlineData("TYPEPROPERTY('int', 'precision')")]
+    [InlineData("DATABASE_PRINCIPAL_ID()")]
+    [InlineData("FILE_ID('master')")]
+    [InlineData("INDEX_COL('dbo.BigTable', 1, 1)")]
     public void EngineSerializingMetadataFunction_Fires(string call)
     {
         var findings = Scan("SELECT Id FROM dbo.T WHERE " + call + " IS NOT NULL;");

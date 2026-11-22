@@ -100,6 +100,18 @@ public sealed class NonParallelizableIntrinsicOracleTests : OracleTestFixture
     [InlineData("CURRENT_TRANSACTION_ID() IS NULL")]
     [InlineData("CURSOR_STATUS('global', 'x') IS NULL")]
     [InlineData("INDEXPROPERTY(1, 'x', 'IsUnique') IS NULL")]
+    [InlineData("COL_NAME(1, 1) IS NULL")]
+    [InlineData("OBJECT_SCHEMA_NAME(1) IS NULL")]
+    [InlineData("IDENT_INCR('dbo.BigTable') IS NULL")]
+    [InlineData("IDENTITYPROPERTY(1, 'IsIdentity') IS NULL")]
+    [InlineData("HAS_PERMS_BY_NAME('dbo.BigTable', 'OBJECT', 'SELECT') IS NULL")]
+    [InlineData("IS_ROLEMEMBER('public') IS NULL")]
+    [InlineData("IS_SRVROLEMEMBER('sysadmin') IS NULL")]
+    [InlineData("PERMISSIONS() IS NULL")]
+    [InlineData("TYPEPROPERTY('int', 'precision') IS NULL")]
+    [InlineData("DATABASE_PRINCIPAL_ID() IS NULL")]
+    [InlineData("FILE_ID('master') IS NULL")]
+    [InlineData("INDEX_COL('dbo.BigTable', 1, 1) IS NULL")]
     public async Task ConfirmedIntrinsic_InsideQueryWithFrom_ForcesSerial(string predicate)
     {
         var planXml = await CaptureRealExecutionPlanAsync(
