@@ -46,7 +46,6 @@ public static class SarifRuleCatalog
     public const string IndexCoverageKeyLookupProneIndexRuleId = FindingRuleIds.IndexCoverageKeyLookupProneIndexRuleId;
     public const string TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId = FindingRuleIds.TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId;
     public const string TriggerCorrectnessMultiRowUnsafeKeyedDmlRuleId = FindingRuleIds.TriggerCorrectnessMultiRowUnsafeKeyedDmlRuleId;
-    public const string TriggerCorrectnessDirectRecursiveTriggerRuleId = FindingRuleIds.TriggerCorrectnessDirectRecursiveTriggerRuleId;
     public const string TriggerCorrectnessInsteadOfInsertFilteredNoRejectPathRuleId = FindingRuleIds.TriggerCorrectnessInsteadOfInsertFilteredNoRejectPathRuleId;
     public const string TriggerCorrectnessUpdateFunctionWithoutValueComparisonRuleId = FindingRuleIds.TriggerCorrectnessUpdateFunctionWithoutValueComparisonRuleId;
     public const string CrossModuleLockOrderRuleId = FindingRuleIds.CrossModuleLockOrderRuleId;

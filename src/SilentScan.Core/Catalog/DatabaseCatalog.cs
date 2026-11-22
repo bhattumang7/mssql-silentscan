@@ -461,7 +461,6 @@ public sealed class DatabaseCatalog
 
     public int? EngineMajorVersion { get; set; }
 
-    public bool? IsRecursiveTriggersEnabled { get; set; }
 
     public bool? IsNestedTriggersEnabled { get; set; }
 

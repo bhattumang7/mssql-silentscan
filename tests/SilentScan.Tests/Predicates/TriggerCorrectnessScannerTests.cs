@@ -11,13 +11,12 @@ public sealed class TriggerCorrectnessScannerTests
         + "CREATE TABLE dbo.Other (Id INT NOT NULL PRIMARY KEY, Val INT NOT NULL);"
         + "CREATE TABLE dbo.NullableVal (Id INT NOT NULL PRIMARY KEY, Val INT NULL);";
 
-    private static IReadOnlyList<TriggerCorrectnessFinding> Scan(string triggerSql, bool? recursiveTriggersEnabled = null)
+    private static IReadOnlyList<TriggerCorrectnessFinding> Scan(string triggerSql)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"{Ddl}\nGO\n{triggerSql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
-        catalog.IsRecursiveTriggersEnabled = recursiveTriggersEnabled;
         return TriggerCorrectnessScanner.Scan(result, catalog);
     }
 
@@ -140,112 +139,6 @@ public sealed class TriggerCorrectnessScannerTests
 
         Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml);
-    }
-
-    [Fact]
-    public void SelfWritingTrigger_RecursiveTriggersOn_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
-            + "BEGIN INSERT INTO dbo.T(Id, Val) SELECT Id + 1, Val FROM inserted; END;",
-            recursiveTriggersEnabled: true);
-
-        var finding = Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void SelfWritingTrigger_RecursiveTriggersOff_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
-            + "BEGIN INSERT INTO dbo.T(Id, Val) SELECT Id + 1, Val FROM inserted; END;",
-            recursiveTriggersEnabled: false);
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void SelfWritingTrigger_RecursiveTriggersUnknown_NeverFires()
-    {
-
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
-            + "BEGIN INSERT INTO dbo.T(Id, Val) SELECT Id + 1, Val FROM inserted; END;",
-            recursiveTriggersEnabled: null);
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void TriggerWritingOtherTable_RecursiveTriggersOn_NeverFires()
-    {
-
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
-            + "BEGIN INSERT INTO dbo.Other(Id, Val) SELECT Id, Val FROM inserted; END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void SelfUpdatingTrigger_RecursiveTriggersOn_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN UPDATE dbo.T SET Val = Val + 1 WHERE Id IN (SELECT Id FROM inserted); END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void SelfUpdatingTriggerThroughAnAlias_RecursiveTriggersOn_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN UPDATE t2 SET Val = t2.Val + 1 FROM dbo.T AS t2 JOIN inserted AS i ON i.Id = t2.Id; END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void OtherTableUpdatedThroughAnAlias_RecursiveTriggersOn_NeverFires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS "
-            + "BEGIN UPDATE o SET Val = i.Val FROM dbo.Other AS o JOIN inserted AS i ON i.Id = o.Id; END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void SelfDeletingTrigger_RecursiveTriggersOn_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER DELETE AS "
-            + "BEGIN DELETE FROM dbo.T WHERE Id IN (SELECT Id FROM deleted); END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
-    }
-
-    [Fact]
-    public void SelfMergingTrigger_RecursiveTriggersOn_Fires()
-    {
-        var findings = Scan(
-            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
-            + "BEGIN "
-            + "MERGE INTO dbo.T AS tgt USING inserted AS src ON tgt.Id = src.Id "
-            + "WHEN MATCHED THEN UPDATE SET tgt.Val = src.Val "
-            + "WHEN NOT MATCHED THEN INSERT (Id, Val) VALUES (src.Id, src.Val); "
-            + "END;",
-            recursiveTriggersEnabled: true);
-
-        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.DirectRecursiveTrigger);
     }
 
     [Fact]

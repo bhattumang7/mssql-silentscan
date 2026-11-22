@@ -1044,7 +1044,6 @@ public static class SarifReportWriter
         {
             TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment => LevelError,
             TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml => LevelError,
-            TriggerCorrectnessFindingKind.DirectRecursiveTrigger => LevelWarning,
             TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath => LevelError,
             TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison => LevelWarning,
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, "Unhandled TriggerCorrectnessFindingKind."),

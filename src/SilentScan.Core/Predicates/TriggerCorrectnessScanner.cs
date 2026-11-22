@@ -60,11 +60,6 @@ public static class TriggerCorrectnessScanner
                 InspectInsteadOfInsertFilteredReinsert(qualifiedName, node, triggerObject, topLevelStatements);
             }
 
-            if (triggerObject.Name is { } targetTableName)
-            {
-                InspectDirectRecursion(qualifiedName, node, targetTableName, statementList);
-            }
-
             if (statementList is not null)
             {
                 InspectUpdateFunctionWithoutValueComparison(qualifiedName, statementList);
@@ -471,53 +466,6 @@ public static class TriggerCorrectnessScanner
             private bool IsColumnNamed(ScalarExpression expression, string columnName) =>
                 expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } last] }
                 && identifierComparer.Equals(last.Value, columnName);
-        }
-
-        private void InspectDirectRecursion(string triggerQualifiedName, TriggerStatementBody node, SchemaObjectName targetTableName, StatementList? statementList)
-        {
-            if (catalog.IsRecursiveTriggersEnabled != true || statementList is null)
-            {
-
-                return;
-            }
-
-            var targetQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(targetTableName));
-            var recursionCollector = new SelfRecursionCollector(catalog, targetQualifiedName);
-            statementList.Accept(recursionCollector);
-
-            if (recursionCollector.FoundAt is { } site)
-            {
-                Findings.Add(new TriggerCorrectnessFinding(
-                    TriggerCorrectnessFindingKind.DirectRecursiveTrigger, triggerQualifiedName, sourcePath,
-                    node.StartLine, node.StartColumn,
-                    $"'{triggerQualifiedName}' writes directly to its own target table '{targetQualifiedName}' at line {site} - RECURSIVE_TRIGGERS is ON for the connected database, so this write re-fires this same trigger instead of silently no-oping.",
-                    FindingConfidence.Medium));
-            }
-        }
-
-        private sealed class SelfRecursionCollector(DatabaseCatalog catalog, string targetQualifiedName) : TSqlFragmentVisitor
-        {
-            public int? FoundAt { get; private set; }
-
-            public override void ExplicitVisit(InsertStatement node) => Check(node.InsertSpecification.Target, node.StartLine);
-
-            public override void ExplicitVisit(UpdateStatement node) =>
-                Check(DmlWriteTargetResolver.ResolveFromClauseAlias(node.UpdateSpecification.Target, node.UpdateSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
-
-            public override void ExplicitVisit(DeleteStatement node) =>
-                Check(DmlWriteTargetResolver.ResolveFromClauseAlias(node.DeleteSpecification.Target, node.DeleteSpecification.FromClause, catalog.IdentifierComparer), node.StartLine);
-
-            public override void ExplicitVisit(MergeStatement node) => Check(node.MergeSpecification.Target, node.StartLine);
-
-            private void Check(TableReference? target, int line)
-            {
-                if (FoundAt is null
-                    && target is NamedTableReference named
-                    && catalog.IdentifierComparer.Equals(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)), targetQualifiedName))
-                {
-                    FoundAt = line;
-                }
-            }
         }
     }
 }

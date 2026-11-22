@@ -28,7 +28,6 @@ public sealed class LiveCatalogReader
         catalog.DefaultCollation = await ReadDatabaseDefaultCollationAsync(connection, cancellationToken);
         catalog.CompatibilityLevel = await ReadCompatibilityLevelAsync(connection, cancellationToken);
         catalog.EngineMajorVersion = await ReadEngineMajorVersionAsync(connection, cancellationToken);
-        catalog.IsRecursiveTriggersEnabled = await ReadIsRecursiveTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsNestedTriggersEnabled = await ReadIsNestedTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsDisallowResultsFromTriggersEnabled = await ReadIsDisallowResultsFromTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsAutoCreateStatsOn = await ReadIsAutoCreateStatsOnAsync(connection, cancellationToken);
@@ -740,13 +739,6 @@ public sealed class LiveCatalogReader
         await using var command = connection.CreateReadOnlyCommand("SELECT CAST(SERVERPROPERTY('ProductMajorVersion') AS INT);");
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return result is int version ? version : null;
-    }
-
-    private static async Task<bool?> ReadIsRecursiveTriggersEnabledAsync(SqlConnection connection, CancellationToken cancellationToken)
-    {
-        await using var command = connection.CreateReadOnlyCommand("SELECT is_recursive_triggers_on FROM sys.databases WHERE database_id = DB_ID();");
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is bool isOn ? isOn : null;
     }
 
     private static async Task<bool?> ReadIsAutoCreateStatsOnAsync(SqlConnection connection, CancellationToken cancellationToken)

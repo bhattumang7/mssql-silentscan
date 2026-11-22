@@ -10,7 +10,6 @@ public enum TriggerCorrectnessFindingKind
 
     MultiRowUnsafeKeyedDml,
 
-    DirectRecursiveTrigger,
 
     InsteadOfInsertFilteredNoRejectPath,
 

@@ -1200,7 +1200,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Trigger correctness ({report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A variable assigned from a single, unspecified row of inserted/deleted with no WHERE/TOP/aggregate - oracle-confirmed to silently bind an arbitrary row's value (and discard the rest) the moment the trigger's own DML affects more than one row - plus the sharper sub-kind where that value then drives a keyed UPDATE/DELETE straight-line in the same trigger body; a trigger with no IF NOT EXISTS/@@ROWCOUNT-style early-out guard (advisory, low confidence); and a trigger that writes directly back to its own target table, only reported when the connected database's own RECURSIVE_TRIGGERS option is live-confirmed on (oracle-confirmed the write genuinely re-fires the trigger rather than silently no-oping in that case).");
+            "A variable assigned from a single, unspecified row of inserted/deleted with no WHERE/TOP/aggregate - oracle-confirmed to silently bind an arbitrary row's value (and discard the rest) the moment the trigger's own DML affects more than one row - plus the sharper sub-kind where that value then drives a keyed UPDATE/DELETE straight-line in the same trigger body.");
 
         foreach (var group in report.Find<TriggerCorrectnessFinding>(nameof(TriggerCorrectnessScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {

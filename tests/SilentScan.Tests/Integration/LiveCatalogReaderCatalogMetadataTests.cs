@@ -12,8 +12,6 @@ public sealed class LiveCatalogReaderCatalogMetadataTests : OracleTestFixture
     protected override string DatabaseNameSeed => nameof(LiveCatalogReaderCatalogMetadataTests);
 
     protected override string Ddl => """
-        ALTER DATABASE CURRENT SET RECURSIVE_TRIGGERS ON;
-        GO
         ALTER DATABASE CURRENT SET AUTO_CREATE_STATISTICS OFF;
         GO
         ALTER DATABASE CURRENT SET ANSI_NULL_DEFAULT ON;
@@ -108,14 +106,6 @@ public sealed class LiveCatalogReaderCatalogMetadataTests : OracleTestFixture
         var real = (byte)(await command.ExecuteScalarAsync())!;
 
         Assert.Equal(real, (byte)catalog.CompatibilityLevel!.Value);
-    }
-
-    [Fact]
-    public async Task ReadAsync_RecursiveTriggersToggledOn_ReadsRealFlagFromSysDatabases()
-    {
-        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        Assert.True(catalog.IsRecursiveTriggersEnabled);
     }
 
     [Fact]

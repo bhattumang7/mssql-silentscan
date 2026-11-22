@@ -73,7 +73,6 @@ public static class RuleDocCatalog
 
         [TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.RuleId] = TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.Content,
         [TriggerCorrectness.MultiRowUnsafeKeyedDml.RuleId] = TriggerCorrectness.MultiRowUnsafeKeyedDml.Content,
-        [TriggerCorrectness.DirectRecursiveTrigger.RuleId] = TriggerCorrectness.DirectRecursiveTrigger.Content,
         [TriggerCorrectness.InsteadOfInsertFilteredNoRejectPath.RuleId] = TriggerCorrectness.InsteadOfInsertFilteredNoRejectPath.Content,
         [TriggerCorrectness.UpdateFunctionWithoutValueComparison.RuleId] = TriggerCorrectness.UpdateFunctionWithoutValueComparison.Content,
         [ForcedSerial.TableVariableModification.RuleId] = ForcedSerial.TableVariableModification.Content,

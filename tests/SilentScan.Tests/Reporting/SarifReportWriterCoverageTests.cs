@@ -478,7 +478,6 @@ public sealed class SarifReportWriterCoverageTests
     [Theory]
     [InlineData(TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment, "error")]
     [InlineData(TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml, "error")]
-    [InlineData(TriggerCorrectnessFindingKind.DirectRecursiveTrigger, "warning")]
     [InlineData(TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath, "error")]
     [InlineData(TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison, "warning")]
     public void Write_TriggerCorrectnessFinding_MapsEachKindToItsOwnLevel(TriggerCorrectnessFindingKind kind, string expectedLevel)
