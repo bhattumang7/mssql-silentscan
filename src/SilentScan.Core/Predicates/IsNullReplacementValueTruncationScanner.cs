@@ -52,6 +52,12 @@ public static class IsNullReplacementValueTruncationScanner
                 return;
             }
 
+            if (checkExpression is ColumnReferenceExpression checkColumn
+                && walker.ResolveColumnFacts(checkColumn, scopeChain).IsNotNull == true)
+            {
+                return;
+            }
+
             var context = new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, Catalog.TypeAliases, Catalog, VariableTypes);
             var checkExpressionType = ScalarExpressionResolver.ResolveScalarType(checkExpression, scopeChain, sourcePath, context);
             var replacementValueType = ScalarExpressionResolver.ResolveScalarType(replacementValue, scopeChain, sourcePath, context);

@@ -18,7 +18,8 @@ public sealed class IsNullReplacementValueTruncationScannerTests
                 ShortBinary VARBINARY(5) NULL,
                 LongBinary VARBINARY(50) NULL,
                 SameLength VARCHAR(50) NULL,
-                UnicodeCol NVARCHAR(50) NULL
+                UnicodeCol NVARCHAR(50) NULL,
+                RequiredCode VARCHAR(5) NOT NULL
             );
             """;
         var result = SqlScriptParser.ParseText("test.sql", $"{ddl}\nGO\n{sql}");
@@ -26,6 +27,24 @@ public sealed class IsNullReplacementValueTruncationScannerTests
 
         var catalog = CatalogBuilder.Build([result]);
         return IsNullReplacementValueTruncationScanner.Scan(result, catalog);
+    }
+
+    [Fact]
+    public void CheckExpressionColumnIsNotNullable_ReplacementNeverSubstituted_NeverFires()
+    {
+        Assert.Empty(Scan("SELECT ISNULL(RequiredCode, LongCode) FROM dbo.T;"));
+    }
+
+    [Fact]
+    public void NotNullCheckColumnOnTheNullableSideOfAnOuterJoin_StillFires()
+    {
+        Assert.Single(Scan("SELECT ISNULL(r.RequiredCode, l.LongCode) FROM dbo.T l LEFT JOIN dbo.T r ON r.Id = l.Id + 1;"));
+    }
+
+    [Fact]
+    public void ReplacementStringLiteralWiderThanNullableCheckExpression_Fires()
+    {
+        Assert.Single(Scan("SELECT ISNULL(ShortCode, 'abcdefghij') FROM dbo.T;"));
     }
 
     [Fact]
