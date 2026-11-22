@@ -2063,6 +2063,18 @@ public sealed class TypedPredicateExtractorTests
         Assert.Equal("=", finding.Operator);
     }
 
+    [Fact]
+    public void Extract_NumericFilterStoredWithParenthesizedLiteral_FiresFilteredIndexParameterMismatch()
+    {
+        var result = ExtractWithFilteredIndex(
+            "CREATE TABLE dbo.Customers (Status INT NOT NULL);",
+            "([Status]=(1))",
+            "CREATE PROCEDURE dbo.usp_Find @p INT AS BEGIN SELECT 1 FROM dbo.Customers WHERE Status = @p; END");
+
+        var finding = Assert.Single(result.FilteredIndexParameterMismatchFindings);
+        Assert.Equal("1", finding.FilterLiteralText);
+    }
+
     [Theory]
     [InlineData("DECLARE @p VARCHAR(20) = 'Active'; SELECT 1 FROM dbo.Customers WHERE Status = @p OPTION (RECOMPILE);")]
     [InlineData("CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE Status = @p OPTION (RECOMPILE); END")]

@@ -354,9 +354,18 @@ public static class IndexDesignScanner
             {
                 ComparisonType: BooleanComparisonType.Equals,
                 FirstExpression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { Value: { } columnName }] },
-                SecondExpression: Literal literal,
-            }
-            || Rules.LiteralTextRenderer.Render(literal) is not { } literalText)
+                SecondExpression: { } second,
+            })
+        {
+            return null;
+        }
+
+        while (second is ParenthesisExpression wrapped)
+        {
+            second = wrapped.Expression;
+        }
+
+        if (second is not Literal literal || Rules.LiteralTextRenderer.Render(literal) is not { } literalText)
         {
             return null;
         }
