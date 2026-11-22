@@ -40,30 +40,6 @@ public sealed class DatabaseConfigurationReaderDefaultsOracleTests : OracleTestF
 }
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoShrinkOnRuleId)]
-public sealed class DatabaseConfigurationReaderUnhealthyFlagsOracleTests : OracleTestFixture
-{
-    protected override string DatabaseNameSeed => nameof(DatabaseConfigurationReaderUnhealthyFlagsOracleTests);
-
-    protected override string Ddl => """
-        CREATE TABLE dbo.T (Id INT NOT NULL PRIMARY KEY);
-        GO
-        ALTER DATABASE CURRENT SET AUTO_SHRINK ON WITH NO_WAIT;
-        GO
-        """;
-
-    [Fact]
-    public async Task AutoShrinkOn_FiresOnlyThatKind()
-    {
-        var findings = await new DatabaseConfigurationReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(DatabaseConfigurationFindingKind.AutoShrinkOn, finding.Kind);
-        Assert.Equal(DatabaseName, finding.DatabaseName);
-    }
-}
-
-[Trait("Category", "Oracle")]
 [Trait("Rule", FindingRuleIds.DatabaseConfigurationAutoCloseOnRuleId)]
 public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTestFixture
 {

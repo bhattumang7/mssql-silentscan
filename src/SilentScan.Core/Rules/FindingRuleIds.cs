@@ -155,14 +155,12 @@ public static class FindingRuleIds
     };
 
     public const string TruncateSwallowedRuleId = "silentscan/control-flow/truncate-swallowed-by-catch";
-    public const string DatabaseConfigurationAutoShrinkOnRuleId = "silentscan/database/auto-shrink-on";
     public const string DatabaseConfigurationAutoCloseOnRuleId = "silentscan/database/auto-close-on";
     public const string DatabaseConfigurationAutoCreateStatisticsOffRuleId = "silentscan/database/auto-create-statistics-off";
     public const string DatabaseConfigurationAutoUpdateStatisticsOffRuleId = "silentscan/database/auto-update-statistics-off";
     public const string DatabaseConfigurationSpatialPersistedComputedColumnDisabledOnCompatibilityLevelChangeRuleId = "silentscan/database/spatial-persisted-computed-column-compatibility-change";
     public static string DatabaseConfigurationRuleId(DatabaseConfigurationFindingKind kind) => kind switch
     {
-        DatabaseConfigurationFindingKind.AutoShrinkOn => DatabaseConfigurationAutoShrinkOnRuleId,
         DatabaseConfigurationFindingKind.AutoCloseOn => DatabaseConfigurationAutoCloseOnRuleId,
         DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => DatabaseConfigurationAutoCreateStatisticsOffRuleId,
         DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => DatabaseConfigurationAutoUpdateStatisticsOffRuleId,

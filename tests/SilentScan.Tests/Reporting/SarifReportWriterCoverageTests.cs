@@ -265,7 +265,6 @@ public sealed class SarifReportWriterCoverageTests
     }
 
     [Theory]
-    [InlineData(DatabaseConfigurationFindingKind.AutoShrinkOn, "warning", "AUTO_SHRINK is ON")]
     [InlineData(DatabaseConfigurationFindingKind.AutoCloseOn, "warning", "AUTO_CLOSE is ON")]
     [InlineData(DatabaseConfigurationFindingKind.AutoCreateStatisticsOff, "warning", "AUTO_CREATE_STATISTICS is OFF")]
     [InlineData(DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff, "warning", "AUTO_UPDATE_STATISTICS is OFF")]
@@ -305,7 +304,6 @@ public sealed class SarifReportWriterCoverageTests
             FloatEqualityFindings: [new FloatEqualityFinding("dbo.T", "A", "float", "test.sql", 1, 1)],
             DatabaseConfigurationFindings:
             [
-                new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoShrinkOn, "Db1"),
                 new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoCloseOn, "Db1"),
             ],
             UntrustedConstraintFindings: [new UntrustedConstraintFinding(UntrustedConstraintFindingKind.CheckConstraint, "CK_X", "dbo.T", "test.sql", 2)]);
@@ -314,11 +312,10 @@ public sealed class SarifReportWriterCoverageTests
         using var document = JsonDocument.Parse(sarif);
         var results = document.RootElement.GetProperty("runs")[0].GetProperty("results");
 
-        Assert.Equal(4, results.GetArrayLength());
+        Assert.Equal(3, results.GetArrayLength());
         Assert.Contains("CHECK constraint on 'dbo.T'", results[0].GetProperty("message").GetProperty("text").GetString());
-        Assert.Contains("AUTO_SHRINK is ON", results[1].GetProperty("message").GetProperty("text").GetString());
-        Assert.Contains("AUTO_CLOSE is ON", results[2].GetProperty("message").GetProperty("text").GetString());
-        Assert.Equal(SarifRuleCatalog.FloatEqualityRuleId, results[3].GetProperty("ruleId").GetString());
+        Assert.Contains("AUTO_CLOSE is ON", results[1].GetProperty("message").GetProperty("text").GetString());
+        Assert.Equal(SarifRuleCatalog.FloatEqualityRuleId, results[2].GetProperty("ruleId").GetString());
     }
 
     [Theory]

@@ -45,7 +45,7 @@ public sealed class DatabaseConfigurationReader
     {
         await using var command = connection.CreateReadOnlyCommand(
             """
-            SELECT name, is_auto_shrink_on, is_auto_close_on,
+            SELECT name, is_auto_close_on,
                    is_auto_create_stats_on, is_auto_update_stats_on,
                    compatibility_level
             FROM sys.databases
@@ -60,20 +60,14 @@ public sealed class DatabaseConfigurationReader
 
         return new DatabaseConfigurationSnapshot(
             DatabaseName: reader.GetString(0),
-            IsAutoShrinkOn: reader.GetBoolean(1),
-            IsAutoCloseOn: reader.GetBoolean(2),
-            IsAutoCreateStatsOn: reader.GetBoolean(3),
-            IsAutoUpdateStatsOn: reader.GetBoolean(4),
-            CompatibilityLevel: reader.GetByte(5));
+            IsAutoCloseOn: reader.GetBoolean(1),
+            IsAutoCreateStatsOn: reader.GetBoolean(2),
+            IsAutoUpdateStatsOn: reader.GetBoolean(3),
+            CompatibilityLevel: reader.GetByte(4));
     }
 
     private static void AddSnapshotFindings(List<DatabaseConfigurationFinding> findings, DatabaseConfigurationSnapshot snapshot)
     {
-        if (snapshot.IsAutoShrinkOn)
-        {
-            findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoShrinkOn, snapshot.DatabaseName));
-        }
-
         if (snapshot.IsAutoCloseOn)
         {
             findings.Add(new DatabaseConfigurationFinding(DatabaseConfigurationFindingKind.AutoCloseOn, snapshot.DatabaseName));
@@ -146,7 +140,6 @@ public sealed class DatabaseConfigurationReader
 
     private sealed record DatabaseConfigurationSnapshot(
         string DatabaseName,
-        bool IsAutoShrinkOn,
         bool IsAutoCloseOn,
         bool IsAutoCreateStatsOn,
         bool IsAutoUpdateStatsOn,

@@ -787,9 +787,6 @@ public static class SarifReportWriter
 
         var (ruleId, level, message) = finding.Kind switch
         {
-            DatabaseConfigurationFindingKind.AutoShrinkOn => (
-                SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
-                "AUTO_SHRINK is ON - a well-known, severe anti-pattern: the engine repeatedly shrinks the file and the workload immediately re-grows it, causing constant fragmentation churn for no durable space saving."),
             DatabaseConfigurationFindingKind.AutoCloseOn => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 "AUTO_CLOSE is ON - the database's connection/buffer-pool state is torn down after the last connection closes and rebuilt from scratch on the next one, adding real latency to whichever connection happens to be first."),

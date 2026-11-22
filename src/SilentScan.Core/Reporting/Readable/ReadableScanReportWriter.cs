@@ -2167,7 +2167,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Database-level configuration flags ({report.Find<DatabaseConfigurationFinding>(DatabaseConfigurationRuleId).Count})");
         yield return new ReadableBlock.Paragraph(
-            "Read once per scan run directly from sys.databases/sys.database_query_store_options - a database-granularity fact, not a per-module one. PAGE_VERIFY/AUTO_SHRINK/AUTO_CLOSE/TARGET_RECOVERY_TIME/AUTO_CREATE_STATISTICS/AUTO_UPDATE_STATISTICS/compatibility level (compared against the connected engine instance's own current default, read live from the model system database) are well-established anti-patterns; the two Query Store flags are informational since whether Query Store should be on is a real operational choice.");
+            "Read once per scan run directly from sys.databases/sys.database_query_store_options - a database-granularity fact, not a per-module one. PAGE_VERIFY/AUTO_CLOSE/TARGET_RECOVERY_TIME/AUTO_CREATE_STATISTICS/AUTO_UPDATE_STATISTICS/compatibility level (compared against the connected engine instance's own current default, read live from the model system database) are well-established anti-patterns; the two Query Store flags are informational since whether Query Store should be on is a real operational choice.");
 
         foreach (var group in report.Find<DatabaseConfigurationFinding>(DatabaseConfigurationRuleId).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
@@ -2186,7 +2186,6 @@ public static class ReadableScanReportWriter
 
     private static string DatabaseConfigurationFlagLabel(DatabaseConfigurationFinding finding) => finding.Kind switch
     {
-        DatabaseConfigurationFindingKind.AutoShrinkOn => "AUTO_SHRINK = ON",
         DatabaseConfigurationFindingKind.AutoCloseOn => "AUTO_CLOSE = ON",
         DatabaseConfigurationFindingKind.AutoCreateStatisticsOff => "AUTO_CREATE_STATISTICS = OFF",
         DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => "AUTO_UPDATE_STATISTICS = OFF",

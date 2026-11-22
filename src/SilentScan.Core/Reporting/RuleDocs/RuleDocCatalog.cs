@@ -126,7 +126,6 @@ public static class RuleDocCatalog
         [ControlFlow.OutputParameter.RuleId] = ControlFlow.OutputParameter.Content,
 
 
-        [Database.AutoShrinkOn.RuleId] = Database.AutoShrinkOn.Content,
         [Database.AutoCloseOn.RuleId] = Database.AutoCloseOn.Content,
         [Database.AutoCreateStatisticsOff.RuleId] = Database.AutoCreateStatisticsOff.Content,
         [Database.AutoUpdateStatisticsOff.RuleId] = Database.AutoUpdateStatisticsOff.Content,

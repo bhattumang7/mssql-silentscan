@@ -3,8 +3,6 @@ namespace SilentScan.Core.Predicates;
 
 public enum DatabaseConfigurationFindingKind
 {
-    AutoShrinkOn,
-
     AutoCloseOn,
 
     AutoCreateStatisticsOff,
