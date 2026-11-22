@@ -465,9 +465,6 @@ statement — is uncontroversial syntax, not a claim needing verification).
   confirmed as the mathematically correct direction) all check out against
   the existing test suite's JOIN/comma-join/UPDATE-FROM/CTE-shadowing
   coverage.
-- `PostExpansionJoinWidthScanner` — the `MinimumGap = 3` threshold and
-  unresolved/derived-table undercounting exactly match the doc's own
-  "lower bound, never exhaustive" framing.
 - `ProcCallArgumentMismatchScanner` — verified both directions:
   `WriteLossClassifier.Classify(target, source, ...)` called correctly as
   `(formal, caller)` for the in-direction and `(caller, formal)` for the
@@ -493,10 +490,6 @@ statement — is uncontroversial syntax, not a claim needing verification).
   explicitly documented as an intentional design choice (already
   oracle-tested scan-vs-seek claim, deliberately declines an unproven
   "forces serial execution" claim).
-- `SelectStarViewScanner` — star-consumer exclusion, full-explicit-selection
-  exclusion, multi-source unqualified-column decline, and CTE/derived-table
-  non-attribution all match existing test coverage; a pure code-structure
-  claim (frozen metadata), no engine-timing dependency to diverge on.
 - `SelfReferencingDmlScanner` — `HasLiteralTopOne`'s PERCENT/variable/
   non-literal exclusions and the target-alias-skip logic across self-join
   aliases match already-oracle-confirmed Eager Spool/Distinct Sort presence
@@ -665,9 +658,6 @@ statement — is uncontroversial syntax, not a claim needing verification).
   missing-statistics scanners use the any-comparison set for different claims,
   and the leading-column scanner already treats the clustered index as an
   alternative seek path.
-- `PostExpansionJoinWidthScanner` (post-expansion-join-width) — sampled 20
-  findings across 20 modules: all true positives (each flagged view joins the
-  listed tables). Not covered by the sample: a view read with `NOEXPAND`.
 - `IndexCoverageScanner` (key-lookup-prone) — root cause: claim attached to a
   context that cannot trigger the effect. An equality on a bit-typed leading
   key was reported although the column has only two values, so the predicate
