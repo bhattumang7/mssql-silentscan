@@ -22,6 +22,23 @@ public sealed class StringAggMissingOrderScannerTests
     }
 
     [Fact]
+    public void AggregatedBaseColumn_NamesItsTableAndColumn()
+    {
+        var finding = Assert.Single(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T;"));
+
+        Assert.Equal("dbo.T", finding.TableQualifiedName);
+        Assert.Equal("Name", finding.ColumnName);
+    }
+
+    [Fact]
+    public void AggregatedExpression_NamesNoColumn()
+    {
+        var finding = Assert.Single(ScanWithCatalog("SELECT STRING_AGG(UPPER(Name), ',') FROM dbo.T;"));
+
+        Assert.Null(finding.ColumnName);
+    }
+
+    [Fact]
     public void QueryPinnedToOneRowByPrimaryKey_NeverFires()
     {
         Assert.Empty(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T WHERE Id = 1;"));

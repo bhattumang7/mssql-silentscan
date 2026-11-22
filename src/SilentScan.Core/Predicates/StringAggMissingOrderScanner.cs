@@ -49,7 +49,13 @@ public static class StringAggMissingOrderScanner
                 && node.Parameters is not [Literal, ..]
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
-                Findings.Add(new StringAggMissingOrderFinding(sourcePath, node.StartLine, node.StartColumn));
+                var aggregated = node.Parameters is [ColumnReferenceExpression columnRef, ..]
+                    ? ScalarExpressionResolver.ResolveColumnReference(columnRef, walker.CurrentScopeChain(), sourcePath, ledger: null, catalog) as ColumnProvenance.BaseColumn
+                    : null;
+                Findings.Add(new StringAggMissingOrderFinding(
+                    sourcePath, node.StartLine, node.StartColumn,
+                    TableQualifiedName: aggregated?.Depth == 0 ? aggregated.TableQualifiedName : null,
+                    ColumnName: aggregated?.Depth == 0 ? aggregated.ColumnName : null));
             }
         }
     }
