@@ -1,3 +1,4 @@
+using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 
@@ -10,6 +11,44 @@ public sealed class BareTopNoOrderByScannerTests
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return BareTopNoOrderByScanner.Scan(result);
+    }
+
+    private const string KeyedDdl = """
+        CREATE TABLE dbo.K (Id INT NOT NULL PRIMARY KEY, Name VARCHAR(50) NOT NULL);
+        CREATE TABLE dbo.C (A INT NOT NULL, B INT NOT NULL, Name VARCHAR(50) NOT NULL, CONSTRAINT PK_C PRIMARY KEY (A, B));
+        CREATE TABLE dbo.H (Id INT NOT NULL, Name VARCHAR(50) NOT NULL);
+        CREATE UNIQUE INDEX UX_F ON dbo.H (Id) WHERE Id > 0;
+        """;
+
+    private static IReadOnlyList<BareTopNoOrderByFinding> ScanWithCatalog(string sql)
+    {
+        var ddl = SqlScriptParser.ParseText("ddl.sql", KeyedDdl);
+        var catalog = CatalogBuilder.Build([ddl]);
+        var result = SqlScriptParser.ParseText("test.sql", sql);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        return BareTopNoOrderByScanner.Scan(result, catalog);
+    }
+
+    [Theory]
+    [InlineData("SELECT TOP (1) Name FROM dbo.K WHERE Id = 5;")]
+    [InlineData("DECLARE @i INT = 5; SELECT TOP (1) Name FROM dbo.K WHERE Id = @i;")]
+    [InlineData("SELECT TOP (1) k.Name FROM dbo.K AS k WHERE k.Id = 5 AND k.Name = 'x';")]
+    [InlineData("SELECT TOP (3) Name FROM dbo.C WHERE B = 2 AND A = 1;")]
+    public void TopOverAnEqualityOnEveryColumnOfAUniqueKey_NeverFires(string sql)
+    {
+        Assert.Empty(ScanWithCatalog(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT TOP (1) Name FROM dbo.K WHERE Id > 5;")]
+    [InlineData("SELECT TOP (1) Name FROM dbo.K WHERE Id = 5 OR Id = 6;")]
+    [InlineData("SELECT TOP (1) Name FROM dbo.C WHERE A = 1;")]
+    [InlineData("SELECT TOP (1) Name FROM dbo.H WHERE Id = 5;")]
+    [InlineData("SELECT TOP (1) k.Name FROM dbo.K AS k JOIN dbo.K AS j ON j.Name = k.Name WHERE k.Id = 5;")]
+    [InlineData("SELECT TOP (1) Name FROM dbo.K WHERE Id = Id;")]
+    public void TopOverAnEqualityThatDoesNotPinAUniqueKey_Fires(string sql)
+    {
+        Assert.Single(ScanWithCatalog(sql));
     }
 
     [Fact]

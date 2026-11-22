@@ -37,6 +37,10 @@ internal static class BareTopNoOrderBy
             is every row the query would otherwise produce regardless of what order TOP itself
             picks them in, so there's no row-selection nondeterminism left for a missing ORDER BY
             to expose - TOP's own selection behavior is moot when the percentage is the whole set.
+
+            A TOP over a single table whose WHERE clause pins every column of a unique, unfiltered
+            index with an equality against a literal or variable is also excluded: at most one row
+            can qualify, so there is nothing for TOP to choose between.
             """,
         HowToFixIt: """
             Add an explicit ORDER BY to the query that TOP applies to, specifying exactly which

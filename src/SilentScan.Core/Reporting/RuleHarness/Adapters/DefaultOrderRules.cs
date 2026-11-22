@@ -71,8 +71,8 @@ internal sealed class BareTopNoOrderByRule : IPerFileRule
 {
     public string Id => "BareTopNoOrderByScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.LiteralOnly;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.Scan(parseResult);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.CreateRule(parseResult.SourcePath);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BareTopNoOrderByScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => BareTopNoOrderByScanner.Harvest((BareTopNoOrderByScanner.Rule)moduleRule);
 }
 

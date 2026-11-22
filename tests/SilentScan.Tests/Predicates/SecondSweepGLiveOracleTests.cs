@@ -36,6 +36,22 @@ public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task TopOverAUniqueKeyEquality_ReturnsTheSingleRowWhateverIndexesExist_WhileANonUniqueEqualityDoesNot()
+    {
+        await ExecuteAsync("""
+            CREATE TABLE dbo.Keyed (Id INT NOT NULL PRIMARY KEY, Val INT NOT NULL);
+            INSERT INTO dbo.Keyed (Id, Val) SELECT Id, Val FROM dbo.Items WHERE Id <= 500;
+            """);
+
+        var before = await IdsAsync("SELECT TOP (5) Id FROM dbo.Keyed WHERE Id = 7;");
+        await ExecuteAsync("CREATE INDEX IX_Keyed_Val ON dbo.Keyed(Val, Id DESC);");
+        var after = await IdsAsync("SELECT TOP (5) Id FROM dbo.Keyed WHERE Id = 7;");
+
+        Assert.Equal([7], before);
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
     public async Task SameBareTopQueryText_ReturnsADifferentRowSetOnceASupportingIndexExists()
     {
         const string Query = "SELECT TOP (5) Id FROM dbo.Items WHERE Val = 3;";

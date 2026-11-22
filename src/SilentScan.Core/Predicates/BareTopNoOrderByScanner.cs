@@ -8,14 +8,15 @@ namespace SilentScan.Core.Predicates;
 
 public static class BareTopNoOrderByScanner
 {
-    public static IReadOnlyList<BareTopNoOrderByFinding> Scan(SqlParseResult parseResult)
+    public static IReadOnlyList<BareTopNoOrderByFinding> Scan(SqlParseResult parseResult, DatabaseCatalog? catalog = null)
     {
-        var rule = CreateRule(parseResult.SourcePath);
-        var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
+        catalog ??= new DatabaseCatalog();
+        var rule = CreateRule(parseResult.SourcePath, catalog);
+        var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
     return Harvest(rule);
     }
-    internal static Rule CreateRule(string sourcePath) => new(sourcePath);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog catalog) => new(sourcePath, catalog);
 
     internal static IReadOnlyList<BareTopNoOrderByFinding> Harvest(Rule rule) =>
             [
@@ -28,7 +29,7 @@ public static class BareTopNoOrderByScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath) : IModuleRule
+    internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
         private readonly HashSet<QuerySpecification> existsSubqueries = [];
 
@@ -50,7 +51,71 @@ public static class BareTopNoOrderByScanner
             || node.FromClause is null
             || existsSubqueries.Contains(node)
             || node.SelectElements.All(IsLiteralSelectElement)
+            || PinsOneRowByUniqueKey(node)
             || (node.GroupByClause is null && node.SelectElements.All(IsAggregateSelectElement));
+
+        private bool PinsOneRowByUniqueKey(QuerySpecification node)
+        {
+            if (node.FromClause is not { TableReferences: [NamedTableReference reference] }
+                || node.WhereClause?.SearchCondition is not { } condition
+                || catalog.Find(SchemaObjectNameHelper.Qualify(reference.SchemaObject)) is not { } table)
+            {
+                return false;
+            }
+
+            var names = new List<string> { reference.SchemaObject.BaseIdentifier.Value };
+            if (reference.Alias is { } alias)
+            {
+                names.Add(alias.Value);
+            }
+
+            var pinned = new HashSet<string>(catalog.IdentifierComparer);
+            CollectPinnedColumns(condition, names, pinned);
+            return table.Indexes.Any(index =>
+                index.IsUnique && !index.IsFiltered && !index.IsDisabled && index.KeyColumns.Count > 0
+                && index.KeyColumns.All(pinned.Contains));
+        }
+
+        private void CollectPinnedColumns(BooleanExpression condition, List<string> tableNames, HashSet<string> pinned)
+        {
+            switch (condition)
+            {
+                case BooleanParenthesisExpression parenthesis:
+                    CollectPinnedColumns(parenthesis.Expression, tableNames, pinned);
+                    break;
+                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } both:
+                    CollectPinnedColumns(both.FirstExpression, tableNames, pinned);
+                    CollectPinnedColumns(both.SecondExpression, tableNames, pinned);
+                    break;
+                case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } equality:
+                    AddPinnedColumn(equality.FirstExpression, equality.SecondExpression, tableNames, pinned);
+                    AddPinnedColumn(equality.SecondExpression, equality.FirstExpression, tableNames, pinned);
+                    break;
+            }
+        }
+
+        private void AddPinnedColumn(ScalarExpression column, ScalarExpression value, List<string> tableNames, HashSet<string> pinned)
+        {
+            if (column is not ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers }
+                || identifiers.Count > 2
+                || (identifiers.Count == 2 && !tableNames.Contains(identifiers[0].Value, catalog.IdentifierComparer))
+                || !IsRowIndependent(value))
+            {
+                return;
+            }
+
+            pinned.Add(identifiers[^1].Value);
+        }
+
+        private static bool IsRowIndependent(ScalarExpression value)
+        {
+            while (value is ParenthesisExpression parenthesis)
+            {
+                value = parenthesis.Expression;
+            }
+
+            return value is Literal or VariableReference or GlobalVariableExpression;
+        }
 
         private static bool IsHundredPercent(TopRowFilter top) =>
             top.Percent && TopPercentLiteralHelper.IsHundredPercentLiteral(top.Expression);
