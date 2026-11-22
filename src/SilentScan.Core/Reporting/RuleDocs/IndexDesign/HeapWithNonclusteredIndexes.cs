@@ -13,10 +13,12 @@ internal static class HeapWithNonclusteredIndexes
             real nonclustered indexes pays a real, documented cost every one of those nonclustered
             indexes wouldn't otherwise pay: on a clustered table, a nonclustered index's leaf row
             points back to the base row using the clustering key itself, but on a heap it has to use
-            an 8-byte RID (row identifier) instead. That RID isn't as stable as a clustering key
-            either - certain heap maintenance operations (most notably a forwarded-row pointer, left
-            behind when a variable-length column grows past the row's original storage slot) can
-            change it, adding an extra indirection hop to what should have been a direct lookup.
+            an 8-byte RID (row identifier) instead. Heap maintenance makes that costlier than a
+            clustering key: a variable-length column that grows past its row's slot leaves a
+            forwarded-row pointer, adding an extra indirection hop to every lookup of that row,
+            and rebuilding the heap moves rows to new RIDs. Both are oracle-confirmed: forwarded
+            records appear after such an update, none appear on a clustered table, and a rebuilt
+            heap row sits at a different physical location.
 
             This rule is deliberately narrower than "this table is a heap": a heap with ZERO indexes
             at all - a staging or bulk-load table, often a genuinely deliberate design choice for

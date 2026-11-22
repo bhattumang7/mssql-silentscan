@@ -82,7 +82,7 @@ public static class IndexDesignScanner
             IndexDesignFindingKind.HeapWithNonclusteredIndexes,
             table.QualifiedName,
             activeNonclustered[0].Name,
-            $"'{table.QualifiedName}' has no clustered index anywhere but carries {activeNonclustered.Count} nonclustered index(es) ({names}) - each one points back to its base row with an 8-byte RID instead of the clustering key, and that RID can change under heap maintenance (forwarded-row pointers).",
+            $"'{table.QualifiedName}' has no clustered index anywhere but carries {activeNonclustered.Count} nonclustered index(es) ({names}) - each one points back to its base row with an 8-byte RID instead of the clustering key, and heap maintenance leaves forwarded rows that add a hop to every lookup of them, while a heap rebuild moves rows to new RIDs.",
             table.SourcePath,
             table.SourceLine));
     }
