@@ -22,6 +22,15 @@ public sealed class JsonArrayAggMissingOrderScannerTests
     }
 
     [Fact]
+    public void AggregatedBaseColumn_NamesItsTableAndColumn()
+    {
+        var finding = Assert.Single(ScanWithCatalog("SELECT JSON_ARRAYAGG(Name) FROM dbo.T;"));
+
+        Assert.Equal("dbo.T", finding.TableQualifiedName);
+        Assert.Equal("Name", finding.ColumnName);
+    }
+
+    [Fact]
     public void QueryPinnedToOneRowByPrimaryKey_NeverFires()
     {
         Assert.Empty(ScanWithCatalog("SELECT JSON_ARRAYAGG(Name) FROM dbo.T WHERE Id = 1;"));

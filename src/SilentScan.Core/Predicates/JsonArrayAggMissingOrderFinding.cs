@@ -8,7 +8,9 @@ public sealed record JsonArrayAggMissingOrderFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     FindingConfidence Confidence = FindingConfidence.Medium,
-    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<JsonArrayAggMissingOrderFinding>, IFinding
+    SourceSpan? DynamicSqlCallSite = null,
+    string? TableQualifiedName = null,
+    string? ColumnName = null) : IRelocatableFinding<JsonArrayAggMissingOrderFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.JsonArrayAggMissingOrderRuleId;
 
