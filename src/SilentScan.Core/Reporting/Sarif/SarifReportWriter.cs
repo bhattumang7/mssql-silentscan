@@ -538,6 +538,8 @@ public static class SarifReportWriter
         {
             ForcedSerialFindingKind.TableVariableModification =>
                 $"'{finding.ModuleQualifiedName}' writes to table variable '{finding.DetailText}' - this statement's own plan is forced serial (effective MAXDOP 1).",
+            ForcedSerialFindingKind.OutputReturnedToClient =>
+                $"'{finding.ModuleQualifiedName}': an OUTPUT clause without INTO returns rows to the client - this statement's own plan is forced serial (effective MAXDOP 1).",
             ForcedSerialFindingKind.FastForwardCursor =>
                 $"'{finding.ModuleQualifiedName}': cursor '{finding.DetailText}' is FAST_FORWARD (or the equivalent bare FORWARD_ONLY READ_ONLY) - its own defining query plan is forced serial.",
             _ => $"'{finding.ModuleQualifiedName}': {finding.DetailText}{(finding.DetailText!.StartsWith("@@", StringComparison.Ordinal) ? string.Empty : "()")} referenced inside a query with a FROM clause forces that query's plan serial.",

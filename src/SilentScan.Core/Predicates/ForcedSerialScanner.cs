@@ -149,6 +149,13 @@ public static class ForcedSerialScanner
 
         private void InspectDataModification(DataModificationSpecification spec)
         {
+            if (spec.OutputClause is { } output)
+            {
+                Findings.Add(new ForcedSerialFinding(
+                    ForcedSerialFindingKind.OutputReturnedToClient, sourcePath, sourcePath,
+                    output.StartLine, output.StartColumn, DetailText: SourceText(output)));
+            }
+
             var targetVariable = TableVariableName(spec.Target);
             var outputVariable = TableVariableName(spec.OutputIntoClause?.IntoTable);
             var variableName = targetVariable ?? outputVariable;
@@ -161,6 +168,9 @@ public static class ForcedSerialScanner
                 ForcedSerialFindingKind.TableVariableModification, sourcePath, sourcePath,
                 spec.StartLine, spec.StartColumn, DetailText: variableName));
         }
+
+        private static string SourceText(TSqlFragment fragment) =>
+            string.Concat(Enumerable.Range(fragment.FirstTokenIndex, fragment.LastTokenIndex - fragment.FirstTokenIndex + 1).Select(i => fragment.ScriptTokenStream[i].Text));
 
         private static bool InsertHasNoRowSource(DataModificationSpecification spec)
         {

@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">144 rules. 109 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">145 rules. 109 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -194,6 +194,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
     <ul class="rule-list">
       <li><a class="id" href="rules/forced-serial-fast-forward-cursor.html">Fast Forward Cursor</a> <code class="rule-key">silentscan/forced-serial/fast-forward-cursor</code><span class="snippet">A cursor declared FAST_FORWARD (or the equivalent bare FORWARD_ONLY READ_ONLY without an explicit STATIC/KEYSET/DYNAMIC) forces the cursor&#x27;s own defining query plan serial, confirmed as NonParallelPlanReason=&quot;NoParallelFastForwardCursor&quot;.</span></li>
       <li><a class="id" href="rules/forced-serial-nonparallelizable-intrinsic.html">Nonparallelizable Intrinsic</a> <code class="rule-key">silentscan/forced-serial/nonparallelizable-intrinsic</code><span class="snippet">One of a finite, oracle-confirmed list of intrinsic functions/globals (OBJECT_ID, IDENT_CURRENT, ERROR_NUMBER, ERROR_MESSAGE, ERROR_LINE, ERROR_SEVERITY, ERROR_STATE, ERROR_PROCEDURE, @@TRANCOUNT) referenced inside a query with a real FROM clause forces that query&#x27;s plan serial, confirmed as NonParallelPlanReason=&quot;NonParallelizableIntrinsicFunction&quot;.</span></li>
+      <li><a class="id" href="rules/forced-serial-output-returned-to-client.html">Output Returned To Client</a> <code class="rule-key">silentscan/forced-serial/output-returned-to-client</code><span class="snippet">An INSERT/UPDATE/DELETE/MERGE has an OUTPUT clause without INTO, so its rows are returned to the client.</span></li>
       <li><a class="id" href="rules/forced-serial-table-variable-modification.html">Table Variable Modification</a> <code class="rule-key">silentscan/forced-serial/table-variable-modification</code><span class="snippet">A DECLARE&#x27;d table variable is the write target of an INSERT/UPDATE/DELETE/MERGE, or the INTO target of an OUTPUT clause.</span></li>
     </ul>
   </section>

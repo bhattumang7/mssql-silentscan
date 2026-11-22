@@ -74,6 +74,7 @@ public static class FindingRuleIds
     public const string CheckConstraintPredicateContradictionIntervalRuleId = "silentscan/correctness/check-constraint-predicate-contradiction";
     public const string NotNullPredicateContradictionRuleId = "silentscan/correctness/not-null-predicate-contradiction";
     public const string ForcedSerialTableVariableModificationRuleId = "silentscan/forced-serial/table-variable-modification";
+    public const string ForcedSerialOutputReturnedToClientRuleId = "silentscan/forced-serial/output-returned-to-client";
     public const string ForcedSerialFastForwardCursorRuleId = "silentscan/forced-serial/fast-forward-cursor";
     public const string ForcedSerialNonParallelizableIntrinsicRuleId = "silentscan/forced-serial/nonparallelizable-intrinsic";
     public const string UntrustedCheckConstraintRuleId = "silentscan/catalog/untrusted-check-constraint";
@@ -260,6 +261,7 @@ public static class FindingRuleIds
         ForcedSerialFindingKind.TableVariableModification => ForcedSerialTableVariableModificationRuleId,
         ForcedSerialFindingKind.FastForwardCursor => ForcedSerialFastForwardCursorRuleId,
         ForcedSerialFindingKind.NonParallelizableIntrinsic => ForcedSerialNonParallelizableIntrinsicRuleId,
+        ForcedSerialFindingKind.OutputReturnedToClient => ForcedSerialOutputReturnedToClientRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled ForcedSerialFindingKind."),
     };
     public static string DeprecatedSyntaxRuleId(DeprecatedSyntaxFindingKind kind) => kind switch

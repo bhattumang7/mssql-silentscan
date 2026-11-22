@@ -65,6 +65,7 @@ public static class SarifRuleCatalog
     public const string NotNullPredicateContradictionRuleId = FindingRuleIds.NotNullPredicateContradictionRuleId;
     public static string CheckConstraintPredicateContradictionRuleId(CheckConstraintPredicateContradictionKind kind) => FindingRuleIds.CheckConstraintPredicateContradictionRuleId(kind);
     public const string ForcedSerialTableVariableModificationRuleId = FindingRuleIds.ForcedSerialTableVariableModificationRuleId;
+    public const string ForcedSerialOutputReturnedToClientRuleId = FindingRuleIds.ForcedSerialOutputReturnedToClientRuleId;
     public const string ForcedSerialFastForwardCursorRuleId = FindingRuleIds.ForcedSerialFastForwardCursorRuleId;
     public const string ForcedSerialNonParallelizableIntrinsicRuleId = FindingRuleIds.ForcedSerialNonParallelizableIntrinsicRuleId;
     public const string UntrustedCheckConstraintRuleId = FindingRuleIds.UntrustedCheckConstraintRuleId;

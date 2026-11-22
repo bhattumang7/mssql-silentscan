@@ -10,6 +10,8 @@ public enum ForcedSerialFindingKind
     FastForwardCursor,
 
     NonParallelizableIntrinsic,
+
+    OutputReturnedToClient,
 }
 
 public sealed record ForcedSerialFinding(

@@ -14,6 +14,33 @@ public sealed class ForcedSerialScannerTests
         return ForcedSerialScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("DELETE FROM dbo.T OUTPUT deleted.Id;", "OUTPUT deleted.Id")]
+    [InlineData("UPDATE dbo.T SET Val = 1 OUTPUT inserted.Id, inserted.Val;", "OUTPUT inserted.Id, inserted.Val")]
+    [InlineData("INSERT INTO dbo.T (Id) OUTPUT inserted.Id VALUES (1);", "OUTPUT inserted.Id")]
+    public void OutputWithoutInto_Fires(string statement, string clause)
+    {
+        var findings = Scan(statement);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(ForcedSerialFindingKind.OutputReturnedToClient, finding.Kind);
+        Assert.Equal(clause, finding.DetailText);
+    }
+
+    [Fact]
+    public void OutputInto_TemporaryTable_NeverFires()
+    {
+        var findings = Scan("CREATE TABLE #o (Id INT); DELETE FROM dbo.T OUTPUT deleted.Id INTO #o;");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void DeleteWithoutOutput_NeverFires()
+    {
+        Assert.Empty(Scan("DELETE FROM dbo.T WHERE Id = 1;"));
+    }
+
     [Fact]
     public void TableVariable_InsertTarget_Fires()
     {

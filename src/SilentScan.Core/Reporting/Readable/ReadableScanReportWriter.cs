@@ -1278,6 +1278,7 @@ public static class ReadableScanReportWriter
         ForcedSerialFindingKind.TableVariableModification => "Table variable modification",
         ForcedSerialFindingKind.FastForwardCursor => "FAST_FORWARD cursor",
         ForcedSerialFindingKind.NonParallelizableIntrinsic => "Non-parallelizable intrinsic",
+        ForcedSerialFindingKind.OutputReturnedToClient => "OUTPUT returned to client",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled ForcedSerialFindingKind."),
     };
 

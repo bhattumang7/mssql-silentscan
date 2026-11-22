@@ -75,6 +75,7 @@ public static class RuleDocCatalog
         [TriggerCorrectness.InsteadOfInsertFilteredNoRejectPath.RuleId] = TriggerCorrectness.InsteadOfInsertFilteredNoRejectPath.Content,
         [TriggerCorrectness.UpdateFunctionWithoutValueComparison.RuleId] = TriggerCorrectness.UpdateFunctionWithoutValueComparison.Content,
         [ForcedSerial.TableVariableModification.RuleId] = ForcedSerial.TableVariableModification.Content,
+        [ForcedSerial.OutputReturnedToClient.RuleId] = ForcedSerial.OutputReturnedToClient.Content,
         [ForcedSerial.FastForwardCursor.RuleId] = ForcedSerial.FastForwardCursor.Content,
         [ForcedSerial.NonParallelizableIntrinsic.RuleId] = ForcedSerial.NonParallelizableIntrinsic.Content,
 
