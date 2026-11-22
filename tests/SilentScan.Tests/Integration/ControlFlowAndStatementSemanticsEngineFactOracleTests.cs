@@ -111,6 +111,16 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
+    [Trait("Rule", FindingRuleIds.BoundedStringBuiltinTruncationReplicateResultTruncatedRuleId)]
+    public async Task ReplicatePastTheCap_KeepsOnlyWholeCopies_AndAMaxTypedSourceKeepsEverything()
+    {
+        Assert.Equal(8000, await ScalarAsync<int>("SELECT LEN(REPLICATE('abcdefghij', 900));"));
+        Assert.Equal(7998, await ScalarAsync<int>("SELECT LEN(REPLICATE('abc', 4000));"));
+        Assert.Equal(3999, await ScalarAsync<int>("SELECT LEN(REPLICATE(N'abc', 4000));"));
+        Assert.Equal(12000, await ScalarAsync<int>("SELECT LEN(REPLICATE(CAST('abc' AS VARCHAR(MAX)), 4000));"));
+    }
+
+    [Fact]
     [Trait("Rule", FindingRuleIds.ControlFlowRiskLegacyIdentityIntrinsicRuleId)]
     public async Task AtAtIdentityReturnsTriggerScopeValue_ScopeIdentityReturnsOwnScopeValue()
     {

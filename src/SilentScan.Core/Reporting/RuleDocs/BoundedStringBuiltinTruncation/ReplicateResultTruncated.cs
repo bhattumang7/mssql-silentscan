@@ -16,6 +16,9 @@ internal static class ReplicateResultTruncated
             was probed directly against a real engine: REPLICATE('abcdefghij', 900), whose true
             repeated length is 9000 bytes, comes back exactly 8000 bytes long with no error and no
             warning - the extra 1000 bytes are simply gone.
+            When the source length does not divide the cap evenly the engine keeps only whole
+            copies, so the result can be a little shorter than the cap (REPLICATE('abc', 4000)
+            returns 7998 bytes).
 
             When both the source literal and the repeat count are compile-time constants, the exact
             repeated length is knowable from the source text alone - no catalog access or runtime
