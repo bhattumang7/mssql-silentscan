@@ -343,50 +343,6 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
-    public void HavingConditionOnGroupByKeyOnly_Fires()
-    {
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING Col = 'x';");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void HavingConditionOnAggregateResult_NeverFires()
-    {
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING COUNT(*) > 1;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-    }
-
-    [Fact]
-    public void HavingConditionMixingKeyAndAggregate_FiresForTheKeyOnlyBranch()
-    {
-
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING Col = 'x' AND COUNT(*) > 1;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-        Assert.Contains("GROUP BY key", finding.DetailText);
-    }
-
-    [Fact]
-    public void HavingConditionOredWithAggregate_NeverFires()
-    {
-
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING Col = 'x' OR COUNT(*) > 1;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-    }
-
-    [Fact]
-    public void HavingConditionInsideUnsatisfiableConjunct_NeverFires()
-    {
-        var findings = Scan("SELECT Id, COUNT(*) FROM dbo.Big GROUP BY Id HAVING Id = 1 AND Id = 2;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-    }
-
-    [Fact]
     public void SelectDistinctJoinOnNonUniqueColumn_Fires()
     {
         var findings = Scan("SELECT DISTINCT a.Id FROM dbo.A a JOIN dbo.C c ON a.Id = c.AId;");
@@ -1175,22 +1131,6 @@ public sealed class QueryAntiPatternScannerTests
             "DECLARE @cnt INT; SELECT @cnt = COUNT(*) FROM dbo.Big; IF @cnt > 0 SELECT 1; SELECT @cnt = COUNT(*) FROM dbo.Big WHERE Col = 'x'; IF @cnt = 0 SELECT 2;");
 
         Assert.Equal(2, findings.Count(f => f.Kind == QueryAntiPatternFindingKind.CountStarVariableExistenceCheck));
-    }
-
-    [Fact]
-    public void HavingConditionWithNoColumnReferences_NeverFires()
-    {
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING 1 = 1 AND COUNT(*) > 1;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
-    }
-
-    [Fact]
-    public void HavingConditionReferencesNonGroupByColumn_NeverFires()
-    {
-        var findings = Scan("SELECT Col, COUNT(*) FROM dbo.Big GROUP BY Col HAVING Id = 1 AND COUNT(*) > 1;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.NonAggregateHavingPredicate);
     }
 
     [Fact]

@@ -14,12 +14,6 @@ public static class QueryAntiPatternScanner
         "COUNT", "COUNT_BIG",
     };
 
-    private static readonly HashSet<string> AggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "SUM", "COUNT", "COUNT_BIG", "AVG", "MIN", "MAX", "APPROX_COUNT_DISTINCT",
-        "CHECKSUM_AGG", "GROUPING", "GROUPING_ID", "STDEV", "STDEVP", "STRING_AGG", "VAR", "VARP",
-    };
-
     public static IReadOnlyList<QueryAntiPatternFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
         var rule = CreateRule(parseResult, catalog);
@@ -199,7 +193,6 @@ public static class QueryAntiPatternScanner
         {
             var byAlias = scopeChain[0].ByAlias;
 
-            InspectHaving(node, scopeChain, walker);
             InspectDistinctJoinFanout(node, byAlias, scopeChain, walker);
         }
 
@@ -854,74 +847,6 @@ public static class QueryAntiPatternScanner
             BooleanComparisonType.LessThanOrEqualTo => BooleanComparisonType.GreaterThanOrEqualTo,
             _ => type,
         };
-
-        private void InspectHaving(
-            QuerySpecification node, IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain, ModuleWalker walker)
-        {
-            if (node.HavingClause?.SearchCondition is not { } having || node.GroupByClause is not { } groupBy)
-            {
-                return;
-            }
-
-            var groupByColumns = groupBy.GroupingSpecifications
-                .OfType<ExpressionGroupingSpecification>()
-                .Select(g => g.Expression)
-                .OfType<ColumnReferenceExpression>()
-                .Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)
-                .ToHashSet(catalog.IdentifierComparer);
-
-            var dead = PredicateSurvivalAnalyzer.FindDeadComparisons(having, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain));
-
-            foreach (var condition in PredicateTreeWalker.FlattenAnd(having))
-            {
-                if (ContainsAggregate(condition) || dead.Contains(condition))
-                {
-                    continue;
-                }
-
-                var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
-                condition.Accept(collector);
-                if (collector.References.Count == 0)
-                {
-                    continue;
-                }
-
-                var allGroupByOrLiteral = collector.References.All(c =>
-                    groupByColumns.Contains(c.MultiPartIdentifier.Identifiers[^1].Value));
-                if (!allGroupByOrLiteral)
-                {
-                    continue;
-                }
-
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.NonAggregateHavingPredicate, sourcePath,
-                    condition.StartLine, condition.StartColumn,
-                    "HAVING condition references only GROUP BY key columns/literals - equivalent WHERE condition would filter before aggregation",
-                    FindingConfidence.High));
-            }
-        }
-
-        private static bool ContainsAggregate(TSqlFragment fragment)
-        {
-            var collector = new AggregateCallCollector();
-            fragment.Accept(collector);
-            return collector.Found;
-        }
-
-        private sealed class AggregateCallCollector : TSqlFragmentVisitor
-        {
-            public bool Found { get; private set; }
-
-            public override void ExplicitVisit(FunctionCall node)
-            {
-                if (AggregateFunctionNames.Contains(node.FunctionName.Value))
-                {
-                    Found = true;
-                }
-
-                base.ExplicitVisit(node);
-            }
-        }
 
         private void InspectDistinctJoinFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias, ScopeChain scopeChain, ModuleWalker walker)
         {

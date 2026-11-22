@@ -605,7 +605,6 @@ public sealed class SarifReportWriterCoverageTests
     [Theory]
     [InlineData(QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, "error")]
     [InlineData(QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, "error")]
-    [InlineData(QueryAntiPatternFindingKind.NonAggregateHavingPredicate, "warning")]
     public void Write_QueryAntiPatternFinding_MapsKindToItsOwnLevelBucket(QueryAntiPatternFindingKind kind, string expectedLevel)
     {
         var finding = new QueryAntiPatternFinding(kind, "test.sql", 1, 1, "detail", FindingConfidence.High);

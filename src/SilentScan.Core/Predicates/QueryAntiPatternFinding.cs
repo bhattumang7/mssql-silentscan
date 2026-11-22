@@ -16,7 +16,6 @@ public enum QueryAntiPatternFindingKind
 
     CountStarVariableExistenceCheck,
 
-    NonAggregateHavingPredicate,
 
 
     DistinctMaskingJoinFanout,

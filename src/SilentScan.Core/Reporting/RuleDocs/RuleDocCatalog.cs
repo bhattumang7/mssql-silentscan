@@ -65,7 +65,6 @@ public static class RuleDocCatalog
         [QueryAntiPattern.TableVariableStaleEstimateInLoop.RuleId] = QueryAntiPattern.TableVariableStaleEstimateInLoop.Content,
         [QueryAntiPattern.RbarSingleRowLoopDml.RuleId] = QueryAntiPattern.RbarSingleRowLoopDml.Content,
         [QueryAntiPattern.CountStarVariableExistenceCheck.RuleId] = QueryAntiPattern.CountStarVariableExistenceCheck.Content,
-        [QueryAntiPattern.NonAggregateHavingPredicate.RuleId] = QueryAntiPattern.NonAggregateHavingPredicate.Content,
         [QueryAntiPattern.DistinctMaskingJoinFanout.RuleId] = QueryAntiPattern.DistinctMaskingJoinFanout.Content,
         [QueryAntiPattern.UnqualifiedTableReference.RuleId] = QueryAntiPattern.UnqualifiedTableReference.Content,
         [QueryAntiPattern.MergeMissingHoldlock.RuleId] = QueryAntiPattern.MergeMissingHoldlock.Content,

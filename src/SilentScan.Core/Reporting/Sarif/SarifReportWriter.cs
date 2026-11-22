@@ -1018,7 +1018,6 @@ public static class SarifReportWriter
         {
             QueryAntiPatternFindingKind.TableVariableLowCompatEstimate => LevelError,
             QueryAntiPatternFindingKind.CountStarVariableExistenceCheck => LevelError,
-            QueryAntiPatternFindingKind.NonAggregateHavingPredicate => LevelWarning,
 
             _ => LevelWarning,
         };

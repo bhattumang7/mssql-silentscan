@@ -160,23 +160,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     }
 
     [Fact]
-    [Trait("Rule", FindingRuleIds.QueryAntiPatternNonAggregateHavingPredicateRuleId)]
-    public async Task NonAggregateHaving_EqualsWhereResult_AndPlansAreIdentical()
-    {
-        const string having = "SELECT K, SUM(V) FROM dbo.H GROUP BY K HAVING K = 1";
-        const string where = "SELECT K, SUM(V) FROM dbo.H WHERE K = 1 GROUP BY K";
-
-        var havingRows = await RowsAsync(having);
-        var whereRows = await RowsAsync(where);
-        var havingOps = ShowPlan.PhysicalOps(await PlanInSessionAsync(string.Empty, having));
-        var whereOps = ShowPlan.PhysicalOps(await PlanInSessionAsync(string.Empty, where));
-
-        Assert.Equal(whereRows.Count, havingRows.Count);
-        Assert.Equal(whereRows[0][1], havingRows[0][1]);
-        Assert.Equal(whereOps, havingOps);
-    }
-
-    [Fact]
     [Trait("Rule", FindingRuleIds.IndexDesignFloatOrRealIndexKeyColumnRuleId)]
     public async Task FloatIndexKeyEquality_MissesSumOfTenthsWhileDecimalControlMatches()
     {
