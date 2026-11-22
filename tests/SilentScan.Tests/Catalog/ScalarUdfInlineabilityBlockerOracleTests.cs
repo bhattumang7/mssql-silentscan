@@ -63,4 +63,24 @@ public sealed class ScalarUdfInlineabilityBlockerOracleTests : OracleTestFixture
             predictedBlocker is null || engineInlineable == 0,
             $"{name}: scanner predicts blocker '{predictedBlocker}' but engine is_inlineable = {engineInlineable}");
     }
+
+    [Theory]
+    [InlineData("RETURN DATEDIFF(DAY, {fn CURDATE()}, CAST(@x AS DATETIME));", false)]
+    [InlineData("RETURN DATEDIFF(SECOND, {fn CURTIME()}, CAST(@x AS DATETIME));", false)]
+    [InlineData("RETURN DATEDIFF(DAY, {fn NOW()}, CAST(@x AS DATETIME));", false)]
+    [InlineData("RETURN {fn DAYOFWEEK(CAST(@x AS DATETIME))};", true)]
+    public async Task OdbcTimeFunctions_BlockInliningExactlyWhereTheEngineDoes(string body, bool inlineable)
+    {
+        var ddl = $"CREATE FUNCTION dbo.fn_OdbcProbe (@x INT) RETURNS INT AS BEGIN {body} END";
+        await ExecuteAsync(ddl);
+        var engineInlineable = await ScalarAsync<int>("SELECT CAST(is_inlineable AS INT) FROM sys.sql_modules WHERE object_id = OBJECT_ID('dbo.fn_OdbcProbe');");
+        Assert.Equal(inlineable, engineInlineable == 1);
+
+        var parsed = SqlScriptParser.ParseText("test.sql", Ddl + Environment.NewLine + ddl);
+        Assert.False(parsed.HasErrors, string.Join("; ", parsed.Errors.Select(e => e.Message)));
+        var catalog = CatalogBuilder.Build([parsed]);
+        var predictedBlocker = catalog.TryGetScalarUdfInfo("dbo.fn_OdbcProbe", out var info) ? info!.InlineabilityBlocker : null;
+
+        Assert.Equal(inlineable, predictedBlocker is null);
+    }
 }

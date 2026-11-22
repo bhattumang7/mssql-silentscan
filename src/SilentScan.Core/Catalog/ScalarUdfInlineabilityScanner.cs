@@ -13,6 +13,11 @@ public static class ScalarUdfInlineabilityScanner
         "GETDATE", "GETUTCDATE", "SYSDATETIME", "SYSUTCDATETIME", "SYSDATETIMEOFFSET",
     };
 
+    private static readonly HashSet<string> TimeDependentOdbcFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CURDATE", "CURTIME", "NOW",
+    };
+
     private static readonly HashSet<ParameterlessCallType> TimeDependentParameterlessCalls =
     [
         ParameterlessCallType.CurrentTimestamp, ParameterlessCallType.CurrentDate,
@@ -218,6 +223,16 @@ public static class ScalarUdfInlineabilityScanner
             else if (node.FunctionName is { Value: { } functionName } && TimeDependentIntrinsics.Contains(functionName))
             {
                 Report($"time-dependent intrinsic {functionName.ToUpperInvariant()}()");
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(OdbcFunctionCall node)
+        {
+            if (node.Name?.Value is { } odbcName && TimeDependentOdbcFunctions.Contains(odbcName))
+            {
+                Report($"time-dependent intrinsic {odbcName.ToUpperInvariant()}()");
             }
 
             base.ExplicitVisit(node);
