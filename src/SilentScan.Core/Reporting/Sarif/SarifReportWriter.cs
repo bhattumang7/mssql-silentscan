@@ -719,8 +719,6 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var message = finding.Kind switch
         {
-            ModuleCompileFlagFindingKind.RecompilesEveryCall =>
-                $"'{finding.ModuleQualifiedName}' is authored WITH RECOMPILE - every call compiles a fresh plan and discards it, so this module's own cost never accumulates in the plan cache at all.",
             ModuleCompileFlagFindingKind.TableValuedFunctionReturnUsesDatabaseCollation =>
                 $"'{finding.ModuleQualifiedName}' declares a RETURNS TABLE character column with no explicit COLLATE - its collation was baked in against the database's default collation at CREATE/ALTER time and will silently disagree with the database's collation after any future ALTER DATABASE ... COLLATE.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),

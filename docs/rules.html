@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">153 rules. 117 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">152 rules. 117 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -112,7 +112,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/catalog-trigger-firing-order-undefined.html">Trigger Firing Order Undefined</a> <code class="rule-key">silentscan/catalog/trigger-firing-order-undefined</code><span class="snippet">A table carries two or more enabled AFTER triggers for the same firing event (INSERT/UPDATE/DELETE) with no sp_settriggerorder pin narrowing their relative order down to a single pair.</span></li>
       <li><a class="id" href="rules/catalog-tvf-return-database-collation.html">TVF Return Database Collation</a> <code class="rule-key">silentscan/catalog/tvf-return-database-collation</code><span class="snippet">A non-schema-bound table-valued function&#x27;s own RETURNS @t TABLE(...) declares a character-typed column with no explicit COLLATE clause, so its collation was implicitly resolved against the CURRENT database&#x27;s default collation at CREATE/ALTER time and baked in (sys.sql_modules.uses_database_collation).</span></li>
       <li><a class="id" href="rules/catalog-untrusted-check-constraint.html">Untrusted Check Constraint</a> <code class="rule-key">silentscan/catalog/untrusted-check-constraint</code><span class="snippet">A CHECK constraint the engine itself does not trust (sys.check_constraints.is_not_trusted).</span></li>
-      <li><a class="id" href="rules/catalog-with-recompile.html">With Recompile</a> <code class="rule-key">silentscan/catalog/with-recompile</code><span class="snippet">The module was authored WITH RECOMPILE (sys.sql_modules.is_recompiled).</span></li>
     </ul>
   </section>
 

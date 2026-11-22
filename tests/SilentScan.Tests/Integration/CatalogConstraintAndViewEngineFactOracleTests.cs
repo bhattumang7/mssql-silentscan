@@ -48,10 +48,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE FUNCTION dbo.TvfExplicitCollation() RETURNS @t TABLE (N VARCHAR(10) COLLATE Latin1_General_CS_AS) AS BEGIN RETURN; END;
         GO
-        CREATE PROCEDURE dbo.ProcRecompile WITH RECOMPILE AS SELECT 1 AS X;
-        GO
-        CREATE PROCEDURE dbo.ProcCached AS SELECT 1 AS X;
-        GO
         CREATE TABLE dbo.Base (A INT, B INT, C INT);
         INSERT INTO dbo.Base VALUES (1, 2, 3);
         GO
@@ -80,21 +76,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.ChkNull WHERE Qty IS NULL;"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNull VALUES (2, -1);"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullSafe VALUES (1, NULL);"));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.ModuleCompileFlagRecompilesEveryCallRuleId)]
-    public async Task WithRecompileProcedure_IsFlaggedAndLeavesNoCachedPlan_WhileControlIsCached()
-    {
-        await ExecuteAsync("EXEC dbo.ProcRecompile; EXEC dbo.ProcRecompile; EXEC dbo.ProcCached; EXEC dbo.ProcCached;");
-
-        var flags = await RowsAsync("SELECT OBJECT_NAME(object_id), CAST(is_recompiled AS INT) FROM sys.sql_modules WHERE object_id IN (OBJECT_ID('dbo.ProcRecompile'), OBJECT_ID('dbo.ProcCached')) ORDER BY 1;");
-        var cached = await RowsAsync("SELECT OBJECT_NAME(st.objectid, st.dbid) FROM sys.dm_exec_cached_plans cp CROSS APPLY sys.dm_exec_sql_text(cp.plan_handle) st WHERE cp.objtype = 'Proc' AND st.dbid = DB_ID() AND st.objectid IN (OBJECT_ID('dbo.ProcRecompile'), OBJECT_ID('dbo.ProcCached'));");
-
-        Assert.Equal(1, flags.Single(r => (string)r[0]! == "ProcRecompile")[1]);
-        Assert.Equal(0, flags.Single(r => (string)r[0]! == "ProcCached")[1]);
-        Assert.DoesNotContain(cached, r => (string)r[0]! == "ProcRecompile");
-        Assert.Contains(cached, r => (string)r[0]! == "ProcCached");
     }
 
     [Fact]

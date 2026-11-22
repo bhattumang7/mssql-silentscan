@@ -103,11 +103,9 @@ public static class FindingRuleIds
     public const string RegexpAccentInsensitiveColumnRuleId = "silentscan/string-builtin/regexp-accent-insensitive-column-unsupported";
     public const string StringConcatNullRuleId = "silentscan/predicate/plus-operator-null-propagation";
     public const string SecurityPredicateIndexRuleId = "silentscan/catalog/rls-predicate-unindexed-column";
-    public const string ModuleCompileFlagRecompilesEveryCallRuleId = "silentscan/catalog/with-recompile";
     public const string ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId = "silentscan/catalog/tvf-return-database-collation";
     public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => kind switch
     {
-        ModuleCompileFlagFindingKind.RecompilesEveryCall => ModuleCompileFlagRecompilesEveryCallRuleId,
         ModuleCompileFlagFindingKind.TableValuedFunctionReturnUsesDatabaseCollation => ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };

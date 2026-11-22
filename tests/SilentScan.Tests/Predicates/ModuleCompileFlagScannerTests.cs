@@ -9,16 +9,11 @@ public sealed class ModuleCompileFlagScannerTests
     private const string ModuleName = "dbo.usp_Test";
 
     private static IReadOnlyList<ModuleCompileFlagFinding> Scan(
-        string sql, bool? isRecompiled = null, bool? usesDatabaseCollation = null, bool? isSchemaBound = null)
+        string sql, bool? usesDatabaseCollation = null, bool? isSchemaBound = null)
     {
         var catalog = new DatabaseCatalog();
         var result = SqlScriptParser.ParseText(ModuleName, sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-
-        if (isRecompiled is { } recompiled)
-        {
-            catalog.AddModuleIsRecompiled(ModuleName, recompiled);
-        }
 
         if (usesDatabaseCollation is { } udc)
         {
@@ -31,33 +26,6 @@ public sealed class ModuleCompileFlagScannerTests
         }
 
         return ModuleCompileFlagScanner.Scan(result, catalog);
-    }
-
-    [Fact]
-    public void IsRecompiledTrue_Fires()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.usp_Test WITH RECOMPILE AS BEGIN SELECT 1; END", isRecompiled: true);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(ModuleCompileFlagFindingKind.RecompilesEveryCall, finding.Kind);
-        Assert.Equal(ModuleName, finding.ModuleQualifiedName);
-    }
-
-    [Fact]
-    public void IsRecompiledFalse_DoesNotFire()
-    {
-        var findings = Scan("CREATE PROCEDURE dbo.usp_Test AS BEGIN SELECT 1; END", isRecompiled: false);
-
-        Assert.Empty(findings);
-    }
-
-    [Fact]
-    public void IsRecompiledUnknown_NeverGuessesFire()
-    {
-
-        var findings = Scan("CREATE PROCEDURE dbo.usp_Test AS BEGIN SELECT 1; END");
-
-        Assert.Empty(findings);
     }
 
     [Fact]
@@ -90,17 +58,5 @@ public sealed class ModuleCompileFlagScannerTests
             usesDatabaseCollation: false, isSchemaBound: false);
 
         Assert.Empty(findings);
-    }
-
-    [Fact]
-    public void BothFlagsTrue_FiresBothIndependently()
-    {
-        var findings = Scan(
-            "CREATE PROCEDURE dbo.usp_Test WITH RECOMPILE AS BEGIN SELECT 1; END",
-            isRecompiled: true, usesDatabaseCollation: true, isSchemaBound: false);
-
-        Assert.Equal(2, findings.Count);
-        Assert.Contains(findings, f => f.Kind == ModuleCompileFlagFindingKind.RecompilesEveryCall);
-        Assert.Contains(findings, f => f.Kind == ModuleCompileFlagFindingKind.TableValuedFunctionReturnUsesDatabaseCollation);
     }
 }

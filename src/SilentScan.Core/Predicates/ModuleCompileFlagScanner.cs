@@ -10,13 +10,6 @@ public static class ModuleCompileFlagScanner
         var moduleQualifiedName = parseResult.SourcePath;
         var findings = new List<ModuleCompileFlagFinding>();
 
-        if (catalog.TryGetModuleIsRecompiled(moduleQualifiedName, out var isRecompiled) && isRecompiled)
-        {
-            findings.Add(new ModuleCompileFlagFinding(
-                ModuleCompileFlagFindingKind.RecompilesEveryCall, moduleQualifiedName, parseResult.SourcePath,
-                parseResult.Fragment.StartLine, parseResult.Fragment.StartColumn));
-        }
-
         var schemaBound = catalog.TryGetModuleIsSchemaBound(moduleQualifiedName, out var isSchemaBound) && isSchemaBound;
 
         if (!schemaBound

@@ -45,7 +45,6 @@ public static class LiveScanRunner
             catalog.AddModuleUsesQuotedIdentifier(module.QualifiedName, module.UsesQuotedIdentifier);
             catalog.AddModuleUsesAnsiNulls(module.QualifiedName, module.UsesAnsiNulls);
             catalog.AddModuleIsSchemaBound(module.QualifiedName, module.IsSchemaBound);
-            catalog.AddModuleIsRecompiled(module.QualifiedName, module.IsRecompiled);
             catalog.AddModuleUsesDatabaseCollation(module.QualifiedName, module.UsesDatabaseCollation);
         }
 

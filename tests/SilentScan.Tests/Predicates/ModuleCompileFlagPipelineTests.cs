@@ -7,33 +7,6 @@ namespace SilentScan.Tests.Predicates;
 public sealed class ModuleCompileFlagPipelineTests
 {
     [Fact]
-    public async Task ProcedureWithRecompile_Fires()
-    {
-        var report = await EngineAuthoritativeScan.ScanAsync("""
-            CREATE PROCEDURE dbo.usp_Recompiled WITH RECOMPILE AS
-            BEGIN
-                SELECT 1 AS X;
-            END
-            """);
-
-        var finding = Assert.Single(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner"), f => f.Kind == ModuleCompileFlagFindingKind.RecompilesEveryCall);
-        Assert.Equal("dbo.usp_Recompiled", finding.ModuleQualifiedName);
-    }
-
-    [Fact]
-    public async Task ProcedureWithoutRecompile_DoesNotFire()
-    {
-        var report = await EngineAuthoritativeScan.ScanAsync("""
-            CREATE PROCEDURE dbo.usp_Plain AS
-            BEGIN
-                SELECT 1 AS X;
-            END
-            """);
-
-        Assert.DoesNotContain(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner"), f => f.Kind == ModuleCompileFlagFindingKind.RecompilesEveryCall);
-    }
-
-    [Fact]
     public async Task TableValuedFunctionReturnsUncollatedStringColumn_Fires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync("""

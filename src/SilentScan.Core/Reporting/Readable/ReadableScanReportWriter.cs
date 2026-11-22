@@ -1828,15 +1828,12 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Module compile flags ({report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "Two independent sys.sql_modules catalog flags, each baked in wholesale at CREATE/ALTER time: WITH RECOMPILE (every call compiles a fresh plan and discards it, invisible to any plan-cache-based monitoring), and a non-schema-bound table-valued function's own RETURNS TABLE declaring a character column with no explicit COLLATE (its collation was resolved against the database's default at CREATE/ALTER time and silently disagrees with the database's collation after any later ALTER DATABASE ... COLLATE). Schema-bound modules are deliberately excluded from the second kind - oracle-confirmed that schema-binding sets the underlying flag unconditionally, string data or not, so it carries no differentiating signal there.");
+            "A non-schema-bound table-valued function's own RETURNS TABLE declaring a character column with no explicit COLLATE has its collation resolved against the database's default at CREATE/ALTER time, and it silently disagrees with the database's collation after any later ALTER DATABASE ... COLLATE. Schema-bound modules are deliberately excluded - oracle-confirmed that schema-binding sets the underlying flag unconditionally, string data or not, so it carries no differentiating signal there.");
 
         foreach (var group in report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var title = group.Key == ModuleCompileFlagFindingKind.RecompilesEveryCall
-                ? "WITH RECOMPILE"
-                : "RETURNS TABLE column uses database collation";
-            yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
+            yield return new ReadableBlock.Heading(level + 1, $"RETURNS TABLE column uses database collation ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ModuleCompileFlagRuleId(group.Key)));
             yield return new ReadableBlock.Table(
                 [WhereHeader, ModuleHeader],
