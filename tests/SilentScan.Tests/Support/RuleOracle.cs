@@ -89,11 +89,18 @@ public abstract class RuleOracle
 
     private static readonly int[] CommonCompatibilityLevels = [110, 120, 130, 140, 150, 160];
 
-    private static readonly EngineTarget[] AllTargets =
-    [
-        .. WithLevels(SqlServerOptions.LocalDocker, []),
-        .. WithLevels(SqlServerOptions.LocalDockerLatest, [170]),
-    ];
+    private static readonly EngineTarget[] AllTargets = string.Equals(Environment.GetEnvironmentVariable("SILENTSCAN_ORACLE_QUICK"), "1", StringComparison.Ordinal)
+        ?
+        [
+            new EngineTarget(SqlServerOptions.LocalDocker, CommonCompatibilityLevels[0]),
+            new EngineTarget(SqlServerOptions.LocalDocker, CommonCompatibilityLevels[^1]),
+            new EngineTarget(SqlServerOptions.LocalDockerLatest, 170),
+        ]
+        :
+        [
+            .. WithLevels(SqlServerOptions.LocalDocker, []),
+            .. WithLevels(SqlServerOptions.LocalDockerLatest, [170]),
+        ];
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ScanReport> _scans = [];
 

@@ -62,6 +62,7 @@ scripts/dotnet-safe.sh test
 scripts/dotnet-safe.sh test --filter "FullyQualifiedName~DynamicSql"
 scripts/dotnet-safe.sh test --filter "Category!=Oracle"   # fast loop, no DB: ~3,000 tests in seconds
 scripts/dotnet-safe.sh test --filter "Category=Oracle"    # DB-backed only: ~650 tests, minutes (needs Docker SQL Server)
+SILENTSCAN_ORACLE_QUICK=1 scripts/dotnet-safe.sh test --filter "FullyQualifiedName~SomeOracleClass"   # paired-oracle classes on 3 engine targets instead of 14
 ```
 
 Every test class that deploys to or queries the live Docker SQL Server
