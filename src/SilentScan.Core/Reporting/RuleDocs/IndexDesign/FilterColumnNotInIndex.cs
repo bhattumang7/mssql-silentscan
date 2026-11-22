@@ -38,7 +38,7 @@ internal static class FilterColumnNotInIndex
                         ON dbo.Orders (CustomerId)
                         WHERE IsActive = 1;
                     """,
-                NoncompliantExplanation: "The filter references IsActive, but the index only carries CustomerId - IsActive is neither a key column nor an INCLUDE column, so the optimizer can't cheaply confirm the filter still holds for a query that doesn't already carry IsActive itself.",
+                NoncompliantExplanation: "The filter references IsActive, but the index only carries CustomerId - IsActive is neither a key column nor an INCLUDE column, so any query that returns or sorts by IsActive must fetch it from the base table with a key lookup per row.",
                 CompliantSql: """
                     CREATE TABLE dbo.Orders (CustomerId INT NOT NULL, IsActive BIT NOT NULL);
                     CREATE NONCLUSTERED INDEX IX_Orders_Active
@@ -46,6 +46,6 @@ internal static class FilterColumnNotInIndex
                         INCLUDE (IsActive)
                         WHERE IsActive = 1;
                     """,
-                CompliantExplanation: "IsActive is now carried by the index as an INCLUDE column, so the optimizer can confirm the filter still holds without re-reading the base table."),
+                CompliantExplanation: "IsActive is now carried by the index as an INCLUDE column, so a query that returns IsActive is answered from the index alone, with no key lookup."),
         ]);
 }
