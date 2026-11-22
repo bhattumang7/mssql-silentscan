@@ -50,6 +50,11 @@ public static class NonSargablePredicateScanner
             && sourceType.Category != SqlTypeCategory.DateTimeOffset
             && targetType.Category is not SqlTypeCategory.Time);
 
+    internal static bool IsSeekableStringWidening(SqlType targetType, SqlType sourceType) =>
+        targetType is { Category: SqlTypeCategory.NVarChar or SqlTypeCategory.NChar }
+        && sourceType is { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char, IsMax: false, Collation: { IsSqlFamily: false } }
+        && (targetType.IsMax || (targetType.Length is { } targetLength && sourceType.Length is { } sourceLength && targetLength >= sourceLength));
+
     private sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
         public List<SargabilityFinding> Findings { get; } = [];

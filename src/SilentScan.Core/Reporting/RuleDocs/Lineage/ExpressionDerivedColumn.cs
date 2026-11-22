@@ -18,8 +18,10 @@ internal static class ExpressionDerivedColumn
             every row. Oracle-confirmed exceptions are not reported: a `CAST` that stays inside the
             numeric family (`INT` to `BIGINT`, `DECIMAL`) or inside the date/time family
             (`DATETIME` to `DATE`) still seeks the base column's index, because the engine converts
-            the constant instead. A cast to a string, a function such as `UPPER`, and arithmetic
-            on the column all lose the seek, and those are what this finding covers.
+            the constant instead. So does a `VARCHAR` column with a Windows collation cast to an
+            `NVARCHAR` at least as wide. A cast to a narrower string, a cast of a SQL-collation
+            column, a function such as `UPPER`, and arithmetic on the column all lose the seek,
+            and those are what this finding covers.
 
             This is reported separately from this tool's ordinary sargability verdicts (the
             `verdict/*` family), which are about type-precedence mismatches between two otherwise-

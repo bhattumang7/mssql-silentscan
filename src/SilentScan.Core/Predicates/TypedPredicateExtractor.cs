@@ -1307,7 +1307,8 @@ public static class TypedPredicateExtractor
             }
 
             if (provenance is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } }
-                && NonSargablePredicateScanner.IsSeekableThroughConvert(castType, sourceType))
+                && (NonSargablePredicateScanner.IsSeekableThroughConvert(castType, sourceType)
+                    || NonSargablePredicateScanner.IsSeekableStringWidening(castType, sourceType)))
             {
                 return;
             }

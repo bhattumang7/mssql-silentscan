@@ -29,6 +29,19 @@ public sealed class ExpressionDerivedSeekableCastOracleTests : OracleTestFixture
         GO
         CREATE VIEW dbo.VPlus AS SELECT Id + 1 AS IdPlus, Pad FROM dbo.Ed;
         GO
+        CREATE TABLE dbo.EdW (Id INT NOT NULL PRIMARY KEY, WinCol VARCHAR(20) COLLATE Latin1_General_CI_AS NOT NULL, SqlCol VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL, Pad CHAR(100) NOT NULL DEFAULT 'x');
+        INSERT INTO dbo.EdW (Id, WinCol, SqlCol)
+        SELECT TOP (20000) ROW_NUMBER() OVER (ORDER BY (SELECT 1)), 'v' + CAST(ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS VARCHAR(10)), 'v' + CAST(ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS VARCHAR(10))
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+        CREATE INDEX IX_EdW_Win ON dbo.EdW (WinCol);
+        CREATE INDEX IX_EdW_Sql ON dbo.EdW (SqlCol);
+        GO
+        CREATE VIEW dbo.VWinWide AS SELECT CAST(WinCol AS NVARCHAR(20)) AS X, Pad FROM dbo.EdW;
+        GO
+        CREATE VIEW dbo.VWinNarrow AS SELECT CAST(WinCol AS NVARCHAR(3)) AS X, Pad FROM dbo.EdW;
+        GO
+        CREATE VIEW dbo.VSqlWide AS SELECT CAST(SqlCol AS NVARCHAR(20)) AS X, Pad FROM dbo.EdW;
+        GO
         """;
 
     private Task<string> PlanAsync(string statement) => new PlanXmlCapture(Options).CaptureAsync(DatabaseName, statement);
@@ -36,6 +49,7 @@ public sealed class ExpressionDerivedSeekableCastOracleTests : OracleTestFixture
     [Theory]
     [InlineData("SELECT Pad FROM dbo.VBig WHERE IdBig = 5;", "PK__Ed")]
     [InlineData("SELECT Pad FROM dbo.VDate WHERE D = '2024-03-01';", "IX_Ed_Dt")]
+    [InlineData("SELECT Pad FROM dbo.VWinWide WHERE X = N'v5';", "IX_EdW_Win")]
     public async Task NumericOrDateCastExposedByAView_StillSeeksTheBaseColumnIndex(string statement, string expectedIndex)
     {
         var plan = await PlanAsync(statement);
@@ -48,6 +62,8 @@ public sealed class ExpressionDerivedSeekableCastOracleTests : OracleTestFixture
     [InlineData("SELECT Pad FROM dbo.VStr WHERE IdStr = '5';")]
     [InlineData("SELECT Pad FROM dbo.VUpper WHERE US = 'V5';")]
     [InlineData("SELECT Pad FROM dbo.VPlus WHERE IdPlus = 6;")]
+    [InlineData("SELECT Pad FROM dbo.VWinNarrow WHERE X = N'v5';")]
+    [InlineData("SELECT Pad FROM dbo.VSqlWide WHERE X = N'v5';")]
     public async Task StringCastOrExpressionExposedByAView_CannotSeekTheBaseColumnIndex(string statement)
     {
         var plan = await PlanAsync(statement);

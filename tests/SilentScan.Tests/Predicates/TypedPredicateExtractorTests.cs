@@ -432,6 +432,34 @@ public sealed class TypedPredicateExtractorTests
         Assert.Single(ExpressionDerivedThroughView(selectExpression, parameterType, "@p"));
     }
 
+    private static IReadOnlyList<ExpressionDerivedFinding> ExpressionDerivedThroughStringCast(string collation, string castTarget)
+    {
+        return ExtractExpressionDerived(
+            $"CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, Code VARCHAR(20) COLLATE {collation} NOT NULL);",
+            "CREATE INDEX IX_Orders_Code ON dbo.Orders(Code);",
+            $"CREATE VIEW dbo.vw_Orders AS SELECT OrderId, CAST(Code AS {castTarget}) AS Derived FROM dbo.Orders;",
+            "CREATE PROCEDURE dbo.usp_Get @p NVARCHAR(20) AS BEGIN SELECT OrderId FROM dbo.vw_Orders WHERE Derived = @p; END");
+    }
+
+    [Theory]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(20)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(100)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(MAX)")]
+    public void Extract_WindowsCollationVarcharCastToAnAtLeastAsWideNvarcharThroughAView_NeverFiresExpressionDerived(string collation, string castTarget)
+    {
+        Assert.Empty(ExpressionDerivedThroughStringCast(collation, castTarget));
+    }
+
+    [Theory]
+    [InlineData("SQL_Latin1_General_CP1_CI_AS", "NVARCHAR(20)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(3)")]
+    [InlineData("Latin1_General_CI_AS", "VARCHAR(100)")]
+    [InlineData("SQL_Latin1_General_CP1_CI_AS", "VARCHAR(100)")]
+    public void Extract_OtherStringCastsThroughAView_StillFireExpressionDerived(string collation, string castTarget)
+    {
+        Assert.Single(ExpressionDerivedThroughStringCast(collation, castTarget));
+    }
+
     [Fact]
     public void Extract_PlainPassthroughThroughTwoViews_NoExpressionDerivedFinding()
     {
