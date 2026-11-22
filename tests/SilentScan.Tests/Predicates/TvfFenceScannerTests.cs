@@ -9,13 +9,14 @@ public sealed class TvfFenceScannerTests
 {
     private static readonly string FixturesDir = Path.Combine(AppContext.BaseDirectory, "fixtures", "tvf_fence");
 
-    private static IReadOnlyList<TvfFenceFinding> ScanFixture(string fileName)
+    private static IReadOnlyList<TvfFenceFinding> ScanFixture(string fileName, int? compatibilityLevel = 130)
     {
         var path = Path.Combine(FixturesDir, fileName);
         var result = SqlScriptParser.ParseFile(path);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
+        catalog.CompatibilityLevel = compatibilityLevel;
         var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
         var fenceMap = TvfFenceMap.Build(views, catalog);
         return TvfFenceScanner.Scan(result, catalog, fenceMap);
@@ -87,12 +88,13 @@ public sealed class TvfFenceScannerTests
 
         """;
 
-    private static List<TvfFenceFinding> ScanText(string sql)
+    private static List<TvfFenceFinding> ScanText(string sql, int? compatibilityLevel = 130)
     {
         var result = SqlScriptParser.ParseText("test.sql", SoleSourceSetup + sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
+        catalog.CompatibilityLevel = compatibilityLevel;
         var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
         var fenceMap = TvfFenceMap.Build(views, catalog);
         return TvfFenceScanner.Scan(result, catalog, fenceMap).Where(f => f.Kind == TvfFenceFindingKind.NestedUnderViewOrTvf).ToList();
@@ -142,6 +144,18 @@ public sealed class TvfFenceScannerTests
         Assert.NotNull(nested.OriginSourcePath);
 
         Assert.Contains(findings, f => f.Kind == TvfFenceFindingKind.CorrelatedApply);
+    }
+
+    [Theory]
+    [InlineData(140)]
+    [InlineData(150)]
+    [InlineData(170)]
+    [InlineData(null)]
+    public void NestedUnderViewOrTvf_AtOrAboveInterleavedExecutionCompatOrUnknown_DoesNotFire(int? compatibilityLevel)
+    {
+        var findings = ScanText("SELECT o.OrderId FROM dbo.Orders o JOIN dbo.vw_Tier t ON t.CustomerId = o.CustomerId;", compatibilityLevel);
+
+        Assert.Empty(findings);
     }
 
     [Fact]

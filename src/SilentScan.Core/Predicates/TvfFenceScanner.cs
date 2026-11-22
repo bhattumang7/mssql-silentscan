@@ -184,7 +184,7 @@ public static class TvfFenceScanner
 
         private void TryEmitNestedFinding(string qualifiedName, TableReference reference, string fragmentText)
         {
-            if (!fenceMap.TryGetValue(qualifiedName, out var origin))
+            if (catalog.CompatibilityLevel is not < 140 || !fenceMap.TryGetValue(qualifiedName, out var origin))
             {
                 return;
             }

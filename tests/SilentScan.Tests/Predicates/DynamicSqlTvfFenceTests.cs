@@ -29,6 +29,7 @@ public sealed class DynamicSqlTvfFenceTests
         Assert.False(schema.HasErrors, string.Join("; ", schema.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([schema]);
+        catalog.CompatibilityLevel = 130;
         var lineage = LineageResolver.Resolve(catalog, [schema]);
         var (views, _) = ViewDefinitionExtractor.Extract([schema], catalog.DefaultCollation, catalog.TypeAliases);
         var fenceMap = TvfFenceMap.Build(views, catalog);

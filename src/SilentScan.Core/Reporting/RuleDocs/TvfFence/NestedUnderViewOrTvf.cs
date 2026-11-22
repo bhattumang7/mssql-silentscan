@@ -25,6 +25,11 @@ internal static class NestedUnderViewOrTvf
             traced through the view's own definition - and, if that view itself selects from
             another view, through however many additional layers sit in between - before the actual
             cause of the bad estimate becomes visible.
+
+            This finding is reported only when the connected database is known to be below
+            compatibility level 140: oracle-confirmed on SQL Server 2022, from level 140 on,
+            interleaved execution gives a multi-statement TVF behind a view its real row count in
+            the actual plan, so the fixed estimate is no longer inherited.
             """,
         HowToFixIt: """
             Trace the view (or inline TVF) down to whichever underlying object is a multi-statement
