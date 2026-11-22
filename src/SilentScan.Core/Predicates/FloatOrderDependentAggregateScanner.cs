@@ -45,6 +45,11 @@ public static class FloatOrderDependentAggregateScanner
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            if (SingleRowKeyPinning.QueryReadsAtMostOneRow(node, catalog))
+            {
+                return;
+            }
+
             foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
             {
                 Inspect(element.Expression, scopeChain);

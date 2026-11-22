@@ -29,6 +29,15 @@ public sealed class FloatOrderDependentAggregateScannerTests
         Assert.Equal("SUM", finding.AggregateFunctionName);
     }
 
+    [Theory]
+    [InlineData("SUM")]
+    [InlineData("AVG")]
+    [InlineData("STDEV")]
+    public void AggregateOverAQueryPinnedToOneRowByPrimaryKey_NeverFires(string aggregateFunction)
+    {
+        Assert.Empty(Scan($"SELECT {aggregateFunction}(Amount) FROM dbo.Measurements WHERE Id = 1;"));
+    }
+
     [Fact]
     public void AvgOfRealColumn_Fires()
     {

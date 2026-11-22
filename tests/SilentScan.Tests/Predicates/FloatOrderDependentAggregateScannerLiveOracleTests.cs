@@ -40,6 +40,24 @@ public sealed class FloatOrderDependentAggregateEngineFactOracleTests : OracleTe
 
         Assert.NotEqual(Convert.ToHexString(serialBits), Convert.ToHexString(parallelBits));
     }
+
+    [Fact]
+    public async Task SumOverAKeyPinnedSingleRow_HasTheSameBitPatternInSerialAndForcedParallelPlans()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        await using var serialCommand = new SqlCommand(
+            "SELECT CAST(SUM(Amount) AS VARBINARY(8)) FROM dbo.Measurements WHERE Id = 3 OPTION (MAXDOP 1);",
+            connection);
+        var serialBits = (byte[])(await serialCommand.ExecuteScalarAsync())!;
+
+        await using var parallelCommand = new SqlCommand(
+            "SELECT CAST(SUM(Amount) AS VARBINARY(8)) FROM dbo.Measurements WHERE Id = 3 OPTION (MAXDOP 4, QUERYTRACEON 8649);",
+            connection);
+        var parallelBits = (byte[])(await parallelCommand.ExecuteScalarAsync())!;
+
+        Assert.Equal(Convert.ToHexString(serialBits), Convert.ToHexString(parallelBits));
+    }
 }
 
 [Trait("Category", "Oracle")]
