@@ -15,7 +15,8 @@ public sealed record UnderLengthParameterFinding(
     [property: JsonIgnore] string SourcePath,
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
-    FindingConfidence Confidence = FindingConfidence.High) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    string? VariableName = null) : IFinding
 {
     public string RuleId { get; } = FindingRuleIds.UnderLengthParameterRuleId;
 

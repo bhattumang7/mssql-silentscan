@@ -1609,6 +1609,7 @@ public sealed class TypedPredicateExtractorTests
         var finding = Assert.Single(result.UnderLengthParameterFindings);
         Assert.Equal(20, finding.ColumnLength);
         Assert.Equal(5, finding.OtherOperandLength);
+        Assert.Equal("@Code", finding.VariableName);
     }
 
     [Fact]

@@ -11,6 +11,11 @@ public sealed class UnderLengthParameterVerifier : RuleVerifier<UnderLengthParam
 
     protected override Perturbation Describe(UnderLengthParameterFinding finding)
     {
+        if (finding.VariableName is not { Length: > 1 } variable)
+        {
+            return Perturbation.NotApplicable("The finding does not name the variable.");
+        }
+
         var size = finding.IsImplicitDefault
             ? @"(?!\s*\()"
             : finding.OtherOperandLength is { } length
@@ -21,7 +26,7 @@ public sealed class UnderLengthParameterVerifier : RuleVerifier<UnderLengthParam
             return Perturbation.NotApplicable("The finding does not say how long the other operand is.");
         }
 
-        var declaration = new Regex(@"(@\w+\s+(?:AS\s+)?)(n?varchar|n?char)" + size, RegexOptions.IgnoreCase);
+        var declaration = new Regex(@"(" + Regex.Escape(variable) + @"\s+(?:AS\s+)?)(n?varchar|n?char)" + size, RegexOptions.IgnoreCase);
         string? original = null;
         return new Perturbation(
             [],

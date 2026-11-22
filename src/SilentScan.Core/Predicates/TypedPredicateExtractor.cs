@@ -1026,7 +1026,8 @@ public static class TypedPredicateExtractor
 
             UnderLengthParameterFindings.Add(new UnderLengthParameterFinding(
                 column.TableQualifiedName, column.ColumnName, result.ColumnLength, result.OtherLength, result.IsImplicitDefault,
-                operatorText, changesRangeOrPatternShape, sourcePath, node.StartLine, node.StartColumn));
+                operatorText, changesRangeOrPatternShape, sourcePath, node.StartLine, node.StartColumn,
+                VariableName: value.VariableName));
         }
 
         private bool CannotExceedDeclaredLength(PredicateOperand.Value value, int declaredLength) =>

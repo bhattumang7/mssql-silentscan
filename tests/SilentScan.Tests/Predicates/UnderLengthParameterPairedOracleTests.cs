@@ -26,6 +26,7 @@ public sealed class UnderLengthParameterPairedOracleTests : RuleOracle
     [
         finding => ((UnderLengthParameterFinding)finding) with { SourcePath = "dbo.Other" },
         finding => ((UnderLengthParameterFinding)finding) with { OtherOperandLength = 7 },
+        finding => ((UnderLengthParameterFinding)finding) with { VariableName = "@other" },
     ];
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
