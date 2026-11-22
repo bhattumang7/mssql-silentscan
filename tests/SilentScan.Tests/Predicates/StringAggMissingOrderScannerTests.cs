@@ -47,6 +47,8 @@ public sealed class StringAggMissingOrderScannerTests
     [Theory]
     [InlineData("SELECT STRING_AGG('x', ',') FROM dbo.T;")]
     [InlineData("SELECT STRING_AGG(N'x', N', ') FROM dbo.T GROUP BY GroupId;")]
+    [InlineData("DECLARE @v VARCHAR(5) = 'x'; SELECT STRING_AGG(@v, ',') FROM dbo.T;")]
+    [InlineData("SELECT STRING_AGG(('x'), ',') FROM dbo.T;")]
     public void AggregatedValueIsAConstant_EveryOrderGivesTheSameString_NeverFires(string sql)
     {
         Assert.Empty(ScanWithCatalog(sql));
