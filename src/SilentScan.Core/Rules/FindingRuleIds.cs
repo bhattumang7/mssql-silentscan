@@ -131,11 +131,9 @@ public static class FindingRuleIds
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
     public const string CursorCloseOnCommitRuleId = "silentscan/control-flow/cursor-close-on-commit";
-    public const string TransactionHygieneUnresolvedOnSomePathRuleId = "silentscan/control-flow/unresolved-transaction";
     public const string TransactionHygieneImplicitTransactionUnresolvedOnSomePathRuleId = "silentscan/control-flow/unresolved-implicit-transaction";
     public static string TransactionHygieneRuleId(TransactionHygieneFindingKind kind) => kind switch
     {
-        TransactionHygieneFindingKind.UnresolvedOnSomePath => TransactionHygieneUnresolvedOnSomePathRuleId,
         TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath => TransactionHygieneImplicitTransactionUnresolvedOnSomePathRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };

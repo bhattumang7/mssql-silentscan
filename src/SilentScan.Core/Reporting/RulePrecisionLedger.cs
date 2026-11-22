@@ -24,7 +24,6 @@ public static class RulePrecisionLedger
         new("silentscan/catalog/with-recompile", 2, 2, 0, 0),
         new("silentscan/control-flow/case-expression-missing-else", 55, 9, 11, 0),
         new("silentscan/control-flow/unassigned-output-parameter", 627, 17, 3, 0),
-        new("silentscan/control-flow/unresolved-transaction", 353, 7, 13, 0),
         new("silentscan/correctness/nonunique-update-source", 3, 2, 1, 0),
         new("silentscan/correctness/not-in-nullable-subquery", 5, 3, 1, 1),
         new("silentscan/correctness/not-null-predicate-contradiction", 2, 2, 0, 0),

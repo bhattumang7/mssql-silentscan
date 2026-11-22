@@ -61,11 +61,11 @@ public static class TransactionHygieneScanner
 
             var finalState = AnalyzeSequential(statements, FlowState.NotTracking);
 
-            if (finalState is { Declined: false, OpenSite: { } openSite })
+            if (finalState is { Declined: false, OpenSite: { } openSite and not BeginTransactionStatement })
             {
                 var exitAnchor = statements.Count > 0 ? statements[^1] : openSite;
                 Findings.Add(new TransactionHygieneFinding(
-                    ClassifyOpenSiteKind(openSite),
+                    TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath,
                     sourcePath,
                     openSite.StartLine,
                     openSite.StartColumn,
@@ -76,11 +76,6 @@ public static class TransactionHygieneScanner
 
         private static IList<TSqlStatement> Unwrap(IList<TSqlStatement> statements) =>
             statements is [BeginEndBlockStatement singleBlock] ? singleBlock.StatementList.Statements : statements;
-
-        private static TransactionHygieneFindingKind ClassifyOpenSiteKind(TSqlStatement openSite) =>
-            openSite is BeginTransactionStatement
-                ? TransactionHygieneFindingKind.UnresolvedOnSomePath
-                : TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath;
 
         private FlowState AnalyzeSequential(IList<TSqlStatement> statements, FlowState state)
         {
@@ -147,10 +142,10 @@ public static class TransactionHygieneScanner
 
         private FlowState ExitWithUnresolvedFinding(FlowState state, TSqlStatement exitStatement)
         {
-            if (state.OpenSite is { } openSite)
+            if (state.OpenSite is { } openSite and not BeginTransactionStatement)
             {
                 Findings.Add(new TransactionHygieneFinding(
-                    ClassifyOpenSiteKind(openSite),
+                    TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath,
                     sourcePath,
                     openSite.StartLine,
                     openSite.StartColumn,

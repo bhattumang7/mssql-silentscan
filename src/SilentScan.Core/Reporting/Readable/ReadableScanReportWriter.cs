@@ -245,7 +245,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "REPLICATE/REPLACE/SPACE constant-provable result truncation", report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count);
         AddCount(counts, "Cursors silently closed by CURSOR_CLOSE_ON_COMMIT then fetched", report.Find<CursorCloseOnCommitFinding>(nameof(CursorCloseOnCommitScanner)).Count);
         AddCount(counts, "View/inline TVF ordering not guaranteed", report.Find<ViewOrderingFinding>(nameof(ViewOrderingScanner)).Count);
-        AddCount(counts, "Unresolved BEGIN TRANSACTION", report.Find<TransactionHygieneFinding>(nameof(TransactionHygieneScanner)).Count);
         AddCount(counts, "Composite index leading-column violations", report.Find<CompositeIndexLeadingColumnFinding>(nameof(CompositeIndexLeadingColumnScanner)).Count);
         AddCount(counts, "Predicate columns with no applicable statistic and auto-create disabled", report.Find<MissingStatisticsFinding>(nameof(MissingStatisticsScanner)).Count);
         AddCount(counts, "INDEX hints naming a nonexistent or non-seekable index", report.Find<IndexHintFinding>(nameof(IndexHintScanner)).Count);
@@ -1968,14 +1967,10 @@ public static class ReadableScanReportWriter
             var ordered = group.ToList();
             var (title, paragraph, columns) = group.Key switch
             {
-                TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath => (
+                _ => (
                     "Unresolved implicit transaction",
                     "SET IMPLICIT_TRANSACTIONS ON silently opens a transaction ahead of the next INSERT/UPDATE/DELETE/MERGE/TRUNCATE/SELECT (with a FROM)/CREATE/ALTER/DROP/GRANT/REVOKE/OPEN CURSOR/FETCH CURSOR with no matching BEGIN TRANSACTION - a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK leaves @@TRANCOUNT elevated by one the instant the procedure returns, same as an unresolved explicit BEGIN TRANSACTION.",
                     new[] { "Implicit transaction opened at", "Unresolved at" }),
-                _ => (
-                    "Unresolved BEGIN TRANSACTION",
-                    "A BEGIN TRANSACTION reaches a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK - oracle-confirmed directly that SQL Server raises Msg 266 and leaves @@TRANCOUNT elevated by one the instant such a procedure returns, holding its locks indefinitely.",
-                    new[] { "BEGIN TRANSACTION at", "Unresolved at" }),
             };
 
             yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");

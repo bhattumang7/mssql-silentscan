@@ -781,13 +781,8 @@ public static class SarifReportWriter
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TransactionHygieneRuleId(finding.Kind), finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            TransactionHygieneFindingKind.ImplicitTransactionUnresolvedOnSomePath =>
-                $"SET IMPLICIT_TRANSACTIONS ON silently opens a transaction at line {finding.BeginTransactionLine} with no matching BEGIN TRANSACTION - it reaches this point with no intervening COMMIT/ROLLBACK, leaving @@TRANCOUNT elevated by one on this path.",
-            _ =>
-                $"BEGIN TRANSACTION at line {finding.BeginTransactionLine} reaches this point with no intervening COMMIT/ROLLBACK - @@TRANCOUNT is left elevated by one on this path, holding its locks until the session or connection pool eventually clears it.",
-        };
+        var message =
+            $"SET IMPLICIT_TRANSACTIONS ON silently opens a transaction at line {finding.BeginTransactionLine} with no matching BEGIN TRANSACTION - it reaches this point with no intervening COMMIT/ROLLBACK, leaving @@TRANCOUNT elevated by one on this path.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.UnresolvedExitLine, finding.UnresolvedExitColumn);
     }

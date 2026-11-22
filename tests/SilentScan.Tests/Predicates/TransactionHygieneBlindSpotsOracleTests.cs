@@ -6,7 +6,6 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", FindingRuleIds.TransactionHygieneUnresolvedOnSomePathRuleId)]
 [Trait("Rule", FindingRuleIds.TransactionHygieneImplicitTransactionUnresolvedOnSomePathRuleId)]
 public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
 {
@@ -15,22 +14,10 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
     protected override string Ddl => """
         CREATE TABLE dbo.T1 (Id INT NOT NULL PRIMARY KEY);
         GO
-        CREATE PROCEDURE dbo.p_savepoint_leak AS
+        CREATE PROCEDURE dbo.p_explicit_transaction_leak AS
         BEGIN
             BEGIN TRANSACTION;
-            SAVE TRANSACTION sp1;
             UPDATE dbo.T1 SET Id = Id;
-            ROLLBACK TRANSACTION sp1;
-            RETURN;
-        END
-        GO
-        CREATE PROCEDURE dbo.p_savepoint_then_full_rollback AS
-        BEGIN
-            BEGIN TRANSACTION;
-            SAVE TRANSACTION sp1;
-            UPDATE dbo.T1 SET Id = Id;
-            ROLLBACK TRANSACTION sp1;
-            ROLLBACK TRANSACTION;
             RETURN;
         END
         GO
@@ -55,19 +42,6 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
             DECLARE @x INT = 1;
             SELECT @x;
             RETURN;
-        END
-        GO
-        CREATE PROCEDURE dbo.p_xact_abort_correct_rollback AS
-        BEGIN
-            SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                ROLLBACK TRANSACTION;
-            END CATCH
         END
         GO
         """;
@@ -100,14 +74,13 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task RollbackToSavepoint_DoesNotCloseTheTransaction_EngineLeavesTranCountElevated()
+    public async Task ImplicitTransactions_UnclosedUpdate_EngineLeavesTranCountElevatedWithNoBeginTransactionInSourceAndNoWarning()
     {
         await using var connection = await OpenConnectionAsync();
         try
         {
-            await using var exec = new SqlCommand("EXEC dbo.p_savepoint_leak;", connection);
-            var ex = await Assert.ThrowsAsync<SqlException>(() => exec.ExecuteNonQueryAsync());
-            Assert.Equal(266, ex.Number);
+            await using var exec = new SqlCommand("EXEC dbo.p_implicit_transaction_leak;", connection);
+            await exec.ExecuteNonQueryAsync();
 
             Assert.Equal(1, await ReadTranCountAsync(connection));
         }
@@ -118,54 +91,15 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
     }
 
     [Fact]
-    public void RollbackToSavepoint_ScannerNowFlagsTheStillOpenTransaction()
-    {
-        var findings = Scan(
-            """
-            BEGIN TRANSACTION;
-            SAVE TRANSACTION sp1;
-            UPDATE dbo.T1 SET Id = Id;
-            ROLLBACK TRANSACTION sp1;
-            RETURN;
-            """);
-
-        var finding = Assert.Single(findings);
-        Assert.Equal(TransactionHygieneFindingKind.UnresolvedOnSomePath, finding.Kind);
-    }
-
-    [Fact]
-    public async Task RollbackToSavepointFollowedByFullRollback_ClosesCleanly_NeverFires()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        await using var exec = new SqlCommand("EXEC dbo.p_savepoint_then_full_rollback;", connection);
-        await exec.ExecuteNonQueryAsync();
-
-        Assert.Equal(0, await ReadTranCountAsync(connection));
-
-        var findings = Scan(
-            """
-            BEGIN TRANSACTION;
-            SAVE TRANSACTION sp1;
-            UPDATE dbo.T1 SET Id = Id;
-            ROLLBACK TRANSACTION sp1;
-            ROLLBACK TRANSACTION;
-            RETURN;
-            """);
-
-        Assert.Empty(findings);
-    }
-
-    [Fact]
-    public async Task ImplicitTransactions_UnclosedUpdate_EngineLeavesTranCountElevatedWithNoBeginTransactionInSourceAndNoWarning()
+    public async Task ExplicitTransaction_UnclosedUpdate_UnlikeTheImplicitCase_RaisesMsg266WhenTheProcedureReturns()
     {
         await using var connection = await OpenConnectionAsync();
         try
         {
-            await using var exec = new SqlCommand("EXEC dbo.p_implicit_transaction_leak;", connection);
-            await exec.ExecuteNonQueryAsync();
+            await using var exec = new SqlCommand("EXEC dbo.p_explicit_transaction_leak;", connection);
+            var ex = await Assert.ThrowsAsync<SqlException>(() => exec.ExecuteNonQueryAsync());
 
-            Assert.Equal(1, await ReadTranCountAsync(connection));
+            Assert.Equal(266, ex.Number);
         }
         finally
         {
@@ -229,66 +163,4 @@ public sealed class TransactionHygieneBlindSpotsOracleTests : OracleTestFixture
         Assert.Empty(findings);
     }
 
-    [Fact]
-    public async Task RollbackInCatch_UnderXactAbort_SucceedsCleanly_ScannerNeverFlagsIt()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        await using var exec = new SqlCommand("EXEC dbo.p_xact_abort_correct_rollback;", connection);
-        await exec.ExecuteNonQueryAsync();
-
-        Assert.Equal(0, await ReadTranCountAsync(connection));
-
-        var findings = Scan(
-            """
-            SET XACT_ABORT ON;
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                ROLLBACK TRANSACTION;
-            END CATCH
-            """);
-
-        Assert.Empty(findings);
-    }
-
-    [Fact]
-    public async Task CommitInCatch_WithoutXactAbort_SucceedsBecauseTheTransactionIsNotDoomed_ScannerNeverFlagsIt()
-    {
-        await using var connection = await OpenConnectionAsync();
-
-        await using var exec = new SqlCommand(
-            """
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                SELECT XACT_STATE();
-                COMMIT TRANSACTION;
-            END CATCH
-            """,
-            connection);
-        await exec.ExecuteNonQueryAsync();
-
-        Assert.Equal(0, await ReadTranCountAsync(connection));
-
-        var findings = Scan(
-            """
-            BEGIN TRANSACTION;
-            BEGIN TRY
-                SELECT 1 / 0;
-                COMMIT TRANSACTION;
-            END TRY
-            BEGIN CATCH
-                COMMIT TRANSACTION;
-            END CATCH
-            """);
-
-        Assert.Empty(findings);
-    }
 }

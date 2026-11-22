@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">158 rules. 121 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">157 rules. 120 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -129,7 +129,6 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/control-flow-truncate-swallowed-by-catch.html">Truncate Swallowed By Catch</a> <code class="rule-key">silentscan/control-flow/truncate-swallowed-by-catch</code><span class="snippet">TRUNCATE TABLE sits inside a TRY block whose CATCH block never THROWs/RAISERRORs anywhere in its own statement tree.</span></li>
       <li><a class="id" href="rules/control-flow-unassigned-output-parameter.html">Unassigned Output Parameter</a> <code class="rule-key">silentscan/control-flow/unassigned-output-parameter</code><span class="snippet">A procedure&#x27;s own OUTPUT parameter is not assigned on some statically reachable path (a RETURN, or the natural end of the body).</span></li>
       <li><a class="id" href="rules/control-flow-unresolved-implicit-transaction.html">Unresolved Implicit Transaction</a> <code class="rule-key">silentscan/control-flow/unresolved-implicit-transaction</code><span class="snippet">SET IMPLICIT_TRANSACTIONS ON is in effect (set earlier in the same module body) when an INSERT/UPDATE/DELETE/MERGE/TRUNCATE TABLE/a SELECT with a FROM clause/CREATE/ALTER TABLE/DROP/GRANT/REVOKE/OPEN CURSOR/FETCH CURSOR statement runs with no transaction already open.</span></li>
-      <li><a class="id" href="rules/control-flow-unresolved-transaction.html">Unresolved Transaction</a> <code class="rule-key">silentscan/control-flow/unresolved-transaction</code><span class="snippet">A BEGIN TRANSACTION reaches a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK.</span></li>
     </ul>
   </section>
 

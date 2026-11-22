@@ -4,7 +4,6 @@ namespace SilentScan.Core.Predicates;
 
 public enum TransactionHygieneFindingKind
 {
-    UnresolvedOnSomePath,
     ImplicitTransactionUnresolvedOnSomePath,
 }
 

@@ -20,9 +20,10 @@ internal static class TransactionHygieneImplicit
             The same reachable-path analysis this tool already applies to an explicit `BEGIN
             TRANSACTION` applies here too: a `RETURN`/`THROW`, or the natural end of the module
             body, reached with no intervening `COMMIT`/`ROLLBACK` after one of these statements ran
-            leaves `@@TRANCOUNT` elevated by one, holding locks exactly as an unresolved explicit
-            transaction would - except there's no `BEGIN TRANSACTION` in the code to draw the eye to
-            it.
+            leaves `@@TRANCOUNT` elevated by one, holding its locks. An unresolved explicit `BEGIN
+            TRANSACTION` is not reported by this tool because the engine raises Msg 266 the moment
+            the procedure returns; oracle-confirmed, this implicit case raises no error at all, so
+            nothing in the code or at run time draws the eye to it.
             """,
         HowToFixIt: """
             Ensure every RETURN/THROW path, and the natural end of the module body, is preceded by a
