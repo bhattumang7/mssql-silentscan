@@ -42,7 +42,7 @@ public static partial class WriteLossClassifier
             return Predicates.WriteLossKind.TemporalOffsetDropped;
         }
 
-        if (IsTemporalScaleNarrowingRisk(target, source))
+        if (IsTemporalScaleNarrowingRisk(target, source) || LiteralLosesFractionalDigits(target, source, literal))
         {
             return Predicates.WriteLossKind.TemporalScaleNarrowing;
         }
@@ -87,6 +87,14 @@ public static partial class WriteLossClassifier
         source.Category == SqlTypeCategory.DateTimeOffset
         && target.Category is SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTime or SqlTypeCategory.SmallDateTime
             or SqlTypeCategory.Date or SqlTypeCategory.Time;
+
+    private static bool LiteralLosesFractionalDigits(SqlType target, SqlType source, Literal? literal) =>
+        source.IsStringFamily
+        && target.IsFractionalSecondsFamily
+        && target.Scale is { } scale
+        && literal is StringLiteral stringLiteral
+        && FractionalDigitsRegex().Match(stringLiteral.Value) is { Success: true } match
+        && match.Groups[1].Value.AsSpan(Math.Min(scale, match.Groups[1].Length)).IndexOfAnyExcept('0') >= 0;
 
     public static bool IsTemporalScaleNarrowingRisk(SqlType target, SqlType source) =>
         target.IsFractionalSecondsFamily && source.IsFractionalSecondsFamily
@@ -223,6 +231,10 @@ public static partial class WriteLossClassifier
     [System.Text.RegularExpressions.GeneratedRegex(
         @"[T ]00:00(:00)?(\.0+)?$", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]
     private static partial System.Text.RegularExpressions.Regex MidnightTimeOfDayRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\d{1,2}:\d{2}:\d{2}\.(\d+)", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]
+    private static partial System.Text.RegularExpressions.Regex FractionalDigitsRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(
         @"[T ]\d{1,2}:\d{2}:(?:0[1-9]|[1-9]\d|00\.\d*[1-9])", System.Text.RegularExpressions.RegexOptions.None, matchTimeoutMilliseconds: 100)]

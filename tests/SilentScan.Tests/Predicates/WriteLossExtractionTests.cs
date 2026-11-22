@@ -21,6 +21,23 @@ public sealed class WriteLossExtractionTests
         return TypedPredicateExtractor.Extract(result, catalog, lineage);
     }
 
+    [Theory]
+    [InlineData("TIME(0)", "'10:00:00.5'", true)]
+    [InlineData("DATETIME2(0)", "'2024-01-01 10:00:00.999'", true)]
+    [InlineData("DATETIME2(3)", "'2024-01-01 10:00:00.9999'", true)]
+    [InlineData("TIME(0)", "'10:00:00'", false)]
+    [InlineData("TIME(0)", "'10:00:00.000'", false)]
+    [InlineData("DATETIME2(3)", "'2024-01-01 10:00:00.999'", false)]
+    [InlineData("DATETIME2(7)", "'2024-01-01 10:00:00.9999999'", false)]
+    public void Extract_StringLiteralWithFractionalSecondsIntoNarrowerTemporal_FiresOnlyWhenDigitsAreLost(string targetType, string literal, bool fires)
+    {
+        var findings = Extract(
+            $"CREATE TABLE dbo.T (C {targetType} NULL);",
+            $"INSERT INTO dbo.T (C) VALUES ({literal});");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == WriteLossKind.TemporalScaleNarrowing));
+    }
+
     [Fact]
     public void Extract_InsertValuesWithNonAsciiUnicodeLiteralIntoVarchar_FlagsUnicodeReplacement()
     {
