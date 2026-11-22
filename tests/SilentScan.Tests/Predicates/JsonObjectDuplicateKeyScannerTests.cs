@@ -21,6 +21,24 @@ public sealed class JsonObjectDuplicateKeyScannerTests
         Assert.Equal("a", finding.DuplicateKey);
     }
 
+    [Theory]
+    [InlineData("SELECT JSON_OBJECT('a':NULL, 'a':2 ABSENT ON NULL);")]
+    [InlineData("SELECT JSON_OBJECT('a':1, 'a':NULL ABSENT ON NULL);")]
+    [InlineData("SELECT JSON_OBJECT('a':NULL, 'a':NULL ABSENT ON NULL);")]
+    public void JsonObject_RepeatedKeyWhoseExtraEntryIsALiteralNullUnderAbsentOnNull_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT JSON_OBJECT('a':1, 'a':NULL NULL ON NULL);")]
+    [InlineData("SELECT JSON_OBJECT('a':1, 'a':NULL);")]
+    [InlineData("SELECT JSON_OBJECT('a':1, 'a':2 ABSENT ON NULL);")]
+    public void JsonObject_RepeatedKeyThatSurvivesTheNullClause_Fires(string sql)
+    {
+        Assert.Single(Scan(sql));
+    }
+
     [Fact]
     public void JsonObject_DistinctKeys_NeverFires()
     {

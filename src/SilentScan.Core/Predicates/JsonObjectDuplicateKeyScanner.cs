@@ -40,7 +40,9 @@ public static class JsonObjectDuplicateKeyScanner
                 return;
             }
 
+            var dropsNulls = node.AbsentOrNullOnNull.Any(word => string.Equals(word.Value, "ABSENT", StringComparison.OrdinalIgnoreCase));
             var duplicateKeys = node.JsonParameters
+                .Where(p => !(dropsNulls && p.JsonValue is NullLiteral))
                 .Select(p => p.JsonKeyName as StringLiteral)
                 .Where(literal => literal is not null)
                 .GroupBy(literal => literal!.Value, StringComparer.Ordinal)
