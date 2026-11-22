@@ -38,6 +38,38 @@ public sealed class MissingStatisticsAutoCreateDisabledOracleTests : OracleTestF
         Assert.Contains("B", flaggedColumns);
         Assert.Contains("C", flaggedColumns);
     }
+
+    [Fact]
+    public async Task TempTablePredicate_TheEngineStillAutoCreatesItsStatistic_SoTheScannerStaysSilent()
+    {
+        var connectionString = Options.BuildConnectionString(DatabaseName);
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var command = new Microsoft.Data.SqlClient.SqlCommand(
+            """
+            CREATE TABLE #T (Id INT NOT NULL, V INT NULL);
+            INSERT #T VALUES (1, 1), (2, 2);
+            SELECT COUNT(*) FROM #T WHERE V = 1 OPTION (RECOMPILE);
+            SELECT COUNT(*) FROM tempdb.sys.stats s
+            JOIN tempdb.sys.stats_columns sc ON sc.object_id = s.object_id AND sc.stats_id = s.stats_id
+            JOIN tempdb.sys.columns c ON c.object_id = sc.object_id AND c.column_id = sc.column_id
+            WHERE s.object_id = OBJECT_ID('tempdb..#T') AND c.name = 'V';
+            """,
+            connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.NextResultAsync();
+        await reader.ReadAsync();
+        Assert.Equal(1, reader.GetInt32(0));
+
+        var catalog = await new LiveCatalogReader(connectionString).ReadAsync();
+        Assert.False(catalog.IsAutoCreateStatsOn);
+        var parseResult = SqlScriptParser.ParseText(
+            "test.sql",
+            "CREATE TABLE #T (Id INT NOT NULL, V INT NULL); SELECT 1 FROM #T WHERE V = 1;");
+        catalog.MergeFileModeExtras(SilentScan.Core.Catalog.CatalogBuilder.Build([parseResult]));
+
+        Assert.Empty(MissingStatisticsScanner.Scan(parseResult, catalog));
+    }
 }
 
 [Trait("Category", "Oracle")]

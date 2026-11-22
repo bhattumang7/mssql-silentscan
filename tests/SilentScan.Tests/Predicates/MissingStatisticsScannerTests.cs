@@ -31,6 +31,30 @@ public sealed class MissingStatisticsScannerTests
         return catalog;
     }
 
+    [Theory]
+    [InlineData("CREATE TABLE #T (Id INT NOT NULL, V INT NULL); SELECT 1 FROM #T WHERE V = 5;")]
+    [InlineData("CREATE TABLE ##T (Id INT NOT NULL, V INT NULL); SELECT 1 FROM ##T WHERE V = 5;")]
+    [InlineData("DECLARE @t TABLE (Id INT NOT NULL, V INT NULL); SELECT 1 FROM @t WHERE V = 5;")]
+    [InlineData("SELECT 1 AS Id, 2 AS V INTO #T; SELECT 1 FROM #T WHERE V = 5;")]
+    public void AutoCreateStatsOff_PredicateOnATempTableOrTableVariable_NeverFires(string batch)
+    {
+        var parsed = SqlScriptParser.ParseText("test.sql", batch);
+        var catalog = CatalogBuilder.Build([parsed]);
+        catalog.IsAutoCreateStatsOn = false;
+
+        Assert.Empty(MissingStatisticsScanner.Scan(parsed, catalog));
+    }
+
+    [Fact]
+    public void AutoCreateStatsOff_PredicateOnAPermanentTableCreatedInTheSameBatch_StillFires()
+    {
+        var parsed = SqlScriptParser.ParseText("test.sql", "CREATE TABLE dbo.R (Id INT NOT NULL, V INT NULL); SELECT 1 FROM dbo.R WHERE V = 5;");
+        var catalog = CatalogBuilder.Build([parsed]);
+        catalog.IsAutoCreateStatsOn = false;
+
+        Assert.Single(MissingStatisticsScanner.Scan(parsed, catalog));
+    }
+
     [Fact]
     public void AutoCreateStatsUnknown_FileMode_NeverFires()
     {
