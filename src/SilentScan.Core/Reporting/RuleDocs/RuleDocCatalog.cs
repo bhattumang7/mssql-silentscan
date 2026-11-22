@@ -138,7 +138,6 @@ public static class RuleDocCatalog
         [DynamicSql.TempTableExecShapeColumnTypeMismatch.RuleId] = DynamicSql.TempTableExecShapeColumnTypeMismatch.Content,
         [DynamicSql.ExecResultSetsShapeColumnTypeMismatch.RuleId] = DynamicSql.ExecResultSetsShapeColumnTypeMismatch.Content,
 
-        [Catalog.NonPersistedComputedColumn.RuleId] = Catalog.NonPersistedComputedColumn.Content,
         [Catalog.TemporalTableHistoryIndexGap.RuleId] = Catalog.TemporalTableHistoryIndexGap.Content,
         [Catalog.StaleSelectStarView.RuleId] = Catalog.StaleSelectStarView.Content,
         [Catalog.SecurityPredicateIndex.RuleId] = Catalog.SecurityPredicateIndex.Content,

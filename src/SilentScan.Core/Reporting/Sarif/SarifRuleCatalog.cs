@@ -76,7 +76,6 @@ public static class SarifRuleCatalog
     public const string ExecStringConcatenatesParameterizableValueRuleId = FindingRuleIds.ExecStringConcatenatesParameterizableValueRuleId;
     public const string TempTableExecShapeColumnTypeMismatchRuleId = FindingRuleIds.TempTableExecShapeColumnTypeMismatchRuleId;
     public const string ExecResultSetsShapeColumnTypeMismatchRuleId = FindingRuleIds.ExecResultSetsShapeColumnTypeMismatchRuleId;
-    public const string NonPersistedComputedColumnRuleId = FindingRuleIds.NonPersistedComputedColumnRuleId;
     public const string SelfReferencingDmlRuleId = FindingRuleIds.SelfReferencingDmlRuleId;
     public const string TemporalTableHistoryIndexGapRuleId = FindingRuleIds.TemporalTableHistoryIndexGapRuleId;
     public const string CheckConstraintNullNotHandledRuleId = FindingRuleIds.CheckConstraintNullNotHandledRuleId;

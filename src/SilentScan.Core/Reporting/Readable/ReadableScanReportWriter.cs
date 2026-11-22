@@ -93,7 +93,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(TemporalBoundary(report, headingLevel, pathBase));
         blocks.AddRange(MaxTypedColumn(report, headingLevel, pathBase));
         blocks.AddRange(MemoryOptimizedSchemaOnlyDurability(report, headingLevel, pathBase));
-        blocks.AddRange(NonPersistedComputedColumn(report, headingLevel, pathBase));
         blocks.AddRange(UnderLengthParameter(report, headingLevel, pathBase));
         blocks.AddRange(AnsiPaddingMismatch(report, headingLevel, pathBase));
         blocks.AddRange(CatchAllPredicate(report, headingLevel, pathBase));
@@ -191,7 +190,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "BETWEEN predicates silently excluding rows at an imprecise end-of-period boundary", report.Find<TemporalBoundaryPrecisionFinding>(nameof(NonSargablePredicateScanner)).Count);
         AddCount(counts, "MAX-typed/json columns (can never be an index key)", report.Find<MaxTypedColumnFinding>(nameof(MaxTypedColumnScanner)).Count(f => f.Kind == NonIndexableColumnFindingKind.MaxLength));
         AddCount(counts, "Memory-optimized table declared SCHEMA_ONLY durability (data lost on restart)", report.Find<MemoryOptimizedSchemaOnlyDurabilityFinding>(nameof(MemoryOptimizedSchemaOnlyDurabilityScanner)).Count);
-        AddCount(counts, "Non-persisted computed columns", report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count);
         AddCount(counts, "Predicates comparing a column against an under-length parameter/variable", report.Find<UnderLengthParameterFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "LIKE predicates that can never match a non-ANSI-padded column", report.Find<AnsiPaddingMismatchFinding>(nameof(TypedPredicateExtractor)).Count);
         AddCount(counts, "Catch-all / kitchen-sink optional-filter predicates", report.Find<CatchAllPredicateFinding>(nameof(CatchAllPredicateScanner)).Count);
@@ -734,29 +732,6 @@ public static class ReadableScanReportWriter
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                 f.TableQualifiedName,
-            })]);
-    }
-
-    private static IEnumerable<ReadableBlock> NonPersistedComputedColumn(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Non-persisted computed columns ({report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A structural catalog fact (sys.computed_columns.is_persisted = 0): the column's definition is recomputed from the base row on every read served from the base table, independent of whether that definition calls a UDF - never fires on a PERSISTED computed column, regardless of whether it's also indexed. When an index already stores the column's value, reads served through that specific index avoid the recompute; reads that don't use it still pay it.");
-
-        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.NonPersistedComputedColumnRuleId));
-        yield return new ReadableBlock.Table(
-            [WhereHeader, ColumnHeader, "Definition", "Covered by an index"],
-            [.. report.Find<NonPersistedComputedColumnFinding>(nameof(NonPersistedComputedColumnScanner)).Select(f => new List<string>
-            {
-                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                $"{f.TableQualifiedName}.{f.ColumnName}",
-                f.DefinitionText,
-                f.IsCoveredByIndex ? "Yes" : "No",
             })]);
     }
 

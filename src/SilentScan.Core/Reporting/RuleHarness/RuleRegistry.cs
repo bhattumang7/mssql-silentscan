@@ -59,7 +59,6 @@ public static class RuleRegistry
         new SpExecuteSqlParameterMismatchRule(),
         new MaxTypedColumnRule(),
         new MemoryOptimizedSchemaOnlyDurabilityRule(),
-        new NonPersistedComputedColumnRule(),
         new UntrustedConstraintRule(),
         new CheckConstraintRule(),
         new SecurityPredicateIndexRule(),

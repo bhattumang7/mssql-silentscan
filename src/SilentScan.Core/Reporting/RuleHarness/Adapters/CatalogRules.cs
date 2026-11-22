@@ -37,13 +37,6 @@ internal sealed class MemoryOptimizedSchemaOnlyDurabilityRule : ICatalogRule
     public IReadOnlyList<IFinding> Scan(RuleContext context) => MemoryOptimizedSchemaOnlyDurabilityScanner.Scan(context.Catalog);
 }
 
-internal sealed class NonPersistedComputedColumnRule : ICatalogRule
-{
-    public string Id => "NonPersistedComputedColumnScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(RuleContext context) => NonPersistedComputedColumnScanner.Scan(context.Catalog);
-}
-
 internal sealed class UntrustedConstraintRule : ICatalogRule
 {
     public string Id => "UntrustedConstraintScanner";

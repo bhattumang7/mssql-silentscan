@@ -85,7 +85,6 @@ public static class FindingRuleIds
     public const string ExecStringConcatenatesParameterizableValueRuleId = "silentscan/dynamic-sql/exec-string-concatenates-parameterizable-value";
     public const string TempTableExecShapeColumnTypeMismatchRuleId = "silentscan/dynamic-sql/insert-exec-temp-table-column-type-mismatch";
     public const string ExecResultSetsShapeColumnTypeMismatchRuleId = "silentscan/dynamic-sql/exec-with-result-sets-column-type-mismatch";
-    public const string NonPersistedComputedColumnRuleId = "silentscan/catalog/non-persisted-computed-column";
     public const string SelfReferencingDmlRuleId = "silentscan/dml/self-referencing";
     public const string TemporalTableHistoryIndexGapRuleId = "silentscan/catalog/temporal-history-index-gap";
     public const string CheckConstraintNullNotHandledRuleId = "silentscan/catalog/check-constraint-null-not-handled";

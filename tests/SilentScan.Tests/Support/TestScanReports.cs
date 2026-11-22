@@ -37,7 +37,6 @@ public static class TestScanReports
         IReadOnlyList<UntrustedConstraintFinding>? UntrustedConstraintFindings = null,
         IReadOnlyList<MultiReferencedCteFinding>? MultiReferencedCteFindings = null,
         IReadOnlyList<UnparameterizedDynamicSqlFinding>? UnparameterizedDynamicSqlFindings = null,
-        IReadOnlyList<NonPersistedComputedColumnFinding>? NonPersistedComputedColumnFindings = null,
         IReadOnlyList<TempTableExecShapeFinding>? TempTableExecShapeFindings = null,
         IReadOnlyList<ExecResultSetsShapeFinding>? ExecResultSetsShapeFindings = null,
         IReadOnlyList<SelfReferencingDmlFinding>? SelfReferencingDmlFindings = null,
@@ -126,7 +125,6 @@ public static class TestScanReports
         Set("ForcedSerialScanner", ForcedSerialFindings);
         Set("UntrustedConstraintScanner", UntrustedConstraintFindings);
         Set("MultiReferencedCteScanner", MultiReferencedCteFindings);
-        Set("NonPersistedComputedColumnScanner", NonPersistedComputedColumnFindings);
         Set("TempTableExecShapeScanner", TempTableExecShapeFindings);
         Set("ExecResultSetsShapeScanner", ExecResultSetsShapeFindings);
         Set("SelfReferencingDmlScanner", SelfReferencingDmlFindings);

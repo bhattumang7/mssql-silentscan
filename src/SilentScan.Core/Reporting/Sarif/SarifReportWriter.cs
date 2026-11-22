@@ -54,7 +54,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<UntrustedConstraintFinding>("UntrustedConstraintScanner").Select(ToResult));
         results.AddRange(report.Find<MultiReferencedCteFinding>("MultiReferencedCteScanner").Select(ToResult));
         results.AddRange(report.Find<UnparameterizedDynamicSqlFinding>("DynamicSqlScanner").Select(ToResult));
-        results.AddRange(report.Find<NonPersistedComputedColumnFinding>("NonPersistedComputedColumnScanner").Select(ToResult));
         results.AddRange(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner").Select(ToResult));
         results.AddRange(report.Find<ExecResultSetsShapeFinding>("ExecResultSetsShapeScanner").Select(ToResult));
         results.AddRange(report.Find<SelfReferencingDmlFinding>("SelfReferencingDmlScanner").Select(ToResult));
@@ -921,18 +920,6 @@ public static class SarifReportWriter
         };
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
-    }
-
-    private static SarifResult ToResult(NonPersistedComputedColumnFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NonPersistedComputedColumnRuleId, finding.Confidence);
-        var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = finding.IsCoveredByIndex
-            ? $"'{finding.TableQualifiedName}.{finding.ColumnName}' is a non-persisted computed column ({finding.DefinitionText}) - recomputed from the base row on every read served from the base table or from an index that doesn't store it; an index on this table already stores {finding.ColumnName}, so reads served through that index avoid the recompute, but only when the optimizer actually chooses it."
-            : $"'{finding.TableQualifiedName}.{finding.ColumnName}' is a non-persisted computed column ({finding.DefinitionText}) - recomputed from the base row on every read that touches it.";
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
 
     private static SarifResult ToResult(IndexDesignFinding finding)
