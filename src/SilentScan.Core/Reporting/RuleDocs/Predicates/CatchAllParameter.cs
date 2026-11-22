@@ -34,11 +34,11 @@ internal static class CatchAllParameter
             at which point it can correctly choose "seek" when a value is supplied and "scan" when
             it isn't, instead of committing to one compromise plan up front.
 
-            It is also suppressed for a SELECT in a database at compatibility level 170 or higher:
+            It is also suppressed in a database at compatibility level 170 or higher:
             oracle-confirmed on SQL Server 2025, optional parameter optimization there compiles a
-            plan per branch for this exact shape, so a selective call seeks the index and reads a
-            small fraction of the pages the full scan reads at level 160 or lower. A local variable never
-            qualifies, and UPDATE and DELETE statements are not covered by that confirmation.
+            plan per branch for this exact shape in a SELECT, UPDATE, DELETE or INSERT ... SELECT,
+            so a selective call seeks the index and reads a small fraction of the pages the full
+            scan reads at level 160 or lower. A local variable never qualifies.
             """,
         HowToFixIt: """
             Add OPTION (RECOMPILE) to the statement, or WITH RECOMPILE to the procedure, so the

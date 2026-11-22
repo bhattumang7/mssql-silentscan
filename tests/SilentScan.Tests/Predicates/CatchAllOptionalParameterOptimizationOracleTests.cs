@@ -23,6 +23,14 @@ public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLif
         GO
         CREATE PROCEDURE dbo.FindByA @p INT = NULL AS SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
         GO
+        CREATE TABLE dbo.Sink (Id INT NOT NULL);
+        GO
+        CREATE PROCEDURE dbo.UpdateByA @p INT = NULL AS UPDATE dbo.Wide SET Id = Id WHERE (A = @p OR @p IS NULL);
+        GO
+        CREATE PROCEDURE dbo.DeleteByA @p INT = NULL AS DELETE dbo.Wide WHERE (A = @p OR @p IS NULL);
+        GO
+        CREATE PROCEDURE dbo.InsertSelectByA @p INT = NULL AS INSERT dbo.Sink (Id) SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
+        GO
         """;
 
     public async Task InitializeAsync()
@@ -67,6 +75,47 @@ public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLif
         var after = await LogicalReadsAsync(170, "EXEC dbo.FindByA @p = 7;");
 
         Assert.True(before > after * 5, $"compat 150 read {before} pages, compat 170 read {after}");
+    }
+
+    private async Task<bool> PlanDispatchesOnOptionalParameterAsync(int compatibilityLevel, string statement)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        await using (var setup = new SqlCommand(
+            $"ALTER DATABASE [{_databaseName}] SET COMPATIBILITY_LEVEL = {compatibilityLevel}; DBCC FREEPROCCACHE; SET STATISTICS XML ON;", connection))
+        {
+            await setup.ExecuteNonQueryAsync();
+        }
+
+        await using var call = new SqlCommand(statement, connection);
+        await using var reader = await call.ExecuteReaderAsync();
+        var dispatched = false;
+        do
+        {
+            while (await reader.ReadAsync())
+            {
+                if (reader.FieldCount > 0 && reader.GetValue(0) is string text && text.Contains("OptionalParameterPredicate", StringComparison.Ordinal))
+                {
+                    dispatched = true;
+                }
+            }
+        }
+        while (await reader.NextResultAsync());
+
+        return dispatched;
+    }
+
+    [Theory]
+    [InlineData("UpdateByA")]
+    [InlineData("DeleteByA")]
+    [InlineData("InsertSelectByA")]
+    public async Task ModificationOnAProcedureParameter_IsDispatchedOnTheOptionalParameterAtCompat170Only(string procedure)
+    {
+        var statement = $"BEGIN TRAN; EXEC dbo.{procedure} @p = 7; ROLLBACK;";
+
+        Assert.False(await PlanDispatchesOnOptionalParameterAsync(150, statement));
+        Assert.True(await PlanDispatchesOnOptionalParameterAsync(170, statement));
     }
 
     [Fact]

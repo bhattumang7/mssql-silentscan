@@ -60,14 +60,21 @@ public sealed class CatchAllPredicateScannerTests
         Assert.Single(Scan(SelectProcedure, compatibilityLevel));
     }
 
-    [Fact]
-    public void UpdateAtCompatibilityLevel170_StillFires()
+    [Theory]
+    [InlineData("UPDATE dbo.Customers SET Region = 'x' WHERE (Code = @p OR @p IS NULL)")]
+    [InlineData("DELETE dbo.Customers WHERE (Code = @p OR @p IS NULL)")]
+    [InlineData("INSERT dbo.Archive (Id) SELECT Id FROM dbo.Customers WHERE (Code = @p OR @p IS NULL)")]
+    public void ModificationAtCompatibilityLevel170_NeverFires(string statement)
     {
-        var findings = Scan(
-            "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN UPDATE dbo.Customers SET Region = 'x' WHERE (Code = @p OR @p IS NULL); END",
-            170);
+        Assert.Empty(Scan($"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN {statement}; END", 170));
+    }
 
-        Assert.Single(findings);
+    [Theory]
+    [InlineData("UPDATE dbo.Customers SET Region = 'x' WHERE (Code = @p OR @p IS NULL)")]
+    [InlineData("DELETE dbo.Customers WHERE (Code = @p OR @p IS NULL)")]
+    public void ModificationAtCompatibilityLevel160_StillFires(string statement)
+    {
+        Assert.Single(Scan($"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN {statement}; END", 160));
     }
 
     [Fact]

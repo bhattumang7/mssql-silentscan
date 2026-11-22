@@ -40,9 +40,7 @@ public static class CatchAllPredicateScanner
 
         private bool _statementHasOptionRecompile;
 
-        private int _selectStatementDepth;
-
-        private bool OptionalParameterOptimizationApplies => _selectStatementDepth > 0 && catalog.CompatibilityLevel >= 170;
+        private bool OptionalParameterOptimizationApplies => catalog.CompatibilityLevel >= 170;
 
         private bool HasActiveRecompileGuard => _procedureHasWithRecompile || _statementHasOptionRecompile;
 
@@ -84,13 +82,11 @@ public static class CatchAllPredicateScanner
 
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker)
         {
-            _selectStatementDepth++;
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
         }
 
         public void OnLeaveSelectStatementScope(SelectStatement node, ModuleWalker walker)
         {
-            _selectStatementDepth--;
             _statementHasOptionRecompile = _statementRecompileStack.Pop();
         }
 
@@ -105,7 +101,7 @@ public static class CatchAllPredicateScanner
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
-            if (!HasActiveRecompileGuard)
+            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
             {
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }
@@ -117,7 +113,7 @@ public static class CatchAllPredicateScanner
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
-            if (!HasActiveRecompileGuard)
+            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
             {
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }
