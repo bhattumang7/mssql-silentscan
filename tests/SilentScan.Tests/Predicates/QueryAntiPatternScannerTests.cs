@@ -102,6 +102,29 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    [Fact]
+    public void TableVariableAsJoinSource_AtCompat160WithDeferredCompilationDisabled_FiresLowCompatKind()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; "
+            + "SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id;",
+            160,
+            "DEFERRED_COMPILATION_TV");
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
+    [Fact]
+    public void TableVariableAsJoinSource_AtCompat160WithDeferredCompilationEnabled_NeverFiresLowCompatKind()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; "
+            + "SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id;",
+            160);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
+    }
+
     [Theory]
     [InlineData("SELECT Id FROM @t;")]
     [InlineData("SELECT COUNT(*) FROM @t;")]

@@ -33,7 +33,9 @@ internal static class TableVariableLowCompatEstimate
             variable is compiled after the variable has actually been populated, so the optimizer
             gets a real row count for that read, the same way it already did for #temp tables. This
             finding only fires below that compatibility level, where deferred compilation isn't
-            available and the fixed-1-row estimate is unavoidable for any table variable read.
+            available and the fixed-1-row estimate is unavoidable for any table variable read, or
+            where the database has switched the DEFERRED_COMPILATION_TV database scoped
+            configuration off, which brings the fixed estimate back at any level.
 
             It fires only where the estimate can change the plan: a table variable joined to
             another row source, or read under GROUP BY, DISTINCT, or an IN / EXISTS semi-join.

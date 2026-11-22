@@ -63,6 +63,10 @@ public static class QueryAntiPatternScanner
         public void OnEnterDeclareTableVariableStatement(DeclareTableVariableStatement node, ModuleWalker walker) =>
             _tableVariableNames.Add(node.Body.VariableName.Value);
 
+        private bool TableVariableEstimateIsFixed =>
+            catalog.CompatibilityLevel is { } level
+            && (level < 150 || catalog.IsScopedConfigurationDisabled("DEFERRED_COMPILATION_TV"));
+
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
             foreach (var tableReference in node.TableReferences)
@@ -72,12 +76,15 @@ public static class QueryAntiPatternScanner
                     if (_recompileStatementDepth == 0
                         && estimateSensitiveFromClauses.Contains(node)
                         && _tableVariableNames.Contains(variableRef.Variable.Name)
-                        && catalog.CompatibilityLevel is { } level && level < 150)
+                        && catalog.CompatibilityLevel is { } level && TableVariableEstimateIsFixed)
                     {
+                        var reason = level < 150
+                            ? $"connected compatibility level {level}, below 150"
+                            : "deferred compilation of table variables is switched off for the database";
                         Findings.Add(new QueryAntiPatternFinding(
                             QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, sourcePath,
                             variableRef.StartLine, variableRef.StartColumn,
-                            $"{variableRef.Variable.Name} (connected compatibility level {level}, below 150)",
+                            $"{variableRef.Variable.Name} ({reason})",
                             FindingConfidence.High));
                     }
 
@@ -167,7 +174,7 @@ public static class QueryAntiPatternScanner
 
         public void OnEnterWhileStatement(WhileStatement node, ModuleWalker walker)
         {
-            if (catalog.CompatibilityLevel is not { } knownLevel || knownLevel >= 150)
+            if (!TableVariableEstimateIsFixed)
             {
                 InspectStaleTableVariableInLoop(node);
             }

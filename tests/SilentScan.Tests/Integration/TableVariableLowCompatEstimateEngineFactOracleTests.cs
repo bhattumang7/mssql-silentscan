@@ -92,6 +92,20 @@ public sealed partial class TableVariableLowCompatEstimateEngineFactOracleTests 
     }
 
     [Fact]
+    public async Task AtCompat160_TableVariableEstimatesItsRealRowCount_UnlessDeferredCompilationIsSwitchedOff()
+    {
+        await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 160;");
+        var enabled = PlainEstimateRegex().Match(await CaptureTableVariableCountPlanAsync());
+
+        await ExecuteAsync("ALTER DATABASE SCOPED CONFIGURATION SET DEFERRED_COMPILATION_TV = OFF;");
+        var disabled = PlainEstimateRegex().Match(await CaptureTableVariableCountPlanAsync());
+
+        Assert.True(enabled.Success && disabled.Success);
+        Assert.Equal("1000", enabled.Groups[1].Value);
+        Assert.Equal("1", disabled.Groups[1].Value);
+    }
+
+    [Fact]
     public async Task BelowCompat150_StatementWithOptionRecompile_EstimatesTheRealRowCount()
     {
         var planXml = await CaptureTableVariableCountPlanAsync();
