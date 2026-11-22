@@ -32,6 +32,26 @@ public sealed class NotInNullableSubqueryScannerTests
         Assert.True(finding.SubqueryColumnIndexed);
     }
 
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT c.RefId FROM dbo.ChildNotNull n LEFT JOIN dbo.ChildNotNull c ON c.RefId = n.RefId);")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT c.RefId FROM dbo.ChildNotNull c RIGHT JOIN dbo.ChildNotNull n ON c.RefId = n.RefId);")]
+    public void NotNullColumnOnTheNullSuppliedSideOfAnOuterJoinInTheSubquery_Fires(string sql)
+    {
+        var finding = Assert.Single(Scan(sql));
+
+        Assert.Equal("dbo.ChildNotNull", finding.SubqueryTableQualifiedName);
+        Assert.Equal("RefId", finding.SubqueryColumnName);
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT n.RefId FROM dbo.ChildNotNull n LEFT JOIN dbo.ChildNotNull c ON c.RefId = n.RefId);")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT c.RefId FROM dbo.ChildNotNull n INNER JOIN dbo.ChildNotNull c ON c.RefId = n.RefId);")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT c.RefId FROM dbo.ChildNotNull n LEFT JOIN dbo.ChildNotNull c ON c.RefId = n.RefId WHERE c.RefId IS NOT NULL);")]
+    public void NotNullColumnOnThePreservedSideOrGuardedOrInAnInnerJoin_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
     [Fact]
     public void OuterWhereClauseUnsatisfiable_NeverFires()
     {

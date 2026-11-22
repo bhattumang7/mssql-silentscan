@@ -87,7 +87,7 @@ public static class NotInNullableSubqueryScanner
             }
 
             var catalogColumn = catalog.Find(innerColumn.TableQualifiedName)?.FindColumn(innerColumn.ColumnName, catalog.IdentifierComparer);
-            if (catalogColumn is null || !catalogColumn.IsNullable)
+            if (catalogColumn is null || !(catalogColumn.IsNullable || innerColumn.IsNullableSide))
             {
                 return;
             }
