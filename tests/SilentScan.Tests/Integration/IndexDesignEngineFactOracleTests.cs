@@ -131,8 +131,11 @@ public sealed class IndexDesignEngineFactOracleTests : OracleTestFixture
         var missing = await PlanInSessionAsync(string.Empty, "SELECT Status FROM dbo.Fi WITH (INDEX(IX_Fi_Other)) WHERE Status = 1 AND Other = 1;");
         var included = await PlanInSessionAsync(string.Empty, "SELECT Status FROM dbo.Fi WITH (INDEX(IX_Fi_OtherS)) WHERE Status = 1 AND Other = 1;");
 
+        var filterOnly = await PlanInSessionAsync(string.Empty, "SELECT Other FROM dbo.Fi WITH (INDEX(IX_Fi_Other)) WHERE Status = 1 AND Other = 1;");
+
         Assert.True(ShowPlan.HasKeyLookup(missing));
         Assert.False(ShowPlan.HasKeyLookup(included));
+        Assert.False(ShowPlan.HasKeyLookup(filterOnly));
     }
 
     [Fact]

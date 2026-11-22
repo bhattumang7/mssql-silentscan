@@ -12,9 +12,13 @@ internal static class FilterColumnNotInIndex
             A filtered index's own filter predicate can only be substituted by the optimizer for a
             query whose own WHERE clause restates (or logically implies) that same predicate. When
             the filter predicate references a column the index itself does not carry - neither as a
-            key column nor as an INCLUDE column - the optimizer would additionally need to re-derive
-            that column's value from the base table just to confirm the filter still holds, which
-            defeats the covering benefit a filtered index exists for in the first place.
+            key column nor as an INCLUDE column - any query that returns, sorts or otherwise needs
+            that column's value must fetch it from the base table with a key lookup per row, even
+            though the filter fixes what the value is. Oracle-confirmed on the engine: the same
+            filtered index serves a query that only filters on that column with no lookup at all,
+            and a query that also selects it gets the lookup unless the column is in the INCLUDE
+            list. The finding is therefore a structural fact about the index, and the lookup cost
+            applies only to queries that need the column's value.
 
             This finding only fires when the filter's own definition text reparses cleanly - a
             filter this pass cannot parse is left unanalyzed rather than guessed at, the same
