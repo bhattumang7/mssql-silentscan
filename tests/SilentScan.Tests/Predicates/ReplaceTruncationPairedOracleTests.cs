@@ -12,7 +12,7 @@ public sealed class ReplaceTruncationPairedOracleTests : RuleOracle
         GO
         """;
 
-    private const string Truncating = "result-past-the-non-max-cap";
+    private const string Truncating = "growing-replacement-past-cap";
 
     protected override IReadOnlyList<string> ScannerOnlyForms { get; } = [StatementForms.Procedure, StatementForms.View];
 
@@ -28,6 +28,6 @@ public sealed class ReplaceTruncationPairedOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("result-within-the-cap", Setup, "SELECT LEN(REPLACE('abcabcabc', 'abc', 'x')) AS L;"), Truncating),
+        new(new("result-within-cap", Setup, "SELECT LEN(REPLACE('abcabcabc', 'abc', 'x')) AS L;"), Truncating),
     ];
 }

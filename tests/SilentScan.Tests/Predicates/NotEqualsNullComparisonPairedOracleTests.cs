@@ -14,7 +14,7 @@ public sealed class NotEqualsNullComparisonPairedOracleTests : RuleOracle
         GO
         """;
 
-    private const string Comparison = "null-comparison";
+    private const string Comparison = "select-where-angle-bracket-null";
 
     protected override IReadOnlyList<string> ScannerOnlyForms { get; } = [StatementForms.Procedure, StatementForms.View];
 
@@ -30,7 +30,7 @@ public sealed class NotEqualsNullComparisonPairedOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("is-null-form", Setup, "SELECT Id FROM dbo.T WHERE A IS NOT NULL;"), Comparison),
+        new(new("is-not-null", Setup, "SELECT Id FROM dbo.T WHERE A IS NOT NULL;"), Comparison),
         new(
             new(
                 "module-created-with-ansi-nulls-off",

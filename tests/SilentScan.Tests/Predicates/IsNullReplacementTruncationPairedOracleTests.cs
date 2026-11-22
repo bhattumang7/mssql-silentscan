@@ -21,7 +21,7 @@ public sealed class IsNullReplacementTruncationPairedOracleTests : RuleOracle
         GO
         """;
 
-    private const string Truncating = "isnull-replacement-wider-than-the-checked-column";
+    private const string Truncating = "length-truncation";
 
     protected override IReadOnlyList<string> ScannerOnlyForms { get; } = [StatementForms.Procedure, StatementForms.View];
 
@@ -38,6 +38,6 @@ public sealed class IsNullReplacementTruncationPairedOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("replacement-fits-the-checked-column", Wide, "SELECT ISNULL(ShortCode, LongCode) AS V FROM dbo.T;"), Truncating, OwnSetup: true),
+        new(new("replacement-not-wider", Wide, "SELECT ISNULL(ShortCode, LongCode) AS V FROM dbo.T;"), Truncating, OwnSetup: true),
     ];
 }

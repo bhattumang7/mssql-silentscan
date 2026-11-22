@@ -12,7 +12,7 @@ public sealed class SpaceTruncationPairedOracleTests : RuleOracle
         GO
         """;
 
-    private const string Truncating = "result-past-the-non-max-cap";
+    private const string Truncating = "count-past-cap";
 
     protected override IReadOnlyList<string> ScannerOnlyForms { get; } = [StatementForms.Procedure, StatementForms.View];
 
@@ -28,6 +28,6 @@ public sealed class SpaceTruncationPairedOracleTests : RuleOracle
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("result-within-the-cap", Setup, "SELECT LEN(SPACE(100) + 'x') AS L;"), Truncating),
+        new(new("count-within-cap", Setup, "SELECT LEN(SPACE(100) + 'x') AS L;"), Truncating),
     ];
 }

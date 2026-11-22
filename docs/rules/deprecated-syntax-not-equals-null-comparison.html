@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/deprecated-syntax/not-equals-null-comparison</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">&quot;&lt;&gt; NULL&quot;/&quot;!= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting - use &quot;IS NOT NULL&quot; instead. Fires when a SELECT filters with &lt;&gt; NULL; a SELECT filters with != NULL. Never fires when the predicate uses IS NOT NULL.</p>
+  <p class="rationale">&quot;&lt;&gt; NULL&quot;/&quot;!= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting - use &quot;IS NOT NULL&quot; instead. Fires when a SELECT filters with &lt;&gt; NULL. Never fires when the predicate uses IS NOT NULL; the module was created with ANSI_NULLS OFF, where &lt;&gt; NULL compares against NULL values.</p>
   <p class="rationale">&quot;&lt;&gt; NULL&quot;/&quot;!= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting - use &quot;IS NOT NULL&quot; instead. A predicate written this way silently returns no rows at all, not even the non-NULL rows it looks like it is meant to match.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Use IS NOT NULL instead of &lt;&gt; NULL / != NULL.</p>

@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/deprecated-syntax/equals-null-comparison</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">&quot;= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting, including a genuinely NULL value - use &quot;IS NULL&quot; instead. Fires when a SELECT filters with = NULL; an UPDATE filters with = NULL. Never fires when the predicate uses IS NULL.</p>
+  <p class="rationale">&quot;= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting, including a genuinely NULL value - use &quot;IS NULL&quot; instead. Fires when a SELECT filters with = NULL. Never fires when the predicate uses IS NULL; the module was created with ANSI_NULLS OFF, where = NULL matches NULL values.</p>
   <p class="rationale">&quot;= NULL&quot; never matches any row under the default ANSI_NULLS ON session setting, including a genuinely NULL value - use &quot;IS NULL&quot; instead. A predicate written this way silently returns no rows for the NULL case it looks like it is meant to match.</p>
   <h2>How can I fix it?</h2>
   <p class="rationale">Use IS NULL instead of = NULL.</p>
