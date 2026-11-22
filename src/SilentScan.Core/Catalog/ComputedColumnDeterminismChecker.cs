@@ -38,7 +38,7 @@ internal static class ComputedColumnDeterminismChecker
         "DATABASE_PRINCIPAL_ID", "DEFAULT_DOMAIN", "LOGINPROPERTY", "STATS_DATE",
         "APPLOCK_MODE", "APPLOCK_TEST",
 
-        "COMPRESS", "DECOMPRESS", "PWDENCRYPT", "PWDCOMPARE",
+        "COMPRESS", "CRYPT_GEN_RANDOM", "ENCRYPTBYPASSPHRASE", "ENCRYPTBYKEY", "ENCRYPTBYASYMKEY", "ENCRYPTBYCERT", "PWDENCRYPT", "PWDCOMPARE",
         "KEY_GUID", "KEY_ID", "KEY_NAME", "CERTPROPERTY",
         "ASYMKEY_ID", "ASYMKEYPROPERTY", "SYMKEYPROPERTY", "SIGNBYASYMKEY",
 
@@ -57,6 +57,11 @@ internal static class ComputedColumnDeterminismChecker
         "CURDATE", "CURTIME", "NOW", "USER", "DATABASE", "RAND",
         "WEEK", "DAYOFWEEK", "MONTHNAME", "DAYNAME",
     };
+
+    private static readonly HashSet<int> NonDeterministicDateToCharStyles =
+    [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 22, 23, 24, 25, 100, 106, 107, 109, 113,
+    ];
 
     private static readonly HashSet<int> NonDeterministicDateStyles =
     [
@@ -135,7 +140,7 @@ internal static class ComputedColumnDeterminismChecker
 
         public override void ExplicitVisit(CastCall node)
         {
-            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter))
+            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter) || IsDateFamilyToCharConversion(node.DataType, node.Parameter))
             {
                 Found = true;
             }
@@ -145,7 +150,7 @@ internal static class ComputedColumnDeterminismChecker
 
         public override void ExplicitVisit(TryCastCall node)
         {
-            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter))
+            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter) || IsDateFamilyToCharConversion(node.DataType, node.Parameter))
             {
                 Found = true;
             }
@@ -155,8 +160,10 @@ internal static class ComputedColumnDeterminismChecker
 
         public override void ExplicitVisit(ConvertCall node)
         {
-            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter)
-                && (TryGetStyle(node.Style) is not { } style || NonDeterministicDateStyles.Contains(style)))
+            if ((IsCharToDateFamilyConversion(node.DataType, node.Parameter)
+                    && (TryGetStyle(node.Style) is not { } style || NonDeterministicDateStyles.Contains(style)))
+                || (IsDateFamilyToCharConversion(node.DataType, node.Parameter)
+                    && (TryGetStyle(node.Style) is not { } toCharStyle || NonDeterministicDateToCharStyles.Contains(toCharStyle))))
             {
                 Found = true;
             }
@@ -166,8 +173,10 @@ internal static class ComputedColumnDeterminismChecker
 
         public override void ExplicitVisit(TryConvertCall node)
         {
-            if (IsCharToDateFamilyConversion(node.DataType, node.Parameter)
-                && (TryGetStyle(node.Style) is not { } style || NonDeterministicDateStyles.Contains(style)))
+            if ((IsCharToDateFamilyConversion(node.DataType, node.Parameter)
+                    && (TryGetStyle(node.Style) is not { } style || NonDeterministicDateStyles.Contains(style)))
+                || (IsDateFamilyToCharConversion(node.DataType, node.Parameter)
+                    && (TryGetStyle(node.Style) is not { } toCharStyle || NonDeterministicDateToCharStyles.Contains(toCharStyle))))
             {
                 Found = true;
             }
@@ -185,6 +194,12 @@ internal static class ComputedColumnDeterminismChecker
 
             var sourceType = ResolveSourceType(parameter);
             return sourceType is { IsStringFamily: true };
+        }
+
+        private bool IsDateFamilyToCharConversion(DataTypeReference targetDataType, ScalarExpression parameter)
+        {
+            var targetType = SqlTypeReferenceResolver.Resolve(targetDataType, columnCollation: null);
+            return targetType is { IsStringFamily: true } && ResolveSourceType(parameter) is { IsDateTimeFamily: true };
         }
 
         private SqlType? ResolveSourceType(ScalarExpression expression) => expression switch
