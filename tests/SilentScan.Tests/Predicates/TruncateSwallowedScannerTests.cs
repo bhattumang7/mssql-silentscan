@@ -41,6 +41,39 @@ public sealed class TruncateSwallowedScannerTests
         Assert.Single(findings);
     }
 
+    [Theory]
+    [InlineData("EXEC dbo.LogAndRethrow;")]
+    [InlineData("EXEC('THROW 50000, ''x'', 1;');")]
+    [InlineData("EXEC sp_executesql N'THROW 50000, ''x'', 1;';")]
+    public void CatchExecutesCodeThatMayRaise_NeverFires(string statement)
+    {
+        var findings = Scan($"""
+            BEGIN TRY
+                TRUNCATE TABLE dbo.Foo;
+            END TRY
+            BEGIN CATCH
+                {statement}
+            END CATCH;
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void CatchExecutesOnlyASystemProcedure_StillFires()
+    {
+        var findings = Scan("""
+            BEGIN TRY
+                TRUNCATE TABLE dbo.Foo;
+            END TRY
+            BEGIN CATCH
+                EXEC sp_who;
+            END CATCH;
+            """);
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void CatchWithThrow_NeverFires()
     {

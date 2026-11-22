@@ -77,7 +77,29 @@ public static class TruncateSwallowedScanner
 
             var raiseErrorCollector = new NodeCollector<RaiseErrorStatement>();
             fragment.Accept(raiseErrorCollector);
-            return raiseErrorCollector.Nodes.Count != 0;
+            if (raiseErrorCollector.Nodes.Count != 0)
+            {
+                return true;
+            }
+
+            var executeCollector = new NodeCollector<ExecuteStatement>();
+            fragment.Accept(executeCollector);
+            return executeCollector.Nodes.Any(MayRaiseAnError);
+        }
+
+        private static bool MayRaiseAnError(ExecuteStatement execute)
+        {
+            if (execute.ExecuteSpecification.ExecutableEntity is not ExecutableProcedureReference
+                {
+                    ProcedureReference.ProcedureReference.Name: { BaseIdentifier.Value: var name } procedureName,
+                })
+            {
+                return true;
+            }
+
+            var isSystemProcedure = procedureName.SchemaIdentifier is null
+                && (name.StartsWith("sp_", StringComparison.OrdinalIgnoreCase) || name.StartsWith("xp_", StringComparison.OrdinalIgnoreCase));
+            return !isSystemProcedure || name.Equals("sp_executesql", StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed class NodeCollector<T> : TSqlFragmentVisitor

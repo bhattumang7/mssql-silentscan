@@ -47,6 +47,25 @@ public sealed class TruncateSwallowedOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task CatchThatExecutesARaisingProcedure_StillRaisesToTheCaller()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var create = new SqlCommand("CREATE OR ALTER PROCEDURE dbo.RethrowTruncate AS THROW 50001, 'logged and rethrown', 1;", connection))
+        {
+            await create.ExecuteNonQueryAsync();
+        }
+
+        await using var run = new SqlCommand(
+            "BEGIN TRY TRUNCATE TABLE dbo.Foo; END TRY BEGIN CATCH EXEC dbo.RethrowTruncate; END CATCH;",
+            connection);
+        var ex = await Assert.ThrowsAsync<SqlException>(() => run.ExecuteNonQueryAsync());
+
+        Assert.Equal(50001, ex.Number);
+    }
+
+    [Fact]
     public async Task NestedTruncateFailure_RoutesToNearestCatchOnly()
     {
         var markers = await RunAndCaptureMarkersAsync("""
