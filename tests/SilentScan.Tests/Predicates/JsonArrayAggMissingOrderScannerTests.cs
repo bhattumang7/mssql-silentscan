@@ -28,6 +28,12 @@ public sealed class JsonArrayAggMissingOrderScannerTests
     }
 
     [Fact]
+    public void AggregatedValueIsAConstant_EveryOrderGivesTheSameArray_NeverFires()
+    {
+        Assert.Empty(ScanWithCatalog("SELECT JSON_ARRAYAGG('x') FROM dbo.T;"));
+    }
+
+    [Fact]
     public void QueryWithoutFromClause_NeverFires()
     {
         Assert.Empty(ScanWithCatalog("SELECT JSON_ARRAYAGG('a');"));

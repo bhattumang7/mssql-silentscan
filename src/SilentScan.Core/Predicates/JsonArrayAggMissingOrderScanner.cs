@@ -46,6 +46,7 @@ public static class JsonArrayAggMissingOrderScanner
         {
             if (string.Equals(node.FunctionName?.Value, "JSON_ARRAYAGG", StringComparison.OrdinalIgnoreCase)
                 && node.JsonOrderByClause is null
+                && node.Parameters is not [Literal, ..]
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
                 Findings.Add(new JsonArrayAggMissingOrderFinding(sourcePath, node.StartLine, node.StartColumn));

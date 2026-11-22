@@ -28,6 +28,21 @@ public sealed class JsonArrayAggMissingOrderEngineFactOracleTests : IAsyncLifeti
         await new DatabaseProvisioner(Options).DropIfExistsAsync(_databaseName);
 
     [Fact]
+    public async Task JsonArrayAggOverAConstant_ReturnsTheSameArrayWhicheverOrderTheRowsArrive()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT (SELECT JSON_ARRAYAGG('x') FROM (SELECT TOP (100) PERCENT Name FROM dbo.Member ORDER BY Name ASC) a), (SELECT JSON_ARRAYAGG('x') FROM (SELECT TOP (100) PERCENT Name FROM dbo.Member ORDER BY Name DESC) d);",
+            connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        Assert.Equal("[\"x\",\"x\",\"x\"]", reader.GetString(0));
+        Assert.Equal(reader.GetString(0), reader.GetString(1));
+    }
+
+    [Fact]
     public async Task SameQueryTextWithNoOrderByInsideTheCall_ChangesArrayOrderWhenAnIndexRemovesTheSort()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
