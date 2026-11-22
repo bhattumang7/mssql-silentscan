@@ -22,6 +22,20 @@ public sealed class UnistrUnpairedSurrogateEngineFactOracleTests
         Assert.Equal(2, length);
     }
 
+    [Theory]
+    [InlineData("SELECT DATALENGTH(UNISTR(N'\\\\D800'));")]
+    [InlineData("SELECT DATALENGTH(UNISTR(N'\\D800', N'!'));")]
+    public async Task EscapedBackslashAndCustomEscapeCharacter_ProduceLiteralTextNotASurrogate(string sql)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString());
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+
+        Assert.Equal(10, (int)(await command.ExecuteScalarAsync())!);
+    }
+
     [Fact]
     public async Task JsonValue_OnJsonTextContainingTheSameUnpairedSurrogateEscape_AlsoResolvesWithNoError()
     {

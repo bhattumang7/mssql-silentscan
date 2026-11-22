@@ -53,6 +53,15 @@ public sealed class UnistrUnpairedSurrogateScannerTests
         Assert.Single(findings);
     }
 
+    [Theory]
+    [InlineData(@"SELECT UNISTR(N'\\D800');")]
+    [InlineData(@"SELECT UNISTR(N'abc\\DC00');")]
+    [InlineData(@"SELECT UNISTR(N'\D800', N'!');")]
+    public void EscapedBackslashOrCustomEscapeCharacter_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
     [Fact]
     public void NoEscapes_NeverFires()
     {
