@@ -46,6 +46,7 @@ public static class StringAggMissingOrderScanner
         {
             if (string.Equals(node.FunctionName?.Value, "STRING_AGG", StringComparison.OrdinalIgnoreCase)
                 && node.WithinGroupClause is null
+                && node.Parameters is not [Literal, ..]
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
                 Findings.Add(new StringAggMissingOrderFinding(sourcePath, node.StartLine, node.StartColumn));

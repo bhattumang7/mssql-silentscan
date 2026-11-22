@@ -27,6 +27,14 @@ public sealed class StringAggMissingOrderScannerTests
         Assert.Empty(ScanWithCatalog("SELECT STRING_AGG(Name, ',') FROM dbo.T WHERE Id = 1;"));
     }
 
+    [Theory]
+    [InlineData("SELECT STRING_AGG('x', ',') FROM dbo.T;")]
+    [InlineData("SELECT STRING_AGG(N'x', N', ') FROM dbo.T GROUP BY GroupId;")]
+    public void AggregatedValueIsAConstant_EveryOrderGivesTheSameString_NeverFires(string sql)
+    {
+        Assert.Empty(ScanWithCatalog(sql));
+    }
+
     [Fact]
     public void QueryWithoutFromClause_NeverFires()
     {

@@ -18,6 +18,20 @@ public sealed class StringAggMissingOrderEngineFactOracleTests : OracleTestFixtu
     private const string Query = "SELECT STRING_AGG(Name, ',') FROM dbo.Member GROUP BY GroupId;";
 
     [Fact]
+    public async Task StringAggOverAConstant_ReturnsTheSameStringWhicheverOrderTheRowsArrive()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(
+            "SELECT (SELECT STRING_AGG('x', ',') FROM (SELECT TOP (100) PERCENT Name FROM dbo.Member ORDER BY Name ASC) a), (SELECT STRING_AGG('x', ',') FROM (SELECT TOP (100) PERCENT Name FROM dbo.Member ORDER BY Name DESC) d);",
+            connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+
+        Assert.Equal("x,x,x", reader.GetString(0));
+        Assert.Equal(reader.GetString(0), reader.GetString(1));
+    }
+
+    [Fact]
     public async Task SameQueryTextWithNoWithinGroup_ChangesConcatenationOrderWhenAnIndexRemovesTheSort()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
