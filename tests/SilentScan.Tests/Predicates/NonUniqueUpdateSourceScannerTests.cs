@@ -41,6 +41,15 @@ public sealed class NonUniqueUpdateSourceScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("UPDATE t SET t.Val = s.Val FROM dbo.TargetT t JOIN (SELECT TargetId, MAX(Val) AS Val FROM dbo.SourceNonUnique GROUP BY TargetId) s ON t.Id = s.TargetId;")]
+    [InlineData("UPDATE t SET t.Val = s.Val FROM dbo.TargetT t CROSS APPLY (SELECT TOP (1) Val FROM dbo.SourceNonUnique x WHERE x.TargetId = t.Id ORDER BY x.Val) s;")]
+    [InlineData("UPDATE t SET t.Val = s.Val FROM dbo.TargetT t JOIN (SELECT DISTINCT TargetId, 1 AS Val FROM dbo.SourceNonUnique) s ON t.Id = s.TargetId;")]
+    public void SourceCollapsedToOneRowPerKey_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
     [Fact]
     public void WhereClauseUnsatisfiable_NeverFires()
     {
