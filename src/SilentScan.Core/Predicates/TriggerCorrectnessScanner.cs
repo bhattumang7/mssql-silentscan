@@ -77,7 +77,7 @@ public static class TriggerCorrectnessScanner
             for (var i = 0; i < statements.Count; i++)
             {
                 var variableName = TryGetUnsafeAssignedVariable(statements[i]);
-                if (variableName is null)
+                if (variableName is null || HasMultiRowExitGuard(statements, i))
                 {
                     continue;
                 }
@@ -99,6 +99,90 @@ public static class TriggerCorrectnessScanner
                     $"'{variableName}' is assigned from a single, unspecified row of inserted/deleted (no WHERE/TOP/aggregate) - silently wrong for every multi-row INSERT/UPDATE/MERGE that fires this trigger.",
                     FindingConfidence.High));
             }
+        }
+
+        private static bool HasMultiRowExitGuard(IList<TSqlStatement> statements, int assignmentIndex)
+        {
+            for (var i = 0; i < assignmentIndex; i++)
+            {
+                if (statements[i] is IfStatement { Predicate: BooleanComparisonExpression comparison } ifStatement
+                    && RejectsMoreThanOneRow(comparison)
+                    && ExitsTheTrigger(ifStatement.ThenStatement))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool RejectsMoreThanOneRow(BooleanComparisonExpression comparison)
+        {
+            var (countSide, literalSide, type) = IsRowCount(comparison.FirstExpression)
+                ? (comparison.FirstExpression, comparison.SecondExpression, comparison.ComparisonType)
+                : (comparison.SecondExpression, comparison.FirstExpression, Reverse(comparison.ComparisonType));
+
+            if (!IsRowCount(countSide) || literalSide is not IntegerLiteral literal
+                || !int.TryParse(literal.Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var limit))
+            {
+                return false;
+            }
+
+            return type switch
+            {
+                BooleanComparisonType.GreaterThan => limit == 1,
+                BooleanComparisonType.GreaterThanOrEqualTo => limit == 2,
+                BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => limit == 1,
+                _ => false,
+            };
+        }
+
+        private static BooleanComparisonType Reverse(BooleanComparisonType type) => type switch
+        {
+            BooleanComparisonType.GreaterThan => BooleanComparisonType.LessThan,
+            BooleanComparisonType.LessThan => BooleanComparisonType.GreaterThan,
+            BooleanComparisonType.GreaterThanOrEqualTo => BooleanComparisonType.LessThanOrEqualTo,
+            BooleanComparisonType.LessThanOrEqualTo => BooleanComparisonType.GreaterThanOrEqualTo,
+            _ => type,
+        };
+
+        private static bool IsRowCount(ScalarExpression expression)
+        {
+            while (expression is ParenthesisExpression parenthesized)
+            {
+                expression = parenthesized.Expression;
+            }
+
+            return expression switch
+            {
+                GlobalVariableExpression global => string.Equals(global.Name, "@@ROWCOUNT", StringComparison.OrdinalIgnoreCase),
+                ScalarSubquery { QueryExpression: QuerySpecification { SelectElements: [SelectScalarExpression { Expression: FunctionCall call }] } spec } =>
+                    string.Equals(call.FunctionName.Value, "COUNT", StringComparison.OrdinalIgnoreCase)
+                    && spec.WhereClause is null
+                    && spec.FromClause is { TableReferences: [NamedTableReference { SchemaObject.SchemaIdentifier: null } named] }
+                    && PseudoTableNames.Contains(named.SchemaObject.BaseIdentifier.Value),
+                _ => false,
+            };
+        }
+
+        private static bool ExitsTheTrigger(TSqlStatement statement)
+        {
+            var finder = new ExitStatementFinder();
+            statement.Accept(finder);
+            return finder.Found;
+        }
+
+        private sealed class ExitStatementFinder : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void Visit(ReturnStatement node) => Found = true;
+
+            public override void Visit(ThrowStatement node) => Found = true;
+
+            public override void Visit(RaiseErrorStatement node) => Found = true;
+
+            public override void Visit(RollbackTransactionStatement node) => Found = true;
         }
 
         private static string? TryGetUnsafeAssignedVariable(TSqlStatement statement) => statement switch

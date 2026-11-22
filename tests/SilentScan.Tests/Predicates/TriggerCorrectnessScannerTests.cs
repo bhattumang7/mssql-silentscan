@@ -43,6 +43,34 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
     }
 
+    [Theory]
+    [InlineData("IF (SELECT COUNT(*) FROM inserted) > 1 RETURN;")]
+    [InlineData("IF (SELECT COUNT(*) FROM inserted) <> 1 BEGIN ROLLBACK TRANSACTION; RETURN; END;")]
+    [InlineData("IF @@ROWCOUNT > 1 RETURN;")]
+    [InlineData("IF @@ROWCOUNT <> 1 BEGIN RAISERROR('one row only', 16, 1); RETURN; END;")]
+    [InlineData("IF (SELECT COUNT(*) FROM inserted) > 1 THROW 50001, 'one row only', 1;")]
+    public void AssignmentAfterAGuardThatExitsOnAMultiRowStatement_NeverFires(string guard)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN {guard} DECLARE @v INT; SELECT @v = Val FROM inserted; PRINT @v; END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind is TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment or TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml);
+    }
+
+    [Theory]
+    [InlineData("IF (SELECT COUNT(*) FROM inserted) > 1 PRINT 'many';")]
+    [InlineData("IF @@ROWCOUNT = 0 RETURN;")]
+    [InlineData("IF (SELECT COUNT(*) FROM dbo.Other) > 1 RETURN;")]
+    public void AssignmentAfterAnUnrelatedOrNonExitingCheck_StillFires(string check)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN {check} DECLARE @v INT; SELECT @v = Val FROM inserted; PRINT @v; END;");
+
+        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
+    }
+
     [Fact]
     public void SelectSetVariableFromInserted_WithWhere_NeverFires()
     {
