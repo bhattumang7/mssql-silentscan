@@ -624,6 +624,18 @@ public sealed class ScalarUdfInfoTests
     [InlineData("@@ERROR")]
     [InlineData("@@NESTLEVEL")]
     [InlineData("@@PROCID")]
+    [InlineData("@@CONNECTIONS")]
+    [InlineData("@@CPU_BUSY")]
+    [InlineData("@@IDLE")]
+    [InlineData("@@IO_BUSY")]
+    [InlineData("@@MAX_CONNECTIONS")]
+    [InlineData("@@PACKET_ERRORS")]
+    [InlineData("@@PACK_RECEIVED")]
+    [InlineData("@@PACK_SENT")]
+    [InlineData("@@TIMETICKS")]
+    [InlineData("@@TOTAL_ERRORS")]
+    [InlineData("@@TOTAL_READ")]
+    [InlineData("@@TOTAL_WRITE")]
     public void Build_FunctionReferencingNonInlineableGlobalVariable_RecordsInlineabilityBlocker(string globalVariable)
     {
         var catalog = BuildFrom($$"""

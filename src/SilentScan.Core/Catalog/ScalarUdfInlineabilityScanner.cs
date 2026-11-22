@@ -26,6 +26,7 @@ public static class ScalarUdfInlineabilityScanner
     private static readonly HashSet<string> NonInlineableGlobalVariables = new(StringComparer.OrdinalIgnoreCase)
     {
         "@@DBTS", "@@ROWCOUNT", "@@ERROR", "@@NESTLEVEL", "@@PROCID",
+        "@@CONNECTIONS", "@@CPU_BUSY", "@@IDLE", "@@IO_BUSY", "@@MAX_CONNECTIONS", "@@PACKET_ERRORS", "@@PACK_RECEIVED", "@@PACK_SENT", "@@TIMETICKS", "@@TOTAL_ERRORS", "@@TOTAL_READ", "@@TOTAL_WRITE",
     };
 
     private static readonly ConditionalWeakTable<DatabaseCatalog, List<(string Caller, string Callee)>> CallGraphsByCatalog = [];
