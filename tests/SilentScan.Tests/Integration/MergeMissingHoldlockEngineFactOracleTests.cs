@@ -15,6 +15,7 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         CREATE TABLE dbo.HeapTarget (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetLocked (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetUpdlock (K INT NOT NULL, V INT NOT NULL);
+        CREATE TABLE dbo.HeapTargetSerializable (K INT NOT NULL, V INT NOT NULL);
         GO
         """;
 
@@ -77,7 +78,7 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         Assert.True(await KeyLockStillHeldMidTransactionAsync(targetHint: "WITH (HOLDLOCK)"));
     }
 
-    private async Task<(int DuplicateKeys, int Errors)> RaceAsync(string table, string hint)
+    private async Task<(int DuplicateKeys, int Errors)> RaceAsync(string table, string hint, string isolationLevel = "READ COMMITTED")
     {
         const int Sessions = 6;
         const int Keys = 300;
@@ -88,6 +89,11 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         {
             await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
             await connection.OpenAsync();
+            await using (var isolation = new SqlCommand($"SET TRANSACTION ISOLATION LEVEL {isolationLevel};", connection))
+            {
+                await isolation.ExecuteNonQueryAsync();
+            }
+
             for (var key = 0; key < Keys; key++)
             {
                 barriers[key].SignalAndWait();
@@ -133,6 +139,14 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
     public async Task ConcurrentMergeWithHoldlock_OnAHeapTarget_InsertsNoDuplicateKeys()
     {
         var (duplicateKeys, _) = await RaceAsync("HeapTargetLocked", "WITH (HOLDLOCK)");
+
+        Assert.Equal(0, duplicateKeys);
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithoutHints_UnderSerializableIsolation_OnAHeapTarget_InsertsNoDuplicateKeys()
+    {
+        var (duplicateKeys, _) = await RaceAsync("HeapTargetSerializable", string.Empty, "SERIALIZABLE");
 
         Assert.Equal(0, duplicateKeys);
     }

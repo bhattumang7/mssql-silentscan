@@ -464,6 +464,30 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void MergeUnderSerializableIsolation_NeverFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; "
+            + "MERGE dbo.H AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.V = 1 "
+            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
+    public void MergeAfterIsolationIsLoweredBackToReadCommitted_StillFiresMissingHoldlock()
+    {
+        var findings = Scan(
+            "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; SET TRANSACTION ISOLATION LEVEL READ COMMITTED; "
+            + "MERGE dbo.H AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.V = 1 "
+            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
+    [Fact]
     public void MergeMatchingOnTheFullPrimaryKey_NeverFiresMissingHoldlock()
     {
         var findings = Scan(

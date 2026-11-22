@@ -375,9 +375,15 @@ public static class QueryAntiPatternScanner
             InspectMergeUnconditionalDelete(spec);
         }
 
+        private bool _serializableIsolationSet;
+
+        public void OnEnterSetTransactionIsolationLevelStatement(SetTransactionIsolationLevelStatement node, ModuleWalker walker) =>
+            _serializableIsolationSet = node.Level == IsolationLevel.Serializable;
+
         private void InspectMergeMissingHoldlock(MergeSpecification spec)
         {
-            if (spec.Target is not NamedTableReference targetRef
+            if (_serializableIsolationSet
+                || spec.Target is not NamedTableReference targetRef
                 || SchemaObjectNameHelper.IsLocalTempName(targetRef.SchemaObject.BaseIdentifier.Value)
                 || !spec.ActionClauses.Any(clause => clause.Action is InsertMergeAction))
             {
