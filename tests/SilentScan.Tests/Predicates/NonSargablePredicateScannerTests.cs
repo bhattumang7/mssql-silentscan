@@ -452,6 +452,30 @@ public sealed class NonSargablePredicateScannerTests
         Assert.Equal("DisplayName", finding.ColumnName);
     }
 
+    private static IReadOnlyList<SargabilityFinding> ScanStringCast(string collation, string castTarget) =>
+        ScanSqlWithCatalog(
+            $"CREATE TABLE dbo.Names (Id INT NOT NULL PRIMARY KEY, Code VARCHAR(20) COLLATE {collation} NOT NULL);"
+            + "CREATE INDEX IX_Names_Code ON dbo.Names(Code);"
+            + "\nGO\n"
+            + $"CREATE PROCEDURE dbo.usp_Get @p NVARCHAR(20) AS SELECT Id FROM dbo.Names WHERE CAST(Code AS {castTarget}) = @p;");
+
+    [Theory]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(20)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(100)")]
+    public void CastOfAWindowsCollationVarcharToAnAtLeastAsWideNvarchar_NeverFires(string collation, string castTarget)
+    {
+        Assert.Empty(ScanStringCast(collation, castTarget));
+    }
+
+    [Theory]
+    [InlineData("SQL_Latin1_General_CP1_CI_AS", "NVARCHAR(20)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(3)")]
+    [InlineData("Latin1_General_CI_AS", "VARCHAR(100)")]
+    public void OtherStringCastsOnAColumn_StillFire(string collation, string castTarget)
+    {
+        Assert.Single(ScanStringCast(collation, castTarget));
+    }
+
     [Fact]
     public void LikeOfJustAPercent_NeverFiresLeadingWildcard()
     {

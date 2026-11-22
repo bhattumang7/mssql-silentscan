@@ -26,6 +26,11 @@ internal static class CastOrConvertOnColumn
             added to make the comparison compile rather than to express anything about the data.
             The fix is almost always to correct the type mismatch at its source instead of paying
             for it on every execution.
+
+            Oracle-confirmed exceptions are not reported: a cast inside the numeric family, inside
+            the date/time family, and of a VARCHAR column with a Windows collation to an NVARCHAR at
+            least as wide still seek the column's index, because the engine converts the constant or
+            derives a range instead. A SQL collation, a narrower target and a VARCHAR target do not.
             """,
         HowToFixIt: """
             Match the comparison value's type to the column's own declared type, so no conversion

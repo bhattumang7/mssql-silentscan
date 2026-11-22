@@ -390,7 +390,7 @@ public static class NonSargablePredicateScanner
 
         private bool PreservesSeekability(DataTypeReference targetDataType, SqlType? sourceType)
         {
-            if (sourceType is null || sourceType.IsStringFamily || sourceType.IsBinaryFamily)
+            if (sourceType is null || sourceType.IsBinaryFamily)
             {
                 return false;
             }
@@ -399,6 +399,11 @@ public static class NonSargablePredicateScanner
             if (targetType is null)
             {
                 return false;
+            }
+
+            if (sourceType.IsStringFamily)
+            {
+                return IsSeekableStringWidening(targetType, sourceType);
             }
 
             return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
