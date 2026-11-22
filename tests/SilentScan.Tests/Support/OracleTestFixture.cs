@@ -29,6 +29,16 @@ public abstract class OracleTestFixture : IAsyncLifetime
         await new DatabaseProvisioner(Options).DropIfExistsAsync(DatabaseName);
     }
 
+    protected async Task<int> CountBufferedPagesAsync()
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString());
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT COUNT(*) FROM sys.dm_os_buffer_descriptors WHERE database_id = DB_ID(@name);", connection);
+        command.Parameters.AddWithValue("@name", DatabaseName);
+        return (int)(await command.ExecuteScalarAsync())!;
+    }
+
     protected async Task<SqlConnection> OpenConnectionAsync()
     {
         var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));

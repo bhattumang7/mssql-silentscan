@@ -25,6 +25,18 @@ public sealed class DatabaseConfigurationReaderDefaultsOracleTests : OracleTestF
 
         Assert.Empty(findings);
     }
+
+    [Fact]
+    public async Task AutoCloseOff_KeepsItsBufferedPagesAfterTheLastConnectionCloses()
+    {
+        await ExecuteAsync("INSERT INTO dbo.T SELECT TOP (3000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a, sys.all_objects b;");
+        await ExecuteAsync("SELECT COUNT(*) FROM dbo.T;");
+
+        SqlConnection.ClearAllPools();
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        Assert.True(await CountBufferedPagesAsync() > 0);
+    }
 }
 
 [Trait("Category", "Oracle")]
@@ -70,6 +82,21 @@ public sealed class DatabaseConfigurationReaderAutoCloseOracleTests : OracleTest
         var findings = await new DatabaseConfigurationReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
 
         Assert.Contains(DatabaseConfigurationFindingKind.AutoCloseOn, findings.Select(f => f.Kind));
+    }
+
+    [Fact]
+    public async Task AutoCloseOn_DropsEveryBufferedPageOnceTheLastConnectionCloses()
+    {
+        await ExecuteAsync("INSERT INTO dbo.T SELECT TOP (3000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects a, sys.all_objects b;");
+        await ExecuteAsync("SELECT COUNT(*) FROM dbo.T;");
+
+        var pagesBefore = await CountBufferedPagesAsync();
+        Assert.True(pagesBefore > 0);
+
+        SqlConnection.ClearAllPools();
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(0, await CountBufferedPagesAsync());
     }
 }
 
