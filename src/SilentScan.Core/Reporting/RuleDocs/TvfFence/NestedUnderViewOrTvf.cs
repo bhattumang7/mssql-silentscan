@@ -45,6 +45,8 @@ internal static class NestedUnderViewOrTvf
             new RuleDocExample(
                 Title: "A view quietly wraps a multi-statement TVF call",
                 NoncompliantSql: """
+                    ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 130;
+                    GO
                     CREATE TABLE dbo.Customers (CustomerId INT NOT NULL PRIMARY KEY, Name VARCHAR(100) NOT NULL);
 
                     GO

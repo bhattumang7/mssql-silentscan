@@ -41,7 +41,7 @@ internal static class ExecStringConcatenatesParameterizableValue
                     CREATE PROCEDURE dbo.usp_Find AS
                     BEGIN
                         DECLARE @Code VARCHAR(20) = 'ABC';
-                        EXEC('SELECT * FROM dbo.T WHERE Code = ''' + @Code + '''');
+                        EXEC('SELECT TOP (10) * FROM dbo.T WHERE Code = ''' + @Code + '''');
                     END;
                     """,
                 NoncompliantExplanation: "This is a plain EXEC(string) call - sp_executesql's own @params mechanism was never used at all, so every distinct @Code value compiles a fresh cached plan with no straightforward parameterized alternative already in play.",
@@ -50,7 +50,7 @@ internal static class ExecStringConcatenatesParameterizableValue
                     BEGIN
                         DECLARE @Code VARCHAR(20) = 'ABC';
                         EXEC sp_executesql
-                            N'SELECT * FROM dbo.T WHERE Code = @Code',
+                            N'SELECT TOP (10) * FROM dbo.T WHERE Code = @Code',
                             N'@Code VARCHAR(20)',
                             @Code = @Code;
                     END;

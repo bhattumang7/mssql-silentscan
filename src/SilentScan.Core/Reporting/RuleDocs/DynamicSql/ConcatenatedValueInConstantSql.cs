@@ -47,7 +47,7 @@ internal static class ConcatenatedValueInConstantSql
                     CREATE PROCEDURE dbo.usp_Find AS
                     BEGIN
                         DECLARE @Code VARCHAR(20) = 'ABC';
-                        DECLARE @sql NVARCHAR(MAX) = N'SELECT * FROM dbo.T WHERE Code = ''' + @Code + '''';
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT TOP (10) * FROM dbo.T WHERE Code = ''' + @Code + '''';
                         EXEC sp_executesql @sql;
                     END;
                     """,
@@ -57,7 +57,7 @@ internal static class ConcatenatedValueInConstantSql
                     BEGIN
                         DECLARE @Code VARCHAR(20) = 'ABC';
                         EXEC sp_executesql
-                            N'SELECT * FROM dbo.T WHERE Code = @Code',
+                            N'SELECT TOP (10) * FROM dbo.T WHERE Code = @Code',
                             N'@Code VARCHAR(20)',
                             @Code = @Code;
                     END;
