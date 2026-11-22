@@ -131,7 +131,8 @@ public static class BareTopNoOrderByScanner
         }
 
         private static bool IsLiteralSelectElement(SelectElement element) =>
-            element is SelectScalarExpression { Expression: Literal };
+            element is SelectScalarExpression { Expression: Literal }
+                or SelectSetVariable { Expression: Literal, AssignmentKind: AssignmentKind.Equals };
 
         private static bool IsAggregateSelectElement(SelectElement element) =>
             element is SelectScalarExpression { Expression: FunctionCall { OverClause: null } call }

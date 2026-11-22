@@ -75,6 +75,15 @@ public sealed class BareTopNoOrderByScannerTests
         Assert.Empty(Scan(sql));
     }
 
+    [Theory]
+    [InlineData("SELECT TOP (1) 1 FROM dbo.T;")]
+    [InlineData("DECLARE @f INT; SELECT TOP (1) @f = 1 FROM dbo.T;")]
+    [InlineData("SELECT TOP (1) 'x' AS c FROM dbo.T;")]
+    public void TopWhoseSelectListIsConstant_EveryRowIsIdentical_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
     [Fact]
     public void TopWithOrderBy_NeverFires()
     {

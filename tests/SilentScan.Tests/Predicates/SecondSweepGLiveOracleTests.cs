@@ -20,6 +20,17 @@ public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
         """;
 
     [Fact]
+    public async Task TopAssigningAConstantToAVariable_LeavesTheSameValueWhicheverRowOrderIsUsed()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(
+            "DECLARE @a INT, @b INT; SELECT TOP (1) @a = 7 FROM dbo.Items ORDER BY Id ASC; SELECT TOP (1) @b = 7 FROM dbo.Items ORDER BY Id DESC; SELECT CASE WHEN @a = @b THEN 1 ELSE 0 END;",
+            connection);
+
+        Assert.Equal(1, (int)(await command.ExecuteScalarAsync())!);
+    }
+
+    [Fact]
     public async Task TopOverNoFromClause_ReturnsOneRowWhateverTheTopValue()
     {
         await using var connection = await OpenConnectionAsync();
