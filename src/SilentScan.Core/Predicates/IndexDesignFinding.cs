@@ -31,7 +31,8 @@ public sealed record IndexDesignFinding(
     string DetailText,
     [property: JsonIgnore] string SourcePath,
     [property: JsonIgnore] int Line,
-    FindingConfidence Confidence = FindingConfidence.High) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    IReadOnlyList<string>? ColumnNames = null) : IFinding
 {
     public string RuleId { get; } = FindingRuleIds.IndexDesignRuleId(Kind);
 

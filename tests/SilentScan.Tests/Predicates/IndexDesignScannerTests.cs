@@ -444,6 +444,7 @@ public sealed class IndexDesignScannerTests
 
         var finding = Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.UnindexedForeignKey);
         Assert.Equal("dbo.Orders", finding.TableQualifiedName);
+        Assert.Equal(["CustomerId"], finding.ColumnNames);
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 

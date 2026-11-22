@@ -269,7 +269,8 @@ public static class IndexDesignScanner
                 IndexName: null,
                 $"'{parentTable.QualifiedName}' foreign key '{group.Key.ConstraintName}' ({string.Join(", ", fkColumns)}) referencing '{referencedTable}' has no active index leading on its own column set - every parent-side DELETE/UPDATE forces a referential-integrity scan of this table, and every join along this relationship has no seek path.",
                 parentTable.SourcePath,
-                parentTable.SourceLine));
+                parentTable.SourceLine,
+                ColumnNames: [.. group.Select(fk => fk.ParentColumnName)]));
         }
     }
 
