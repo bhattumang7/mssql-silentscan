@@ -580,58 +580,6 @@ public sealed class IndexDesignScannerTests
     }
 
     [Fact]
-    public void FloatKeyColumn_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        var index = new CatalogIndex("IX_Prices_Amount", CatalogIndexKind.Index, IsUnique: false, ["Amount"], []);
-        catalog.AddOrReplace(Table("dbo", "Prices", [Column("Amount", new SqlType(SqlTypeCategory.Float))], [index]));
-
-        var findings = IndexDesignScanner.Scan(catalog);
-
-        var finding = Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.FloatOrRealIndexKeyColumn);
-        Assert.Equal(FindingConfidence.High, finding.Confidence);
-    }
-
-    [Fact]
-    public void RealKeyColumn_Fires()
-    {
-        var catalog = new DatabaseCatalog();
-        var index = new CatalogIndex("IX_Prices_Amount", CatalogIndexKind.Index, IsUnique: false, ["Amount"], []);
-        catalog.AddOrReplace(Table("dbo", "Prices", [Column("Amount", new SqlType(SqlTypeCategory.Real))], [index]));
-
-        var findings = IndexDesignScanner.Scan(catalog);
-
-        Assert.Single(findings, f => f.Kind == IndexDesignFindingKind.FloatOrRealIndexKeyColumn);
-    }
-
-    [Fact]
-    public void FloatColumn_NotAKeyColumn_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        var index = new CatalogIndex("IX_Prices_CustomerId", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], ["Amount"]);
-        catalog.AddOrReplace(Table(
-            "dbo", "Prices",
-            [Column("CustomerId", IntType), Column("Amount", new SqlType(SqlTypeCategory.Float))],
-            [index]));
-
-        var findings = IndexDesignScanner.Scan(catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.FloatOrRealIndexKeyColumn);
-    }
-
-    [Fact]
-    public void FloatKeyColumn_OnDisabledIndex_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        var index = new CatalogIndex("IX_Prices_Amount", CatalogIndexKind.Index, IsUnique: false, ["Amount"], [], IsDisabled: true);
-        catalog.AddOrReplace(Table("dbo", "Prices", [Column("Amount", new SqlType(SqlTypeCategory.Float))], [index]));
-
-        var findings = IndexDesignScanner.Scan(catalog);
-
-        Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.FloatOrRealIndexKeyColumn);
-    }
-
-    [Fact]
     public void StatisticsMarkedNoRecompute_Fires()
     {
         var catalog = new DatabaseCatalog();

@@ -18,8 +18,6 @@ public enum IndexDesignFindingKind
 
     FilterColumnNotInIndex,
 
-    FloatOrRealIndexKeyColumn,
-
     NoRecomputeStatistics,
 
 

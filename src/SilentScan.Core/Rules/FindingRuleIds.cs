@@ -191,7 +191,6 @@ public static class FindingRuleIds
     public const string IndexDesignSubsumedIndexRuleId = "silentscan/index-design/subsumed-index";
     public const string IndexDesignUnindexedForeignKeyRuleId = "silentscan/index-design/unindexed-foreign-key";
     public const string IndexDesignFilterColumnNotInIndexRuleId = "silentscan/index-design/filter-column-not-in-index";
-    public const string IndexDesignFloatOrRealIndexKeyColumnRuleId = "silentscan/index-design/float-or-real-index-key-column";
     public const string IndexDesignNoRecomputeStatisticsRuleId = "silentscan/index-design/no-recompute-statistics";
     public const string IndexDesignRowOrPageLockingDisabledRuleId = "silentscan/index-design/row-or-page-locking-disabled";
     public static string IndexDesignRuleId(IndexDesignFindingKind kind) => kind switch
@@ -202,7 +201,6 @@ public static class FindingRuleIds
         IndexDesignFindingKind.SubsumedIndex => IndexDesignSubsumedIndexRuleId,
         IndexDesignFindingKind.UnindexedForeignKey => IndexDesignUnindexedForeignKeyRuleId,
         IndexDesignFindingKind.FilterColumnNotInIndex => IndexDesignFilterColumnNotInIndexRuleId,
-        IndexDesignFindingKind.FloatOrRealIndexKeyColumn => IndexDesignFloatOrRealIndexKeyColumnRuleId,
         IndexDesignFindingKind.NoRecomputeStatistics => IndexDesignNoRecomputeStatisticsRuleId,
         IndexDesignFindingKind.RowOrPageLockingDisabled => IndexDesignRowOrPageLockingDisabledRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),

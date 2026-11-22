@@ -39,11 +39,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         CREATE TABLE dbo.O (X INT, Y INT);
         INSERT INTO dbo.O VALUES (1, 9), (2, 8);
         GO
-        CREATE TABLE dbo.Fl (F FLOAT NOT NULL, Dc DECIMAL(10,1) NOT NULL);
-        CREATE INDEX IX_Fl_F ON dbo.Fl(F);
-        CREATE INDEX IX_Fl_Dc ON dbo.Fl(Dc);
-        INSERT INTO dbo.Fl SELECT CAST(0.1 AS FLOAT) + CAST(0.2 AS FLOAT), CAST(0.1 AS DECIMAL(10,1)) + CAST(0.2 AS DECIMAL(10,1));
-        GO
         CREATE TABLE dbo.Pa (Id INT NOT NULL, Grp INT NOT NULL);
         CREATE TABLE dbo.Pb (PaId INT NOT NULL, Tag INT NOT NULL);
         INSERT INTO dbo.Pa VALUES (1, 1), (2, 1);
@@ -157,14 +152,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
 
         await ExecuteAsync("MERGE dbo.Tg t USING (SELECT Id FROM dbo.Tg WHERE 1 = 0) s ON t.Id = s.Id WHEN NOT MATCHED BY SOURCE THEN DELETE;");
         Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Tg;"));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.IndexDesignFloatOrRealIndexKeyColumnRuleId)]
-    public async Task FloatIndexKeyEquality_MissesSumOfTenthsWhileDecimalControlMatches()
-    {
-        Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Fl WITH (INDEX(IX_Fl_F)) WHERE F = 0.3;"));
-        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Fl WITH (INDEX(IX_Fl_Dc)) WHERE Dc = 0.3;"));
     }
 
     [Fact]

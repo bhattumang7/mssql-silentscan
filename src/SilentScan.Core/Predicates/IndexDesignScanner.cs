@@ -39,7 +39,6 @@ public static class IndexDesignScanner
             ScanClusteringKeyQuality(table, defaultTextByColumn, catalog.IdentifierComparer, findings);
             ScanDuplicateAndSubsumedIndexes(table, catalog.IdentifierComparer, findings);
             ScanFilteredIndexColumnCoverage(table, catalog.CompatibilityLevel, catalog.IdentifierComparer, findings);
-            ScanFloatOrRealIndexKeyColumns(table, catalog.IdentifierComparer, findings);
             ScanNoRecomputeStatistics(table, findings);
             ScanRowOrPageLockingDisabled(table, findings);
         }
@@ -376,34 +375,6 @@ public static class IndexDesignScanner
             }
 
             base.ExplicitVisit(node);
-        }
-    }
-
-    private static void ScanFloatOrRealIndexKeyColumns(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
-    {
-        foreach (var index in table.Indexes)
-        {
-            if (index.IsDisabled || index.KeyColumns.Count == 0)
-            {
-                continue;
-            }
-
-            var floatKeyColumns = index.KeyColumns
-                .Where(name => table.FindColumn(name, identifierComparer)?.Type?.Category is SqlTypeCategory.Real or SqlTypeCategory.Float)
-                .ToList();
-
-            if (floatKeyColumns.Count == 0)
-            {
-                continue;
-            }
-
-            findings.Add(new IndexDesignFinding(
-                IndexDesignFindingKind.FloatOrRealIndexKeyColumn,
-                table.QualifiedName,
-                index.Name,
-                $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' carries approximate (float/real) key column(s) {string.Join(", ", floatKeyColumns)} - IEEE-754 binary floating-point cannot represent every decimal value exactly, so an equality seek/comparison against it can silently miss a value a person would call 'the same number'.",
-                table.SourcePath,
-                table.SourceLine));
         }
     }
 
