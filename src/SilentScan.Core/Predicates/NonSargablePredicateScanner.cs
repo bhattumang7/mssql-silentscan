@@ -369,10 +369,28 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (node.Pattern is StringLiteral literal && RegexpSeekability.CannotDeriveRange(literal.Value))
+            if (node.Pattern is StringLiteral literal
+                && (RegexpSeekability.CannotDeriveRange(literal.Value) || FlagsStopTheSeek(node.Flags, columnRef, scopeChain, walker)))
             {
                 Add(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, columnName, detail: null, node, columnRef, scopeChain, walker);
             }
+        }
+
+        private static bool FlagsStopTheSeek(ScalarExpression? flags, ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (flags is not StringLiteral { Value: { } value })
+            {
+                return false;
+            }
+
+            if (value.Contains('m', StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return value.Contains('i', StringComparison.Ordinal)
+                && walker.ResolveCatalogColumn(columnRef, scopeChain) is { } resolved
+                && resolved.Column.Type?.Collation is { IsBinary: true };
         }
 
         private static ScalarExpression UnwrapParentheses(ScalarExpression expression)

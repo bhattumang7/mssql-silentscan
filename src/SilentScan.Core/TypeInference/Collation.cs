@@ -32,6 +32,11 @@ public sealed record Collation(string Name, CollationSource Source = CollationSo
         || Name.Contains("_BIN_", StringComparison.OrdinalIgnoreCase)
         || Name.Contains("_BIN2", StringComparison.OrdinalIgnoreCase);
 
+    public bool IsBinary =>
+        Name.EndsWith("_BIN", StringComparison.OrdinalIgnoreCase)
+        || Name.Contains("_BIN_", StringComparison.OrdinalIgnoreCase)
+        || Name.Contains("_BIN2", StringComparison.OrdinalIgnoreCase);
+
     public bool IsAccentInsensitive =>
         Name.EndsWith("_AI", StringComparison.OrdinalIgnoreCase)
         || Name.Contains("_AI_", StringComparison.OrdinalIgnoreCase);
