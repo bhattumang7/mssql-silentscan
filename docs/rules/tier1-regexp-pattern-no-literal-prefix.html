@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/tier1/regexp-pattern-no-literal-prefix</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">A REGEXP_LIKE predicate&#x27;s literal pattern has no anchored literal prefix, so the engine cannot derive a seek range from it and the predicate forces a scan.</p>
+  <p class="rationale">A REGEXP_LIKE predicate&#x27;s literal pattern has no anchored literal prefix, so the engine cannot derive a seek range from it and the predicate forces a scan. Also reported when the flags argument holds m (the engine then never derives a range), or holds i on a column with a binary collation.</p>
   <p class="rationale">REGEXP_LIKE only produces a seek-shaped plan when the engine can derive a bounded range of values the pattern can match. For a literal pattern, that derivation only succeeds when the whole pattern reduces to a leading anchor followed by nothing but literal characters - the regex equivalent of a LIKE prefix with no wildcard. Any other regex construct anywhere in the pattern - a missing anchor, a wildcard, a character class, a trailing anchor - defeats the derivation, and the engine falls back to scanning every row and evaluating the pattern per row.</p>
   <p class="rationale">This is a stronger, oracle-confirmed claim than &quot;might not seek&quot;: a literal pattern that isn&#x27;t a pure anchored-literal string cannot seek, full stop.</p>
   <h2>How can I fix it?</h2>
