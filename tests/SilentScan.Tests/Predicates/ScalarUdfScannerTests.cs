@@ -59,6 +59,30 @@ public sealed class ScalarUdfScannerTests
         Assert.Equal(ScalarUdfInlineability.NotInlineable, finding.Inlineability);
     }
 
+    [Fact]
+    public void EngineInlineableFunctionReferencedMoreThanOneHundredTimesInOneStatement_StillFires()
+    {
+        var columns = string.Join(", ", Enumerable.Range(0, 101).Select(i => $"dbo.fn_Compute(Id + {i}) AS C{i}"));
+
+        var findings = ScanSql(
+            ComputeFunctionAndTable + $"SELECT {columns} FROM dbo.T;",
+            compatibilityLevel: 160, engineIsInlineable: true);
+
+        Assert.NotEmpty(findings);
+    }
+
+    [Fact]
+    public void EngineInlineableFunctionReferencedOneHundredTimesInOneStatement_NeverFires()
+    {
+        var columns = string.Join(", ", Enumerable.Range(0, 100).Select(i => $"dbo.fn_Compute(Id + {i}) AS C{i}"));
+
+        var findings = ScanSql(
+            ComputeFunctionAndTable + $"SELECT {columns} FROM dbo.T;",
+            compatibilityLevel: 160, engineIsInlineable: true);
+
+        Assert.Empty(findings);
+    }
+
     [Theory]
     [InlineData("DISABLE_TSQL_SCALAR_UDF_INLINING")]
     [InlineData("QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_140")]

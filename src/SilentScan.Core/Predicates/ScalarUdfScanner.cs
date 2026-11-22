@@ -25,6 +25,8 @@ public static class ScalarUdfScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
+    private const int MaxInlinedReferencesPerStatement = 100;
+
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<string, ScalarUdfOrigin> scalarUdfMap) : IModuleRule
     {
 
@@ -54,9 +56,45 @@ public static class ScalarUdfScanner
 
         private void RecordInliningHints(TSqlFragment statement, IList<OptimizerHint> hints)
         {
-            if (hints.OfType<UseHintList>().SelectMany(list => list.Hints).Any(hint => DisablesInlining(hint.Value)))
+            if (hints.OfType<UseHintList>().SelectMany(list => list.Hints).Any(hint => DisablesInlining(hint.Value))
+                || InlineableReferenceCount(statement) > MaxInlinedReferencesPerStatement)
             {
                 _inliningDisabledStatements.Add((statement.StartOffset, statement.StartOffset + statement.FragmentLength));
+            }
+        }
+
+        private int InlineableReferenceCount(TSqlFragment statement)
+        {
+            var counter = new InlineableReferenceCounter(this);
+            statement.Accept(counter);
+            return counter.Count;
+        }
+
+        private bool IsInlineableReference(FunctionCall node)
+        {
+            if (node.CallTarget is not MultiPartIdentifierCallTarget)
+            {
+                return false;
+            }
+
+            var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.QualifyFunctionCall(node));
+            return catalog.TryGetScalarUdfInfo(qualifiedName, out var info)
+                && info is not null
+                && ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel, catalog.IsScopedConfigurationDisabled("TSQL_SCALAR_UDF_INLINING")).Inlineability == ScalarUdfInlineability.Inlineable;
+        }
+
+        private sealed class InlineableReferenceCounter(Rule owner) : TSqlFragmentVisitor
+        {
+            public int Count { get; private set; }
+
+            public override void ExplicitVisit(FunctionCall node)
+            {
+                if (owner.IsInlineableReference(node))
+                {
+                    Count++;
+                }
+
+                base.ExplicitVisit(node);
             }
         }
 
@@ -173,14 +211,23 @@ public static class ScalarUdfScanner
             }
         }
 
-        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            RecordInliningHints(node, node.OptimizerHints);
             RecordRowSource(node.UpdateSpecification);
+        }
 
-        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            RecordInliningHints(node, node.OptimizerHints);
             RecordRowSource(node.DeleteSpecification);
+        }
 
-        public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+        public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            RecordInliningHints(node, node.OptimizerHints);
             RecordRowSource(node.MergeSpecification);
+        }
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
