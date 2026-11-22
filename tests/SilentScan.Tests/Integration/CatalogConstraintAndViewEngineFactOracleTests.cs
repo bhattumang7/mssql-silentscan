@@ -13,6 +13,10 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE TABLE dbo.ChkNullSafe (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkNullSafe CHECK (Qty IS NOT NULL AND Qty > 0));
         GO
+        CREATE TABLE dbo.ChkIsnullRejects (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkIsnullRejects CHECK (ISNULL(Qty, 0) > 0));
+        GO
+        CREATE TABLE dbo.ChkCoalesceRejects (Id INT NOT NULL, Qty INT NULL, CONSTRAINT CK_ChkCoalesceRejects CHECK (COALESCE(Qty, 0) > 0));
+        GO
         GO
         CREATE TABLE dbo.DfNullable (Id INT NOT NULL, Status INT NULL CONSTRAINT DF_DfNullable DEFAULT 5);
         GO
@@ -58,6 +62,15 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         CREATE VIEW dbo.VNamed AS SELECT A, B, C FROM dbo.Base;
         GO
         """;
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.CheckConstraintNullNotHandledRuleId)]
+    public async Task CheckConstraintThatSubstitutesNullInsidePredicate_RejectsNull_UnlikeAPlainComparison()
+    {
+        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkIsnullRejects VALUES (1, NULL);"));
+        Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkCoalesceRejects VALUES (1, NULL);"));
+        Assert.Null(await SqlErrorNumberAsync("INSERT INTO dbo.ChkNull VALUES (3, NULL);"));
+    }
 
     [Fact]
     [Trait("Rule", FindingRuleIds.CheckConstraintNullNotHandledRuleId)]

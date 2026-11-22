@@ -16,6 +16,19 @@ public sealed class CheckConstraintScannerTests
     private static CatalogColumn Column(string name, bool isNullable = false, bool isIdentity = false) =>
         new(name, new SqlType(SqlTypeCategory.Int), isNullable, isIdentity, IsComputed: false, IsPersisted: false);
 
+    [Theory]
+    [InlineData("(ISNULL([Price],(0))>(0))")]
+    [InlineData("(COALESCE([Price],(0))>(0))")]
+    public void NullableColumnSubstitutedByAConstantInsideThePredicate_TheCheckDecidesNullItself_NeverFires(string definition)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Price", isNullable: true)]));
+        catalog.AddCheckConstraint(new CatalogCheckConstraint(
+            "CK_Orders_Price", "dbo.Orders", IsNotTrusted: false, IsDisabled: false, DefinitionText: definition));
+
+        Assert.Empty(CheckConstraintScanner.Scan(catalog));
+    }
+
     [Fact]
     public void NullableColumn_PredicateWithNoNullGuard_Fires()
     {

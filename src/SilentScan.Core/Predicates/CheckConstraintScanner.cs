@@ -116,5 +116,32 @@ public static class CheckConstraintScanner
 
             base.ExplicitVisit(node);
         }
+
+        public override void ExplicitVisit(CoalesceExpression node)
+        {
+            AddDirectColumns(node.Expressions);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(FunctionCall node)
+        {
+            if (node.FunctionName?.Value is { } name && name.Equals("ISNULL", StringComparison.OrdinalIgnoreCase))
+            {
+                AddDirectColumns(node.Parameters);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        private void AddDirectColumns(IEnumerable<ScalarExpression> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                if (expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers })
+                {
+                    names.Add(identifiers[^1].Value);
+                }
+            }
+        }
     }
 }
