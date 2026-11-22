@@ -317,7 +317,7 @@ public static class ScalarUdfScanner
                 return;
             }
 
-            var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel);
+            var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel, catalog.IsScopedConfigurationDisabled("TSQL_SCALAR_UDF_INLINING"));
             if (inlineability == ScalarUdfInlineability.Inlineable
                 && !_inliningDisabledStatements.Any(r => node.StartOffset >= r.Start && node.StartOffset < r.End))
             {

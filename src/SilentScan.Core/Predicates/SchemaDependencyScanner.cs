@@ -35,7 +35,7 @@ public static class SchemaDependencyScanner
                     continue;
                 }
 
-                var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel);
+                var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel, catalog.IsScopedConfigurationDisabled("TSQL_SCALAR_UDF_INLINING"));
 
                 findings.Add(new ScalarUdfFinding(
                     ScalarUdfFindingKind.SchemaDependency,

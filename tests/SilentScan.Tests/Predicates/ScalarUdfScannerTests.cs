@@ -7,13 +7,18 @@ namespace SilentScan.Tests.Predicates;
 
 public sealed class ScalarUdfScannerTests
 {
-    private static IReadOnlyList<ScalarUdfFinding> ScanSql(string sql, int? compatibilityLevel = null, bool? engineIsInlineable = null)
+    private static IReadOnlyList<ScalarUdfFinding> ScanSql(string sql, int? compatibilityLevel = null, bool? engineIsInlineable = null, bool inliningSwitchedOff = false)
     {
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
         catalog.CompatibilityLevel = compatibilityLevel;
+        if (inliningSwitchedOff)
+        {
+            catalog.DisabledScopedConfigurations.Add("TSQL_SCALAR_UDF_INLINING");
+        }
+
         if (engineIsInlineable is { } inlineable)
         {
             catalog.TryGetScalarUdfInfo("dbo.fn_Compute", out var info);
@@ -41,6 +46,17 @@ public sealed class ScalarUdfScannerTests
         var findings = ScanSql(ComputeFunctionAndTable + statement, compatibilityLevel: 150, engineIsInlineable: true);
 
         Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void EngineInlineableFunctionWithInliningSwitchedOffForTheDatabase_StillFires()
+    {
+        var findings = ScanSql(
+            ComputeFunctionAndTable + "SELECT Id FROM dbo.T WHERE dbo.fn_Compute(Id) = 1;",
+            compatibilityLevel: 160, engineIsInlineable: true, inliningSwitchedOff: true);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(ScalarUdfInlineability.NotInlineable, finding.Inlineability);
     }
 
     [Theory]

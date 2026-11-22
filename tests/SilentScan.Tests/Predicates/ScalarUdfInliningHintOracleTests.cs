@@ -43,4 +43,15 @@ public sealed class ScalarUdfInliningHintOracleTests : OracleTestFixture
     {
         Assert.Equal(RowCount, await UdfExecutionsAsync($"SELECT Id FROM dbo.Source WHERE dbo.Plain(Id) > 0 {option};"));
     }
+
+    [Fact]
+    public async Task InlineableFunctionWithInliningSwitchedOffForTheDatabase_IsCalledOncePerRow()
+    {
+        const string statement = "SELECT Id FROM dbo.Source WHERE dbo.Plain(Id) > 0;";
+        Assert.Equal(0, await UdfExecutionsAsync(statement));
+
+        await ExecuteAsync("ALTER DATABASE SCOPED CONFIGURATION SET TSQL_SCALAR_UDF_INLINING = OFF;");
+
+        Assert.Equal(RowCount, await UdfExecutionsAsync(statement));
+    }
 }

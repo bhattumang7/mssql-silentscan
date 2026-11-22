@@ -7,11 +7,16 @@ public static class ScalarUdfInlineabilityClassifier
     private const int MaxInlineableTableReferenceCount = 49;
     private const int MinInliningCompatibilityLevel = 150;
 
-    public static (ScalarUdfInlineability Inlineability, string? Blocker) Classify(ScalarUdfInfo info, int? compatibilityLevel)
+    public static (ScalarUdfInlineability Inlineability, string? Blocker) Classify(ScalarUdfInfo info, int? compatibilityLevel, bool inliningSwitchedOff = false)
     {
         if (info.Kind == ScalarUdfKind.Clr)
         {
             return (ScalarUdfInlineability.NotInlineable, "CLR scalar UDFs are never inlined");
+        }
+
+        if (inliningSwitchedOff)
+        {
+            return (ScalarUdfInlineability.NotInlineable, "the database has switched the TSQL_SCALAR_UDF_INLINING database scoped configuration off");
         }
 
         if (compatibilityLevel is { } level && level < MinInliningCompatibilityLevel)
