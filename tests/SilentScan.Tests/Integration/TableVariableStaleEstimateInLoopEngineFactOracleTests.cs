@@ -20,8 +20,7 @@ public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTest
         GO
         """;
 
-    [Fact]
-    public async Task ReadStatementInsideGrowingLoop_KeepsEstimatingOneRowWhileActualRowsClimbsToTheLoopCount()
+    private async Task<string> CaptureLoopPlanXmlAsync(string readStatementOption)
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
         await connection.OpenAsync();
@@ -41,7 +40,7 @@ public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTest
                 INSERT INTO @Accumulator (RowId, Amount)
                 SELECT RowId, Amount FROM dbo.SourceRows WHERE RowId = @NextRowId;
 
-                SELECT @total = SUM(Amount) FROM @Accumulator;
+                SELECT @total = SUM(Amount) FROM @Accumulator{readStatementOption};
 
                 SET @NextRowId += 1;
             END;
@@ -75,6 +74,13 @@ public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTest
 
         var planXml = planXmlBuilder.ToString();
         Assert.NotEmpty(planXml);
+        return planXml;
+    }
+
+    [Fact]
+    public async Task ReadStatementInsideGrowingLoop_KeepsEstimatingOneRowWhileActualRowsClimbsToTheLoopCount()
+    {
+        var planXml = await CaptureLoopPlanXmlAsync(string.Empty);
 
         var estimateMatches = EstimateRegex().Matches(planXml);
         Assert.True(estimateMatches.Count > 1, planXml);
@@ -87,8 +93,24 @@ public sealed partial class TableVariableStaleEstimateInLoopEngineFactOracleTest
             $"expected actual rows to climb near {LoopIterations}, but the highest observed was {maxActualRows}");
     }
 
+    [Fact]
+    public async Task ReadStatementWithOptionRecompile_RefreshesItsEstimateOnEveryIteration()
+    {
+        var planXml = await CaptureLoopPlanXmlAsync(" OPTION (RECOMPILE)");
+
+        var estimates = RecompiledEstimateRegex().Matches(planXml)
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .ToList();
+
+        Assert.True(estimates.Count > 1, planXml);
+        Assert.True(estimates.Max() > 50, $"highest estimate was {estimates.Max()}");
+    }
+
     [GeneratedRegex("StatementText=\"SELECT @total = SUM\\(Amount\\) FROM @Accumulator\"[^>]*StatementEstRows=\"([^\"]*)\"")]
     private static partial Regex EstimateRegex();
+
+    [GeneratedRegex("(?s)StatementText=\"SELECT @total = SUM\\(Amount\\) FROM @Accumulator OPTION \\(RECOMPILE\\)\".*?<RelOp [^>]*PhysicalOp=\"Table Scan\"[^>]*EstimateRows=\"([^\"]*)\"")]
+    private static partial Regex RecompiledEstimateRegex();
 
     [GeneratedRegex("ActualRows=\"([0-9]+)\"")]
     private static partial Regex ActualRowsRegex();

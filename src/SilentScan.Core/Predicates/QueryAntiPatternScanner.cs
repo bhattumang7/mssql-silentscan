@@ -555,42 +555,64 @@ public static class QueryAntiPatternScanner
                 _ = node;
             }
 
+            private int _recompileDepth;
+
             public override void ExplicitVisit(FromClause node)
             {
-                foreach (var tableReference in node.TableReferences)
+                if (_recompileDepth == 0)
                 {
-                    foreach (var variableRef in CollectVariableTableReferences(tableReference)
-                        .Where(v => knownTableVariables.Contains(v.Variable.Name)))
+                    foreach (var tableReference in node.TableReferences)
                     {
-                        readSites.Add(variableRef);
+                        foreach (var variableRef in CollectVariableTableReferences(tableReference)
+                            .Where(v => knownTableVariables.Contains(v.Variable.Name)))
+                        {
+                            readSites.Add(variableRef);
+                        }
                     }
                 }
 
                 base.ExplicitVisit(node);
             }
 
-            public override void ExplicitVisit(InsertStatement node)
+            public override void ExplicitVisit(SelectStatement node) => VisitWithRecompileScope(node, () => base.ExplicitVisit(node));
+
+            public override void ExplicitVisit(InsertStatement node) => VisitWithRecompileScope(node, () =>
             {
                 RecordWrite(node.InsertSpecification.Target, null);
                 base.ExplicitVisit(node);
-            }
+            });
 
-            public override void ExplicitVisit(UpdateStatement node)
+            public override void ExplicitVisit(UpdateStatement node) => VisitWithRecompileScope(node, () =>
             {
                 RecordWrite(node.UpdateSpecification.Target, node.UpdateSpecification.OutputIntoClause);
                 base.ExplicitVisit(node);
-            }
+            });
 
-            public override void ExplicitVisit(DeleteStatement node)
+            public override void ExplicitVisit(DeleteStatement node) => VisitWithRecompileScope(node, () =>
             {
                 RecordWrite(node.DeleteSpecification.Target, node.DeleteSpecification.OutputIntoClause);
                 base.ExplicitVisit(node);
-            }
+            });
 
-            public override void ExplicitVisit(MergeStatement node)
+            public override void ExplicitVisit(MergeStatement node) => VisitWithRecompileScope(node, () =>
             {
                 RecordWrite(node.MergeSpecification.Target, node.MergeSpecification.OutputIntoClause);
                 base.ExplicitVisit(node);
+            });
+
+            private void VisitWithRecompileScope(StatementWithCtesAndXmlNamespaces statement, Action visit)
+            {
+                var recompiles = HasOptionRecompile(statement);
+                if (recompiles)
+                {
+                    _recompileDepth++;
+                }
+
+                visit();
+                if (recompiles)
+                {
+                    _recompileDepth--;
+                }
             }
 
             private void RecordWrite(TableReference target, OutputIntoClause? outputInto)

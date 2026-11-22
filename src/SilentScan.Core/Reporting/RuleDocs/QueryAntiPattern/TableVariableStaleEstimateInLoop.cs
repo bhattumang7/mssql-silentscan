@@ -33,6 +33,10 @@ internal static class TableVariableStaleEstimateInLoop
             estimate as the loop runs, without ever triggering a recompile to correct it, because
             nothing about a table variable's growth is a statistics-invalidation event the way it
             is for a permanent or temp table.
+
+            A read statement that carries OPTION (RECOMPILE) is not reported: oracle-confirmed that
+            such a statement is recompiled on every iteration and its estimate follows the growing
+            table variable, while the same loop without the hint keeps the first iteration's estimate.
             """,
         HowToFixIt: """
             Replace the table variable with a #temp table for any loop that both grows it and reads

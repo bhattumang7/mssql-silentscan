@@ -185,6 +185,32 @@ public sealed class QueryAntiPatternScannerTests
     }
 
     [Fact]
+    public void TableVariableReadInLoopByAStatementWithOptionRecompile_NeverFiresStaleEstimate()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); DECLARE @i INT = 0; DECLARE @c INT; "
+            + "WHILE @i < 5 BEGIN "
+            + "INSERT INTO @t SELECT Id FROM dbo.Big WHERE Id = @i; "
+            + "SELECT @c = COUNT(Id) FROM @t OPTION (RECOMPILE); "
+            + "SET @i = @i + 1; END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableStaleEstimateInLoop);
+    }
+
+    [Fact]
+    public void TableVariableReadInLoopWithOptionRecompileOnlyOnAnotherStatement_StillFiresStaleEstimate()
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); DECLARE @i INT = 0; DECLARE @c INT; "
+            + "WHILE @i < 5 BEGIN "
+            + "INSERT INTO @t SELECT Id FROM dbo.Big WHERE Id = @i OPTION (RECOMPILE); "
+            + "SELECT @c = COUNT(Id) FROM @t; "
+            + "SET @i = @i + 1; END;");
+
+        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableStaleEstimateInLoop);
+    }
+
+    [Fact]
     public void TableVariableReadOnlyNoWriteInLoop_NeverFires()
     {
         var findings = Scan(
