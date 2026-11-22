@@ -2,7 +2,7 @@ namespace SilentScan.Tests.Architecture;
 
 public sealed class OraclePairingBaselineTests
 {
-    private const int MaxUnpairedRules = 109;
+    private const int MaxUnpairedRules = 108;
 
     private static string BaselinePath()
     {
