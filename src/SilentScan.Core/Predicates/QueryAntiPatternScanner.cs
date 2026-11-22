@@ -372,7 +372,6 @@ public static class QueryAntiPatternScanner
         private void InspectMergeHazards(MergeSpecification spec)
         {
             InspectMergeMissingHoldlock(spec);
-            InspectMergeUnconditionalDelete(spec);
         }
 
         private bool _serializableIsolationSet;
@@ -456,30 +455,6 @@ public static class QueryAntiPatternScanner
                 {
                     matchedColumns.Add(identifiers[^1].Value);
                 }
-            }
-        }
-
-        private void InspectMergeUnconditionalDelete(MergeSpecification spec)
-        {
-            foreach (var clause in spec.ActionClauses)
-            {
-                if (clause.Action is not DeleteMergeAction || clause.SearchCondition is not null)
-                {
-                    continue;
-                }
-
-                var matchKindText = clause.Condition switch
-                {
-                    MergeCondition.NotMatchedBySource => "WHEN NOT MATCHED BY SOURCE THEN DELETE",
-                    MergeCondition.Matched => "WHEN MATCHED THEN DELETE",
-                    _ => "THEN DELETE",
-                };
-
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.MergeUnconditionalDelete, sourcePath,
-                    clause.StartLine, clause.StartColumn,
-                    $"{matchKindText} with no additional AND condition of its own - {(clause.Condition == MergeCondition.NotMatchedBySource ? "deletes every target row absent from the USING source's result set" : "deletes every row the join matched")}.",
-                    FindingConfidence.Medium));
             }
         }
 

@@ -586,37 +586,6 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
     }
 
-    [Fact]
-    public void MergeUnconditionalWhenMatchedDelete_Fires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A WITH (HOLDLOCK) AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN MATCHED THEN DELETE;");
-
-        var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeUnconditionalDelete);
-        Assert.Equal(FindingConfidence.Medium, finding.Confidence);
-    }
-
-    [Fact]
-    public void MergeUnconditionalWhenNotMatchedBySourceDelete_Fires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A WITH (HOLDLOCK) AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN NOT MATCHED BY SOURCE THEN DELETE;");
-
-        Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeUnconditionalDelete);
-    }
-
-    [Fact]
-    public void MergeConditionallyQualifiedDelete_NeverFires()
-    {
-        var findings = Scan(
-            "MERGE dbo.A WITH (HOLDLOCK) AS t USING dbo.B AS s ON t.Id = s.AId "
-            + "WHEN MATCHED AND s.AId > 0 THEN DELETE;");
-
-        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeUnconditionalDelete);
-    }
-
     private static DatabaseCatalog CatalogWithCouponTable(bool ignoreDupKey)
     {
         var ddl = "CREATE TABLE dbo.Coupon (Code VARCHAR(20) NOT NULL, Pct INT NOT NULL);";

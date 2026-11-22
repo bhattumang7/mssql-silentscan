@@ -51,7 +51,6 @@ public static class FindingRuleIds
     public const string QueryAntiPatternDistinctMaskingJoinFanoutRuleId = "silentscan/query/distinct-masking-join-fanout";
     public const string QueryAntiPatternUnqualifiedTableReferenceRuleId = "silentscan/query/unqualified-table-reference";
     public const string QueryAntiPatternMergeMissingHoldlockRuleId = "silentscan/query/merge-missing-holdlock";
-    public const string QueryAntiPatternMergeUnconditionalDeleteRuleId = "silentscan/query/merge-unconditional-delete";
     public const string QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId = "silentscan/query/multi-row-insert-ignore-dup-key-drop";
     public const string IndexCoverageKeyLookupProneIndexRuleId = "silentscan/index/key-lookup-prone";
     public const string TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId = "silentscan/trigger/multi-row-unsafe-single-row-assignment";
@@ -291,7 +290,6 @@ public static class FindingRuleIds
         QueryAntiPatternFindingKind.DistinctMaskingJoinFanout => QueryAntiPatternDistinctMaskingJoinFanoutRuleId,
         QueryAntiPatternFindingKind.UnqualifiedTableReference => QueryAntiPatternUnqualifiedTableReferenceRuleId,
         QueryAntiPatternFindingKind.MergeMissingHoldlock => QueryAntiPatternMergeMissingHoldlockRuleId,
-        QueryAntiPatternFindingKind.MergeUnconditionalDelete => QueryAntiPatternMergeUnconditionalDeleteRuleId,
         QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop => QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled QueryAntiPatternFindingKind."),
     };

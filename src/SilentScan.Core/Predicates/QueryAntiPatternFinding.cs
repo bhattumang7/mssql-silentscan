@@ -24,7 +24,6 @@ public enum QueryAntiPatternFindingKind
 
     MergeMissingHoldlock,
 
-    MergeUnconditionalDelete,
 
 
 

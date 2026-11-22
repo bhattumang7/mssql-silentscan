@@ -68,7 +68,6 @@ public static class RuleDocCatalog
         [QueryAntiPattern.DistinctMaskingJoinFanout.RuleId] = QueryAntiPattern.DistinctMaskingJoinFanout.Content,
         [QueryAntiPattern.UnqualifiedTableReference.RuleId] = QueryAntiPattern.UnqualifiedTableReference.Content,
         [QueryAntiPattern.MergeMissingHoldlock.RuleId] = QueryAntiPattern.MergeMissingHoldlock.Content,
-        [QueryAntiPattern.MergeUnconditionalDelete.RuleId] = QueryAntiPattern.MergeUnconditionalDelete.Content,
         [QueryAntiPattern.MultiRowInsertIgnoreDupKeyDrop.RuleId] = QueryAntiPattern.MultiRowInsertIgnoreDupKeyDrop.Content,
 
         [TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.RuleId] = TriggerCorrectness.MultiRowUnsafeSingleRowAssignment.Content,

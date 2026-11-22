@@ -25,10 +25,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         INSERT INTO dbo.X VALUES (1), (2), (3);
         INSERT INTO dbo.Y VALUES (1), (2), (3), (4);
         GO
-        CREATE TABLE dbo.Tg (Id INT PRIMARY KEY);
-        CREATE TABLE dbo.TgCond (Id INT PRIMARY KEY);
-        INSERT INTO dbo.Tg VALUES (1), (2), (3);
-        INSERT INTO dbo.TgCond VALUES (1), (2), (3);
         GO
         CREATE TABLE dbo.W (Id INT, V INT);
         INSERT INTO dbo.W VALUES (1, 0), (2, 0), (3, 0);
@@ -141,17 +137,6 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
     {
         Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.X x JOIN dbo.Y y ON x.a = y.b WHERE x.a = 1 AND y.b = 2;"));
         Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.X x JOIN dbo.Y y ON x.a = y.b WHERE x.a = 1 AND y.b = 1;"));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.QueryAntiPatternMergeUnconditionalDeleteRuleId)]
-    public async Task MergeNotMatchedBySourceDelete_WithEmptySourceDeletesEverything_ConditionedBranchDoesNot()
-    {
-        await ExecuteAsync("MERGE dbo.TgCond t USING (SELECT Id FROM dbo.TgCond WHERE 1 = 0) s ON t.Id = s.Id WHEN NOT MATCHED BY SOURCE AND t.Id > 100 THEN DELETE;");
-        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.TgCond;"));
-
-        await ExecuteAsync("MERGE dbo.Tg t USING (SELECT Id FROM dbo.Tg WHERE 1 = 0) s ON t.Id = s.Id WHEN NOT MATCHED BY SOURCE THEN DELETE;");
-        Assert.Equal(0, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.Tg;"));
     }
 
     [Fact]

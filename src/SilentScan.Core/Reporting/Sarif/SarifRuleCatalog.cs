@@ -41,7 +41,6 @@ public static class SarifRuleCatalog
     public const string QueryAntiPatternDistinctMaskingJoinFanoutRuleId = FindingRuleIds.QueryAntiPatternDistinctMaskingJoinFanoutRuleId;
     public const string QueryAntiPatternUnqualifiedTableReferenceRuleId = FindingRuleIds.QueryAntiPatternUnqualifiedTableReferenceRuleId;
     public const string QueryAntiPatternMergeMissingHoldlockRuleId = FindingRuleIds.QueryAntiPatternMergeMissingHoldlockRuleId;
-    public const string QueryAntiPatternMergeUnconditionalDeleteRuleId = FindingRuleIds.QueryAntiPatternMergeUnconditionalDeleteRuleId;
     public const string QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId = FindingRuleIds.QueryAntiPatternMultiRowInsertIgnoreDupKeyDropRuleId;
     public const string IndexCoverageKeyLookupProneIndexRuleId = FindingRuleIds.IndexCoverageKeyLookupProneIndexRuleId;
     public const string TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId = FindingRuleIds.TriggerCorrectnessMultiRowUnsafeSingleRowAssignmentRuleId;
