@@ -5,6 +5,10 @@ namespace SilentScan.Core.Predicates;
 
 public static class AnsiPaddingOffColumnScanner
 {
+    private static bool TrimsTrailingPadding(CatalogColumn column) => column.Type is { } type
+        && (type.Category is SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar or SqlTypeCategory.VarBinary
+            || column.IsNullable && type.Category is SqlTypeCategory.Char or SqlTypeCategory.Binary);
+
     public static IReadOnlyList<AnsiPaddingOffColumnFinding> Scan(DatabaseCatalog catalog)
     {
         var findings = new List<AnsiPaddingOffColumnFinding>();
@@ -18,7 +22,7 @@ public static class AnsiPaddingOffColumnScanner
                     continue;
                 }
 
-                if (column.Type is not { Category: SqlTypeCategory.VarChar or SqlTypeCategory.NVarChar or SqlTypeCategory.VarBinary })
+                if (!TrimsTrailingPadding(column))
                 {
                     continue;
                 }

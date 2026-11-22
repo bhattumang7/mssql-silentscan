@@ -13,7 +13,7 @@ public sealed class AnsiPaddingOffColumnScannerOracleTests : OracleTestFixture
 
     protected override string Ddl => """
         SET ANSI_PADDING OFF;
-        CREATE TABLE dbo.NonPadded (Code VARCHAR(20), Bin VARBINARY(20), FixedCode CHAR(10), N INT);
+        CREATE TABLE dbo.NonPadded (Code VARCHAR(20), Bin VARBINARY(20), FixedCode CHAR(10) NULL, FixedBin BINARY(10) NULL, RequiredCode CHAR(10) NOT NULL DEFAULT '', RequiredBin BINARY(10) NOT NULL DEFAULT 0x00, N INT);
         GO
         SET ANSI_PADDING ON;
         CREATE TABLE dbo.Padded (Code VARCHAR(20));
@@ -50,13 +50,32 @@ public sealed class AnsiPaddingOffColumnScannerOracleTests : OracleTestFixture
         Assert.Contains(findings, f => f.TableQualifiedName == "dbo.NonPadded" && f.ColumnName == "Bin");
     }
 
-    [Fact]
-    public async Task FixedLengthCharColumn_CreatedWithAnsiPaddingOff_NeverFlagged()
+    [Theory]
+    [InlineData("FixedCode", "'ab  '", 2)]
+    [InlineData("FixedBin", "0x4100", 1)]
+    public async Task NullableFixedLengthColumn_CreatedWithAnsiPaddingOff_TrimsLikeItsVariableLengthCounterpart_AndScannerFlagsIt(string column, string value, int storedLength)
     {
+        await ExecuteAsync($"SET ANSI_PADDING ON; INSERT INTO dbo.NonPadded ({column}) VALUES ({value});");
+        Assert.Equal(storedLength, await ScalarAsync<int>($"SELECT TOP (1) DATALENGTH({column}) FROM dbo.NonPadded;"));
+
         var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
         var findings = AnsiPaddingOffColumnScanner.Scan(catalog);
 
-        Assert.DoesNotContain(findings, f => f.TableQualifiedName == "dbo.NonPadded" && f.ColumnName == "FixedCode");
+        Assert.Contains(findings, f => f.TableQualifiedName == "dbo.NonPadded" && f.ColumnName == column);
+    }
+
+    [Theory]
+    [InlineData("RequiredCode", "'ab  '", 10)]
+    [InlineData("RequiredBin", "0x4100", 10)]
+    public async Task RequiredFixedLengthColumn_CreatedWithAnsiPaddingOff_StaysPadded_AndIsNeverFlagged(string column, string value, int storedLength)
+    {
+        await ExecuteAsync($"SET ANSI_PADDING ON; INSERT INTO dbo.NonPadded ({column}) VALUES ({value});");
+        Assert.Equal(storedLength, await ScalarAsync<int>($"SELECT TOP (1) DATALENGTH({column}) FROM dbo.NonPadded;"));
+
+        var catalog = await new LiveCatalogReader(Options.BuildConnectionString(DatabaseName)).ReadAsync();
+        var findings = AnsiPaddingOffColumnScanner.Scan(catalog);
+
+        Assert.DoesNotContain(findings, f => f.TableQualifiedName == "dbo.NonPadded" && f.ColumnName == column);
     }
 
     [Fact]
