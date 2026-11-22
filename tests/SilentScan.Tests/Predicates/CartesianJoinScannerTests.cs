@@ -37,6 +37,8 @@ public sealed class CartesianJoinScannerTests
     [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT COUNT(*) AS c FROM dbo.Config) x;")]
     [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT 1 AS a) x;")]
     [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (VALUES (1)) x(a);")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT TOP (1) Val FROM dbo.Config ORDER BY Id) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT TOP 1 Val FROM dbo.Config) x;")]
     public void OneSideIsAProvablyOneRowSource_NeverFires(string statement)
     {
         Assert.Empty(ScanWithCatalog(statement));
