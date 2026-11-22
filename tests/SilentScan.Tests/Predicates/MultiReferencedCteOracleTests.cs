@@ -79,11 +79,22 @@ public sealed class MultiReferencedCteOracleTests : OracleTestFixture
     }
 
     [Fact]
-    public async Task CteReferencedTwice_BaseTableScannedTwice()
+    public async Task AggregatingCteReferencedTwice_BaseTableScannedTwice()
     {
         var scanCount = await CaptureBaseTableScanCountAsync(
-            "WITH cte AS (SELECT Id, Val FROM dbo.T) SELECT a.Id FROM cte a JOIN cte b ON a.Id = b.Id;");
+            "WITH cte AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) SELECT a.Id FROM cte a JOIN cte b ON a.Id = b.Id;");
 
         Assert.Equal(2, scanCount);
+    }
+
+    [Fact]
+    public async Task PlainCteReferencedTwice_CostsExactlyWhatReadingTheTableTwiceCosts()
+    {
+        var viaCte = await CaptureBaseTableScanCountAsync(
+            "WITH cte AS (SELECT Id, Val FROM dbo.T) SELECT a.Id FROM cte a JOIN cte b ON a.Id = b.Id;");
+        var direct = await CaptureBaseTableScanCountAsync(
+            "SELECT a.Id FROM dbo.T a JOIN dbo.T b ON a.Id = b.Id;");
+
+        Assert.Equal(direct, viaCte);
     }
 }

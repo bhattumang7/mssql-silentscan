@@ -54,12 +54,54 @@ public static class MultiReferencedCteScanner
                     referenceLines.AddRange(CollectReferences(other.QueryExpression, name));
                 }
 
-                if (referenceLines.Count >= 2)
+                if (referenceLines.Count >= 2 && !IsPlainSingleTableRead(cte, ctes))
                 {
                     Findings.Add(new MultiReferencedCteFinding(
                         name, referenceLines.Count, [.. referenceLines.OrderBy(l => l)],
                         sourcePath, cte.StartLine));
                 }
+            }
+        }
+
+        private bool IsPlainSingleTableRead(CommonTableExpression cte, IList<CommonTableExpression> ctes)
+        {
+            if (cte.QueryExpression is not QuerySpecification
+                {
+                    TopRowFilter: null,
+                    GroupByClause: null,
+                    HavingClause: null,
+                    UniqueRowFilter: UniqueRowFilter.NotSpecified,
+                    FromClause.TableReferences: [NamedTableReference { SchemaObject: var source }],
+                } specification
+                || cte.QueryExpression.OrderByClause is not null
+                || (source.SchemaIdentifier is null && ctes.Any(c => identifierComparer.Equals(c.ExpressionName.Value, source.BaseIdentifier.Value))))
+            {
+                return false;
+            }
+
+            var inspector = new CostlyConstructFinder();
+            specification.Accept(inspector);
+            return !inspector.Found;
+        }
+
+        private sealed class CostlyConstructFinder : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(FunctionCall node) => Found = true;
+
+            public override void ExplicitVisit(ScalarSubquery node) => Found = true;
+
+            public override void ExplicitVisit(ExistsPredicate node) => Found = true;
+
+            public override void ExplicitVisit(InPredicate node)
+            {
+                if (node.Subquery is not null)
+                {
+                    Found = true;
+                }
+
+                base.ExplicitVisit(node);
             }
         }
 

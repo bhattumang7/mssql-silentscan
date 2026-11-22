@@ -26,6 +26,11 @@ internal static class MultiReferencedCte
             counted toward this finding: that self-reference is the structurally mandated recursion
             mechanism itself, not the optional re-invocation this rule targets. Only references
             reachable from OUTSIDE the CTE's own query expression count.
+
+            A CTE whose body is only a plain read of one base table (a column list with an optional
+            simple filter, no aggregation, DISTINCT, TOP, join, function call or subquery) is not
+            reported: referencing it twice costs exactly what writing the table twice costs, so
+            there is no repeated work to avoid.
             """,
         HowToFixIt: """
             Materialize the CTE's result into a #temp table or table variable if it's referenced
@@ -38,24 +43,24 @@ internal static class MultiReferencedCte
                 NoncompliantSql: """
                     ;WITH RecentOrders AS
                     (
-                        SELECT CustomerId, OrderId, Amount
+                        SELECT CustomerId, COUNT(*) AS OrderCount, MAX(OrderDate) AS LastOrderDate
                         FROM dbo.Orders
-                        WHERE OrderDate >= DATEADD(day, -30, GETDATE())
+                        GROUP BY CustomerId
                     )
-                    SELECT r1.CustomerId, r1.OrderId, r2.OrderId AS AlsoRecentOrderId
+                    SELECT r1.CustomerId, r1.OrderCount, r2.OrderCount AS OtherOrderCount
                     FROM RecentOrders r1
-                    JOIN RecentOrders r2 ON r1.CustomerId = r2.CustomerId AND r1.OrderId <> r2.OrderId;
+                    JOIN RecentOrders r2 ON r1.CustomerId = r2.CustomerId AND r1.LastOrderDate <> r2.LastOrderDate;
                     """,
                 NoncompliantExplanation: "RecentOrders is referenced twice (r1 and r2) - its defining query, including the full scan/filter of dbo.Orders, runs twice independently rather than once and being reused.",
                 CompliantSql: """
-                    SELECT CustomerId, OrderId, Amount
+                    SELECT CustomerId, COUNT(*) AS OrderCount, MAX(OrderDate) AS LastOrderDate
                     INTO #RecentOrders
                     FROM dbo.Orders
-                    WHERE OrderDate >= DATEADD(day, -30, GETDATE());
+                    GROUP BY CustomerId;
 
-                    SELECT r1.CustomerId, r1.OrderId, r2.OrderId AS AlsoRecentOrderId
+                    SELECT r1.CustomerId, r1.OrderCount, r2.OrderCount AS OtherOrderCount
                     FROM #RecentOrders r1
-                    JOIN #RecentOrders r2 ON r1.CustomerId = r2.CustomerId AND r1.OrderId <> r2.OrderId;
+                    JOIN #RecentOrders r2 ON r1.CustomerId = r2.CustomerId AND r1.LastOrderDate <> r2.LastOrderDate;
                     """,
                 CompliantExplanation: "The defining query runs exactly once into a real temp table, which both references then read from directly - no repeated execution of the underlying query."),
         ]);
