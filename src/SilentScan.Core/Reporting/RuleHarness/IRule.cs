@@ -29,12 +29,3 @@ public interface ICatalogRule : IRule
 {
     IReadOnlyList<IFinding> Scan(RuleContext context);
 }
-
-public interface ICrossModuleRule : IRule
-{
-    IReadOnlyList<IFinding> Scan(IReadOnlyList<SqlParseResult> parseResults, RuleContext context);
-
-    IModuleRule? CreateModuleRule(SqlParseResult parseResult, RuleContext context) => null;
-
-    IReadOnlyList<IFinding> Aggregate(RuleContext context, IReadOnlyList<IModuleRule> moduleRules) => [];
-}

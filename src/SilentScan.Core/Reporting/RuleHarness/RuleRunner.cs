@@ -70,17 +70,13 @@ public static class RuleRunner
         var perFileRules = rules.OfType<IPerFileRule>().ToList();
         var rawPerFileFindings = RunPerFileRules(perFileRules, parseResults, context, progress, crashes);
 
-        var crossModuleRules = rules.OfType<ICrossModuleRule>().ToList();
-        var rawCrossModuleFindings = RunCrossModuleRules(crossModuleRules, parseResults, context, crashes);
-
         foreach (var rule in rules)
         {
             IReadOnlyList<IFinding> raw = rule switch
             {
                 IPerFileRule perFileRule => rawPerFileFindings[perFileRule.Id],
                 ICatalogRule catalogRule => RunCatalogRule(catalogRule, context, crashes),
-                ICrossModuleRule crossModuleRule => rawCrossModuleFindings[crossModuleRule.Id],
-                _ => throw new InvalidOperationException($"Rule '{rule.Id}' does not implement IPerFileRule, ICatalogRule, or ICrossModuleRule."),
+                _ => throw new InvalidOperationException($"Rule '{rule.Id}' does not implement IPerFileRule or ICatalogRule."),
             };
 
             resultsByRuleId[rule.Id] = FinalizeRule(rule, raw);
@@ -409,102 +405,5 @@ public static class RuleRunner
             crashes.Add(new SkippedConstruct(AnalysisPass.Predicates, string.Empty, 0, 0, RuleCrashKind, $"{rule.Id}: {ex.Message}"));
             return [];
         }
-    }
-
-    private static Dictionary<string, IReadOnlyList<IFinding>> RunCrossModuleRules(
-        IReadOnlyList<ICrossModuleRule> rules,
-        IReadOnlyList<SqlParseResult> parseResults,
-        RuleContext context,
-        List<SkippedConstruct> crashes)
-    {
-        var moduleRulesByRule = rules.ToDictionary(rule => rule, _ => new List<IModuleRule>());
-
-        var perFileResults = parseResults
-            .AsParallel()
-            .Select(parseResult => ScanOneFileForCrossModuleRules(rules, parseResult, context, crashes))
-            .ToList();
-
-        foreach (var perFile in perFileResults)
-        {
-            foreach (var (rule, moduleRule) in perFile)
-            {
-                moduleRulesByRule[rule].Add(moduleRule);
-            }
-        }
-
-        var findingsByRuleId = new Dictionary<string, IReadOnlyList<IFinding>>(StringComparer.Ordinal);
-        foreach (var rule in rules)
-        {
-            var moduleRules = moduleRulesByRule[rule];
-            try
-            {
-                findingsByRuleId[rule.Id] = moduleRules.Count > 0
-                    ? rule.Aggregate(context, moduleRules)
-                    : rule.Scan(parseResults, context);
-            }
-            catch (Exception ex)
-            {
-                crashes.Add(new SkippedConstruct(AnalysisPass.Predicates, string.Empty, 0, 0, RuleCrashKind, $"{rule.Id}: {ex.Message}"));
-                findingsByRuleId[rule.Id] = [];
-            }
-        }
-
-        return findingsByRuleId;
-    }
-
-    private static List<(ICrossModuleRule Rule, IModuleRule ModuleRule)> ScanOneFileForCrossModuleRules(
-        IReadOnlyList<ICrossModuleRule> rules,
-        SqlParseResult parseResult,
-        RuleContext context,
-        List<SkippedConstruct> crashes)
-    {
-        var moduleRules = new List<IModuleRule>();
-        var moduleRuleOwner = new Dictionary<IModuleRule, ICrossModuleRule>();
-
-        foreach (var rule in rules)
-        {
-            IModuleRule? moduleRule;
-            try
-            {
-                moduleRule = rule.CreateModuleRule(parseResult, context);
-            }
-            catch (Exception ex)
-            {
-                RecordCrash(crashes, rule.Id, parseResult.SourcePath, ex);
-                continue;
-            }
-
-            if (moduleRule is null)
-            {
-                continue;
-            }
-
-            moduleRules.Add(moduleRule);
-            moduleRuleOwner[moduleRule] = rule;
-        }
-
-        var results = new List<(ICrossModuleRule, IModuleRule)>(moduleRules.Count);
-        if (moduleRules.Count == 0)
-        {
-            return results;
-        }
-
-        var walker = new ModuleWalker(
-            parseResult.SourcePath, context.Catalog, EmptyResolvedViews, rules: moduleRules);
-        parseResult.Fragment.Accept(walker);
-
-        foreach (var moduleRule in moduleRules)
-        {
-            var rule = moduleRuleOwner[moduleRule];
-            if (walker.CrashedRules.TryGetValue(moduleRule, out var crashException))
-            {
-                RecordCrash(crashes, rule.Id, parseResult.SourcePath, crashException);
-                continue;
-            }
-
-            results.Add((rule, moduleRule));
-        }
-
-        return results;
     }
 }
