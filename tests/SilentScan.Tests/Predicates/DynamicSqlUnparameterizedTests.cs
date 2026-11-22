@@ -38,7 +38,7 @@ public sealed class DynamicSqlUnparameterizedTests
             "CREATE PROCEDURE dbo.usp_Find AS\n" +
             "BEGIN\n" +
             "    DECLARE @Code VARCHAR(20) = 'ABC'\n" +
-            "    EXEC('SELECT * FROM dbo.T WHERE Code = ''' + @Code + '''')\n" +
+            "    EXEC('SELECT * FROM dbo.T a JOIN dbo.T b ON a.Name = b.Name WHERE a.Code = ''' + @Code + '''')\n" +
             "END\n";
 
         var result = Analyze(appSql);
@@ -61,7 +61,7 @@ public sealed class DynamicSqlUnparameterizedTests
             "CREATE PROCEDURE dbo.usp_Find AS\n" +
             "BEGIN\n" +
             "    DECLARE @Code VARCHAR(20) = 'ABC'\n" +
-            "    DECLARE @sql NVARCHAR(MAX) = N'SELECT * FROM dbo.T WHERE Code = ''' + @Code + ''''\n" +
+            "    DECLARE @sql NVARCHAR(MAX) = N'SELECT * FROM dbo.T a JOIN dbo.T b ON a.Name = b.Name WHERE a.Code = ''' + @Code + ''''\n" +
             "    EXEC sp_executesql @sql\n" +
             "END\n";
 
@@ -69,6 +69,40 @@ public sealed class DynamicSqlUnparameterizedTests
 
         var finding = Assert.Single(result.UnparameterizedFindings);
         Assert.Equal(UnparameterizedDynamicSqlFindingKind.ConcatenatedValueInConstantSql, finding.Kind);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.T WHERE Code = ''' + @Code + '''")]
+    [InlineData("DELETE dbo.T WHERE Code = ''' + @Code + '''")]
+    [InlineData("INSERT dbo.T (Code, Name) VALUES (''' + @Code + ''', ''n'')")]
+    public void ConcatenatedValueInAStatementTheEngineCanAutoParameterize_NeverFires(string dynamicSql)
+    {
+        var appSql =
+            "CREATE PROCEDURE dbo.usp_Find AS\n" +
+            "BEGIN\n" +
+            "    DECLARE @Code VARCHAR(20) = 'ABC'\n" +
+            $"    EXEC('{dynamicSql}')\n" +
+            "END\n";
+
+        Assert.Empty(Analyze(appSql).UnparameterizedFindings);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM dbo.T WHERE Code = ''' + @Code + ''' OPTION (MAXDOP 1)")]
+    [InlineData("SELECT Name, COUNT(*) FROM dbo.T WHERE Code = ''' + @Code + ''' GROUP BY Name")]
+    [InlineData("SELECT TOP (5) * FROM dbo.T WHERE Code = ''' + @Code + '''")]
+    [InlineData("SELECT DISTINCT Name FROM dbo.T WHERE Code = ''' + @Code + '''")]
+    [InlineData("SELECT * FROM dbo.T WHERE Name IN (SELECT Name FROM dbo.T WHERE Code = ''' + @Code + ''')")]
+    public void ConcatenatedValueInAStatementTheEngineCannotAutoParameterize_Fires(string dynamicSql)
+    {
+        var appSql =
+            "CREATE PROCEDURE dbo.usp_Find AS\n" +
+            "BEGIN\n" +
+            "    DECLARE @Code VARCHAR(20) = 'ABC'\n" +
+            $"    EXEC('{dynamicSql}')\n" +
+            "END\n";
+
+        Assert.Contains(Analyze(appSql).UnparameterizedFindings, f => f.Kind == UnparameterizedDynamicSqlFindingKind.ConcatenatedValueInConstantSql);
     }
 
     [Fact]

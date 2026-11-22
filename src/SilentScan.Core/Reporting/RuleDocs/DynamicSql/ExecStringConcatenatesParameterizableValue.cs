@@ -22,6 +22,12 @@ internal static class ExecStringConcatenatesParameterizableValue
             the general sibling - two distinct claims about the same underlying fact, not a
             duplicate: the general finding says "this pollutes the plan cache," this one says "and
             you had a straightforward way to avoid it that this specific call shape never used."
+
+            It is scoped to statements the engine provably cannot auto-parameterize - one with a
+            join, subquery, GROUP BY, HAVING, DISTINCT, TOP, set operator, CTE, windowed function,
+            FOR clause or OPTION hint. A trivial statement (a single-table SELECT, DELETE or
+            INSERT ... VALUES) is simple-parameterized by the engine into one shared plan even
+            when the value is concatenated, oracle-confirmed, so it is deliberately not reported.
             """,
         HowToFixIt: """
             Use sp_executesql with its own @params mechanism instead of EXEC(string)/EXEC(@sql)

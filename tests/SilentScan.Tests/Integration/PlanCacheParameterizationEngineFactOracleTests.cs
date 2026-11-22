@@ -25,6 +25,8 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         CREATE TABLE dbo.DynConcat (Id INT PRIMARY KEY, V INT);
         CREATE TABLE dbo.DynParam (Id INT PRIMARY KEY, V INT);
         CREATE TABLE dbo.DynExec (Id INT PRIMARY KEY, V INT);
+        CREATE TABLE dbo.DynTrivial (Id INT PRIMARY KEY, V INT);
+        INSERT INTO dbo.DynTrivial VALUES (1, 1), (2, 2), (3, 3);
         INSERT INTO dbo.DynConcat VALUES (1, 1), (2, 2), (3, 3);
         INSERT INTO dbo.DynParam VALUES (1, 1), (2, 2), (3, 3);
         INSERT INTO dbo.DynExec VALUES (1, 1), (2, 2), (3, 3);
@@ -180,6 +182,22 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
 
         Assert.Equal(3, await CachedPlanCountAsync("%FROM dbo.DynConcat WHERE Id = [0-9]%"));
         Assert.Equal(1, await CachedPlanCountAsync("%FROM dbo.DynParam WHERE Id = @i%"));
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.ConcatenatedValueInConstantSqlRuleId)]
+    [Trait("Rule", FindingRuleIds.ExecStringConcatenatesParameterizableValueRuleId)]
+    public async Task ConcatenatedExecStringOfATrivialStatement_IsAutoParameterizedIntoOneSharedPlan()
+    {
+        await using var connection = await OpenConnectionAsync();
+        foreach (var id in new[] { 1, 2, 3 })
+        {
+            await ExecuteAsync(connection, $"DECLARE @s NVARCHAR(200) = N'SELECT V FROM dbo.DynTrivial WHERE Id = ' + CAST({id} AS NVARCHAR(10)); EXEC(@s);");
+        }
+
+        var rows = await RowsAsync($"SELECT COUNT(*) {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%SELECT V FROM%DynTrivial%' AND st.text NOT LIKE '%dm_exec%';");
+
+        Assert.Equal(1, (int)rows[0][0]!);
     }
 
     [Fact]

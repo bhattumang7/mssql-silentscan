@@ -633,7 +633,8 @@ public static partial class DynamicSqlPipeline
         }
 
         var sawValueSplice = boundaries.Any(offset =>
-            DynamicSqlOperandPositionClassifier.Classify(innerParseResult.Fragment, offset) == DynamicSqlOperandPosition.Value);
+            DynamicSqlOperandPositionClassifier.Classify(innerParseResult.Fragment, offset) == DynamicSqlOperandPosition.Value
+            && DynamicSqlAutoParameterizationGuard.IsProvablyNotAutoParameterized(innerParseResult.Fragment, offset));
 
         if (!sawValueSplice)
         {

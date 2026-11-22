@@ -28,6 +28,12 @@ internal static class ConcatenatedValueInConstantSql
             a plain `EXEC(string)` site) - the plan-cache pollution is real regardless of which
             mechanism was used to run the assembled text, since the underlying problem is the value
             ending up baked into the SQL TEXT rather than passed as a real parameter.
+
+            It is scoped to statements the engine provably cannot auto-parameterize - one with a
+            join, subquery, GROUP BY, HAVING, DISTINCT, TOP, set operator, CTE, windowed function,
+            FOR clause or OPTION hint. A trivial statement (a single-table SELECT, DELETE or
+            INSERT ... VALUES) is simple-parameterized by the engine into one shared plan even
+            when the value is concatenated, oracle-confirmed, so it is deliberately not reported.
             """,
         HowToFixIt: """
             Pass the value through sp_executesql's own @params mechanism instead of concatenating it
