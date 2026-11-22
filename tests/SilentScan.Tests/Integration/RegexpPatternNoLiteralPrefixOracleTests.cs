@@ -79,6 +79,11 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
     [InlineData("^a[bc]d")]
     [InlineData(@"^abc\.")]
     [InlineData(@"^[\d]")]
+    [InlineData("^abc[^x]")]
+    [InlineData("^ab[^x]c")]
+    [InlineData("^a[^x]")]
+    [InlineData("^abc[[]")]
+    [InlineData("^[[]bc")]
     public async Task VerifyAsync_AnchoredClassOrQuantifiedLiteral_IsNotConfirmed(string pattern)
     {
         var finding = Finding(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, $"REGEXP_LIKE(DisplayName, '{pattern}')");
@@ -97,6 +102,9 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
     [InlineData("^a?b")]
     [InlineData("^a*")]
     [InlineData("^[^a]")]
+    [InlineData("^[^x]bc")]
+    [InlineData("^ab[[:alpha:]]")]
+    [InlineData("^[[:alpha:]]")]
     public async Task VerifyAsync_PatternWithoutASeekableLeadingRun_ConfirmsNoIndexSeek(string pattern)
     {
         var finding = Finding(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, $"REGEXP_LIKE(DisplayName, '{pattern}')");

@@ -653,6 +653,11 @@ public sealed class NonSargablePredicateScannerTests
     [InlineData("^a[bc]d")]
     [InlineData(@"^abc\.")]
     [InlineData(@"^[\d]")]
+    [InlineData("^abc[^x]")]
+    [InlineData("^ab[^x]c")]
+    [InlineData("^a[^x]")]
+    [InlineData("^abc[[]")]
+    [InlineData("^[[]bc")]
     public void RegexpLikePattern_AnchoredClassOrQuantifiedLiteral_DoesNotFire(string pattern)
     {
         var findings = ScanSql(RegexpQuery(pattern));
@@ -671,6 +676,8 @@ public sealed class NonSargablePredicateScannerTests
     [InlineData("^a?b")]
     [InlineData("^a*")]
     [InlineData("^[^a]")]
+    [InlineData("^[^x]bc")]
+    [InlineData("^ab[[:alpha:]]")]
     public void RegexpLikePattern_NoSeekableLeadingRun_Fires(string pattern)
     {
         var findings = ScanSql(RegexpQuery(pattern));
