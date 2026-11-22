@@ -24,7 +24,10 @@ internal static class ImplicitDefaultRangeFrame
         HowToFixIt: """
             Add an explicit ROWS frame instead of relying on the implicit default RANGE BETWEEN
             UNBOUNDED PRECEDING AND CURRENT ROW - this both documents the intended frame in the
-            source text and avoids the RANGE frame's measured extra CPU cost.
+            source text and avoids the RANGE frame's measured extra CPU cost. ROWS and the default
+            RANGE frame return different values when the ORDER BY has ties (rows that tie all see
+            the whole tie group under RANGE, but only the rows up to themselves under ROWS), so
+            switch only if the ORDER BY is unique or per-row running values are what is wanted.
             """,
         Examples:
         [

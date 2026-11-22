@@ -44,6 +44,36 @@ public sealed class WindowFrameScannerOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task RowsFrameDiffersFromTheImplicitRangeDefaultOnlyWhenOrderByHasTies()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        async Task<List<int>> TotalsAsync(string frame, string values)
+        {
+            await using var command = new SqlCommand(
+                $"SELECT SUM(Amt) OVER (ORDER BY D {frame}) FROM (VALUES {values}) AS v(D, Amt) ORDER BY D, Amt;", connection);
+            await using var reader = await command.ExecuteReaderAsync();
+            var totals = new List<int>();
+            while (await reader.ReadAsync())
+            {
+                totals.Add(reader.GetInt32(0));
+            }
+
+            return totals;
+        }
+
+        const string tied = "(1, 10), (1, 20), (2, 30)";
+        const string distinct = "(1, 10), (2, 20), (3, 30)";
+        const string rows = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+
+        Assert.Equal([30, 30, 60], await TotalsAsync(string.Empty, tied));
+        var rowsTotals = await TotalsAsync(rows, tied);
+        Assert.NotEqual(rowsTotals[0], rowsTotals[1]);
+        Assert.Equal(60, rowsTotals[2]);
+        Assert.Equal(await TotalsAsync(string.Empty, distinct), await TotalsAsync(rows, distinct));
+    }
+
+    [Fact]
     public async Task AggregateWithOrderByNoExplicitFrame_ComputesImplicitRangeFrame()
     {
         await using var connection = await OpenConnectionAsync();
