@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/forced-parameterization/convert-style-code-literal</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">A CONVERT(type, expr, style) call&#x27;s style-code argument is a literal - it stays unparameterized even under PARAMETERIZATION FORCED.</p>
+  <p class="rationale">A CONVERT(type, expr, style) call&#x27;s style-code argument is a literal - it stays unparameterized even under PARAMETERIZATION FORCED. Fires when a CONVERT style code is a literal, which the engine keeps in the statement text under forced parameterization. Never fires when the same literal sits in a comparison, which forced parameterization replaces with a parameter; the statement is inside a dynamic SQL string, whose text the scanner does not inspect.</p>
   <p class="rationale">Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed directly against a real engine: `CONVERT(varchar, GETDATE(), 101)` keeps the `101` style code untouched in the cached plan.</p>
   <p class="rationale">A style code that varies by call - formatting dates differently for different report outputs from the same query shape, for example - gets a fresh compile per distinct style under PARAMETERIZATION FORCED.</p>
   <h2>How can I fix it?</h2>

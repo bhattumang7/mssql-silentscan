@@ -33,7 +33,8 @@ public sealed record ForcedParameterizationFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     string DetailText,
-    FindingConfidence Confidence = FindingConfidence.High) : IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    string? LiteralSourceText = null) : IFinding
 {
     public string RuleId { get; } = FindingRuleIds.ForcedParameterizationRuleId(Kind);
 

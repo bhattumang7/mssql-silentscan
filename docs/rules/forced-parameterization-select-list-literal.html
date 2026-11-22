@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/forced-parameterization/select-list-literal</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">A literal sits directly in the SELECT list - it stays unparameterized even under PARAMETERIZATION FORCED.</p>
+  <p class="rationale">A literal sits directly in the SELECT list - it stays unparameterized even under PARAMETERIZATION FORCED. Fires when a literal sits directly in the select list, which the engine keeps in the statement text under forced parameterization. Never fires when the same literal sits in a comparison, which forced parameterization replaces with a parameter; the statement is inside a dynamic SQL string, whose text the scanner does not inspect.</p>
   <p class="rationale">Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed directly against a real engine: `SELECT &#x27;MarkerSelectList&#x27;, Id FROM T WHERE Id = 1` keeps the select-list literal untouched in the cached plan while the WHERE-clause equality correctly parameterizes.</p>
   <p class="rationale">A tag/label literal returned alongside real columns (a common shape for UNION-distinguishing constants, or a status label) is a minor case in isolation, but it means that specific call site never shares a plan with a differently-tagged sibling query under PARAMETERIZATION FORCED, even though the two are otherwise identical.</p>
   <h2>How can I fix it?</h2>

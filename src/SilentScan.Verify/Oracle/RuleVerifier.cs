@@ -44,6 +44,8 @@ public enum Difference
     PlanChanged,
 
     EstimatesChanged,
+
+    PlanTextChanged,
 }
 
 public abstract record Touch;
@@ -250,7 +252,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             return ClassifyFailure(baseline, perturbed);
         }
 
-        if (expected is Difference.PlanChanged or Difference.EstimatesChanged)
+        if (expected is Difference.PlanChanged or Difference.EstimatesChanged or Difference.PlanTextChanged)
         {
             return ClassifyPlan(baseline, perturbed);
         }
@@ -315,12 +317,12 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
     private static async Task<Observation> ObserveOnceAsync(
         SqlConnection connection, SqlTransaction transaction, string statement, Observe observe, CancellationToken cancellationToken)
     {
-        if (observe.Expected is Difference.PlanChanged or Difference.EstimatesChanged)
+        if (observe.Expected is Difference.PlanChanged or Difference.EstimatesChanged or Difference.PlanTextChanged)
         {
             var plan = observe.PlanInModule
                 ? await ModulePlanOfAsync(connection, transaction, statement, cancellationToken)
                 : await PlanOfAsync(connection, transaction, PlanText(statement), cancellationToken);
-            return new Observation([], 0, null, plan is null ? null : observe.Expected == Difference.EstimatesChanged ? EstimateSignature(plan) : PlanSignature(plan));
+            return new Observation([], 0, null, plan is null ? null : SignatureOf(observe.Expected, plan));
         }
 
         var allowFailure = observe.Expected == Difference.FailureSuppressed;
@@ -366,6 +368,18 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             transaction.Rollback(StatementSavepoint);
         }
     }
+
+    private static string SignatureOf(Difference expected, string planXml) => expected switch
+    {
+        Difference.EstimatesChanged => EstimateSignature(planXml),
+        Difference.PlanTextChanged => PlanTextSignature(planXml),
+        _ => PlanSignature(planXml),
+    };
+
+    private static string PlanTextSignature(string planXml) =>
+        string.Join(
+            ";",
+            XDocument.Parse(planXml).Descendants().SelectMany(e => e.Attributes()).Where(a => a.Name.LocalName == "ScalarString").Select(a => a.Value));
 
     private static string EstimateSignature(string planXml) =>
         string.Join(

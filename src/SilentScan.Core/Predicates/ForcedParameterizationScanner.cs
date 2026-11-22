@@ -43,7 +43,7 @@ public static class ForcedParameterizationScanner
             if (node.SecondExpression is Literal literal)
             {
                 Add(ForcedParameterizationFindingKind.LikePatternLiteral, literal,
-                    $"LIKE pattern '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying only this pattern still recompiles per distinct value.", walker);
+                    $"LIKE pattern '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying only this pattern still recompiles per distinct value.", walker, literal: literal);
             }
         }
 
@@ -52,7 +52,7 @@ public static class ForcedParameterizationScanner
             if (node.Expression is Literal literal)
             {
                 Add(ForcedParameterizationFindingKind.TopOrPagingLiteral, literal,
-                    $"TOP row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the row count still recompiles per distinct value.", walker);
+                    $"TOP row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the row count still recompiles per distinct value.", walker, literal: literal);
             }
         }
 
@@ -62,7 +62,7 @@ public static class ForcedParameterizationScanner
             if (literal is not null)
             {
                 Add(ForcedParameterizationFindingKind.TopOrPagingLiteral, literal,
-                    $"OFFSET/FETCH row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the page size still recompiles per distinct value.", walker);
+                    $"OFFSET/FETCH row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the page size still recompiles per distinct value.", walker, literal: literal);
             }
         }
 
@@ -71,7 +71,7 @@ public static class ForcedParameterizationScanner
             if (node.Expression is Literal literal)
             {
                 Add(ForcedParameterizationFindingKind.SelectListLiteral, literal,
-                    $"Select-list literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker);
+                    $"Select-list literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
             }
         }
 
@@ -80,7 +80,7 @@ public static class ForcedParameterizationScanner
             foreach (var literal in FindDirectComparisonLiterals(node.SearchCondition))
             {
                 Add(ForcedParameterizationFindingKind.HavingLiteral, literal,
-                    $"HAVING comparand '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker);
+                    $"HAVING comparand '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
             }
         }
 
@@ -99,7 +99,7 @@ public static class ForcedParameterizationScanner
                 if (finder.Found is { } literal)
                 {
                     Add(ForcedParameterizationFindingKind.OrderByExpressionLiteral, element,
-                        $"ORDER BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker);
+                        $"ORDER BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
                 }
             }
         }
@@ -113,7 +113,7 @@ public static class ForcedParameterizationScanner
                 if (finder.Found is { } literal)
                 {
                     Add(ForcedParameterizationFindingKind.GroupByExpressionLiteral, specification,
-                        $"GROUP BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker);
+                        $"GROUP BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
                 }
             }
         }
@@ -123,7 +123,7 @@ public static class ForcedParameterizationScanner
             if (node.TableSampleClause?.SampleNumber is Literal literal)
             {
                 Add(ForcedParameterizationFindingKind.TableSampleSizeLiteral, literal,
-                    $"TABLESAMPLE size '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker);
+                    $"TABLESAMPLE size '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
             }
         }
 
@@ -134,7 +134,7 @@ public static class ForcedParameterizationScanner
                 if (column is SelectScalarExpression { Expression: Literal literal })
                 {
                     Add(ForcedParameterizationFindingKind.DmlOutputListLiteral, literal,
-                        $"OUTPUT clause literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker);
+                        $"OUTPUT clause literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
                 }
             }
         }
@@ -144,7 +144,7 @@ public static class ForcedParameterizationScanner
             if (node.Style is Literal literal)
             {
                 Add(ForcedParameterizationFindingKind.ConvertStyleCodeLiteral, literal,
-                    $"CONVERT style code '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker);
+                    $"CONVERT style code '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
             }
         }
 
@@ -158,9 +158,14 @@ public static class ForcedParameterizationScanner
             }
         }
 
-        private void Add(ForcedParameterizationFindingKind kind, TSqlFragment site, string detailText, ModuleWalker walker, FindingConfidence confidence = FindingConfidence.High) =>
+        private void Add(ForcedParameterizationFindingKind kind, TSqlFragment site, string detailText, ModuleWalker walker, FindingConfidence confidence = FindingConfidence.High, Literal? literal = null)
+        {
             Findings.Add(new ForcedParameterizationFinding(
-                kind, CurrentModule(walker), sourcePath, site.StartLine, site.StartColumn, detailText, confidence));
+                kind, CurrentModule(walker), sourcePath, site.StartLine, site.StartColumn, detailText, confidence, literal is null ? null : SourceText(literal)));
+        }
+
+        private static string SourceText(TSqlFragment fragment) =>
+            string.Concat(Enumerable.Range(fragment.FirstTokenIndex, fragment.LastTokenIndex - fragment.FirstTokenIndex + 1).Select(i => fragment.ScriptTokenStream[i].Text));
 
         private static string LiteralText(Literal literal) => literal.Value ?? "NULL";
 

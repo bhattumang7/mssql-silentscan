@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/forced-parameterization/order-by-expression-literal</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">A literal appears inside a compound ORDER BY expression - it stays unparameterized even under PARAMETERIZATION FORCED.</p>
+  <p class="rationale">A literal appears inside a compound ORDER BY expression - it stays unparameterized even under PARAMETERIZATION FORCED. Fires when an ORDER BY expression holds a literal, which the engine keeps in the statement text under forced parameterization. Never fires when the same literal sits in a comparison, which forced parameterization replaces with a parameter; the statement is inside a dynamic SQL string, whose text the scanner does not inspect.</p>
   <p class="rationale">Reported only when the target database has `PARAMETERIZATION FORCED` on, and only for a literal nested inside a compound `ORDER BY` expression - confirmed directly against a real engine: `ORDER BY (Id &#x2B; 100)` keeps the `100` literal untouched in the cached plan.</p>
   <p class="rationale">Deliberately excludes a BARE literal as the entire ORDER BY element (`ORDER BY 1`, the common ordinal-position idiom) - that shape was not part of this rule&#x27;s own oracle probe, and is structurally different (a small, finite, rarely-varying set of values, not a value that scales with the app&#x27;s own data).</p>
   <h2>How can I fix it?</h2>

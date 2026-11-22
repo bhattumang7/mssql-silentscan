@@ -20,6 +20,17 @@ public sealed class ForcedParameterizationScannerTests
         Assert.Contains(findings, f => f.Kind == ForcedParameterizationFindingKind.LikePatternLiteral);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM dbo.T WHERE Name LIKE 'abc%';", ForcedParameterizationFindingKind.LikePatternLiteral, "'abc%'")]
+    [InlineData("SELECT TOP 5 Id FROM dbo.T;", ForcedParameterizationFindingKind.TopOrPagingLiteral, "5")]
+    [InlineData("SELECT Id FROM dbo.T ORDER BY Id + 7;", ForcedParameterizationFindingKind.OrderByExpressionLiteral, "7")]
+    public void LiteralKinds_CarryTheLiteralAsWritten(string sql, ForcedParameterizationFindingKind kind, string literal)
+    {
+        var finding = Assert.Single(Scan(sql), f => f.Kind == kind);
+
+        Assert.Equal(literal, finding.LiteralSourceText);
+    }
+
     [Fact]
     public void LikePatternVariable_NeverFires()
     {

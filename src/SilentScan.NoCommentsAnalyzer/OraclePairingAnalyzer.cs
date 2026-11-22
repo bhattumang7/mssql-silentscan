@@ -40,6 +40,7 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         "SilentScan.Verify.Oracle.PerturbationStep",
         "SilentScan.Verify.Oracle.RuleVerifier<TFinding>",
         "SilentScan.Verify.Oracle.TouchedObject",
+        "SilentScan.Verify.Oracle.TouchedExpression",
         "SilentScan.Verify.Oracle.VerifierSupportAttribute",
         "SilentScan.Verify.SqlServerOptions",
     ];
