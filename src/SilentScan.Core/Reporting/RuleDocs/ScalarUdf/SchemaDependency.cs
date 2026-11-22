@@ -11,13 +11,15 @@ internal static class SchemaDependency
             A scalar UDF called inside a computed column's definition, a `DEFAULT` constraint, or a
             `CHECK` constraint is fundamentally different from every other scalar-UDF finding on
             this page, because it isn't a property of any one query - it's a property of the table
-            itself, baked into the schema. Every statement that touches the table pays the cost,
-            including ones that never name the column at all: a computed column is (re)evaluated for
-            every row an INSERT, UPDATE, or (for a non-persisted computed column) SELECT touches
-            unless the specific query explicitly excludes it, a DEFAULT fires on every INSERT that
-              doesn't supply the column, and a CHECK constraint's function call runs on every INSERT
-            and every UPDATE that could affect the constrained column, whether or not the function
-            is provably inlineable at that engine version.
+            itself, baked into the schema. A computed column is (re)evaluated for every row an
+            INSERT, UPDATE, or (for a non-persisted computed column) SELECT touches unless the
+            specific query explicitly excludes it, and a CHECK constraint's function call runs on
+            every INSERT and every UPDATE that could affect the constrained column; both can also
+            make queries that never name the column serial, because the optimizer consults the
+            definition. A DEFAULT is narrower: it fires only on an INSERT that does not supply the
+            column, and oracle-confirmed it forces only that INSERT plan serial - SELECT and UPDATE
+            plans on the same table stay parallel-capable. None of this depends on whether the
+            function is provably inlineable at that engine version.
 
             This is also a genuinely different detection stream from the other scalar-UDF rules on
             this page: those are found by walking a query's predicate, SELECT list, or dependency

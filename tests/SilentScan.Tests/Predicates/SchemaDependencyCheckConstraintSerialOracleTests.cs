@@ -17,6 +17,13 @@ public sealed class SchemaDependencyCheckConstraintSerialOracleTests : OracleTes
         GO
         CREATE TABLE dbo.Orders (Id INT NOT NULL, Qty INT NOT NULL, CONSTRAINT CK_Orders_Qty CHECK (dbo.fnIsValid(Qty) = 1));
         GO
+        CREATE FUNCTION dbo.fnStampValue () RETURNS INT AS
+        BEGIN
+            RETURN 7;
+        END;
+        GO
+        CREATE TABLE dbo.Stamped (Id INT NOT NULL, Qty INT NOT NULL, Stamp INT NOT NULL CONSTRAINT DF_Stamped_Stamp DEFAULT (dbo.fnStampValue()));
+        GO
         """;
 
     public override async Task InitializeAsync()
@@ -32,6 +39,10 @@ public sealed class SchemaDependencyCheckConstraintSerialOracleTests : OracleTes
             SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1
             FROM sys.all_objects a CROSS JOIN sys.all_objects b;
             UPDATE STATISTICS dbo.Orders WITH FULLSCAN;
+            INSERT INTO dbo.Stamped (Id, Qty, Stamp)
+            SELECT TOP (5000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 1, 7
+            FROM sys.all_objects a CROSS JOIN sys.all_objects b;
+            UPDATE STATISTICS dbo.Stamped WITH FULLSCAN;
             """, connection);
         await seedCommand.ExecuteNonQueryAsync();
     }
@@ -84,6 +95,43 @@ public sealed class SchemaDependencyCheckConstraintSerialOracleTests : OracleTes
 
         Assert.Contains("NonParallelPlanReason=\"TSQLUserDefinedFunctionsNotParallelizable\"", planXml);
         Assert.Contains("UserDefinedFunction FunctionName=\"[" + DatabaseName + "].[dbo].[fnIsValid]\"", planXml);
+    }
+
+    private async Task<string> CaptureEstimatedPlanAsync(string probe)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using (var onCommand = new SqlCommand("SET SHOWPLAN_XML ON;", connection))
+        {
+            await onCommand.ExecuteNonQueryAsync();
+        }
+
+        string planXml;
+        await using (var probeCommand = new SqlCommand(probe, connection))
+        {
+            planXml = (string)(await probeCommand.ExecuteScalarAsync())!;
+        }
+
+        await using (var offCommand = new SqlCommand("SET SHOWPLAN_XML OFF;", connection))
+        {
+            await offCommand.ExecuteNonQueryAsync();
+        }
+
+        return planXml;
+    }
+
+    [Fact]
+    public async Task DefaultConstraintUdf_ForcesOnlyTheInsertSerial_NotASelectOrAnUpdate()
+    {
+        var insertPlan = await CaptureEstimatedPlanAsync(
+            "INSERT INTO dbo.Stamped (Id, Qty) SELECT a.object_id, 1 FROM sys.all_objects a CROSS JOIN sys.all_objects b OPTION (MAXDOP 0);");
+        var selectPlan = await CaptureEstimatedPlanAsync("SELECT COUNT(*) FROM dbo.Stamped WHERE Qty = 1 OPTION (MAXDOP 0);");
+        var updatePlan = await CaptureEstimatedPlanAsync("UPDATE dbo.Stamped SET Qty = Qty + 1 OPTION (MAXDOP 0);");
+
+        Assert.Contains("NonParallelPlanReason=\"TSQLUserDefinedFunctionsNotParallelizable\"", insertPlan);
+        Assert.DoesNotContain("NonParallelPlanReason=\"TSQLUserDefinedFunctionsNotParallelizable\"", selectPlan);
+        Assert.DoesNotContain("NonParallelPlanReason=\"TSQLUserDefinedFunctionsNotParallelizable\"", updatePlan);
     }
 
     [Fact]
