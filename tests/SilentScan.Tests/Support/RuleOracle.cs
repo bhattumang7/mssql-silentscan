@@ -236,7 +236,7 @@ public abstract class RuleOracle
     private static int DefaultLevel(SqlServerOptions options) => options == SqlServerOptions.LocalDockerLatest ? 170 : 160;
 
     private static IEnumerable<EngineTarget> WithLevels(SqlServerOptions options, int[] extraLevels) =>
-        new int?[] { null }.Concat(CommonCompatibilityLevels.Concat(extraLevels).Select(level => (int?)level)).Select(level => new EngineTarget(options, level));
+        CommonCompatibilityLevels.Concat(extraLevels).Select(level => new EngineTarget(options, level));
 
     private static void Collect(List<string> failures, string label, string? failure)
     {
@@ -430,7 +430,6 @@ public abstract class RuleOracle
         }
         finally
         {
-            SqlConnection.ClearAllPools();
             await provisioner.DropIfExistsAsync(databaseName);
         }
     }

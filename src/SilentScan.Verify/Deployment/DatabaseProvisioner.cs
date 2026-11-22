@@ -32,15 +32,39 @@ public sealed partial class DatabaseProvisioner
         await DropIfExistsCoreAsync(connection, databaseName, cancellationToken);
         var collateClause = collationName is null ? string.Empty : $" COLLATE {collationName}";
         await ExecuteAsync(connection, $"CREATE DATABASE [{databaseName}]{collateClause};", cancellationToken);
-        await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
+        var (currentLevel, queryStoreOn) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
+        if (currentLevel != PinnedCompatibilityLevel)
+        {
+            await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
+        }
 
-        await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+        if (queryStoreOn)
+        {
+            await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+        }
+
         await ExecuteAsync(connection, $"EXEC [{databaseName}].sys.sp_addextendedproperty @name = N'{Oracle.HarnessDatabaseGuard.MarkerName}', @value = N'1';", cancellationToken);
+    }
+
+    private static async Task<(int CompatibilityLevel, bool QueryStoreOn)> ReadCreatedStateAsync(
+        SqlConnection connection, string databaseName, CancellationToken cancellationToken)
+    {
+        await using var command = new SqlCommand("SELECT compatibility_level, is_query_store_on FROM sys.databases WHERE name = @name;", connection);
+        command.Parameters.AddWithValue("@name", databaseName);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+        return (reader.GetByte(0), reader.GetBoolean(1));
     }
 
     public async Task SetCompatibilityLevelAsync(string databaseName, int compatibilityLevel, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenMasterConnectionAsync(databaseName, cancellationToken);
+        var (currentLevel, _) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
+        if (currentLevel == compatibilityLevel)
+        {
+            return;
+        }
+
         await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {compatibilityLevel};", cancellationToken);
     }
 
