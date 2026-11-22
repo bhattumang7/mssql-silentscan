@@ -33,6 +33,16 @@ public sealed class CartesianJoinScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM dbo.Orders o, (SELECT MAX(Val) AS m FROM dbo.Config) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT COUNT(*) AS c FROM dbo.Config) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT 1 AS a) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (VALUES (1)) x(a);")]
+    public void OneSideIsAProvablyOneRowSource_NeverFires(string statement)
+    {
+        Assert.Empty(ScanWithCatalog(statement));
+    }
+
+    [Theory]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o;")]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Val = 1;")]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1 OR c.Id = 2;")]
