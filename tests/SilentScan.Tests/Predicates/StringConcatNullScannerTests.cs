@@ -17,6 +17,7 @@ public sealed class StringConcatNullScannerTests
                 Age INT NULL
             );
             CREATE TABLE dbo.Other (Id INT NOT NULL PRIMARY KEY, Label VARCHAR(50) NULL);
+            CREATE TABLE dbo.Person2 (Id INT NOT NULL PRIMARY KEY, LastName2 VARCHAR(50) NOT NULL);
             """;
         var result = SqlScriptParser.ParseText("test.sql", $"{ddl}\nGO\n{sql}");
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
@@ -33,6 +34,27 @@ public sealed class StringConcatNullScannerTests
         var finding = Assert.Single(findings);
         Assert.Equal("dbo.Person", finding.TableQualifiedName);
         Assert.Equal("MiddleName", finding.ColumnName);
+    }
+
+    [Theory]
+    [InlineData("SELECT p.FirstName + ' ' + o.LastName2 FROM dbo.Person p LEFT JOIN dbo.Person2 o ON o.Id = p.Id;")]
+    [InlineData("SELECT p.FirstName + ' ' + o.LastName2 FROM dbo.Person2 o RIGHT JOIN dbo.Person p ON o.Id = p.Id;")]
+    public void NotNullColumnOnTheNullSuppliedSideOfAnOuterJoin_Fires(string sql)
+    {
+        var findings = Scan(sql);
+
+        var finding = Assert.Single(findings);
+        Assert.Equal("dbo.Person2", finding.TableQualifiedName);
+        Assert.Equal("LastName2", finding.ColumnName);
+    }
+
+    [Theory]
+    [InlineData("SELECT p.FirstName + ' ' + o.LastName2 FROM dbo.Person p INNER JOIN dbo.Person2 o ON o.Id = p.Id;")]
+    [InlineData("SELECT o.LastName2 + ' ' + o.LastName2 FROM dbo.Person2 o LEFT JOIN dbo.Person p ON o.Id = p.Id;")]
+    [InlineData("SELECT p.FirstName + ' ' + o.LastName2 FROM dbo.Person p LEFT JOIN dbo.Person2 o ON o.Id = p.Id WHERE o.LastName2 = 'X';")]
+    public void NotNullColumnOnThePreservedSideOrInAnInnerJoin_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
     }
 
     [Fact]

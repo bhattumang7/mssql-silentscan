@@ -180,7 +180,8 @@ public static class StringConcatNullScanner
                         return new Leaf(LeafKind.Unknown, false, null, null);
                     }
 
-                    var isNullable = catalog.Find(r.TableQualifiedName)?.FindColumn(r.ColumnName, catalog.IdentifierComparer)?.IsNullable ?? false;
+                    var isNullable = r.IsNullableSide
+                        || (catalog.Find(r.TableQualifiedName)?.FindColumn(r.ColumnName, catalog.IdentifierComparer)?.IsNullable ?? false);
                     return new Leaf(LeafKind.String, isNullable, r.TableQualifiedName, r.ColumnName, ReferenceKeyOf(columnRef));
 
                 case FunctionCall { FunctionName.Value: var name } call
