@@ -212,7 +212,7 @@ public static class PartialCompositeForeignKeyJoinScanner
             }
 
             var usedReferencedColumns = new HashSet<string>(coveredLocally.Select(p => p.ReferencedColumnName), catalog.IdentifierComparer);
-            return referencedTable.Indexes.Any(i => i.IsUnique && i.KeyColumns.Count > 0 && i.KeyColumns.All(usedReferencedColumns.Contains));
+            return referencedTable.Indexes.Any(i => i.IsUnique && !i.IsFiltered && !i.IsDisabled && i.KeyColumns.Count > 0 && i.KeyColumns.All(usedReferencedColumns.Contains));
         }
 
         private bool PredicateCoversPair(

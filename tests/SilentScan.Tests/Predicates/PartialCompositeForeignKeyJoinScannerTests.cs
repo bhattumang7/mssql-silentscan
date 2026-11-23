@@ -156,6 +156,23 @@ public sealed class PartialCompositeForeignKeyJoinScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void UniqueIndexOnReferencedSideThatIsFilteredOrDisabled_DoesNotSuppress(bool filtered, bool disabled)
+    {
+        var catalog = BuildCatalog(extraOrdersIndexes:
+        [
+            new CatalogIndex("UX_Orders_OrderId", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["OrderId"], IncludedColumns: [],
+                IsFiltered: filtered, FilterDefinition: filtered ? "([OrderId]>(0))" : null, IsDisabled: disabled),
+        ]);
+
+        var findings = Scan(
+            "SELECT 1 FROM dbo.OrderLines ol JOIN dbo.Orders o ON ol.OrderId = o.OrderId;", catalog);
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void JoinMatchingNoneOfTheForeignKeyColumns_NeverFires()
     {
