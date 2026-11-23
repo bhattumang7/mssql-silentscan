@@ -30,6 +30,9 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE COALESCE(b.Y, 0) = 0;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y = 1 OR b.Y IS NULL;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y IS NOT NULL);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS DISTINCT FROM 7;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y IS NOT DISTINCT FROM 7);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NOT DISTINCT FROM NULL;")]
     public void PredicateThatKeepsNullSuppliedRows_NeverFires(string sql)
     {
         Assert.Empty(Scan(sql));
