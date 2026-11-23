@@ -398,7 +398,7 @@ public static class QueryAntiPatternScanner
             }
 
             var hintKinds = targetRef.TableHints.Select(h => h.HintKind).ToHashSet();
-            if (hintKinds.Contains(TableHintKind.HoldLock) || hintKinds.Contains(TableHintKind.Serializable))
+            if (hintKinds.Overlaps([TableHintKind.HoldLock, TableHintKind.Serializable, TableHintKind.TabLock, TableHintKind.TabLockX]))
             {
                 return;
             }

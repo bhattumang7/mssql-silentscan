@@ -565,6 +565,21 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Equal(FindingConfidence.Medium, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("TABLOCK", false)]
+    [InlineData("TABLOCKX", false)]
+    [InlineData("HOLDLOCK", false)]
+    [InlineData("UPDLOCK", true)]
+    public void MergeTargetWithAWholeTableLockHint_HasNoRaceBetweenTheProbeAndTheInsert(string hint, bool fires)
+    {
+        var findings = Scan(
+            $"MERGE dbo.H WITH ({hint}) AS t USING dbo.B AS s ON t.Id = s.AId "
+            + "WHEN MATCHED THEN UPDATE SET t.V = 1 "
+            + "WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.AId);");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock));
+    }
+
     [Fact]
     public void MergeUnderSerializableIsolation_NeverFiresMissingHoldlock()
     {
