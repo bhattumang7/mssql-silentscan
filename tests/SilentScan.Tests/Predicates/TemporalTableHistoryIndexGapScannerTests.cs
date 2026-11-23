@@ -57,6 +57,24 @@ public sealed class TemporalTableHistoryIndexGapScannerTests
     }
 
     [Fact]
+    public void HistoryIndexWhoseLeadingKeysAreTheCurrentIndexKeys_NeverFires()
+    {
+        var current = Table("dbo", "Widget", Index("IX_Widget_Code", CatalogIndexKind.Index, "Code"));
+        var history = Table("dbo", "WidgetHistory", Index("IX_WidgetHistory", CatalogIndexKind.Index, "Code", "Region"));
+
+        Assert.Empty(TemporalTableHistoryIndexGapScanner.Scan(CatalogWithPair(current, history)));
+    }
+
+    [Fact]
+    public void HistoryIndexLeadingWithOnlyPartOfTheCurrentIndexKeys_StillFires()
+    {
+        var current = Table("dbo", "Widget", Index("IX_Widget_Code", CatalogIndexKind.Index, "Code", "Region"));
+        var history = Table("dbo", "WidgetHistory", Index("IX_WidgetHistory", CatalogIndexKind.Index, "Code"));
+
+        Assert.Single(TemporalTableHistoryIndexGapScanner.Scan(CatalogWithPair(current, history)));
+    }
+
+    [Fact]
     public void ReversedKeyColumnOrderOnHistorySide_StillFires()
     {
 

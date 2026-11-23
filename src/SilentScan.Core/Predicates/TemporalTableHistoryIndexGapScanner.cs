@@ -45,5 +45,6 @@ public static class TemporalTableHistoryIndexGapScanner
         && index.KeyColumns.Count > 0;
 
     private static bool SameKeyColumns(CatalogIndex current, CatalogIndex candidate, StringComparer identifierComparer) =>
-        current.KeyColumns.SequenceEqual(candidate.KeyColumns, identifierComparer);
+        candidate.KeyColumns.Count >= current.KeyColumns.Count
+        && current.KeyColumns.SequenceEqual(candidate.KeyColumns.Take(current.KeyColumns.Count), identifierComparer);
 }

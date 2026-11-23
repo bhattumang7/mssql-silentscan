@@ -13,7 +13,7 @@ internal static class TemporalTableHistoryIndexGap
             table and its HISTORY table - a fact this tool oracle-confirmed directly against a real
             engine (5,000 current-table rows, 2,500 history-table rows, statistics updated with
             `FULLSCAN` on both). When a nonclustered index exists on the current side but no
-            structurally matching index exists on the history side, a sargable predicate that
+            index led by the same key columns exists on the history side, a sargable predicate that
             correctly seeks the current-table branch via its own index still degrades to a full
             Clustered Index Scan on the history-table branch of the same query - the other half of
             the same oracle probe confirmed both branches seek cleanly once a matching index is
@@ -37,7 +37,7 @@ internal static class TemporalTableHistoryIndexGap
             both sides for the same "genuinely seekable" reason this tool applies elsewhere.
             """,
         HowToFixIt: """
-            Create a structurally matching nonclustered index (same key columns, same order) on the
+            Create a nonclustered index led by the same key columns (same key columns, same order) on the
             HISTORY table to mirror the one on the CURRENT table.
             """,
         Examples:
@@ -63,6 +63,6 @@ internal static class TemporalTableHistoryIndexGap
                 CompliantSql: """
                     CREATE NONCLUSTERED INDEX IX_WidgetHistory_Code ON dbo.WidgetHistory (Code);
                     """,
-                CompliantExplanation: "With a structurally matching index (same key column, same order) on the history table, both branches of the FOR SYSTEM_TIME rewrite seek instead of one of them scanning."),
+                CompliantExplanation: "With a matching index (same key column, same order) on the history table, both branches of the FOR SYSTEM_TIME rewrite seek instead of one of them scanning."),
         ]);
 }
