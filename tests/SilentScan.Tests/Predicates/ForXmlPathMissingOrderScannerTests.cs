@@ -22,6 +22,15 @@ public sealed class ForXmlPathMissingOrderScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT Name FROM dbo.T ORDER BY (SELECT NULL) FOR XML PATH('');", true)]
+    [InlineData("DECLARE @x INT = 1; SELECT Name FROM dbo.T ORDER BY @x FOR XML PATH('');", true)]
+    [InlineData("SELECT Name FROM dbo.T ORDER BY Id FOR XML PATH('');", false)]
+    public void OrderByOfOnlyRowIndependentKeys_HasNoOrder(string sql, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(sql).Count == 1);
+    }
+
+    [Theory]
     [InlineData("SELECT ',' FROM dbo.T FOR XML PATH('');", false)]
     [InlineData("DECLARE @v VARCHAR(5) = 'x'; SELECT @v FROM dbo.T FOR XML PATH('');", false)]
     [InlineData("DECLARE @v VARCHAR(5) = 'x'; SELECT ',' + @v FROM dbo.T FOR XML PATH('');", false)]

@@ -21,6 +21,15 @@ public sealed class StringAggMissingOrderScannerTests
         return StringAggMissingOrderScanner.Scan(result, CatalogBuilder.Build([result]));
     }
 
+    [Theory]
+    [InlineData("DECLARE @x INT = 1; SELECT STRING_AGG(Name, ',') WITHIN GROUP (ORDER BY @x) FROM dbo.T;", true)]
+    [InlineData("SELECT STRING_AGG(Name, ',') WITHIN GROUP (ORDER BY @@SPID) FROM dbo.T;", true)]
+    [InlineData("SELECT STRING_AGG(Name, ',') WITHIN GROUP (ORDER BY Id) FROM dbo.T;", false)]
+    public void WithinGroupOfOnlyRowIndependentKeys_HasNoOrder(string sql, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(sql).Count == 1);
+    }
+
     [Fact]
     public void AggregatedBaseColumn_NamesItsTableAndColumn()
     {

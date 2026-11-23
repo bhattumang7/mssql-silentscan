@@ -40,7 +40,7 @@ public static class ForXmlPathMissingOrderScanner
         {
             if (node.ForClause is XmlForClause { Options: { } options }
                 && options.Any(o => o.OptionKind == XmlForClauseOptions.Path)
-                && node.OrderByClause is null
+                && (node.OrderByClause is null || RowIndependentExpression.OrderKeysAreAllRowIndependent(node.OrderByClause.OrderByElements))
                 && !node.SelectElements.All(e => e is SelectScalarExpression { Expression: { } expression } && RowIndependentExpression.Is(expression))
                 && !SingleRowKeyPinning.QueryReadsAtMostOneRow(node, catalog))
             {

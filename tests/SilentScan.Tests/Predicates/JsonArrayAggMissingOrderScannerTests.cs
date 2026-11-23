@@ -22,6 +22,15 @@ public sealed class JsonArrayAggMissingOrderScannerTests
     }
 
     [Theory]
+    [InlineData("DECLARE @x INT = 1; SELECT JSON_ARRAYAGG(Name ORDER BY @x) FROM dbo.T;", true)]
+    [InlineData("SELECT JSON_ARRAYAGG(Name ORDER BY @@SPID) FROM dbo.T;", true)]
+    [InlineData("SELECT JSON_ARRAYAGG(Name ORDER BY Id) FROM dbo.T;", false)]
+    public void OrderByOfOnlyRowIndependentKeys_HasNoOrder(string sql, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(sql).Count == 1);
+    }
+
+    [Theory]
     [InlineData("SELECT JSON_ARRAYAGG('x') FROM dbo.T;", false)]
     [InlineData("SELECT JSON_ARRAYAGG(1) FROM dbo.T;", false)]
     [InlineData("DECLARE @v INT = 1; SELECT JSON_ARRAYAGG(@v) FROM dbo.T;", false)]

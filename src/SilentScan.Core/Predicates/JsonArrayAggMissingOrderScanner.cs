@@ -45,7 +45,7 @@ public static class JsonArrayAggMissingOrderScanner
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
             if (string.Equals(node.FunctionName?.Value, "JSON_ARRAYAGG", StringComparison.OrdinalIgnoreCase)
-                && node.JsonOrderByClause is null
+                && (node.JsonOrderByClause is null || RowIndependentExpression.OrderKeysAreAllRowIndependent(node.JsonOrderByClause.OrderByElements))
                 && !(node.Parameters.Count > 0 && RowIndependentExpression.Is(node.Parameters[0]))
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {

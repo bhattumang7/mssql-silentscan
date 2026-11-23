@@ -40,7 +40,7 @@ public static class BareTopNoOrderByScanner
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (node.TopRowFilter is { } top && node.OrderByClause is null && !IsHundredPercent(top) && !CannotVaryByRowChoice(node, top))
+            if (node.TopRowFilter is { } top && (node.OrderByClause is null || RowIndependentExpression.OrderKeysAreAllRowIndependent(node.OrderByClause.OrderByElements)) && !IsHundredPercent(top) && !CannotVaryByRowChoice(node, top))
             {
                 Findings.Add(new BareTopNoOrderByFinding(sourcePath, top.StartLine, top.StartColumn));
             }
@@ -125,13 +125,12 @@ public static class BareTopNoOrderByScanner
                 or SelectSetVariable { Expression: Literal, AssignmentKind: AssignmentKind.Equals };
 
         private static bool IsAggregateSelectElement(SelectElement element) =>
-            element is SelectScalarExpression { Expression: FunctionCall { OverClause: null } call }
-            && AggregateNames.Contains(call.FunctionName.Value);
-
-        private static readonly HashSet<string> AggregateNames = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "COUNT", "COUNT_BIG", "SUM", "AVG", "MIN", "MAX", "STDEV", "STDEVP", "VAR", "VARP",
-        };
+            element switch
+            {
+                SelectScalarExpression { Expression: { } expression } => RowIndependentExpression.IsAggregateOnly(expression),
+                SelectSetVariable { Expression: { } expression } => RowIndependentExpression.IsAggregateOnly(expression),
+                _ => false,
+            };
 
         private sealed class ExistsSubqueryCollector(HashSet<QuerySpecification> target) : TSqlFragmentVisitor
         {

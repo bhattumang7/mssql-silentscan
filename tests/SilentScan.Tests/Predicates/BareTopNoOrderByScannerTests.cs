@@ -13,6 +13,22 @@ public sealed class BareTopNoOrderByScannerTests
         return BareTopNoOrderByScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("SELECT TOP (2) Name FROM dbo.H ORDER BY (SELECT NULL);", true)]
+    [InlineData("DECLARE @x INT = 1; SELECT TOP (2) Name FROM dbo.H ORDER BY @x;", true)]
+    [InlineData("DECLARE @x INT = 1; SELECT TOP (2) Name FROM dbo.H ORDER BY @x + 0;", true)]
+    [InlineData("SELECT TOP (2) Name FROM dbo.H ORDER BY @@SPID;", true)]
+    [InlineData("SELECT TOP (2) Name FROM dbo.H ORDER BY Name;", false)]
+    [InlineData("SELECT TOP (2) Name FROM dbo.H ORDER BY 1;", false)]
+    [InlineData("DECLARE @n INT; SELECT TOP (1) @n = COUNT(*) FROM dbo.H;", false)]
+    [InlineData("SELECT TOP (1) ISNULL(MAX(Id), 0) + 1 FROM dbo.H;", false)]
+    [InlineData("SELECT TOP (5) COUNT(*), 'x' FROM dbo.H;", false)]
+    [InlineData("SELECT TOP (5) Name, COUNT(*) FROM dbo.H GROUP BY Name;", true)]
+    public void OrderByOfOnlyRowIndependentKeysOrAnAggregateOnlySelectList(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count == 1);
+    }
+
     private const string KeyedDdl = """
         CREATE TABLE dbo.K (Id INT NOT NULL PRIMARY KEY, Name VARCHAR(50) NOT NULL);
         CREATE TABLE dbo.C (A INT NOT NULL, B INT NOT NULL, Name VARCHAR(50) NOT NULL, CONSTRAINT PK_C PRIMARY KEY (A, B));
