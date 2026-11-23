@@ -42,21 +42,11 @@ public static class StringAggMissingOrderScanner
         public void OnLeaveQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
             _specifications.Pop();
 
-        private static bool IsRowIndependent(ScalarExpression value)
-        {
-            while (value is ParenthesisExpression parenthesis)
-            {
-                value = parenthesis.Expression;
-            }
-
-            return value is Literal or VariableReference or GlobalVariableExpression;
-        }
-
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
             if (string.Equals(node.FunctionName?.Value, "STRING_AGG", StringComparison.OrdinalIgnoreCase)
                 && node.WithinGroupClause is null
-                && !(node.Parameters.Count > 0 && IsRowIndependent(node.Parameters[0]))
+                && !(node.Parameters.Count > 0 && RowIndependentExpression.Is(node.Parameters[0]))
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
                 var aggregated = node.Parameters is [ColumnReferenceExpression columnRef, ..]

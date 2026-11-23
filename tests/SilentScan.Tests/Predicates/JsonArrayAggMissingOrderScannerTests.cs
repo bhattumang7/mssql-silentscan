@@ -21,6 +21,17 @@ public sealed class JsonArrayAggMissingOrderScannerTests
         return JsonArrayAggMissingOrderScanner.Scan(result, CatalogBuilder.Build([result]));
     }
 
+    [Theory]
+    [InlineData("SELECT JSON_ARRAYAGG('x') FROM dbo.T;", false)]
+    [InlineData("SELECT JSON_ARRAYAGG(1) FROM dbo.T;", false)]
+    [InlineData("DECLARE @v INT = 1; SELECT JSON_ARRAYAGG(@v) FROM dbo.T;", false)]
+    [InlineData("SELECT JSON_ARRAYAGG(Name) FROM dbo.T;", true)]
+    [InlineData("SELECT JSON_ARRAYAGG(Id + 1) FROM dbo.T;", true)]
+    public void ConstantElement_HasNoOrderToLose_OnlyRowDependentElementsFire(string sql, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(sql).Count == 1);
+    }
+
     [Fact]
     public void AggregatedBaseColumn_NamesItsTableAndColumn()
     {

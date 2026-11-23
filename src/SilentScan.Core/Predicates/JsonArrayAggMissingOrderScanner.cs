@@ -46,7 +46,7 @@ public static class JsonArrayAggMissingOrderScanner
         {
             if (string.Equals(node.FunctionName?.Value, "JSON_ARRAYAGG", StringComparison.OrdinalIgnoreCase)
                 && node.JsonOrderByClause is null
-                && node.Parameters is not [Literal, ..]
+                && !(node.Parameters.Count > 0 && RowIndependentExpression.Is(node.Parameters[0]))
                 && !(_specifications.TryPeek(out var specification) && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog)))
             {
                 var aggregated = node.Parameters is [ColumnReferenceExpression columnRef, ..]

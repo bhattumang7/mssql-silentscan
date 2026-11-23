@@ -99,22 +99,12 @@ public static class BareTopNoOrderByScanner
             if (column is not ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers }
                 || identifiers.Count > 2
                 || (identifiers.Count == 2 && !tableNames.Contains(identifiers[0].Value, catalog.IdentifierComparer))
-                || !IsRowIndependent(value))
+                || !RowIndependentExpression.Is(value))
             {
                 return;
             }
 
             pinned.Add(identifiers[^1].Value);
-        }
-
-        private static bool IsRowIndependent(ScalarExpression value)
-        {
-            while (value is ParenthesisExpression parenthesis)
-            {
-                value = parenthesis.Expression;
-            }
-
-            return value is Literal or VariableReference or GlobalVariableExpression;
         }
 
         private static bool IsHundredPercent(TopRowFilter top) =>
