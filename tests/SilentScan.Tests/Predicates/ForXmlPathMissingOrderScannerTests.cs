@@ -21,6 +21,18 @@ public sealed class ForXmlPathMissingOrderScannerTests
         return ForXmlPathMissingOrderScanner.Scan(result, CatalogBuilder.Build([result]));
     }
 
+    [Theory]
+    [InlineData("SELECT ',' FROM dbo.T FOR XML PATH('');", false)]
+    [InlineData("DECLARE @v VARCHAR(5) = 'x'; SELECT @v FROM dbo.T FOR XML PATH('');", false)]
+    [InlineData("DECLARE @v VARCHAR(5) = 'x'; SELECT ',' + @v FROM dbo.T FOR XML PATH('');", false)]
+    [InlineData("SELECT Name FROM dbo.T FOR XML PATH('');", true)]
+    [InlineData("SELECT ',' + Name FROM dbo.T FOR XML PATH('');", true)]
+    [InlineData("SELECT ',', Name FROM dbo.T FOR XML PATH('');", true)]
+    public void SelectListOfOnlyRowIndependentValues_HasNoOrderToLose(string sql, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(sql).Count == 1);
+    }
+
     [Fact]
     public void QueryPinnedToOneRowByPrimaryKey_NeverFires()
     {

@@ -11,6 +11,11 @@ internal static class RowIndependentExpression
             value = parenthesis.Expression;
         }
 
-        return value is Literal or VariableReference or GlobalVariableExpression;
+        return value switch
+        {
+            Literal or VariableReference or GlobalVariableExpression => true,
+            BinaryExpression binary => Is(binary.FirstExpression) && Is(binary.SecondExpression),
+            _ => false,
+        };
     }
 }
