@@ -80,6 +80,11 @@ public static class QueryExpressionResolver
                 case SelectScalarExpression scalar:
                     var name = scalar.ColumnName?.Value ?? InferName(scalar.Expression);
                     var provenance = ScalarExpressionResolver.Resolve(scalar.Expression, byAlias, ordered, sourcePath, ledger, catalog.TypeAliases, catalog);
+                    if (EmitsSuperAggregateNulls(spec.GroupByClause) && provenance is ColumnProvenance.BaseColumn grouped)
+                    {
+                        provenance = grouped with { IsNullableSide = true };
+                    }
+
                     result.Add(new ResolvedColumn(name ?? "?column?", provenance));
                     break;
             }
@@ -87,6 +92,12 @@ public static class QueryExpressionResolver
 
         return result;
     }
+
+    private static bool EmitsSuperAggregateNulls(GroupByClause? groupBy) =>
+        groupBy is not null
+        && (groupBy.GroupByOption is GroupByOption.Rollup or GroupByOption.Cube
+            || groupBy.GroupingSpecifications.Any(specification =>
+                specification is RollupGroupingSpecification or CubeGroupingSpecification or GrandTotalGroupingSpecification or GroupingSetsGroupingSpecification));
 
     private static IEnumerable<ResolvedColumn> ResolveStar(
         SelectStarExpression star, Dictionary<string, ScopeEntry> byAlias, IReadOnlyList<ScopeEntry> ordered, string sourcePath, SkipLedger? ledger)

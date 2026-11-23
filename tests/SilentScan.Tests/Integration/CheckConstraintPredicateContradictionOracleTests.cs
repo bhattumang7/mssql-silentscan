@@ -119,6 +119,21 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
             SELECT d.NoteId FROM (SELECT n.NoteId, o.OrderId FROM dbo.Notes n LEFT JOIN dbo.Orders o ON o.OrderId = n.NoteId + 1) d WHERE d.OrderId IS NULL;
         END
         GO
+        CREATE PROCEDURE dbo.P_RollupNoFire AS
+        BEGIN
+            SELECT d.OrderId FROM (SELECT o.OrderId, COUNT(*) AS N FROM dbo.Orders o GROUP BY ROLLUP (o.OrderId)) d WHERE d.OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_GroupingSetsNoFire AS
+        BEGIN
+            WITH g AS (SELECT o.OrderId, COUNT(*) AS N FROM dbo.Orders o GROUP BY GROUPING SETS ((o.OrderId), ())) SELECT OrderId FROM g WHERE OrderId IS NULL;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_CubeNoFire AS
+        BEGIN
+            SELECT d.OrderId FROM (SELECT o.OrderId, COUNT(*) AS N FROM dbo.Orders o GROUP BY o.OrderId WITH CUBE) d WHERE d.OrderId IS NULL;
+        END
+        GO
         CREATE PROCEDURE dbo.P_CteAntiNoFire AS
         BEGIN
             WITH d AS (SELECT n.NoteId, o.OrderId FROM dbo.Notes n LEFT JOIN dbo.Orders o ON o.OrderId = n.NoteId + 1) SELECT NoteId FROM d WHERE OrderId IS NULL;
@@ -254,6 +269,9 @@ public sealed class CheckConstraintPredicateContradictionOracleTests : OracleTes
     [InlineData("P_FullJoinAntiNoFire")]
     [InlineData("P_DerivedAntiNoFire")]
     [InlineData("P_CteAntiNoFire")]
+    [InlineData("P_RollupNoFire")]
+    [InlineData("P_GroupingSetsNoFire")]
+    [InlineData("P_CubeNoFire")]
     [InlineData("P_OuterApplyAntiNoFire")]
     public async Task NotNullColumnQueriedForNullAcrossAnOuterJoin_NeverFires_AndTheEngineReturnsTheUnmatchedRows(string procedure)
     {
