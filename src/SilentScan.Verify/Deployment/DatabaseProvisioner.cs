@@ -7,6 +7,8 @@ public sealed partial class DatabaseProvisioner
 {
     private const int PinnedCompatibilityLevel = 160;
 
+    private static readonly SemaphoreSlim CreationGate = new(1, 1);
+
     private readonly SqlServerOptions _options;
 
     public DatabaseProvisioner(SqlServerOptions options)
@@ -29,18 +31,26 @@ public sealed partial class DatabaseProvisioner
 
         await using var connection = await OpenMasterConnectionAsync(databaseName, cancellationToken);
 
-        await DropIfExistsCoreAsync(connection, databaseName, cancellationToken);
-        var collateClause = collationName is null ? string.Empty : $" COLLATE {collationName}";
-        await ExecuteAsync(connection, $"CREATE DATABASE [{databaseName}]{collateClause};", cancellationToken);
-        var (currentLevel, queryStoreOn) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
-        if (currentLevel != PinnedCompatibilityLevel)
+        await CreationGate.WaitAsync(cancellationToken);
+        try
         {
-            await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
-        }
+            await DropIfExistsCoreAsync(connection, databaseName, cancellationToken);
+            var collateClause = collationName is null ? string.Empty : $" COLLATE {collationName}";
+            await ExecuteAsync(connection, $"CREATE DATABASE [{databaseName}]{collateClause};", cancellationToken);
+            var (currentLevel, queryStoreOn) = await ReadCreatedStateAsync(connection, databaseName, cancellationToken);
+            if (currentLevel != PinnedCompatibilityLevel)
+            {
+                await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET COMPATIBILITY_LEVEL = {PinnedCompatibilityLevel};", cancellationToken);
+            }
 
-        if (queryStoreOn)
+            if (queryStoreOn)
+            {
+                await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+            }
+        }
+        finally
         {
-            await ExecuteAsync(connection, $"ALTER DATABASE [{databaseName}] SET QUERY_STORE = OFF;", cancellationToken);
+            CreationGate.Release();
         }
 
         await ExecuteAsync(connection, $"EXEC [{databaseName}].sys.sp_addextendedproperty @name = N'{Oracle.HarnessDatabaseGuard.MarkerName}', @value = N'1';", cancellationToken);
