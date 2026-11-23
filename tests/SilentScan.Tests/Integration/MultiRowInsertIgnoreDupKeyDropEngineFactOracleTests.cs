@@ -15,6 +15,10 @@ public sealed class MultiRowInsertIgnoreDupKeyDropEngineFactOracleTests : Oracle
         GO
         INSERT INTO dbo.T3 (Id) VALUES (1);
         GO
+        CREATE TABLE dbo.T3Disabled (Id INT NOT NULL);
+        CREATE UNIQUE INDEX UX_T3Disabled_Id ON dbo.T3Disabled(Id) WITH (IGNORE_DUP_KEY = ON);
+        ALTER INDEX UX_T3Disabled_Id ON dbo.T3Disabled DISABLE;
+        GO
         """;
 
     [Fact]
@@ -32,5 +36,13 @@ public sealed class MultiRowInsertIgnoreDupKeyDropEngineFactOracleTests : Oracle
         countCommand.CommandText = "SELECT COUNT(*) FROM dbo.T3;";
         var actualRowCount = (int)(await countCommand.ExecuteScalarAsync())!;
         Assert.Equal(3, actualRowCount);
+    }
+
+    [Fact]
+    public async Task MultiRowInsertColliding_IntoADisabledIndex_DropsNothing()
+    {
+        await ExecuteAsync("INSERT INTO dbo.T3Disabled (Id) VALUES (1), (1), (2);");
+
+        Assert.Equal(3, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T3Disabled;"));
     }
 }

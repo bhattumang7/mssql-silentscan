@@ -626,7 +626,7 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
     }
 
-    private static DatabaseCatalog CatalogWithCouponTable(bool ignoreDupKey)
+    private static DatabaseCatalog CatalogWithCouponTable(bool ignoreDupKey, bool disabled = false)
     {
         var ddl = "CREATE TABLE dbo.Coupon (Code VARCHAR(20) NOT NULL, Pct INT NOT NULL);";
         var result = SqlScriptParser.ParseText("test.sql", ddl);
@@ -636,16 +636,27 @@ public sealed class QueryAntiPatternScannerTests
         var existing = catalog.Find("dbo.Coupon")!;
         var index = new CatalogIndex(
             "UX_Coupon_Code", CatalogIndexKind.UniqueConstraint, IsUnique: true, KeyColumns: ["Code"],
-            IncludedColumns: [], IgnoreDupKey: ignoreDupKey);
+            IncludedColumns: [], IgnoreDupKey: ignoreDupKey, IsDisabled: disabled);
         catalog.AddOrReplace(existing with { Indexes = [index] });
         return catalog;
     }
 
-    private static IReadOnlyList<QueryAntiPatternFinding> ScanCoupon(string sql, bool ignoreDupKey)
+    private static IReadOnlyList<QueryAntiPatternFinding> ScanCoupon(string sql, bool ignoreDupKey, bool disabled = false)
     {
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
-        return QueryAntiPatternScanner.Scan(result, CatalogWithCouponTable(ignoreDupKey));
+        return QueryAntiPatternScanner.Scan(result, CatalogWithCouponTable(ignoreDupKey, disabled));
+    }
+
+    [Fact]
+    public void MultiRowInsert_IntoDisabledIgnoreDupKeyIndex_NeverFires()
+    {
+        var findings = ScanCoupon(
+            "INSERT INTO dbo.Coupon (Code, Pct) VALUES ('SAVE10', 10), ('SAVE20', 20), ('SAVE10', 15);",
+            ignoreDupKey: true,
+            disabled: true);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MultiRowInsertIgnoreDupKeyDrop);
     }
 
     [Fact]

@@ -290,7 +290,7 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
-                var hazardIndex = resolved.Indexes.FirstOrDefault(ix => ix.IsUnique && ix.IgnoreDupKey);
+                var hazardIndex = resolved.Indexes.FirstOrDefault(ix => ix.IsUnique && ix.IgnoreDupKey && !ix.IsDisabled);
                 if (hazardIndex is null)
                 {
                     continue;
