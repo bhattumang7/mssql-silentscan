@@ -147,7 +147,7 @@ public static class SelfReferencingDmlScanner
 
         private void Report(SelfReferencingDmlFinding? match, string statementKind, string targetQualifiedName, TSqlFragment locationNode)
         {
-            if (match is { } finding)
+            if (match is { } finding && catalog.Find(targetQualifiedName)?.IsMemoryOptimized != true)
             {
                 Findings.Add(finding with { StatementKind = statementKind, TargetTableQualifiedName = targetQualifiedName, Line = locationNode.StartLine, Column = locationNode.StartColumn });
             }

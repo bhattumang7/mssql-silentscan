@@ -40,6 +40,18 @@ public sealed class SelfReferencingDmlScannerTests
         Assert.Equal("dbo.T", finding.ReadSideQualifiedName);
     }
 
+    [Theory]
+    [InlineData("INSERT INTO dbo.Mo (Id, Val) SELECT Id + 1000, Val FROM dbo.Mo;", false)]
+    [InlineData("UPDATE m SET Val = m2.Val FROM dbo.Mo m JOIN dbo.Mo m2 ON m2.Id = m.Id + 1;", false)]
+    [InlineData("DELETE FROM dbo.Mo WHERE Id IN (SELECT Id + 1 FROM dbo.Mo);", false)]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT Id + 1000, Val, 0 FROM dbo.T;", true)]
+    public void MemoryOptimizedTarget_HasNoHalloweenProtectionToPay(string sql, bool fires)
+    {
+        var findings = Scan("CREATE TABLE dbo.Mo (Id INT NOT NULL PRIMARY KEY NONCLUSTERED, Val INT NOT NULL) WITH (MEMORY_OPTIMIZED = ON);" + Environment.NewLine + "GO" + Environment.NewLine + sql);
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void InsertFromDifferentTable_NeverFires()
     {
