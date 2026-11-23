@@ -12,6 +12,24 @@ public sealed class TruncateSwallowedScannerTests
         return TruncateSwallowedScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("#t", false)]
+    [InlineData("##g", false)]
+    [InlineData("dbo.Foo", true)]
+    [InlineData("Foo", true)]
+    public void EmptyCatch_FiresOnlyForTablesAForeignKeyCanReference(string table, bool fires)
+    {
+        var findings = Scan($"""
+            BEGIN TRY
+                TRUNCATE TABLE {table};
+            END TRY
+            BEGIN CATCH
+            END CATCH;
+            """);
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void EmptyCatch_Fires()
     {

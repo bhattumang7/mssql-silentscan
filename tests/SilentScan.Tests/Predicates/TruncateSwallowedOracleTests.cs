@@ -105,4 +105,17 @@ public sealed class TruncateSwallowedOracleTests : OracleTestFixture
 
         Assert.Equal(["inner", "outer"], markers);
     }
+
+    [Fact]
+    public async Task TruncatingATempTable_NeverFails_WhileTruncatingAnFkReferencedTableDoes()
+    {
+        var markers = await RunAndCaptureMarkersAsync(
+            """
+            CREATE TABLE #t (Id INT);
+            BEGIN TRY TRUNCATE TABLE #t; INSERT dbo.Marker VALUES ('temp-ok'); END TRY BEGIN CATCH INSERT dbo.Marker VALUES ('temp-caught'); END CATCH;
+            BEGIN TRY TRUNCATE TABLE dbo.Foo; INSERT dbo.Marker VALUES ('fk-ok'); END TRY BEGIN CATCH INSERT dbo.Marker VALUES ('fk-caught'); END CATCH;
+            """);
+
+        Assert.Equal(["fk-caught", "temp-ok"], markers);
+    }
 }

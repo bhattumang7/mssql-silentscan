@@ -124,7 +124,7 @@ public static class TruncateSwallowedScanner
 
             public override void Visit(TSqlFragment fragment)
             {
-                if (fragment is TruncateTableStatement match)
+                if (fragment is TruncateTableStatement { TableName.BaseIdentifier.Value: { } name } match && !name.StartsWith('#'))
                 {
                     Nodes.Add(match);
                 }
