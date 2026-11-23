@@ -14,6 +14,20 @@ public sealed class TransactionHygieneScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT 1 FROM (VALUES (1)) v(a);", false)]
+    [InlineData("SELECT value FROM STRING_SPLIT('a,b', ',');", false)]
+    [InlineData("WITH c AS (SELECT 1 AS a) SELECT a FROM c;", false)]
+    [InlineData("SELECT a FROM dbo.T;", true)]
+    [InlineData("SELECT d.a FROM (SELECT a FROM dbo.T) d;", true)]
+    [InlineData("WITH c AS (SELECT a FROM dbo.T) SELECT a FROM c;", true)]
+    public void SelectOpensAnImplicitTransactionOnlyWhenItReadsARealTable(string select, bool fires)
+    {
+        var findings = Scan($"SET IMPLICIT_TRANSACTIONS ON; {select}");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
+    [Theory]
     [InlineData("BEGIN TRANSACTION; UPDATE dbo.T SET a = 1;")]
     [InlineData("BEGIN TRANSACTION; UPDATE dbo.T SET a = 1; RETURN;")]
     [InlineData("BEGIN TRANSACTION; SAVE TRANSACTION sp1; UPDATE dbo.T SET a = 1; ROLLBACK TRANSACTION sp1; RETURN;")]

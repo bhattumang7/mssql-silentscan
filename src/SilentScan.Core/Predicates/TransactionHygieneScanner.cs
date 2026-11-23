@@ -184,9 +184,29 @@ public static class TransactionHygieneScanner
             DropTableStatement or DropIndexStatement or AlterTableStatement => true,
             GrantStatement or RevokeStatement => true,
             OpenCursorStatement or FetchCursorStatement => true,
-            SelectStatement { QueryExpression: QuerySpecification { FromClause: not null } } => true,
+            SelectStatement { QueryExpression: QuerySpecification { FromClause: not null } } select => ReadsARealTable(select),
             _ => false,
         };
+
+        private static bool ReadsARealTable(SelectStatement select)
+        {
+            var cteNames = (select.WithCtesAndXmlNamespaces?.CommonTableExpressions ?? [])
+                .Select(c => c.ExpressionName.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var collector = new NamedTableCollector();
+            select.Accept(collector);
+            return collector.Names.Any(n => n.SchemaIdentifier is not null || !cteNames.Contains(n.BaseIdentifier.Value));
+        }
+
+        private sealed class NamedTableCollector : TSqlFragmentVisitor
+        {
+            public List<SchemaObjectName> Names { get; } = [];
+
+            public override void ExplicitVisit(NamedTableReference node)
+            {
+                Names.Add(node.SchemaObject);
+            }
+        }
 
         private FlowState AnalyzeIf(IfStatement ifStatement, FlowState enteringState)
         {
