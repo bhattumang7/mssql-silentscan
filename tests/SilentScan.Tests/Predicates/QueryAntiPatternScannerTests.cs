@@ -316,6 +316,23 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Contains("Id", finding.DetailText);
     }
 
+    [Theory]
+    [InlineData("UPDATE dbo.C SET AId = 0 WHERE AId = @i;", false)]
+    [InlineData("UPDATE dbo.H SET V = 0 WHERE Id = @i;", false)]
+    [InlineData("DELETE FROM dbo.C WHERE AId = @i;", false)]
+    [InlineData("UPDATE dbo.C SET AId = 0 WHERE Id = @i;", true)]
+    [InlineData("UPDATE dbo.B SET Id = Id WHERE AId = @i;", true)]
+    public void WhileLoopDmlKeyedToLoopVariable_FiresOnlyWhenTheColumnIdentifiesOneRow(string dml, bool fires)
+    {
+        var findings = Scan(
+            "DECLARE @i INT = 0; "
+            + "WHILE @i < 100 BEGIN "
+            + dml
+            + " SET @i = @i + 1; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.RbarSingleRowLoopDml));
+    }
+
     [Fact]
     public void WhileLoopUpdateWithCompositePredicate_NeverFires()
     {

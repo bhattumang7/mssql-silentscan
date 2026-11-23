@@ -615,19 +615,41 @@ public static class QueryAntiPatternScanner
         private void InspectRbarSingleRowLoopDml(WhileStatement node)
         {
             var assignedVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var dmlSites = new List<(WhereClause? Where, int Line, int Column)>();
+            var dmlSites = new List<(WhereClause? Where, int Line, int Column, TableReference? Target)>();
             var collector = new LoopDmlAndAssignmentCollector(dmlSites, assignedVariables);
             node.Statement.Accept(collector);
 
-            foreach (var (where, line, column) in dmlSites)
+            foreach (var (where, line, column, target) in dmlSites)
             {
-                if (SingleVariableEqualityColumn(where, assignedVariables) is { } detail)
+                if (SingleVariableEqualityColumn(where, assignedVariables) is { } detail
+                    && ComparedColumnIdentifiesOneRow(target, where))
                 {
                     Findings.Add(new QueryAntiPatternFinding(
                         QueryAntiPatternFindingKind.RbarSingleRowLoopDml, sourcePath, line, column,
                         detail, FindingConfidence.Medium));
                 }
             }
+        }
+
+        private bool ComparedColumnIdentifiesOneRow(TableReference? target, WhereClause? where)
+        {
+            var condition = where?.SearchCondition;
+            while (condition is BooleanParenthesisExpression paren)
+            {
+                condition = paren.Expression;
+            }
+
+            if (target is not NamedTableReference named
+                || condition is not BooleanComparisonExpression cmp
+                || (cmp.FirstExpression as ColumnReferenceExpression ?? cmp.SecondExpression as ColumnReferenceExpression)
+                    is not { MultiPartIdentifier.Identifiers: [.., { } column] }
+                || catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject))) is not { } table)
+            {
+                return false;
+            }
+
+            return table.Indexes.Any(index => index.IsUnique && !index.IsFiltered && !index.IsDisabled
+                && index.KeyColumns.Count == 1 && catalog.IdentifierComparer.Equals(index.KeyColumns[0], column.Value));
         }
 
         private static string? SingleVariableEqualityColumn(WhereClause? where, HashSet<string> loopVariables)
@@ -662,7 +684,7 @@ public static class QueryAntiPatternScanner
         }
 
         private sealed class LoopDmlAndAssignmentCollector(
-            List<(WhereClause? Where, int Line, int Column)> dmlSites,
+            List<(WhereClause? Where, int Line, int Column, TableReference? Target)> dmlSites,
             HashSet<string> assignedVariables) : TSqlFragmentVisitor
         {
             public override void ExplicitVisit(WhileStatement node)
@@ -672,13 +694,13 @@ public static class QueryAntiPatternScanner
 
             public override void ExplicitVisit(UpdateStatement node)
             {
-                dmlSites.Add((node.UpdateSpecification.WhereClause, node.StartLine, node.StartColumn));
+                dmlSites.Add((node.UpdateSpecification.WhereClause, node.StartLine, node.StartColumn, node.UpdateSpecification.Target));
                 base.ExplicitVisit(node);
             }
 
             public override void ExplicitVisit(DeleteStatement node)
             {
-                dmlSites.Add((node.DeleteSpecification.WhereClause, node.StartLine, node.StartColumn));
+                dmlSites.Add((node.DeleteSpecification.WhereClause, node.StartLine, node.StartColumn, node.DeleteSpecification.Target));
                 base.ExplicitVisit(node);
             }
 
