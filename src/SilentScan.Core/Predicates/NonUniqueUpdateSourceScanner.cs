@@ -68,7 +68,7 @@ public static class NonUniqueUpdateSourceScanner
 
             foreach (var join in spec.FromClause!.TableReferences.SelectMany(PredicateTreeWalker.FlattenJoinNodes))
             {
-                InspectJoin(join, targetAlias, targetQualifiedName, spec.SetClauses, byAlias, scopeChain, walker);
+                InspectJoin(join, targetAlias, targetQualifiedName, spec.SetClauses, spec.WhereClause?.SearchCondition, byAlias, scopeChain, walker);
             }
         }
 
@@ -77,7 +77,7 @@ public static class NonUniqueUpdateSourceScanner
 
         private void InspectJoin(
             QualifiedJoin join, string targetAlias, string targetQualifiedName,
-            IList<SetClause> setClauses, Dictionary<string, ScopeEntry> byAlias,
+            IList<SetClause> setClauses, BooleanExpression? whereCondition, Dictionary<string, ScopeEntry> byAlias,
             List<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
             ModuleWalker walker)
         {
@@ -115,7 +115,10 @@ public static class NonUniqueUpdateSourceScanner
                 return;
             }
 
-            if (JoinKeyUniqueness.IsProvenUniqueOver(sourceTable, joinColumns, catalog.IdentifierComparer))
+            var pinnedByWhere = whereCondition is null
+                ? []
+                : JoinKeyUniqueness.EqualityColumnsQualifiedBy(whereCondition, sourceAlias, catalog.IdentifierComparer);
+            if (JoinKeyUniqueness.IsProvenUniqueOver(sourceTable, [.. joinColumns, .. pinnedByWhere], catalog.IdentifierComparer))
             {
                 return;
             }

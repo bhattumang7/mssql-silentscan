@@ -88,6 +88,20 @@ public sealed class NonUniqueUpdateSourceScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("ON t.Id = s.TargetId AND s.Cat = 1;", false)]
+    [InlineData("ON t.Id = s.TargetId WHERE s.Cat = 1;", false)]
+    [InlineData("ON t.Id = s.TargetId WHERE 1 = s.Cat;", false)]
+    [InlineData("ON t.Id = s.TargetId WHERE s.Cat > 1;", true)]
+    [InlineData("ON t.Id = s.TargetId WHERE s.Cat = 1 OR s.Cat = 2;", true)]
+    [InlineData("ON t.Id = s.TargetId;", true)]
+    public void CompositeUniqueSource_FiresUnlessTheRemainingKeyColumnIsPinned(string tail, bool fires)
+    {
+        var findings = Scan($"UPDATE t SET t.Val = s.Val FROM dbo.TargetT t JOIN dbo.SourceCompositeUnique s {tail}");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void CompositeUniqueSuperset_JoinOnSubsetOnly_StillFires()
     {
