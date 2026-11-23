@@ -23,6 +23,32 @@ public sealed class MultiRowUnsafeSingleRowAssignmentEngineFactOracleTests : Ora
             INSERT INTO dbo.T4Log (CapturedVal) VALUES (@v);
         END;
         GO
+        CREATE TABLE dbo.RcLog (Prefix VARCHAR(20) NOT NULL, Seen INT NOT NULL);
+        GO
+        CREATE TABLE dbo.RcNoCount (Id INT NOT NULL);
+        GO
+        CREATE TRIGGER dbo.trg_RcNoCount ON dbo.RcNoCount AFTER INSERT AS
+        BEGIN
+            SET NOCOUNT ON;
+            INSERT INTO dbo.RcLog (Prefix, Seen) VALUES ('set-nocount', @@ROWCOUNT);
+        END;
+        GO
+        CREATE TABLE dbo.RcDeclare (Id INT NOT NULL);
+        GO
+        CREATE TRIGGER dbo.trg_RcDeclare ON dbo.RcDeclare AFTER INSERT AS
+        BEGIN
+            DECLARE @n INT;
+            INSERT INTO dbo.RcLog (Prefix, Seen) VALUES ('bare-declare', @@ROWCOUNT);
+        END;
+        GO
+        CREATE TABLE dbo.RcInit (Id INT NOT NULL);
+        GO
+        CREATE TRIGGER dbo.trg_RcInit ON dbo.RcInit AFTER INSERT AS
+        BEGIN
+            DECLARE @n INT = 1;
+            INSERT INTO dbo.RcLog (Prefix, Seen) VALUES ('init-declare', @@ROWCOUNT);
+        END;
+        GO
         CREATE TABLE dbo.T5 (Id INT NOT NULL, Val INT NOT NULL);
         GO
         CREATE TABLE dbo.T5Log (CapturedVal INT NOT NULL);
@@ -71,5 +97,15 @@ public sealed class MultiRowUnsafeSingleRowAssignmentEngineFactOracleTests : Ora
         await using var single = connection.CreateCommand();
         single.CommandText = "INSERT INTO dbo.T5 (Id, Val) VALUES (4, 40); SELECT CapturedVal FROM dbo.T5Log;";
         Assert.Equal(40, (int)(await single.ExecuteScalarAsync())!);
+    }
+
+    [Fact]
+    public async Task RowCountInATrigger_SurvivesOnlyABareDeclare()
+    {
+        await ExecuteAsync("INSERT INTO dbo.RcNoCount VALUES (1),(2),(3); INSERT INTO dbo.RcDeclare VALUES (1),(2),(3); INSERT INTO dbo.RcInit VALUES (1),(2),(3);");
+
+        Assert.Equal(0, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'set-nocount';"));
+        Assert.Equal(3, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'bare-declare';"));
+        Assert.Equal(1, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'init-declare';"));
     }
 }

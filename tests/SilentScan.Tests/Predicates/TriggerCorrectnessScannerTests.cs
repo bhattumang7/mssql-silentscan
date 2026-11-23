@@ -70,6 +70,21 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
     }
 
+    [Theory]
+    [InlineData("SET NOCOUNT ON; IF @@ROWCOUNT > 1 RETURN;", true)]
+    [InlineData("DECLARE @n INT = 1; IF @@ROWCOUNT > 1 RETURN;", true)]
+    [InlineData("DECLARE @n INT; SET @n = 1; IF @@ROWCOUNT > 1 RETURN;", true)]
+    [InlineData("DECLARE @n INT; IF @@ROWCOUNT > 1 RETURN;", false)]
+    [InlineData("SET NOCOUNT ON; IF (SELECT COUNT(*) FROM inserted) > 1 RETURN;", false)]
+    public void RowCountGuard_OnlyProtectsWhenNothingBeforeItResetsRowCount(string prefix, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN {prefix} DECLARE @v INT; SELECT @v = Val FROM inserted; PRINT @v; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment));
+    }
+
     [Fact]
     public void SelectSetVariableFromInserted_WithWhere_NeverFires()
     {

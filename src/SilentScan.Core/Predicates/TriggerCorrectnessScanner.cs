@@ -102,6 +102,7 @@ public static class TriggerCorrectnessScanner
             {
                 if (statements[i] is IfStatement { Predicate: BooleanComparisonExpression comparison } ifStatement
                     && RejectsMoreThanOneRow(comparison)
+                    && (!ReadsRowCountVariable(comparison) || RowCountIntactBefore(statements, i))
                     && ExitsTheTrigger(ifStatement.ThenStatement))
                 {
                     return true;
@@ -110,6 +111,15 @@ public static class TriggerCorrectnessScanner
 
             return false;
         }
+
+        private static bool ReadsRowCountVariable(BooleanComparisonExpression comparison) =>
+            comparison.FirstExpression is GlobalVariableExpression || comparison.SecondExpression is GlobalVariableExpression
+            || comparison.FirstExpression is ParenthesisExpression { Expression: GlobalVariableExpression }
+            || comparison.SecondExpression is ParenthesisExpression { Expression: GlobalVariableExpression };
+
+        private static bool RowCountIntactBefore(IList<TSqlStatement> statements, int guardIndex) =>
+            statements.Take(guardIndex).All(statement => statement is DeclareVariableStatement { Declarations: var declarations }
+                && declarations.All(declaration => declaration.Value is null));
 
         private static bool RejectsMoreThanOneRow(BooleanComparisonExpression comparison)
         {
