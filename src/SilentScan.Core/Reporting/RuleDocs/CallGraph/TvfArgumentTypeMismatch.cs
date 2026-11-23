@@ -8,20 +8,20 @@ internal static class TvfArgumentTypeMismatch
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            This rule follows a real call site, not just an inline table-valued function's own
+            This rule follows a real call site, not just an inline or multi-statement table-valued function's own
             declaration: it resolves a `FROM dbo.SomeFunction(...)` or `CROSS/OUTER APPLY
             dbo.SomeFunction(...)` reference, looks up the literal or caller-side variable actually
             passed at each argument position, and compares its type against the function's declared
             parameter type. Table-valued function arguments are always positional in T-SQL - there is
             no named-parameter syntax the way there is for `EXEC` - so the same silent narrowing that
-            can affect a stored procedure's own parameter marshalling can affect an inline TVF's
+            can affect a stored procedure's own parameter marshalling can affect a table-valued function's
             parameter marshalling too: a shorter string literal or variable, a narrower numeric type,
             or a coarser temporal type is implicitly converted to the function's declared parameter
             type before the function body's own `RETURN (SELECT ...)` ever runs.
 
             This is classified the same way an INSERT or UPDATE assignment's silent data loss is,
             because the underlying mechanism is identical - it's an assignment, not a predicate. The
-            fact that the assignment happens at an inline TVF's own parameter boundary rather than
+            fact that the assignment happens at a table-valued function's own parameter boundary rather than
             inside a DML statement doesn't change the mechanism, only where in the code the loss
             happens - which is also why it's easy to miss in review, since neither the call site's own
             argument expression nor the function's own parameter declaration looks wrong in isolation,

@@ -63,7 +63,7 @@ public static class TvfCallArgumentMismatchScanner
         private void VisitFunctionReference(SchemaObjectFunctionTableReference function, ModuleWalker walker)
         {
             var qualifiedName = Catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(function.SchemaObject));
-            if (!Catalog.TryGetTableValuedFunctionKind(qualifiedName, out var kind) || kind != TableValuedFunctionKind.Inline
+            if (!Catalog.TryGetTableValuedFunctionKind(qualifiedName, out var kind) || kind is not (TableValuedFunctionKind.Inline or TableValuedFunctionKind.MultiStatement)
                 || !Catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
             {
                 return;

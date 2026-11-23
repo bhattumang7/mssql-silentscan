@@ -51,7 +51,7 @@ public sealed class TvfCallArgumentMismatchScannerTests
     }
 
     [Fact]
-    public void MultiStatementTableValuedFunction_NeverFires()
+    public void MultiStatementTableValuedFunction_FiresLikeAnInlineOne()
     {
         var findings = Scan(
             """
@@ -65,7 +65,7 @@ public sealed class TvfCallArgumentMismatchScannerTests
             """,
             "SELECT * FROM dbo.fn_ByCode('a very long literal value');");
 
-        Assert.Empty(findings);
+        Assert.Single(findings);
     }
 
     [Fact]

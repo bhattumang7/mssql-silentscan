@@ -598,7 +598,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Inline TVF call-site argument mismatches ({report.Find<TvfCallArgumentMismatchFinding>(nameof(TvfCallArgumentMismatchScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A real FROM/APPLY call site invoking an inline table-valued function has a silent narrowing conversion at parameter marshalling, not a predicate - an assignment-shaped conversion, classified the same way an INSERT/UPDATE assignment's silent data loss is, applied to an inline TVF's own parameter boundary the same way it already applies to a stored procedure's EXEC call site.");
+            "A real FROM/APPLY call site invoking an inline or multi-statement table-valued function has a silent narrowing conversion at parameter marshalling, not a predicate - an assignment-shaped conversion, classified the same way an INSERT/UPDATE assignment's silent data loss is, applied to an inline TVF's own parameter boundary the same way it already applies to a stored procedure's EXEC call site.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TvfCallArgumentMismatchRuleId));
         yield return new ReadableBlock.Table(
