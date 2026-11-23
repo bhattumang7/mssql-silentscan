@@ -129,17 +129,17 @@ public static class ParameterReassignmentPredicateScanner
 
             switch (statement)
             {
-                case SelectStatement { QueryExpression: QuerySpecification spec } select when !HasOptionRecompile(select.OptimizerHints):
+                case SelectStatement { QueryExpression: QuerySpecification spec } select when !DefeatsStaleSniffing(select.OptimizerHints, select):
                     InspectQuerySpecificationTree(spec, BuildScopeChain(spec.FromClause, select.WithCtesAndXmlNamespaces), state);
                     break;
 
-                case UpdateStatement { UpdateSpecification: { } upd } update when !HasOptionRecompile(update.OptimizerHints):
+                case UpdateStatement { UpdateSpecification: { } upd } update when !DefeatsStaleSniffing(update.OptimizerHints, update):
                     ModuleWalker.InspectAllPredicateLocations(
                         update, BuildDataModificationScopeChain(upd.Target, upd.FromClause, update.WithCtesAndXmlNamespaces), (condition, chain) => InspectSearchConditionCore(condition, chain, state));
                     InspectDerivedTablesInFromClause(upd.FromClause, state);
                     break;
 
-                case DeleteStatement { DeleteSpecification: { } del } delete when !HasOptionRecompile(delete.OptimizerHints):
+                case DeleteStatement { DeleteSpecification: { } del } delete when !DefeatsStaleSniffing(delete.OptimizerHints, delete):
                     ModuleWalker.InspectAllPredicateLocations(
                         delete, BuildDataModificationScopeChain(del.Target, del.FromClause, delete.WithCtesAndXmlNamespaces), (condition, chain) => InspectSearchConditionCore(condition, chain, state));
                     InspectDerivedTablesInFromClause(del.FromClause, state);
@@ -222,8 +222,34 @@ public static class ParameterReassignmentPredicateScanner
             }
         }
 
-        private static bool HasOptionRecompile(IList<OptimizerHint> hints) =>
-            hints.Any(h => h.HintKind == OptimizerHintKind.Recompile);
+        private static bool DefeatsStaleSniffing(IList<OptimizerHint> hints, TSqlFragment statement) =>
+            hints.Any(h => h.HintKind is OptimizerHintKind.Recompile or OptimizerHintKind.OptimizeFor
+                || h is UseHintList useHints && useHints.Hints.Any(hint => string.Equals(hint.Value, "DISABLE_PARAMETER_SNIFFING", StringComparison.OrdinalIgnoreCase)))
+            || ReadsTemporaryTable(statement);
+
+        private static bool ReadsTemporaryTable(TSqlFragment statement)
+        {
+            var finder = new TemporaryTableFinder();
+            statement.Accept(finder);
+            return finder.Found;
+        }
+
+        private sealed class TemporaryTableFinder : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(NamedTableReference node)
+            {
+                if (node.SchemaObject.BaseIdentifier.Value.StartsWith('#'))
+                {
+                    Found = true;
+                }
+
+                base.ExplicitVisit(node);
+            }
+
+            public override void ExplicitVisit(VariableTableReference node) => Found = true;
+        }
 
         private ScopeChain BuildScopeChain(FromClause? fromClause, WithCtesAndXmlNamespaces? withClause)
         {

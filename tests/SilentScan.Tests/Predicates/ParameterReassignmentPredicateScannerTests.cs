@@ -238,6 +238,29 @@ public sealed class ParameterReassignmentPredicateScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p OPTION (OPTIMIZE FOR (@p UNKNOWN));", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p OPTION (OPTIMIZE FOR (@p = 'A'));", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p OPTION (USE HINT ('DISABLE_PARAMETER_SNIFFING'));", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers c JOIN #stage s ON s.Code = c.Code WHERE c.Code = @p;", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p OPTION (MAXDOP 1);", true)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p OPTION (USE HINT ('FORCE_LEGACY_CARDINALITY_ESTIMATION'));", true)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p;", true)]
+    public void HintsOrDeferredCompilationThatDefeatTheStaleSniffedValue_Suppress(string statement, bool fires)
+    {
+        var findings = Scan(
+            $"""
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                CREATE TABLE #stage (Code VARCHAR(20) NOT NULL);
+                SET @p = 'OVERWRITTEN';
+                {statement}
+            END
+            """);
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void OptionRecompileOnStatement_Suppresses()
     {
