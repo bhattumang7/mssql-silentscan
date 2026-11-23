@@ -77,7 +77,7 @@ public static class TruncateSwallowedScanner
 
             var raiseErrorCollector = new NodeCollector<RaiseErrorStatement>();
             fragment.Accept(raiseErrorCollector);
-            if (raiseErrorCollector.Nodes.Count != 0)
+            if (raiseErrorCollector.Nodes.Any(RaisesToTheCaller))
             {
                 return true;
             }
@@ -86,6 +86,9 @@ public static class TruncateSwallowedScanner
             fragment.Accept(executeCollector);
             return executeCollector.Nodes.Any(MayRaiseAnError);
         }
+
+    private static bool RaisesToTheCaller(RaiseErrorStatement raise) =>
+        raise.SecondParameter is not IntegerLiteral { Value: var severity } || !int.TryParse(severity, out var level) || level > 10;
 
         private static bool MayRaiseAnError(ExecuteStatement execute)
         {

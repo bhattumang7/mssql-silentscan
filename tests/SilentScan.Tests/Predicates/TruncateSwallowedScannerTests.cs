@@ -122,6 +122,26 @@ public sealed class TruncateSwallowedScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("RAISERROR('failed', 10, 1);", true)]
+    [InlineData("RAISERROR('failed', 0, 1);", true)]
+    [InlineData("RAISERROR('failed', 11, 1);", false)]
+    [InlineData("RAISERROR('failed', 16, 1);", false)]
+    [InlineData("DECLARE @s INT = 10; RAISERROR('failed', @s, 1);", false)]
+    public void CatchWithRaiserror_OnlyASeverityAboveTenReachesTheCaller(string handler, bool fires)
+    {
+        var findings = Scan($"""
+            BEGIN TRY
+                TRUNCATE TABLE dbo.Foo;
+            END TRY
+            BEGIN CATCH
+                {handler}
+            END CATCH;
+            """);
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void ThrowNestedInsideIf_StillNeverFires()
     {
