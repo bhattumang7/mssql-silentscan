@@ -35,6 +35,10 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
         CREATE TABLE dbo.O (X INT, Y INT);
         INSERT INTO dbo.O VALUES (1, 9), (2, 8);
         GO
+        CREATE TABLE dbo.Dk (AId INT NOT NULL, Kind INT NOT NULL);
+        CREATE UNIQUE INDEX UX_Dk ON dbo.Dk(AId, Kind);
+        INSERT INTO dbo.Dk VALUES (1, 1), (1, 2);
+        GO
         CREATE TABLE dbo.Pa (Id INT NOT NULL, Grp INT NOT NULL);
         CREATE TABLE dbo.Pb (PaId INT NOT NULL, Tag INT NOT NULL);
         INSERT INTO dbo.Pa VALUES (1, 1), (2, 1);
@@ -166,5 +170,12 @@ public sealed class ControlFlowAndStatementSemanticsEngineFactOracleTests : Orac
             $"SELECT COUNT(*) FROM {rows} WHERE CASE f | f WHEN 0 THEN 'a' WHEN 1 THEN 'b' END IS NULL;"));
         Assert.Equal(2, await ScalarAsync<int>(
             $"SELECT COUNT(*) FROM {rows} WHERE CASE f | f WHEN 0 THEN 'a' END IS NULL;"));
+    }
+
+    [Fact]
+    public async Task JoinOnPartOfAUniqueKey_FansOutUnlessTheWhereClausePinsTheRemainingKeyColumn()
+    {
+        Assert.Equal(2, await ScalarAsync<int>("SELECT COUNT(*) FROM (VALUES (1)) AS a(Id) JOIN dbo.Dk AS d ON a.Id = d.AId;"));
+        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM (VALUES (1)) AS a(Id) JOIN dbo.Dk AS d ON a.Id = d.AId WHERE d.Kind = 1;"));
     }
 }

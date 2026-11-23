@@ -417,6 +417,25 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Equal(FindingConfidence.Medium, finding.Confidence);
     }
 
+    private static readonly string KindedTable =
+        "CREATE TABLE dbo.D (Id INT NOT NULL PRIMARY KEY, AId INT NOT NULL, Kind INT NOT NULL);"
+        + (char)10 + "CREATE UNIQUE INDEX UX_D_AId_Kind ON dbo.D(AId, Kind);" + (char)10 + "GO" + (char)10;
+
+    [Theory]
+    [InlineData("WHERE d.Kind = 1", false)]
+    [InlineData("WHERE 1 = d.Kind", false)]
+    [InlineData("WHERE d.Kind = 1 AND a.Id > 5", false)]
+    [InlineData("WHERE d.Kind > 1", true)]
+    [InlineData("WHERE d.Kind = 1 OR d.Kind = 2", true)]
+    [InlineData("WHERE d.Kind = a.Id", true)]
+    [InlineData("", true)]
+    public void SelectDistinctJoinOnPartOfAUniqueKey_FiresUnlessTheWhereClausePinsTheRest(string where, bool fires)
+    {
+        var findings = Scan(KindedTable + $"SELECT DISTINCT a.Id FROM dbo.A a JOIN dbo.D d ON a.Id = d.AId {where};");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.DistinctMaskingJoinFanout));
+    }
+
     [Fact]
     public void SelectDistinctJoinOnUniqueIndexedColumn_NeverFires()
     {

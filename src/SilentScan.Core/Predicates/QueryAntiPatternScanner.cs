@@ -901,10 +901,23 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
+                var pinnedColumns = node.WhereClause is { SearchCondition: { } whereCondition }
+                    ? PredicateTreeWalker.FlattenAnd(whereCondition)
+                        .OfType<BooleanComparisonExpression>()
+                        .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
+                        .Select(c => (c.FirstExpression, c.SecondExpression) switch
+                        {
+                            (var column, Literal or VariableReference) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
+                            (Literal or VariableReference, var column) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
+                            _ => null,
+                        })
+                        .OfType<string>()
+                        .ToList()
+                    : [];
                 var isProvablyUnique = joinedTable.Indexes.Any(ix =>
                     ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled
                     && ix.KeyColumns.Count > 0
-                    && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer)));
+                    && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer) || pinnedColumns.Contains(kc, catalog.IdentifierComparer)));
                 if (isProvablyUnique)
                 {
                     continue;
