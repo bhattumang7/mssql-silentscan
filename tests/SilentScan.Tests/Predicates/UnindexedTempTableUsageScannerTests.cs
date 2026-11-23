@@ -15,6 +15,61 @@ public sealed class UnindexedTempTableUsageScannerTests
         return UnindexedTempTableUsageScanner.Scan(parseResult, catalog);
     }
 
+    [Theory]
+    [InlineData("ALTER TABLE #t ADD CONSTRAINT PK_t PRIMARY KEY (Code);")]
+    [InlineData("ALTER TABLE #t ADD PRIMARY KEY (Code);")]
+    [InlineData("ALTER TABLE #t ADD CONSTRAINT UQ_t UNIQUE (Code);")]
+    [InlineData("CREATE CLUSTERED INDEX ix ON #t (Code);")]
+    [InlineData("CREATE NONCLUSTERED INDEX ix ON #t (Code);")]
+    [InlineData("CREATE UNIQUE INDEX ix ON #t (Code);")]
+    [InlineData("CREATE CLUSTERED COLUMNSTORE INDEX ix ON #t;")]
+    public void SelectIntoThenAnyIndexCreation_NeverFires(string indexStatement)
+    {
+        var findings = Scan($"""
+            CREATE PROCEDURE dbo.usp_Foo AS
+            BEGIN
+                SELECT Id, Code INTO #t FROM dbo.Source WHERE Flag = 1;
+                {indexStatement}
+                SELECT s.* FROM dbo.Source2 s INNER JOIN #t t ON s.Code = t.Code;
+            END
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Theory]
+    [InlineData("EXEC('CREATE CLUSTERED INDEX ix ON #t (Code)');")]
+    [InlineData("EXEC sp_executesql N'CREATE INDEX ix ON #t (Code)';")]
+    [InlineData("DECLARE @sql NVARCHAR(200) = N'CREATE INDEX ix ON #t (Code)'; EXEC (@sql);")]
+    public void SelectIntoThenIndexCreatedByDynamicSql_NeverFires(string indexStatement)
+    {
+        var findings = Scan($"""
+            CREATE PROCEDURE dbo.usp_Foo AS
+            BEGIN
+                SELECT Id, Code INTO #t FROM dbo.Source WHERE Flag = 1;
+                {indexStatement}
+                SELECT s.* FROM dbo.Source2 s INNER JOIN #t t ON s.Code = t.Code;
+            END
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SelectIntoThenUnrelatedLiteralDynamicSql_StillFires()
+    {
+        var findings = Scan("""
+            CREATE PROCEDURE dbo.usp_Foo AS
+            BEGIN
+                SELECT Id, Code INTO #t FROM dbo.Source WHERE Flag = 1;
+                EXEC('SELECT 1');
+                SELECT s.* FROM dbo.Source2 s INNER JOIN #t t ON s.Code = t.Code;
+            END
+            """);
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void SelectIntoThenJoin_NoIndex_Fires()
     {

@@ -6,7 +6,7 @@ using SilentScan.Core.Common;
 
 namespace SilentScan.Core.Predicates;
 
-public static class UnindexedTempTableUsageScanner
+public static partial class UnindexedTempTableUsageScanner
 {
     public static IReadOnlyList<UnindexedTempTableUsageFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
@@ -77,7 +77,7 @@ public static class UnindexedTempTableUsageScanner
                 continue;
             }
 
-            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage);
+            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage, rule);
         }
 
         return OrderFindings(findings);
@@ -85,10 +85,10 @@ public static class UnindexedTempTableUsageScanner
 
     private static void AddFindingIfUnindexed(
         List<UnindexedTempTableUsageFinding> findings, SqlParseResult parseResult, DatabaseCatalog catalog,
-        Declaration declaration, Usage usage)
+        Declaration declaration, Usage usage, Rule rule)
     {
         var temp = catalog.Find(declaration.TempQualifiedName, declaration.Scope);
-        if (temp is null || temp.Indexes.Count != 0)
+        if (temp is null || temp.Indexes.Count != 0 || rule.DynamicSqlScopes.Contains(declaration.Scope))
         {
             return;
         }
@@ -128,7 +128,7 @@ public static class UnindexedTempTableUsageScanner
                 continue;
             }
 
-            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage);
+            AddFindingIfUnindexed(findings, parseResult, catalog, declaration, usage, rule);
         }
 
         return OrderFindings(findings);
@@ -140,11 +140,48 @@ public static class UnindexedTempTableUsageScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(DatabaseCatalog catalog) : IModuleRule
+    internal sealed partial class Rule(DatabaseCatalog catalog) : IModuleRule
     {
         public List<Declaration> Declarations { get; } = [];
 
         public List<Usage> Usages { get; } = [];
+
+        public HashSet<string?> DynamicSqlScopes { get; } = [];
+
+        public void OnEnterExecuteStatement(ExecuteStatement node, ModuleWalker walker)
+        {
+            if (MayCreateAnIndex(node))
+            {
+                DynamicSqlScopes.Add(walker.CurrentProcScope);
+            }
+        }
+
+        private static bool MayCreateAnIndex(ExecuteStatement node)
+        {
+            var texts = new List<ScalarExpression>();
+            switch (node.ExecuteSpecification.ExecutableEntity)
+            {
+                case ExecutableStringList list:
+                    texts.AddRange(list.Strings);
+                    break;
+                case ExecutableProcedureReference { ProcedureReference.ProcedureReference.Name.BaseIdentifier.Value: var procedure } reference
+                    when string.Equals(procedure, "sp_executesql", StringComparison.OrdinalIgnoreCase):
+                    if (reference.Parameters.Count > 0)
+                    {
+                        texts.Add(reference.Parameters[0].ParameterValue);
+                    }
+
+                    break;
+                default:
+                    return false;
+            }
+
+            return texts.Any(text => text is not StringLiteral literal
+                || IndexKeywordRegex().IsMatch(literal.Value));
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\b(INDEX|PRIMARY\s+KEY|UNIQUE)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 100)]
+        private static partial System.Text.RegularExpressions.Regex IndexKeywordRegex();
 
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker)
         {

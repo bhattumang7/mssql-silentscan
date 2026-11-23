@@ -151,6 +151,18 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    [Trait("Rule", FindingRuleIds.UnindexedTempTableUsageFilteredInWhereRuleId)]
+    public async Task IndexCreatedByDynamicSqlOnAnOuterTempTable_IsUsedByLaterStatements()
+    {
+        const string setup = "SELECT * INTO #t1 FROM dbo.Src; EXEC('CREATE INDEX IX_dyn ON #t1(K)');";
+
+        var plan = await PlanInSessionAsync(setup, "SELECT Id FROM #t1 WHERE K = 42;");
+
+        Assert.Contains("IX_dyn", ShowPlan.IndexNames(plan));
+        Assert.Contains("Index Seek", ShowPlan.PhysicalOps(plan));
+    }
+
+    [Fact]
     [Trait("Rule", FindingRuleIds.FilteredIndexParameterMismatchRuleId)]
     public async Task FilteredIndexIsUsedForLiteralButNotForVariable()
     {
