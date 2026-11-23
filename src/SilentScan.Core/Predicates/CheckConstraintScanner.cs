@@ -125,18 +125,52 @@ public static class CheckConstraintScanner
 
         public override void ExplicitVisit(CoalesceExpression node)
         {
-            AddDirectColumns(node.Expressions);
+            AddAllColumns(node.Expressions);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(SearchedCaseExpression node)
+        {
+            if (node.ElseExpression is not null)
+            {
+                foreach (var whenClause in node.WhenClauses)
+                {
+                    whenClause.WhenExpression.Accept(new ColumnNameCollector(names));
+                }
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(IIfCall node)
+        {
+            node.Predicate.Accept(new ColumnNameCollector(names));
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(FunctionCall node)
         {
-            if (node.FunctionName?.Value is { } name && name.Equals("ISNULL", StringComparison.OrdinalIgnoreCase))
+            if (node.FunctionName?.Value is { } name)
             {
-                AddDirectColumns(node.Parameters);
+                if (name.Equals("ISNULL", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddAllColumns(node.Parameters);
+                }
+                else if (name.Equals("CONCAT", StringComparison.OrdinalIgnoreCase) || name.Equals("CONCAT_WS", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddDirectColumns(node.Parameters);
+                }
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private void AddAllColumns(IEnumerable<ScalarExpression> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                expression.Accept(new ColumnNameCollector(names));
+            }
         }
 
         private void AddDirectColumns(IEnumerable<ScalarExpression> expressions)
