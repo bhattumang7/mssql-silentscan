@@ -92,7 +92,7 @@ public static class NotInNullableSubqueryScanner
                 return;
             }
 
-            if (HasDefensiveNotNullFilter(subquerySpec.WhereClause?.SearchCondition, innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
+            if (HasDefensiveNotNullFilter([subquerySpec.WhereClause?.SearchCondition, .. InnerJoinConditions(subquerySpec.FromClause)], innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
             {
                 return;
             }
@@ -108,11 +108,19 @@ public static class NotInNullableSubqueryScanner
                 sourcePath, predicate.StartLine, predicate.StartColumn));
         }
 
+        private static IEnumerable<BooleanExpression?> InnerJoinConditions(FromClause? fromClause) =>
+            fromClause is null ? [] : fromClause.TableReferences.SelectMany(InnerJoinConditions);
+
+        private static IEnumerable<BooleanExpression?> InnerJoinConditions(TableReference reference) =>
+            reference is QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner } join
+                ? [join.SearchCondition, .. InnerJoinConditions(join.FirstTableReference), .. InnerJoinConditions(join.SecondTableReference)]
+                : [];
+
         private bool HasDefensiveNotNullFilter(
-            BooleanExpression? subqueryWhere, string tableQualifiedName, string columnName,
+            IEnumerable<BooleanExpression?> filters, string tableQualifiedName, string columnName,
             IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> subqueryScopeChain)
         {
-            foreach (var clause in PredicateTreeWalker.FlattenAnd(subqueryWhere))
+            foreach (var clause in filters.SelectMany(PredicateTreeWalker.FlattenAnd))
             {
                 foreach (var filterColumnRef in NullRejectedColumns(clause))
                 {

@@ -20,6 +20,16 @@ public sealed class NotInNullableSubqueryScannerTests
         return NotInNullableSubqueryScanner.Scan(result, catalog);
     }
 
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT n.RefId FROM dbo.ChildNullable n JOIN dbo.ChildNotNull c ON c.RefId = n.RefId);", false)]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT n.RefId FROM dbo.ChildNullable n INNER JOIN dbo.ChildNotNull c ON n.RefId = c.RefId AND c.RefId > 0);", false)]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT n.RefId FROM dbo.ChildNullable n LEFT JOIN dbo.ChildNotNull c ON c.RefId = n.RefId);", true)]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT n.RefId FROM dbo.ChildNullable n JOIN dbo.ChildNotNull c ON c.RefId > 0);", true)]
+    public void InnerJoinConditionOnTheSubqueryColumn_RemovesTheNullsLikeAWhereFilter(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count == 1);
+    }
+
     [Fact]
     public void NullableSubqueryColumn_Fires()
     {
