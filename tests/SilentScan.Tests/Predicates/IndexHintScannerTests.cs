@@ -50,6 +50,19 @@ public sealed class IndexHintScannerTests
         Assert.Single(Scan(statement, CatalogWithIndex()));
     }
 
+    [Theory]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status IN (SELECT Status FROM dbo.Orders o2 WHERE o2.OrderId = 1);", false)]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status = 3 OR OrderId = 1;", false)]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status IN (1, 2);", false)]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status > 3;", false)]
+    [InlineData("SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE Status IS NOT NULL;", false)]
+    public void LeadingColumnNamedInAnyPredicateShape_IsTreatedAsBoundAndNeverFires(string statement, bool fires)
+    {
+        var findings = Scan(statement, CatalogWithIndex());
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void HintNamesNonexistentIndex_NeverFires()
     {
