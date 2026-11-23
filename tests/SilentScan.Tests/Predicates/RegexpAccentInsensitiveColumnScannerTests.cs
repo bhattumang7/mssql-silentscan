@@ -26,6 +26,10 @@ public sealed class RegexpAccentInsensitiveColumnScannerTests
     [InlineData("'[[:alpha:]]+'", false)]
     [InlineData("'caf\\w'", true)]
     [InlineData("'[a-z]+'", true)]
+    [InlineData("'^\\p{L}+$'", false)]
+    [InlineData("'^\\pL+$'", false)]
+    [InlineData("'^(?i)\\d+$'", false)]
+    [InlineData("'(?i)cafe'", true)]
     public void RegexpLike_AiColumn_FiresOnlyForALiteralLetterThatAccentFoldingCouldChange(string pattern, bool fires)
     {
         var findings = Scan(AiTable, $"SELECT * FROM dbo.T WHERE REGEXP_LIKE(Name, {pattern});");

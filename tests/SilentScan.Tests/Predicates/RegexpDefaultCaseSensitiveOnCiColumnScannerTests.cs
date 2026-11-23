@@ -39,6 +39,18 @@ public sealed class RegexpDefaultCaseSensitiveOnCiColumnScannerTests
     [InlineData("'[[:upper:]]+'", true)]
     [InlineData("'\\p{Lu}'", true)]
     [InlineData("'\\x41'", true)]
+    [InlineData("'(?i)abc'", false)]
+    [InlineData("'(?is)abc'", false)]
+    [InlineData("'[A-Za-z]+'", false)]
+    [InlineData("'[a-zA-Z0-9_]+'", false)]
+    [InlineData("'^[Yy]$'", false)]
+    [InlineData("'[^A-Za-z]+'", false)]
+    [InlineData("'\\p{L}+'", false)]
+    [InlineData("'\\pN+'", false)]
+    [InlineData("'\\p{Nd}+'", false)]
+    [InlineData("'\\p{Ll}'", true)]
+    [InlineData("'[A-Z]abc'", true)]
+    [InlineData("'[a-z]+'", true)]
     public void RegexpLike_OnlyLettersThatTheCaseFlagCouldChange_Fire(string pattern, bool fires)
     {
         var findings = Scan(CiTable, $"SELECT * FROM dbo.T WHERE REGEXP_LIKE(Name, {pattern});");

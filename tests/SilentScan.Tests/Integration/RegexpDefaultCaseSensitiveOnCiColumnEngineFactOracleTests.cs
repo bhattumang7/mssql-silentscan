@@ -88,6 +88,10 @@ public sealed class RegexpDefaultCaseSensitiveOnCiColumnEngineFactOracleTests : 
     [InlineData("'[[:upper:]]+'", ", 'i'", 4)]
     [InlineData("'\\p{Lu}+'", "", 3)]
     [InlineData("'\\p{Lu}+'", ", 'i'", 4)]
+    [InlineData("'(?i)john'", "", 3)]
+    [InlineData("'[Jj][Oo][Hh][Nn]'", "", 3)]
+    [InlineData("'\\p{L}+'", "", 4)]
+    [InlineData("'\\p{L}+'", ", 'i'", 4)]
     public async Task CaseNeutralEscapesMatchEveryCasing_WhileCaseCarryingClassesNeedTheIFlag(string pattern, string flags, int expected)
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
