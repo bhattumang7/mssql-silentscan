@@ -25,6 +25,12 @@ public sealed class CartesianJoinScannerTests
 
     [Theory]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1;")]
+    [InlineData("DECLARE @id INT = 1; SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = @id;")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE (c.Id = 1);")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id IN (1);")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT Val FROM dbo.Config ORDER BY Id OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o CROSS JOIN (SELECT Val FROM dbo.Config WHERE Id = 1) x;")]
+    [InlineData("SELECT * FROM dbo.Orders o, dbo.Config c WHERE c.Id = 1 AND c.Val > 0;")]
     [InlineData("SELECT * FROM dbo.Config c CROSS JOIN dbo.Orders o WHERE c.Id = 1;")]
     [InlineData("SELECT * FROM dbo.Orders o, dbo.Config c WHERE c.Id = 1 AND o.Amount > 5;")]
     public void OneSideKeyPinnedToASingleRow_NeverFires(string statement)
@@ -48,6 +54,8 @@ public sealed class CartesianJoinScannerTests
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o;")]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Val = 1;")]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1 OR c.Id = 2;")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id IN (1, 2);")]
+    [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id NOT IN (1);")]
     [InlineData("SELECT * FROM dbo.Config c CROSS JOIN dbo.Orders o WHERE c.Id > 1;")]
     public void NeitherSidePinnedToASingleRow_StillFires(string statement)
     {

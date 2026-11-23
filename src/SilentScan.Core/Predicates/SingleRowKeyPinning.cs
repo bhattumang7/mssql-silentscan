@@ -26,6 +26,9 @@ internal static class SingleRowKeyPinning
             {
                 AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries);
                 AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries);
+            }            else if (conjunct is InPredicate { NotDefined: false, Subquery: null, Values: [{ } onlyValue] } singleValueIn)
+            {
+                AddEquality(equalities, singleValueIn.Expression, onlyValue, entries);
             }
         }
 
