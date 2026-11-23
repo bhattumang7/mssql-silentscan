@@ -12,6 +12,17 @@ public sealed class WindowFrameScannerTests
         return WindowFrameScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("SELECT SUM(Amt) OVER w FROM dbo.Sales WINDOW w AS (ORDER BY D ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);", false)]
+    [InlineData("SELECT SUM(Amt) OVER w FROM dbo.Sales WINDOW w AS (ORDER BY D RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);", false)]
+    [InlineData("SELECT SUM(Amt) OVER w FROM dbo.Sales WINDOW w AS (ORDER BY D);", true)]
+    [InlineData("SELECT SUM(Amt) OVER (w ROWS UNBOUNDED PRECEDING) FROM dbo.Sales WINDOW w AS (ORDER BY D);", false)]
+    [InlineData("SELECT ROW_NUMBER() OVER w FROM dbo.Sales WINDOW w AS (ORDER BY D);", false)]
+    public void NamedWindowDefinition_FiresOnlyWhenAFrameCapableFunctionGetsNoFrame(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count == 1);
+    }
+
     [Fact]
     public void ExplicitRowsFrame_NeverFires()
     {

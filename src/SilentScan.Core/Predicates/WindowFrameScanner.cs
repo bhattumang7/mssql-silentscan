@@ -44,6 +44,40 @@ public static class WindowFrameScanner
     {
         public List<WindowFrameFinding> Findings { get; } = [];
 
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (node.WindowClause is not { WindowDefinition: { Count: > 0 } definitions })
+            {
+                return;
+            }
+
+            var unframed = definitions
+                .Where(d => d is { RefWindowName: null, OrderByClause: not null, WindowFrameClause: null })
+                .Select(d => d.WindowName.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (unframed.Count == 0)
+            {
+                return;
+            }
+
+            var collector = new NamedOverCollector();
+            foreach (var element in node.SelectElements)
+            {
+                element.Accept(collector);
+            }
+
+            foreach (var call in collector.Calls)
+            {
+                if (call.OverClause is { WindowName: { } name, OrderByClause: null, WindowFrameClause: null } over
+                    && unframed.Contains(name.Value)
+                    && !FrameIncapableFunctions.Contains(call.FunctionName?.Value ?? string.Empty))
+                {
+                    Findings.Add(new WindowFrameFinding(
+                        WindowFrameFindingKind.ImplicitDefaultRangeFrame, sourcePath, over.StartLine, over.StartColumn));
+                }
+            }
+        }
+
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
             if (node.OverClause is not { OrderByClause: not null } overClause
@@ -56,6 +90,25 @@ public static class WindowFrameScanner
             {
                 Findings.Add(new WindowFrameFinding(
                     WindowFrameFindingKind.ImplicitDefaultRangeFrame, sourcePath, overClause.StartLine, overClause.StartColumn));
+            }
+        }
+
+        private sealed class NamedOverCollector : TSqlFragmentVisitor
+        {
+            public List<FunctionCall> Calls { get; } = [];
+
+            public override void ExplicitVisit(QuerySpecification node)
+            {
+            }
+
+            public override void ExplicitVisit(FunctionCall node)
+            {
+                if (node.OverClause?.WindowName is not null)
+                {
+                    Calls.Add(node);
+                }
+
+                base.ExplicitVisit(node);
             }
         }
     }
