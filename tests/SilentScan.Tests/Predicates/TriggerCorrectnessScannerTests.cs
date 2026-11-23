@@ -167,6 +167,21 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("Val IS NOT NULL", false)]
+    [InlineData("Id IS NOT NULL AND Val IS NOT NULL", false)]
+    [InlineData("Val IS NOT NULL AND Val > 0", true)]
+    [InlineData("1 = 1", false)]
+    [InlineData("Val > 0", true)]
+    public void InsteadOfInsertTrigger_SingleReinsert_FiresOnlyWhenTheFilterCanDropARow(string filter, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T INSTEAD OF INSERT AS "
+            + $"BEGIN INSERT INTO dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE {filter}; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath));
+    }
+
     [Fact]
     public void InsteadOfInsertTrigger_FilteredReinsertWithCompanionInsert_NeverFires()
     {

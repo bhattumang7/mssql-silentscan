@@ -278,7 +278,8 @@ public static class TriggerCorrectnessScanner
                 .OfType<InsertStatement>()
                 .Where(ins => ins.InsertSpecification.Target is NamedTableReference
                     && ins.InsertSpecification.InsertSource is SelectInsertSource { Select: QuerySpecification spec }
-                    && IsFilteredReinsertFromInserted(spec))
+                    && IsFilteredReinsertFromInserted(spec)
+                    && !FilterKeepsEveryRow(spec, triggerObject))
                 .ToList();
 
             if (filteredInserts.Count == 0)
@@ -288,7 +289,7 @@ public static class TriggerCorrectnessScanner
 
             var hasCompanionInsert = topLevelStatements.OfType<InsertStatement>().Count() > filteredInserts.Count;
             var hasRaiseErrorOrThrow = ContainsRaiseErrorOrThrow(topLevelStatements);
-            var hasProvenExhaustiveCoverage = filteredInserts.Count > 1 && HasProvenExhaustiveCoverage(filteredInserts, triggerObject);
+            var hasProvenExhaustiveCoverage = HasProvenExhaustiveCoverage(filteredInserts, triggerObject);
 
             if (hasCompanionInsert || hasRaiseErrorOrThrow || hasProvenExhaustiveCoverage)
             {
@@ -302,6 +303,40 @@ public static class TriggerCorrectnessScanner
                     insert.StartLine, insert.StartColumn,
                     "INSTEAD OF INSERT trigger re-inserts a WHERE/join-filtered subset of inserted with no companion INSERT/RAISERROR/THROW anywhere in the body - the caller's own INSERT reports success while rows matching the negated filter are silently dropped, no error, no trace.",
                     FindingConfidence.High));
+            }
+        }
+
+        private bool FilterKeepsEveryRow(QuerySpecification spec, TriggerObject triggerObject)
+        {
+            if (triggerObject.Name is not { } targetTableName
+                || spec.FromClause.TableReferences is not [NamedTableReference]
+                || spec.WhereClause?.SearchCondition is not { } condition)
+            {
+                return false;
+            }
+
+            var table = catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(targetTableName)));
+            var conjuncts = new List<BooleanExpression>();
+            Flatten(condition, conjuncts);
+            return table is not null
+                && conjuncts.All(conjunct => conjunct is BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } column] } }
+                    && table.FindColumn(column.Value, catalog.IdentifierComparer) is { IsNullable: false });
+        }
+
+        private static void Flatten(BooleanExpression expression, List<BooleanExpression> conjuncts)
+        {
+            switch (expression)
+            {
+                case BooleanParenthesisExpression parenthesis:
+                    Flatten(parenthesis.Expression, conjuncts);
+                    break;
+                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } and:
+                    Flatten(and.FirstExpression, conjuncts);
+                    Flatten(and.SecondExpression, conjuncts);
+                    break;
+                default:
+                    conjuncts.Add(expression);
+                    break;
             }
         }
 
