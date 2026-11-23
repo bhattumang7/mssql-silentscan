@@ -23,6 +23,19 @@ public sealed class ViewOrderingScannerTests
         Assert.Equal("dbo.v1", finding.ObjectQualifiedName);
     }
 
+    [Theory]
+    [InlineData("TOP (100) PERCENT WITH TIES", true)]
+    [InlineData("TOP (100.00) PERCENT", true)]
+    [InlineData("TOP (50) PERCENT", false)]
+    [InlineData("TOP (99.9) PERCENT", false)]
+    public void View_TopPercent_NeverLimitsOnlyAtOneHundred(string top, bool neverLimits)
+    {
+        var findings = Scan($"CREATE VIEW dbo.v1 AS SELECT {top} Id FROM dbo.T ORDER BY Id;");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(neverLimits, finding.Kind == ViewOrderingFindingKind.TopPercentOrderByNeverLimits);
+    }
+
     [Fact]
     public void View_TopHundredPointZeroPercentOrderBy_FiresAsNeverLimits()
     {
