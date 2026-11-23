@@ -61,6 +61,8 @@ public sealed class TriggerCorrectnessScannerTests
     [InlineData("IF (SELECT COUNT(*) FROM inserted) > 1 PRINT 'many';")]
     [InlineData("IF @@ROWCOUNT = 0 RETURN;")]
     [InlineData("IF (SELECT COUNT(*) FROM dbo.Other) > 1 RETURN;")]
+    [InlineData("IF @@ROWCOUNT > 1 RAISERROR('one row only', 16, 1);")]
+    [InlineData("IF @@ROWCOUNT > 1 RAISERROR('one row only', 10, 1);")]
     public void AssignmentAfterAnUnrelatedOrNonExitingCheck_StillFires(string check)
     {
         var findings = Scan(

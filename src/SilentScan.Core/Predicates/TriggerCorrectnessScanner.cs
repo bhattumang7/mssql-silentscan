@@ -185,8 +185,6 @@ public static class TriggerCorrectnessScanner
 
             public override void Visit(ThrowStatement node) => Found = true;
 
-            public override void Visit(RaiseErrorStatement node) => Found = true;
-
             public override void Visit(RollbackTransactionStatement node) => Found = true;
         }
 
