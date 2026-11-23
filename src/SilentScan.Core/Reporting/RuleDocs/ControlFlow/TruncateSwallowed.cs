@@ -13,7 +13,7 @@ internal static class TruncateSwallowed
             silently swallowed - execution continues past the CATCH as if the TRUNCATE had
             succeeded, and the caller never learns anything went wrong. This is a real, common
             failure mode, not a theoretical one: `TRUNCATE TABLE` fails (Msg 4712) when the target
-            table is referenced by an enforced foreign key, among other real conditions - oracle-
+            table is referenced by a foreign key from another table (enabled or not), among other real conditions - oracle-
             confirmed directly against a real engine that this exact shape produces exactly that
             silent-continuation behavior.
 
@@ -38,7 +38,7 @@ internal static class TruncateSwallowed
                         INSERT INTO dbo.ErrorLog (Message) VALUES (ERROR_MESSAGE());
                     END CATCH;
                     """,
-                NoncompliantExplanation: "If TRUNCATE fails (e.g. an enforced foreign key references dbo.StagingImport, Msg 4712), the CATCH block logs the error but never re-raises it - execution continues past this block as if the TRUNCATE had succeeded, and the caller never learns the table was never actually cleared.",
+                NoncompliantExplanation: "If TRUNCATE fails (e.g. a foreign key from another table references dbo.StagingImport, Msg 4712), the CATCH block logs the error but never re-raises it - execution continues past this block as if the TRUNCATE had succeeded, and the caller never learns the table was never actually cleared.",
                 CompliantSql: """
                     BEGIN TRY
                         TRUNCATE TABLE dbo.StagingImport;

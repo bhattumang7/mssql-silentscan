@@ -2025,7 +2025,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"TRUNCATE swallowed by an empty/non-rethrowing CATCH ({report.Find<TruncateSwallowedFinding>(nameof(TruncateSwallowedScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "TRUNCATE TABLE sits inside a TRY block whose CATCH never THROWs/RAISERRORs - oracle-confirmed a real TRUNCATE failure (e.g. an enforced FK reference, Msg 4712) is silently swallowed here, with execution continuing as if it had succeeded and no error reaching the caller.");
+            "TRUNCATE TABLE sits inside a TRY block whose CATCH never THROWs/RAISERRORs - oracle-confirmed a real TRUNCATE failure (e.g. a foreign key reference from another table, enabled or not, Msg 4712) is silently swallowed here, with execution continuing as if it had succeeded and no error reaching the caller.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TruncateSwallowedRuleId));
         yield return new ReadableBlock.Table(

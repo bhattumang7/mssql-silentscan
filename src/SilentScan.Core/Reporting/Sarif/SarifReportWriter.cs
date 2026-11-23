@@ -867,7 +867,7 @@ public static class SarifReportWriter
     private static SarifResult ToResult(TruncateSwallowedFinding finding)
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.TruncateSwallowedRuleId, finding.Confidence);
-        var message = "TRUNCATE TABLE inside a TRY block whose CATCH never THROWs/RAISERRORs - oracle-confirmed a TRUNCATE failure (e.g. an enforced FK reference, Msg 4712) is silently swallowed here with no error reaching the caller.";
+        var message = "TRUNCATE TABLE inside a TRY block whose CATCH never THROWs/RAISERRORs - oracle-confirmed a TRUNCATE failure (e.g. a foreign key reference from another table, enabled or not, Msg 4712) is silently swallowed here with no error reaching the caller.";
         return BuildResult(ruleId, FloorLevelForConfidence(LevelWarning, finding.Confidence), message, finding.SourcePath, finding.Line, finding.Column);
     }
 
