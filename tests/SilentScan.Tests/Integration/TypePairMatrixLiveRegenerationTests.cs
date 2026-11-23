@@ -8,9 +8,14 @@ namespace SilentScan.Tests.Integration;
 public sealed class TypePairMatrixLiveRegenerationTests
 {
     [Fact]
-    public async Task LiveMatrix_MatchesCheckedInMatrix_ForEveryProbedCell()
+    public Task LiveMatrix_MatchesCheckedInMatrix_ForEveryProbedCell() => AssertMatchesAsync(SqlServerOptions.LocalDocker);
+
+    [Fact]
+    public Task LatestEngineMatrix_MatchesCheckedInMatrix_ForEveryProbedCell() => AssertMatchesAsync(SqlServerOptions.LocalDockerLatest);
+
+    private static async Task AssertMatchesAsync(SqlServerOptions options)
     {
-        var generator = new TypeMatrixGenerator(SqlServerOptions.LocalDocker);
+        var generator = new TypeMatrixGenerator(options);
         var (liveEntries, _) = await generator.GenerateAsync(
             TypeMatrixGenerator.NumericFamily,
             TypeMatrixGenerator.DateTimeFamily,
