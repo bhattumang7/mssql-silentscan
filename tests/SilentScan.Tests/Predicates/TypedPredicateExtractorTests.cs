@@ -1824,6 +1824,15 @@ public sealed class TypedPredicateExtractorTests
         Assert.Equal("'abc '", finding.PatternLiteralText);
     }
 
+    [Theory]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code LIKE 'abc' + CHAR(9);", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code LIKE 'abc	';", false)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code LIKE 'abc  ';", true)]
+    public void Extract_NonPaddedColumnLike_OnlyATrailingSpaceIsTrimmedByTheEngine(string sql, bool fires)
+    {
+        Assert.Equal(fires, ExtractAnsiPaddingMismatch(isAnsiPadded: false, sql).Count == 1);
+    }
+
     [Fact]
     public void Extract_NonPaddedColumnLikePatternEndingInWildcardAfterSpace_NeverFires()
     {

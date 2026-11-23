@@ -1065,7 +1065,7 @@ public static class TypedPredicateExtractor
             }
 
             var content = literalText[(firstQuote + 1)..lastQuote];
-            return content.Length > 0 && char.IsWhiteSpace(content[^1]);
+            return content.Length > 0 && content[^1] == ' ';
         }
 
         private PredicateOperand ResolvePredicateOperand(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
