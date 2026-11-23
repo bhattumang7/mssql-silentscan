@@ -35,7 +35,19 @@ public static class MultiReferencedCteScanner
             InspectWithClause(node.WithCtesAndXmlNamespaces, node.QueryExpression);
         }
 
-        private void InspectWithClause(WithCtesAndXmlNamespaces? withClause, QueryExpression mainBody)
+        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            InspectWithClause(node.WithCtesAndXmlNamespaces, node.InsertSpecification);
+
+        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            InspectWithClause(node.WithCtesAndXmlNamespaces, node.UpdateSpecification);
+
+        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            InspectWithClause(node.WithCtesAndXmlNamespaces, node.DeleteSpecification);
+
+        public void OnEnterMergeStatementScope(MergeStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            InspectWithClause(node.WithCtesAndXmlNamespaces, node.MergeSpecification);
+
+        private void InspectWithClause(WithCtesAndXmlNamespaces? withClause, TSqlFragment mainBody)
         {
             if (withClause is null)
             {
@@ -43,13 +55,14 @@ public static class MultiReferencedCteScanner
             }
 
             var ctes = withClause.CommonTableExpressions;
+            var reachable = ReachableCtes(ctes, mainBody);
 
             foreach (var cte in ctes)
             {
                 var name = cte.ExpressionName.Value;
 
                 var referenceLines = CollectReferences(mainBody, name);
-                foreach (var other in ctes.Where(other => !ReferenceEquals(other, cte)))
+                foreach (var other in ctes.Where(other => !ReferenceEquals(other, cte) && reachable.Contains(other)))
                 {
                     referenceLines.AddRange(CollectReferences(other.QueryExpression, name));
                 }
@@ -61,6 +74,24 @@ public static class MultiReferencedCteScanner
                         sourcePath, cte.StartLine));
                 }
             }
+        }
+
+        private HashSet<CommonTableExpression> ReachableCtes(IList<CommonTableExpression> ctes, TSqlFragment mainBody)
+        {
+            var reachable = new HashSet<CommonTableExpression>();
+            var pending = new Queue<TSqlFragment>();
+            pending.Enqueue(mainBody);
+            while (pending.Count > 0)
+            {
+                var fragment = pending.Dequeue();
+                foreach (var cte in ctes.Where(cte => !reachable.Contains(cte) && CollectReferences(fragment, cte.ExpressionName.Value).Count > 0))
+                {
+                    reachable.Add(cte);
+                    pending.Enqueue(cte.QueryExpression);
+                }
+            }
+
+            return reachable;
         }
 
         private bool IsPlainSingleTableRead(CommonTableExpression cte, IList<CommonTableExpression> ctes)

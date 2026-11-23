@@ -14,6 +14,25 @@ public sealed class MultiReferencedCteScannerTests
         return MultiReferencedCteScanner.Scan(result);
     }
 
+    [Theory]
+    [InlineData("WITH c AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) INSERT INTO dbo.T (Id, Val) SELECT x.Id, y.N FROM c x JOIN c y ON x.Id = y.Id;", true)]
+    [InlineData("WITH c AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) UPDATE t SET Val = y.N FROM dbo.T t JOIN c x ON x.Id = t.Id JOIN c y ON y.Id = t.Id;", true)]
+    [InlineData("WITH c AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) DELETE t FROM dbo.T t JOIN c x ON x.Id = t.Id JOIN c y ON y.Id = t.Id;", true)]
+    [InlineData("WITH c AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) MERGE dbo.T AS t USING (SELECT x.Id, y.N FROM c x JOIN c y ON x.Id = y.Id) AS s ON t.Id = s.Id WHEN MATCHED THEN UPDATE SET Val = s.N;", true)]
+    [InlineData("WITH c AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id) INSERT INTO dbo.T (Id, Val) SELECT x.Id, 1 FROM c x;", false)]
+    public void CteOnADataModificationStatement_IsReEvaluatedPerReferenceLikeOnASelect(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count == 1);
+    }
+
+    [Theory]
+    [InlineData("WITH a AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id), b AS (SELECT x.Id FROM a x JOIN a y ON x.Id = y.Id) SELECT Id FROM dbo.T WHERE Id = 1;", false)]
+    [InlineData("WITH a AS (SELECT Id, COUNT(*) AS N FROM dbo.T GROUP BY Id), b AS (SELECT x.Id FROM a x JOIN a y ON x.Id = y.Id) SELECT Id FROM b;", true)]
+    public void ReferencesInsideASiblingCteThatNothingReaches_NeverRun(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Any(f => f.CteName == "a"));
+    }
+
     [Fact]
     public void CteReferencedTwiceInMainBody_Fires()
     {
