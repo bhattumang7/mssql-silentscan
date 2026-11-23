@@ -117,6 +117,12 @@ public static class CheckConstraintScanner
             base.ExplicitVisit(node);
         }
 
+        public override void ExplicitVisit(DistinctPredicate node)
+        {
+            AddDirectColumns([node.FirstExpression, node.SecondExpression]);
+            base.ExplicitVisit(node);
+        }
+
         public override void ExplicitVisit(CoalesceExpression node)
         {
             AddDirectColumns(node.Expressions);

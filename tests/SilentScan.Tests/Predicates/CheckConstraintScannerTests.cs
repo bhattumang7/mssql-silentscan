@@ -19,6 +19,9 @@ public sealed class CheckConstraintScannerTests
     [Theory]
     [InlineData("(ISNULL([Price],(0))>(0))")]
     [InlineData("(COALESCE([Price],(0))>(0))")]
+    [InlineData("([Price] IS DISTINCT FROM NULL)")]
+    [InlineData("([Price] IS NOT DISTINCT FROM (5))")]
+    [InlineData("([Price] IS DISTINCT FROM (0))")]
     public void NullableColumnSubstitutedByAConstantInsideThePredicate_TheCheckDecidesNullItself_NeverFires(string definition)
     {
         var catalog = new DatabaseCatalog();
