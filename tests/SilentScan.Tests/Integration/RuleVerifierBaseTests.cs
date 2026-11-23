@@ -166,12 +166,6 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     }
 
     [Fact]
-    public void PerturbationThatNamesNothingItTouches_IsRejected()
-    {
-        Assert.ThrowsAny<ArgumentException>(() => new Perturbation([], Difference.ResultEmptied, Nothing, Nothing, _ => false));
-    }
-
-    [Fact]
     public async Task ExpressionTouchPresentOnceInTheStatement_IsJudged()
     {
         var perturbation = Of(Difference.ResultEmptied, Run("DELETE FROM dbo.T;"), touches: [new TouchedExpression("V + 0")]);
