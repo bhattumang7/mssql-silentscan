@@ -23,6 +23,39 @@ public sealed class CartesianJoinScannerTests
         return CartesianJoinScanner.Scan(result, CatalogBuilder.Build([ddl]));
     }
 
+    private static IReadOnlyList<CartesianJoinFinding> ScanWithDdl(string ddl, string statement)
+    {
+        var ddlResult = SqlScriptParser.ParseText("ddl.sql", ddl);
+        var result = SqlScriptParser.ParseText("test.sql", statement);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        return CartesianJoinScanner.Scan(result, CatalogBuilder.Build([ddlResult]));
+    }
+
+    [Theory]
+    [InlineData("INT", "INT", "a.X = 1 AND b.Y = '01'")]
+    [InlineData("VARCHAR(5)", "VARCHAR(5)", "a.X = 'a' AND b.Y = 'a '")]
+    [InlineData("VARCHAR(5) COLLATE Latin1_General_CI_AS", "VARCHAR(5) COLLATE Latin1_General_CI_AS", "a.X = 'a' AND b.Y = 'A'")]
+    [InlineData("INT", "DECIMAL(5,1)", "a.X = 1 AND b.Y = 1.0")]
+    public void JoinedColumnsPinnedToDifferentLiteralsTheEngineTreatsAsEqual_NeverFires(string firstType, string secondType, string where)
+    {
+        var findings = ScanWithDdl(
+            $"CREATE TABLE dbo.JA (X {firstType} NOT NULL); CREATE TABLE dbo.JB (Y {secondType} NOT NULL);",
+            $"SELECT * FROM dbo.JA a INNER JOIN dbo.JB b ON a.X = b.Y WHERE {where};");
+
+        Assert.DoesNotContain(findings, f => f.Kind == CartesianJoinKind.JoinPredicateEmptyWithWhereClause);
+    }
+
+    [Theory]
+    [InlineData("INT", "INT", "a.X = 1 AND b.Y = 2")]
+    public void JoinedColumnsPinnedToDisjointLiterals_Fires(string firstType, string secondType, string where)
+    {
+        var findings = ScanWithDdl(
+            $"CREATE TABLE dbo.JA (X {firstType} NOT NULL); CREATE TABLE dbo.JB (Y {secondType} NOT NULL);",
+            $"SELECT * FROM dbo.JA a INNER JOIN dbo.JB b ON a.X = b.Y WHERE {where};");
+
+        Assert.Contains(findings, f => f.Kind == CartesianJoinKind.JoinPredicateEmptyWithWhereClause);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = 1;")]
     [InlineData("DECLARE @id INT = 1; SELECT * FROM dbo.Config c, dbo.Orders o WHERE c.Id = @id;")]
