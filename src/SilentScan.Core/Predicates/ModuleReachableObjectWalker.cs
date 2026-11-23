@@ -7,16 +7,16 @@ namespace SilentScan.Core.Predicates;
 
 public static class ModuleReachableObjectWalker
 {
-    public readonly record struct Touch(string ObjectQualifiedName, string? IndexName, bool IsIndexedView);
+    public readonly record struct Touch(string ObjectQualifiedName, string? IndexName, bool IsIndexedView, IReadOnlyList<int> Offsets);
 
     public static bool TryFindTouch(TSqlFragment moduleBody, DatabaseCatalog catalog, out Touch touch)
     {
         var collector = new StatementCollector(catalog);
         moduleBody.Accept(collector);
 
-        foreach (var rawName in collector.QualifiedNames)
+        foreach (var (rawName, _) in collector.QualifiedNames)
         {
-            if (TryInspectQualifiedName(catalog.ResolveSynonymName(rawName), catalog, collector.Statements, out touch))
+            if (TryInspectQualifiedName(catalog.ResolveSynonymName(rawName), catalog, collector, out touch))
             {
                 return true;
             }
@@ -26,11 +26,13 @@ public static class ModuleReachableObjectWalker
         return false;
     }
 
-    private static bool TryInspectQualifiedName(string qualifiedName, DatabaseCatalog catalog, IReadOnlyList<StatementPredicates> statements, out Touch touch)
+    private static bool TryInspectQualifiedName(string qualifiedName, DatabaseCatalog catalog, StatementCollector collector, out Touch touch)
     {
         if (catalog.IsIndexedView(qualifiedName))
         {
-            touch = new Touch(qualifiedName, IndexName: null, IsIndexedView: true);
+            touch = new Touch(
+                qualifiedName, IndexName: null, IsIndexedView: true,
+                [.. collector.QualifiedNames.Where(n => catalog.ResolveSynonymName(n.Name) == qualifiedName).Select(n => n.Offset)]);
             return true;
         }
 
@@ -38,10 +40,12 @@ public static class ModuleReachableObjectWalker
         {
             var restated = table.Indexes.FirstOrDefault(i =>
                 i.IsFiltered && i.FilterDefinition is not null
-                && ModuleRestatesFilter(i.FilterDefinition, table.QualifiedName, catalog, statements));
+                && ModuleRestatesFilter(i.FilterDefinition, table.QualifiedName, catalog, collector.Statements).Count > 0);
             if (restated is not null)
             {
-                touch = new Touch(qualifiedName, restated.Name, IsIndexedView: false);
+                touch = new Touch(
+                    qualifiedName, restated.Name, IsIndexedView: false,
+                    ModuleRestatesFilter(restated.FilterDefinition!, table.QualifiedName, catalog, collector.Statements));
                 return true;
             }
         }
@@ -50,21 +54,22 @@ public static class ModuleReachableObjectWalker
         return false;
     }
 
-    private static bool ModuleRestatesFilter(string filterDefinition, string tableQualifiedName, DatabaseCatalog catalog, IReadOnlyList<StatementPredicates> statements)
+    private static List<int> ModuleRestatesFilter(string filterDefinition, string tableQualifiedName, DatabaseCatalog catalog, IReadOnlyList<StatementPredicates> statements)
     {
         var parsed = SqlScriptParser.ParseText("filter-definition.sql", $"SELECT 1 WHERE {filterDefinition};", initialQuotedIdentifiers: true, catalog.CompatibilityLevel);
         if (parsed.HasErrors
             || parsed.Fragment is not TSqlScript { Batches: [{ Statements: [SelectStatement { QueryExpression: QuerySpecification { WhereClause.SearchCondition: { } filter } }] }] })
         {
-            return false;
+            return [];
         }
 
         var required = PredicateTreeWalker.FlattenAnd(filter).Select(Normalize).ToList();
         if (required.Count == 0 || required.Any(r => r.Qualifiers.Count > 0))
         {
-            return false;
+            return [];
         }
 
+        var offsets = new List<int>();
         foreach (var statement in statements)
         {
             var aliases = statement.Tables
@@ -81,11 +86,11 @@ public static class ModuleReachableObjectWalker
                 && have.Qualifiers.All(q => aliases.Contains(q, catalog.IdentifierComparer))));
             if (satisfied)
             {
-                return true;
+                offsets.Add(statement.Offset);
             }
         }
 
-        return false;
+        return offsets;
     }
 
     private static NormalizedPredicate Normalize(BooleanExpression expression)
@@ -131,27 +136,27 @@ public static class ModuleReachableObjectWalker
 
     private readonly record struct StatementTable(string QualifiedName, string AliasKey);
 
-    private sealed record StatementPredicates(List<StatementTable> Tables, List<NormalizedPredicate> Conjuncts);
+    private sealed record StatementPredicates(List<StatementTable> Tables, List<NormalizedPredicate> Conjuncts, int Offset);
 
     private sealed class StatementCollector(DatabaseCatalog catalog) : TSqlFragmentVisitor
     {
-        public List<string> QualifiedNames { get; } = [];
+        public List<(string Name, int Offset)> QualifiedNames { get; } = [];
 
         public List<StatementPredicates> Statements { get; } = [];
 
         public override void Visit(NamedTableReference node) =>
-            QualifiedNames.Add(SchemaObjectNameHelper.Qualify(node.SchemaObject));
+            QualifiedNames.Add((SchemaObjectNameHelper.Qualify(node.SchemaObject), node.StartOffset));
 
         public override void Visit(QuerySpecification node) =>
-            Record(node.FromClause, node.WhereClause, target: null);
+            Record(node.FromClause, node.WhereClause, target: null, node.StartOffset);
 
         public override void Visit(UpdateSpecification node) =>
-            Record(node.FromClause, node.WhereClause, node.Target);
+            Record(node.FromClause, node.WhereClause, node.Target, node.StartOffset);
 
         public override void Visit(DeleteSpecification node) =>
-            Record(node.FromClause, node.WhereClause, node.Target);
+            Record(node.FromClause, node.WhereClause, node.Target, node.StartOffset);
 
-        private void Record(FromClause? fromClause, WhereClause? whereClause, TableReference? target)
+        private void Record(FromClause? fromClause, WhereClause? whereClause, TableReference? target, int offset)
         {
             if (whereClause?.SearchCondition is not { } condition)
             {
@@ -170,7 +175,7 @@ public static class ModuleReachableObjectWalker
                 }
             }
 
-            Statements.Add(new StatementPredicates(tables, [.. PredicateTreeWalker.FlattenAnd(condition).Select(Normalize)]));
+            Statements.Add(new StatementPredicates(tables, [.. PredicateTreeWalker.FlattenAnd(condition).Select(Normalize)], offset));
         }
     }
 }

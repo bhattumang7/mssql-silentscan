@@ -38,6 +38,23 @@ public sealed class SetOptionScannerTests
         return SetOptionScanner.Scan(result, catalog);
     }
 
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Orders WHERE Id > 0; SET NUMERIC_ROUNDABORT ON;", false)]
+    [InlineData("SET NUMERIC_ROUNDABORT ON; SET NUMERIC_ROUNDABORT OFF; SELECT Id FROM dbo.Orders WHERE Id > 0;", false)]
+    [InlineData("SET ANSI_WARNINGS OFF; SET ANSI_WARNINGS ON; SELECT Id FROM dbo.Orders WHERE Id > 0;", false)]
+    [InlineData("SET CONCAT_NULL_YIELDS_NULL OFF; SELECT Id FROM dbo.Orders WHERE Id > 0;", true)]
+    [InlineData("SET NUMERIC_ROUNDABORT ON; SELECT Id FROM dbo.Orders WHERE Id > 0;", true)]
+    [InlineData("SET ANSI_WARNINGS OFF; SELECT Id FROM dbo.Orders WHERE Id > 0; SET ANSI_WARNINGS ON;", true)]
+    public void SetOptionOrder_FiresOnlyWhenTheOptionIsInEffectForTheIndexedStatement(string body, bool fires)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(FilteredIndexTable("dbo", "Orders"));
+
+        var findings = Scan($"CREATE PROCEDURE dbo.usp_Test AS BEGIN {body} END", catalog);
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
+
     [Fact]
     public void NumericRoundabortOn_ModuleTouchesFilteredIndexTable_Fires()
     {

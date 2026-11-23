@@ -70,6 +70,11 @@ public static class SetOptionScanner
 
         foreach (var (statement, kind) in rule.MatchedStatements)
         {
+            if (!rule.StaysInEffectForATouch(statement, touch.Offsets))
+            {
+                continue;
+            }
+
             findings.Add(new SetOptionFinding(
                 kind, moduleQualifiedName, parseResult.SourcePath,
                 statement.StartLine, statement.StartColumn,
@@ -92,8 +97,17 @@ public static class SetOptionScanner
     {
         public List<(PredicateSetStatement Statement, SetOptionFindingKind Kind)> MatchedStatements { get; } = [];
 
+        private readonly List<PredicateSetStatement> _allSetStatements = [];
+
+        public bool StaysInEffectForATouch(PredicateSetStatement statement, IReadOnlyList<int> touchOffsets) =>
+            touchOffsets.Any(touchOffset => touchOffset > statement.StartOffset
+                && !_allSetStatements.Any(other =>
+                    other.StartOffset > statement.StartOffset && other.StartOffset < touchOffset
+                    && (other.Options & statement.Options) != 0 && other.IsOn != statement.IsOn));
+
         public void OnEnterPredicateSetStatement(PredicateSetStatement node, ModuleWalker walker)
         {
+            _allSetStatements.Add(node);
             foreach (var (flag, triggerIsOn, kind) in SyntaxOnlyTriggers)
             {
                 if ((node.Options & flag) != 0 && node.IsOn == triggerIsOn)
