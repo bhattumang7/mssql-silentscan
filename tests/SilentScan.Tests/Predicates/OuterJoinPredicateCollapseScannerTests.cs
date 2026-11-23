@@ -15,6 +15,16 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE LEN(b.Y) > 0;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE ABS(b.Y) = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE UPPER(CONVERT(VARCHAR(5), b.Y)) = '1';")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CONCAT(b.Y, 'x') = 'x';")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE IIF(b.Y IS NULL, 0, 1) = 0;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CASE WHEN b.Y IS NULL THEN 1 ELSE b.Y END = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE ISNULL(b.Y, 0) = 0;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NULL OR b.Y = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE (b.Y = 1 OR b.Y IS NULL) AND a.X = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CONCAT_WS(',', b.Y, 'x') = 'x';")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y = 1 OR a.X = 2;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NULL;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE COALESCE(b.Y, 0) = 0;")]
@@ -26,6 +36,16 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE -b.Y = -1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CAST(b.Y AS VARCHAR(5)) = '1';")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE (b.Y) = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IN (1, 2);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y NOT IN (1, 2);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y LIKE '1%';")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y + 1 = 2;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CONVERT(INT, b.Y) = 1;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y BETWEEN 1 AND 5;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y = 1);")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y = 1;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y <> 1;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NOT NULL;")]

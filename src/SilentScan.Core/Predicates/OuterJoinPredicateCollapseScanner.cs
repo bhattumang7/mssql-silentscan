@@ -87,7 +87,10 @@ public static class OuterJoinPredicateCollapseScanner
             switch (unwrapped)
             {
                 case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.Or }:
-                case BooleanNotExpression:
+                    return;
+
+                case BooleanNotExpression not:
+                    InspectNegatedConjunct(not.Expression, nullSupplyingAliases);
                     return;
 
                 case BooleanComparisonExpression cmp:
@@ -113,8 +116,34 @@ public static class OuterJoinPredicateCollapseScanner
             }
         }
 
+        private void InspectNegatedConjunct(BooleanExpression negated, Dictionary<string, AliasNullSide> nullSupplyingAliases)
+        {
+            while (negated is BooleanParenthesisExpression paren)
+            {
+                negated = paren.Expression;
+            }
+
+            switch (negated)
+            {
+                case BooleanComparisonExpression cmp:
+                    InspectOperand(cmp.FirstExpression, nullSupplyingAliases);
+                    InspectOperand(cmp.SecondExpression, nullSupplyingAliases);
+                    break;
+                case InPredicate inPredicate:
+                    InspectOperand(inPredicate.Expression, nullSupplyingAliases);
+                    break;
+                case LikePredicate like:
+                    InspectOperand(like.FirstExpression, nullSupplyingAliases);
+                    break;
+                case BooleanTernaryExpression between:
+                    InspectOperand(between.FirstExpression, nullSupplyingAliases);
+                    break;
+            }
+        }
+
         private void InspectOperand(ScalarExpression operand, Dictionary<string, AliasNullSide> nullSupplyingAliases)
         {
+            operand = UnwrapNullPropagating(operand);
             if (operand is not ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: >= 2 } ids } columnRef)
             {
                 return;
@@ -135,6 +164,36 @@ public static class OuterJoinPredicateCollapseScanner
                     columnRef.StartLine,
                     columnRef.StartColumn),
                 side));
+        }
+
+        private static ScalarExpression UnwrapNullPropagating(ScalarExpression operand)
+        {
+            while (true)
+            {
+                switch (operand)
+                {
+                    case ParenthesisExpression parenthesis:
+                        operand = parenthesis.Expression;
+                        break;
+                    case UnaryExpression { UnaryExpressionType: UnaryExpressionType.Negative } unary:
+                        operand = unary.Expression;
+                        break;
+                    case CastCall cast:
+                        operand = cast.Parameter;
+                        break;
+                    case ConvertCall convert:
+                        operand = convert.Parameter;
+                        break;
+                    case BinaryExpression binary when binary.FirstExpression is ColumnReferenceExpression:
+                        operand = binary.FirstExpression;
+                        break;
+                    case BinaryExpression binary when binary.SecondExpression is ColumnReferenceExpression:
+                        operand = binary.SecondExpression;
+                        break;
+                    default:
+                        return operand;
+                }
+            }
         }
 
         private static Dictionary<string, AliasNullSide> CollectNullSupplyingAliases(FromClause fromClause, StringComparer identifierComparer)

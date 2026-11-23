@@ -130,6 +130,21 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
             SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Status IS NOT DISTINCT FROM NULL;
         END
         GO
+        CREATE PROCEDURE dbo.P_ArithmeticOperandFires AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE c.Amount + 1 = 6;
+        END
+        GO
+        CREATE PROCEDURE dbo.P_NegatedComparisonFires AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE NOT (c.Amount = 1);
+        END
+        GO
+        CREATE PROCEDURE dbo.P_FunctionWrappedNoFire AS
+        BEGIN
+            SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE LEN(c.Status) > 0;
+        END
+        GO
         INSERT INTO dbo.Parent (Id, Flag) VALUES (1, NULL), (2, NULL);
         INSERT INTO dbo.Child (Id, ParentId, Status, Amount) VALUES (1, 1, 'X', 5), (2, NULL, 'X', 7);
         GO
@@ -357,5 +372,33 @@ public sealed class OuterJoinPredicateCollapseOracleTests : OracleTestFixture
 
         Assert.Equal([1], unguardedIds);
         Assert.Equal([1, 2], guardedIds.OrderBy(id => id));
+    }
+
+    [Theory]
+    [InlineData("P_ArithmeticOperandFires", 1)]
+    [InlineData("P_NegatedComparisonFires", 1)]
+    [InlineData("P_FunctionWrappedNoFire", 0)]
+    public async Task WrappedOperand_FiresExactlyWhereTheEngineCollapsesTheOuterJoin(string procedure, int expectedFindings)
+    {
+        Assert.Equal(expectedFindings, (await FindingsForAsync(procedure)).Count);
+    }
+
+    [Theory]
+    [InlineData("c.Amount + 1 = 6", "Inner Join")]
+    [InlineData("NOT (c.Amount = 1)", "Inner Join")]
+    [InlineData("LEN(c.Status) > 0", "Left Outer Join")]
+    public async Task WrappedOperand_PlanShowsWhetherTheEngineCollapsedTheOuterJoin(string predicate, string expectedLogicalOp)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using (var on = new SqlCommand("SET SHOWPLAN_XML ON;", connection))
+        {
+            await on.ExecuteNonQueryAsync();
+        }
+
+        await using var query = new SqlCommand($"SELECT p.Id FROM dbo.Parent p LEFT JOIN dbo.Child c ON c.ParentId = p.Id WHERE {predicate};", connection);
+        var plan = (string)(await query.ExecuteScalarAsync())!;
+
+        Assert.Contains($"LogicalOp=\"{expectedLogicalOp}\"", plan, StringComparison.Ordinal);
     }
 }
