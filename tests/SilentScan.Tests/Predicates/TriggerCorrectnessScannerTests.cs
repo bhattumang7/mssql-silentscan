@@ -305,6 +305,22 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Contains("Val", finding.DetailText);
     }
 
+    [Theory]
+    [InlineData("AFTER INSERT", false)]
+    [InlineData("FOR INSERT", false)]
+    [InlineData("INSTEAD OF INSERT", false)]
+    [InlineData("AFTER UPDATE", true)]
+    [InlineData("AFTER INSERT, UPDATE", true)]
+    [InlineData("AFTER UPDATE, DELETE", true)]
+    public void UpdateFunctionGate_FiresOnlyWhenTheTriggerCanSeeAnUpdate(string actions, bool fires)
+    {
+        var findings = Scan(
+            $"CREATE TRIGGER dbo.trg_T ON dbo.T {actions} AS "
+            + "BEGIN IF UPDATE(Val) UPDATE dbo.Other SET Val = 1 WHERE Id = 1; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison));
+    }
+
     [Fact]
     public void UpdateFunctionGate_WithSameColumnInsertedDeletedComparison_NeverFires()
     {

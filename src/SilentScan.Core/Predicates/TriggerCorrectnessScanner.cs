@@ -60,7 +60,7 @@ public static class TriggerCorrectnessScanner
                 InspectInsteadOfInsertFilteredReinsert(qualifiedName, node, triggerObject, topLevelStatements);
             }
 
-            if (statementList is not null)
+            if (statementList is not null && node.TriggerActions.Any(action => action.TriggerActionType == TriggerActionType.Update))
             {
                 InspectUpdateFunctionWithoutValueComparison(qualifiedName, statementList);
             }

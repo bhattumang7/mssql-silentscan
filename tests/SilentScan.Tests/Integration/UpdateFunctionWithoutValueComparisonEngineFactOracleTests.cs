@@ -14,6 +14,14 @@ public sealed class UpdateFunctionWithoutValueComparisonEngineFactOracleTests : 
         GO
         CREATE TABLE dbo.T2Log (Msg NVARCHAR(100) NOT NULL);
         GO
+        CREATE TABLE dbo.T3 (Id INT NOT NULL, Val INT NULL);
+        GO
+        CREATE TRIGGER dbo.trg_T3_Insert ON dbo.T3 AFTER INSERT AS
+        BEGIN
+            IF UPDATE(Val)
+                INSERT INTO dbo.T2Log (Msg) VALUES ('Insert saw Val');
+        END;
+        GO
         CREATE TRIGGER dbo.trg_T2_Update ON dbo.T2 AFTER UPDATE AS
         BEGIN
             IF UPDATE(Val)
@@ -33,5 +41,13 @@ public sealed class UpdateFunctionWithoutValueComparisonEngineFactOracleTests : 
 
         Assert.Equal(0, loggedWithColumnAbsentFromSetList);
         Assert.Equal(1, loggedWithUnchangedValueRewritten);
+    }
+
+    [Fact]
+    public async Task UpdateFunction_InAnInsertTrigger_IsTrueEvenForAColumnTheInsertOmits()
+    {
+        await ExecuteAsync("INSERT INTO dbo.T3 (Id) VALUES (1);");
+
+        Assert.Equal(1, await ScalarAsync<int>("SELECT COUNT(*) FROM dbo.T2Log WHERE Msg = 'Insert saw Val';"));
     }
 }
