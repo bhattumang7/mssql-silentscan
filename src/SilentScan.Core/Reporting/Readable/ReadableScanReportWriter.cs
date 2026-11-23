@@ -132,6 +132,7 @@ public static class ReadableScanReportWriter
         blocks.AddRange(IndexDesign(report, headingLevel, pathBase));
         blocks.AddRange(ForcedParameterization(report, headingLevel, pathBase));
         blocks.AddRange(FloatEquality(report, headingLevel, pathBase));
+        blocks.AddRange(ExactApproximateComparison(report, headingLevel, pathBase));
         blocks.AddRange(FloatOrderDependentAggregate(report, headingLevel, pathBase));
         blocks.AddRange(IsNullReplacementValueTruncation(report, headingLevel, pathBase));
         blocks.AddRange(DynamicDataMasking(report, headingLevel, pathBase));
@@ -200,6 +201,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Physical/schema index design (heap/clustered-key quality)", report.Find<IndexDesignFinding>(nameof(IndexDesignScanner)).Count);
         AddCount(counts, "Forced-parameterization-defeating query shapes", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
+        AddCount(counts, "Exact numeric columns compared with float/real columns", report.Find<ExactApproximateComparisonFinding>(nameof(ExactApproximateComparisonScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
         AddCount(counts, "ISNULL replacement value silently narrowed to check-expression type", report.Find<IsNullReplacementValueTruncationFinding>(nameof(IsNullReplacementValueTruncationScanner)).Count);
         AddCount(counts, "Dynamic Data Masking silently defeated", report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Count);
@@ -1012,6 +1014,29 @@ public static class ReadableScanReportWriter
                 $"{f.TableQualifiedName}.{f.ColumnName}",
                 f.TypeDisplay,
                 $"Compared with = at line {f.Line}, column {f.Column}.",
+            })]);
+    }
+
+    private static IEnumerable<ReadableBlock> ExactApproximateComparison(ScanReport report, int level, string? pathBase)
+    {
+        var findings = report.Find<ExactApproximateComparisonFinding>(nameof(ExactApproximateComparisonScanner));
+        if (findings.Count == 0)
+        {
+            yield break;
+        }
+
+        yield return new ReadableBlock.Heading(level, $"Exact numeric columns compared with float/real columns ({findings.Count})");
+        yield return new ReadableBlock.Paragraph(
+            "A WHERE/ON comparison sets an exact numeric column beside a float/real column. The engine converts the exact side to the approximate type first, so distinct exact values beyond that type's precision compare as equal - a silently wrong result, not a performance one.");
+        yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ExactApproximateComparisonRuleId));
+        yield return new ReadableBlock.Table(
+            [WhereHeader, "Exact column", "Approximate column", DetailHeader],
+            [.. findings.Select(f => new List<string>
+            {
+                Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
+                $"{f.ExactColumn} ({f.ExactTypeDisplay})",
+                $"{f.ApproximateColumn} ({f.ApproximateTypeDisplay})",
+                $"Compared at line {f.Line}, column {f.Column}.",
             })]);
     }
 

@@ -80,6 +80,7 @@ public static class SarifReportWriter
         results.AddRange(report.Find<IndexDesignFinding>("IndexDesignScanner").Select(ToResult));
         results.AddRange(report.Find<ForcedParameterizationFinding>("ForcedParameterizationScanner").Select(ToResult));
         results.AddRange(report.Find<FloatEqualityFinding>("FloatEqualityPredicateScanner").Select(ToResult));
+        results.AddRange(report.Find<ExactApproximateComparisonFinding>("ExactApproximateComparisonScanner").Select(ToResult));
         results.AddRange(report.Find<FloatOrderDependentAggregateFinding>("FloatOrderDependentAggregateScanner").Select(ToResult));
         results.AddRange(report.Find<IsNullReplacementValueTruncationFinding>("IsNullReplacementValueTruncationScanner").Select(ToResult));
         results.AddRange(report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)).Select(ToResult));
@@ -939,6 +940,15 @@ public static class SarifReportWriter
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.FloatEqualityRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelError, finding.Confidence);
         var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' ({finding.TypeDisplay}) is compared with = in this predicate - IEEE-754 floating-point representation error means two values a person would call the same number can compare unequal, silently returning the wrong rows.";
+
+        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
+    }
+
+    private static SarifResult ToResult(ExactApproximateComparisonFinding finding)
+    {
+        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ExactApproximateComparisonRuleId, finding.Confidence);
+        var level = FloorLevelForConfidence(LevelError, finding.Confidence);
+        var message = $"'{finding.ExactColumn}' ({finding.ExactTypeDisplay}) is compared with '{finding.ApproximateColumn}' ({finding.ApproximateTypeDisplay}) - the exact side is converted to the approximate type first, so distinct exact values beyond its precision compare as equal and the predicate silently returns the wrong rows.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }

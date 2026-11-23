@@ -211,6 +211,15 @@ internal sealed class FloatEqualityPredicateRule : IPerFileRule
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => FloatEqualityPredicateScanner.Harvest((FloatEqualityPredicateScanner.Rule)moduleRule);
 }
 
+internal sealed class ExactApproximateComparisonRule : IPerFileRule
+{
+    public string Id => "ExactApproximateComparisonScanner";
+    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ExactApproximateComparisonScanner.Scan(parseResult, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ExactApproximateComparisonScanner.CreateRule(parseResult.SourcePath, context.Catalog);
+    public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ExactApproximateComparisonScanner.Harvest((ExactApproximateComparisonScanner.Rule)moduleRule);
+}
+
 internal sealed class FloatOrderDependentAggregateRule : IPerFileRule
 {
     public string Id => "FloatOrderDependentAggregateScanner";

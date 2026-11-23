@@ -29,6 +29,7 @@ public static class SarifRuleCatalog
     public static string MaxTypedColumnRuleId(NonIndexableColumnFindingKind kind) => FindingRuleIds.MaxTypedColumnRuleId(kind);
     public static string DynamicDataMaskingRuleId(DynamicDataMaskingFindingKind kind) => FindingRuleIds.DynamicDataMaskingRuleId(kind);
     public const string FloatEqualityRuleId = FindingRuleIds.FloatEqualityRuleId;
+    public const string ExactApproximateComparisonRuleId = FindingRuleIds.ExactApproximateComparisonRuleId;
     public const string FloatOrderDependentAggregateRuleId = FindingRuleIds.FloatOrderDependentAggregateRuleId;
     public const string IsNullReplacementValueTruncationRuleId = FindingRuleIds.IsNullReplacementValueTruncationRuleId;
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = FindingRuleIds.MemoryOptimizedSchemaOnlyDurabilityRuleId;

@@ -39,6 +39,7 @@ public static class FindingRuleIds
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled DynamicDataMaskingFindingKind."),
     };
     public const string FloatEqualityRuleId = "silentscan/predicates/float-equality";
+    public const string ExactApproximateComparisonRuleId = "silentscan/predicates/exact-approximate-comparison";
     public const string FloatOrderDependentAggregateRuleId = "silentscan/predicates/float-order-dependent-aggregate";
     public const string IsNullReplacementValueTruncationRuleId = "silentscan/predicates/isnull-replacement-value-truncation";
     public const string MemoryOptimizedSchemaOnlyDurabilityRuleId = "silentscan/catalog/memory-optimized-schema-only-durability";

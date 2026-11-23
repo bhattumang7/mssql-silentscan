@@ -18,6 +18,7 @@ public sealed class PredicateLocationCoverageTests
     private static readonly HashSet<string> ModuleWalkerRuleTypeNames = new(StringComparer.Ordinal)
     {
         "SilentScan.Core.Predicates.CatchAllPredicateScanner+Rule",
+        "SilentScan.Core.Predicates.ExactApproximateComparisonScanner+Rule",
         "SilentScan.Core.Predicates.FloatEqualityPredicateScanner+Rule",
         "SilentScan.Core.Predicates.NotInNullableSubqueryScanner+Rule",
         "SilentScan.Core.Predicates.NonSargablePredicateScanner+Rule",

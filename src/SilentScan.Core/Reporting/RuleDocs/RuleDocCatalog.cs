@@ -93,6 +93,7 @@ public static class RuleDocCatalog
         [Catalog.MaxTypedColumn.RuleId] = Catalog.MaxTypedColumn.Content,
         [Catalog.TableValuedFunctionReturnUsesDatabaseCollation.RuleId] = Catalog.TableValuedFunctionReturnUsesDatabaseCollation.Content,
         [Predicates.FloatEquality.RuleId] = Predicates.FloatEquality.Content,
+        [Predicates.ExactApproximateComparison.RuleId] = Predicates.ExactApproximateComparison.Content,
         [Predicates.FloatOrderDependentAggregate.RuleId] = Predicates.FloatOrderDependentAggregate.Content,
         [Predicates.IsNullReplacementValueTruncation.RuleId] = Predicates.IsNullReplacementValueTruncation.Content,
         [Predicates.DynamicDataMaskingPredicateExposure.RuleId] = Predicates.DynamicDataMaskingPredicateExposure.Content,

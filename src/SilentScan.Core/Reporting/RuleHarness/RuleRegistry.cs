@@ -29,6 +29,7 @@ public static class RuleRegistry
         new NonUniqueUpdateSourceRule(),
         new CheckConstraintPredicateContradictionRule(),
         new FloatEqualityPredicateRule(),
+        new ExactApproximateComparisonRule(),
         new FloatOrderDependentAggregateRule(),
         new IsNullReplacementValueTruncationRule(),
         new IndexCoverageRule(),
