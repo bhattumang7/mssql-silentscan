@@ -13,6 +13,21 @@ public sealed class TransactionHygieneScannerTests
         return TransactionHygieneScanner.Scan(result);
     }
 
+    [Fact]
+    public void ImplicitTransactionOpenedInATriggerBody_IsEndedWithTheTriggeringStatement()
+    {
+        var result = SqlScriptParser.ParseText("test.sql", "CREATE TRIGGER dbo.tr ON dbo.T AFTER INSERT AS BEGIN SET IMPLICIT_TRANSACTIONS ON; INSERT dbo.L VALUES (1); END");
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+
+        Assert.Empty(TransactionHygieneScanner.Scan(result));
+    }
+
+    [Fact]
+    public void ImplicitTransactionOpenedInAProcedureBody_StillFires()
+    {
+        Assert.Single(Scan("SET IMPLICIT_TRANSACTIONS ON; INSERT dbo.L VALUES (1);"));
+    }
+
     [Theory]
     [InlineData("SELECT 1 FROM (VALUES (1)) v(a);", false)]
     [InlineData("SELECT value FROM STRING_SPLIT('a,b', ',');", false)]

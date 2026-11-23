@@ -47,8 +47,6 @@ public static class TransactionHygieneScanner
             }
         }
 
-        public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker) => AnalyzeScope(node.StatementList);
-
         private void AnalyzeScope(StatementList? statementList)
         {
 
