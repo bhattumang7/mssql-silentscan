@@ -62,6 +62,20 @@ public sealed class PredicateSurvivalAnalyzerTests
         return (dead, collector.Leaves);
     }
 
+    [Theory]
+    [InlineData("NotNullCol = 'a' AND NotNullCol = 'a '")]
+    [InlineData("NotNullCol = N'a' AND NotNullCol = N'a  '")]
+    [InlineData("NotNullCol = 1 AND NotNullCol = 1.0")]
+    [InlineData("NotNullCol > 'a' AND NotNullCol < 'B'")]
+    [InlineData("NotNullCol > '10' AND NotNullCol < '9'")]
+    [InlineData("NotNullCol > 4 AND NotNullCol < 6")]
+    [InlineData("NotNullCol > 5 AND NotNullCol < 5.5")]
+    [InlineData("NotNullCol = 'ß' AND NotNullCol = 'ss'")]
+    public void EqualitiesTheEngineTreatsAsEqual_NeverMarkedDead(string whereExpr)
+    {
+        Assert.Empty(Analyze(whereExpr).Dead);
+    }
+
     [Fact]
     public void SameColumnConflictingEquality_BothMarkedDead()
     {
