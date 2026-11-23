@@ -448,6 +448,25 @@ public sealed class IndexDesignScannerTests
         Assert.Equal(FindingConfidence.High, finding.Confidence);
     }
 
+    [Theory]
+    [InlineData("([CustomerId] IS NOT NULL)", false)]
+    [InlineData("[CustomerId] IS NOT NULL", false)]
+    [InlineData("([CustomerId] > (0))", true)]
+    [InlineData("([Id] IS NOT NULL)", true)]
+    public void FilteredIndexLedByTheForeignKey_ServesTheReferentialCheckOnlyWhenItKeepsEveryNonNullKey(string filter, bool fires)
+    {
+        var catalog = new DatabaseCatalog();
+        var filtered = new CatalogIndex("IX_Filtered", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsFiltered: true, FilterDefinition: filter);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType)], [filtered]));
+        catalog.AddOrReplace(Table("dbo", "Customers", [Column("Id", IntType)], []));
+        catalog.AddForeignKey(new ForeignKeyRelationship(
+            "FK_Orders_Customers", "dbo.Orders", "CustomerId", "dbo.Customers", "Id"));
+
+        var findings = IndexDesignScanner.Scan(catalog);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == IndexDesignFindingKind.UnindexedForeignKey));
+    }
+
     [Fact]
     public void DisabledForeignKeyWithoutIndex_NeverFires_EnabledSiblingStillFires()
     {

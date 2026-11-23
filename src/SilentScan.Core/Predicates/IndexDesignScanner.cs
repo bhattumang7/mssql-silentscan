@@ -254,7 +254,7 @@ public static class IndexDesignScanner
             var referencedTable = group.First().ReferencedTableQualifiedName;
 
             var hasLeadingIndex = parentTable.Indexes.Any(i =>
-                !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex
+                !i.IsDisabled && (!i.IsFiltered || FilterOnlyDropsNullKeys(i.FilterDefinition, fkColumns, catalog.IdentifierComparer)) && !i.IsColumnstore && !i.IsJsonIndex
                 && i.KeyColumns.Count >= fkColumns.Count
                 && i.KeyColumns.Take(fkColumns.Count).All(c => fkColumns.Contains(c)));
 
@@ -272,6 +272,20 @@ public static class IndexDesignScanner
                 parentTable.SourceLine,
                 ColumnNames: [.. group.Select(fk => fk.ParentColumnName)]));
         }
+    }
+
+    private static bool FilterOnlyDropsNullKeys(string? filterDefinition, HashSet<string> fkColumns, StringComparer identifierComparer)
+    {
+        if (filterDefinition is null)
+        {
+            return false;
+        }
+
+        var conjuncts = filterDefinition.Replace("(", string.Empty, StringComparison.Ordinal).Replace(")", string.Empty, StringComparison.Ordinal)
+            .Split(" AND ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return conjuncts.Length > 0 && conjuncts.All(conjunct =>
+            conjunct.EndsWith(" IS NOT NULL", StringComparison.OrdinalIgnoreCase)
+            && fkColumns.Contains(conjunct[..^" IS NOT NULL".Length].Trim('[', ']', ' '), identifierComparer));
     }
 
     private sealed class TupleComparer(StringComparer identifierComparer) : IEqualityComparer<(string ConstraintName, string ParentTableQualifiedName)>
