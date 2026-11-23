@@ -80,4 +80,19 @@ public sealed class RegexpDefaultCaseSensitiveOnCiColumnEngineFactOracleTests : 
 
         Assert.Equal(1, await CountAsync(connection, "REGEXP_LIKE(Name, 'john', 'ic')"));
     }
+
+    [Theory]
+    [InlineData("'\\w+'", "", 4)]
+    [InlineData("'[[:alpha:]]+'", "", 4)]
+    [InlineData("'[[:upper:]]+'", "", 3)]
+    [InlineData("'[[:upper:]]+'", ", 'i'", 4)]
+    [InlineData("'\\p{Lu}+'", "", 3)]
+    [InlineData("'\\p{Lu}+'", ", 'i'", 4)]
+    public async Task CaseNeutralEscapesMatchEveryCasing_WhileCaseCarryingClassesNeedTheIFlag(string pattern, string flags, int expected)
+    {
+        await using var connection = new SqlConnection(Options.BuildConnectionString(_databaseName));
+        await connection.OpenAsync();
+
+        Assert.Equal(expected, await CountAsync(connection, $"REGEXP_LIKE(Name, {pattern}{flags})"));
+    }
 }

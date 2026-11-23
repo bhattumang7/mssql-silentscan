@@ -75,7 +75,7 @@ public static class RegexpAccentInsensitiveColumnScanner
         {
             if (subject is not ColumnReferenceExpression columnRef
                 || pattern is not StringLiteral patternLiteral
-                || !patternLiteral.Value.Any(char.IsLetter))
+                || !RegexpPatternLetters.HasLiteralLetter(patternLiteral.Value))
             {
                 return;
             }

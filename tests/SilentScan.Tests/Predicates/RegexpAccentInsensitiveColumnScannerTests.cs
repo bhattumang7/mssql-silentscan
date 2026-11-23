@@ -20,6 +20,19 @@ public sealed class RegexpAccentInsensitiveColumnScannerTests
     private const string AiTable = "CREATE TABLE dbo.T (Name VARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AI NOT NULL);";
     private const string AsTable = "CREATE TABLE dbo.T (Name VARCHAR(50) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);";
 
+    [Theory]
+    [InlineData("'\\d+'", false)]
+    [InlineData("'^\\w+\\s\\d{2}$'", false)]
+    [InlineData("'[[:alpha:]]+'", false)]
+    [InlineData("'caf\\w'", true)]
+    [InlineData("'[a-z]+'", true)]
+    public void RegexpLike_AiColumn_FiresOnlyForALiteralLetterThatAccentFoldingCouldChange(string pattern, bool fires)
+    {
+        var findings = Scan(AiTable, $"SELECT * FROM dbo.T WHERE REGEXP_LIKE(Name, {pattern});");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void RegexpLike_AiColumn_Fires()
     {

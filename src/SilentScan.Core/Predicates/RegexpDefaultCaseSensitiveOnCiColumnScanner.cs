@@ -88,7 +88,7 @@ public static class RegexpDefaultCaseSensitiveOnCiColumnScanner
         {
             if (subject is not ColumnReferenceExpression columnRef
                 || pattern is not StringLiteral patternLiteral
-                || !patternLiteral.Value.Any(char.IsAsciiLetter))
+                || !RegexpPatternLetters.HasCaseDependentLetter(patternLiteral.Value))
             {
                 return;
             }

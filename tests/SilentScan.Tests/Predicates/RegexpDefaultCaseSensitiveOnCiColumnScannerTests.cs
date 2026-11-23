@@ -30,6 +30,22 @@ public sealed class RegexpDefaultCaseSensitiveOnCiColumnScannerTests
         Assert.Equal("Name", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("'\\d+'", false)]
+    [InlineData("'^\\d{3}\\s\\w+$'", false)]
+    [InlineData("'\\bfoo\\b'", true)]
+    [InlineData("'[[:alpha:]]+'", false)]
+    [InlineData("'[A-Z]+'", true)]
+    [InlineData("'[[:upper:]]+'", true)]
+    [InlineData("'\\p{Lu}'", true)]
+    [InlineData("'\\x41'", true)]
+    public void RegexpLike_OnlyLettersThatTheCaseFlagCouldChange_Fire(string pattern, bool fires)
+    {
+        var findings = Scan(CiTable, $"SELECT * FROM dbo.T WHERE REGEXP_LIKE(Name, {pattern});");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
     [Fact]
     public void RegexpLike_ExplicitIFlag_NeverFires()
     {
