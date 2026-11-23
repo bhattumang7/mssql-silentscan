@@ -24,6 +24,14 @@ public sealed class OutputParameterScannerTests
         Assert.Equal("@x", finding.ParameterName);
     }
 
+    [Theory]
+    [InlineData("DECLARE c CURSOR LOCAL FOR SELECT 7; OPEN c; FETCH c INTO @x; CLOSE c; DEALLOCATE c;")]
+    [InlineData("EXEC sp_executesql N'SET @y = 8', N'@y INT OUTPUT', @y = @x OUTPUT;")]
+    public void AssignedThroughTheEngineWithoutASetOrSelect_NeverFires(string body)
+    {
+        Assert.Empty(Scan(body));
+    }
+
     [Fact]
     public void AssignedUnconditionallyAtTop_NeverFires()
     {
