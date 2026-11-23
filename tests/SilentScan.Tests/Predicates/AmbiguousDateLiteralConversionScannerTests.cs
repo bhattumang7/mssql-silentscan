@@ -13,6 +13,25 @@ public sealed class AmbiguousDateLiteralConversionScannerTests
     }
 
     [Theory]
+    [InlineData("datetime", "03/04/2026 10:00", true)]
+    [InlineData("datetime2", "03/04/2026 10:00:00", true)]
+    [InlineData("datetime2", "03/04/2026 10:00:00.123", true)]
+    [InlineData("date", "03-04-2026 10:00", true)]
+    [InlineData("datetime", "2026-04-03 10:00:00", true)]
+    [InlineData("datetime", "2026/04/03 10:00", true)]
+    [InlineData("smalldatetime", "2026-04-03 10:00", true)]
+    [InlineData("datetime2", "2026-04-03 10:00:00", false)]
+    [InlineData("datetime", "2026-04-03T10:00:00", false)]
+    [InlineData("datetime", "03/03/2026 10:00", false)]
+    [InlineData("datetime", "13/04/2026 10:00", false)]
+    public void LiteralWithATimeSuffix_FiresExactlyWhenTheDateFormatSettingChangesItsMeaning(string type, string literal, bool fires)
+    {
+        var findings = Scan($"SELECT CAST('{literal}' AS {type});");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
+
+    [Theory]
     [InlineData("SET DATEFORMAT dmy;")]
     [InlineData("SET LANGUAGE British;")]
     public void SessionFormatPinnedEarlierInTheBatch_NeverFires(string setStatement)

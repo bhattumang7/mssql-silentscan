@@ -112,4 +112,24 @@ public sealed class AmbiguousDateLiteralConversionLiveOracleTests
         Assert.Equal(dateMdyResult, dateDmyResult);
         Assert.Equal(new DateTime(2026, 4, 3), dateMdyResult);
     }
+
+    [Theory]
+    [InlineData("datetime", "03/04/2026 10:00", true)]
+    [InlineData("datetime2", "03/04/2026 10:00:00.123", true)]
+    [InlineData("datetime", "2026-04-03 10:00:00", true)]
+    [InlineData("datetime2", "2026-04-03 10:00:00", false)]
+    [InlineData("datetime", "2026-04-03T10:00:00", false)]
+    public async Task LiteralWithATimeSuffix_ChangesMeaningWithDateFormat_ExactlyWhereTheScannerFires(string type, string literal, bool differs)
+    {
+        await using var connection = new SqlConnection(SqlServerOptions.LocalDocker.BuildConnectionString());
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            $"SET DATEFORMAT mdy; DECLARE @a {type} = CAST('{literal}' AS {type}); SET DATEFORMAT dmy; DECLARE @b {type} = CAST('{literal}' AS {type}); SELECT CASE WHEN @a = @b THEN 0 ELSE 1 END;";
+
+        Assert.Equal(differs ? 1 : 0, (int)(await command.ExecuteScalarAsync())!);
+
+        var report = await EngineAuthoritativeScan.ScanAsync($"SELECT CAST('{literal}' AS {type});");
+        Assert.Equal(differs ? 1 : 0, report.Find<AmbiguousDateLiteralConversionFinding>("AmbiguousDateLiteralConversionScanner").Count);
+    }
 }

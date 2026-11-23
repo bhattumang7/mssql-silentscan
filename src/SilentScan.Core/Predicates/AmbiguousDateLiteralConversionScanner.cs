@@ -23,10 +23,10 @@ public static partial class AmbiguousDateLiteralConversionScanner
         SqlDataTypeOption.SmallDateTime,
     ];
 
-    [GeneratedRegex(@"^(\d{1,2})([/.\-])(\d{1,2})\2(\d{2}|\d{4})$")]
+    [GeneratedRegex(@"^(\d{1,2})([/.\-])(\d{1,2})\2(\d{2}|\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?(?:\s*[AaPp][Mm])?)?$")]
     private static partial Regex AmbiguousDatePattern { get; }
 
-    [GeneratedRegex(@"^\d{4}([/.\-])(\d{1,2})\1(\d{1,2})$")]
+    [GeneratedRegex(@"^\d{4}([/.\-])(\d{1,2})\1(\d{1,2})(?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?(?:\s*[AaPp][Mm])?)?$")]
     private static partial Regex AmbiguousYearFirstDatePattern { get; }
 
     internal static bool IsAmbiguousDateLiteral(string text)
