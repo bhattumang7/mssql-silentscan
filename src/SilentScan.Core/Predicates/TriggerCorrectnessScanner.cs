@@ -193,7 +193,7 @@ public static class TriggerCorrectnessScanner
         private static string? TryGetUnsafeAssignedVariable(TSqlStatement statement) => statement switch
         {
             SelectStatement { QueryExpression: QuerySpecification { SelectElements: [SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar] } spec }
-                when IsUnsafeSourceQuery(spec) && !IsAggregateExpression(setVar.Expression)
+                when IsUnsafeSourceQuery(spec) && !(spec.GroupByClause is null && IsAggregateExpression(setVar.Expression))
                 => setVar.Variable.Name,
 
             SetVariableStatement { AssignmentKind: AssignmentKind.Equals, Expression: ScalarSubquery { QueryExpression: QuerySpecification spec } } set
@@ -220,10 +220,34 @@ public static class TriggerCorrectnessScanner
         }
 
         private static bool SelectListIsAggregateOnly(QuerySpecification spec) =>
-            spec.SelectElements is [SelectScalarExpression { Expression: { } expr }] && IsAggregateExpression(expr);
+            spec.GroupByClause is null && spec.SelectElements is [SelectScalarExpression { Expression: { } expr }] && IsAggregateExpression(expr);
 
-        private static bool IsAggregateExpression(ScalarExpression expression) =>
-            expression is FunctionCall call && AggregateFunctionNames.Contains(call.FunctionName.Value);
+        private static bool IsAggregateExpression(ScalarExpression expression)
+        {
+            var finder = new AggregateFinder();
+            expression.Accept(finder);
+            return finder.Found;
+        }
+
+        private sealed class AggregateFinder : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(FunctionCall node)
+            {
+                if (node.OverClause is null && AggregateFunctionNames.Contains(node.FunctionName.Value))
+                {
+                    Found = true;
+                    return;
+                }
+
+                base.ExplicitVisit(node);
+            }
+
+            public override void ExplicitVisit(ScalarSubquery node)
+            {
+            }
+        }
 
         private static bool IsUnsafeSourceQuery(QuerySpecification spec) =>
             spec.WhereClause is null

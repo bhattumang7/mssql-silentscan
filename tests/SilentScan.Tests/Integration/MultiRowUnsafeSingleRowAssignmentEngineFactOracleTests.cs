@@ -23,6 +23,17 @@ public sealed class MultiRowUnsafeSingleRowAssignmentEngineFactOracleTests : Ora
             INSERT INTO dbo.T4Log (CapturedVal) VALUES (@v);
         END;
         GO
+        CREATE TABLE dbo.AggLog (Captured INT NOT NULL);
+        GO
+        CREATE TABLE dbo.AggT (Id INT NOT NULL, Val INT NOT NULL);
+        GO
+        CREATE TRIGGER dbo.trg_AggT ON dbo.AggT AFTER INSERT AS
+        BEGIN
+            DECLARE @v INT;
+            SELECT @v = ISNULL(MAX(Val), 0) + 1 FROM inserted;
+            INSERT INTO dbo.AggLog (Captured) VALUES (@v);
+        END;
+        GO
         CREATE TABLE dbo.RcLog (Prefix VARCHAR(20) NOT NULL, Seen INT NOT NULL);
         GO
         CREATE TABLE dbo.RcNoCount (Id INT NOT NULL);
@@ -107,5 +118,13 @@ public sealed class MultiRowUnsafeSingleRowAssignmentEngineFactOracleTests : Ora
         Assert.Equal(0, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'set-nocount';"));
         Assert.Equal(3, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'bare-declare';"));
         Assert.Equal(1, await ScalarAsync<int>("SELECT Seen FROM dbo.RcLog WHERE Prefix = 'init-declare';"));
+    }
+
+    [Fact]
+    public async Task AggregateWrappedInAnExpression_OverAMultiRowInsert_IsDeterministic()
+    {
+        await ExecuteAsync("INSERT INTO dbo.AggT (Id, Val) VALUES (1, 10), (2, 30), (3, 20);");
+
+        Assert.Equal(31, await ScalarAsync<int>("SELECT Captured FROM dbo.AggLog;"));
     }
 }

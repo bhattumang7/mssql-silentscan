@@ -85,6 +85,22 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment));
     }
 
+    [Theory]
+    [InlineData("SELECT @v = ISNULL(MAX(Val), 0) FROM inserted;", false)]
+    [InlineData("SELECT @v = MAX(Val) + 1 FROM inserted;", false)]
+    [InlineData("SELECT @v = CAST(COUNT(*) AS INT) FROM inserted;", false)]
+    [InlineData("SET @v = (SELECT ISNULL(SUM(Val), 0) FROM inserted);", false)]
+    [InlineData("SELECT @v = Val + 1 FROM inserted;", true)]
+    [InlineData("SELECT @v = ISNULL(Val, 0) FROM inserted;", true)]
+    public void SingleRowAggregateWrappedInAnExpression_NeverFires(string assignment, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN DECLARE @v INT; {assignment} PRINT @v; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment));
+    }
+
     [Fact]
     public void SelectSetVariableFromInserted_WithWhere_NeverFires()
     {
