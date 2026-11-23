@@ -210,6 +210,24 @@ public sealed class NonSargablePredicateScannerTests
         Assert.Equal("CreatedAt", finding.ColumnName);
     }
 
+    [Theory]
+    [InlineData("DATETIME", true)]
+    [InlineData("DATETIME2(3)", true)]
+    [InlineData("SMALLDATETIME", true)]
+    [InlineData("TIME(0)", false)]
+    public void CastOnTimeColumn_ToADateAndTimeType_HasNoSeekRangeThroughTheConversion(string target, bool fires)
+    {
+        var sql = $"""
+            CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, StartsAt TIME(7) NOT NULL);
+            GO
+            CREATE INDEX IX_Orders_StartsAt ON dbo.Orders(StartsAt);
+            GO
+            SELECT OrderId FROM dbo.Orders WHERE CAST(StartsAt AS {target}) = '01:00';
+            """;
+
+        Assert.Equal(fires, ScanSqlWithCatalog(sql).Count == 1);
+    }
+
     [Fact]
     public void CastOnColumn_DateTimeOffsetCastAwayFromOffset_StillFires()
     {

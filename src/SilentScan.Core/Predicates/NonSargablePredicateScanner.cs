@@ -48,7 +48,8 @@ public static class NonSargablePredicateScanner
         (targetType.IsNumericFamily && sourceType.IsNumericFamily)
         || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
             && sourceType.Category != SqlTypeCategory.DateTimeOffset
-            && targetType.Category is not SqlTypeCategory.Time);
+            && targetType.Category is not SqlTypeCategory.Time
+            && sourceType.Category != SqlTypeCategory.Time);
 
     internal static bool IsSeekableStringWidening(SqlType targetType, SqlType sourceType) =>
         targetType is { Category: SqlTypeCategory.NVarChar or SqlTypeCategory.NChar }
