@@ -921,7 +921,7 @@ public static class TypedPredicateExtractor
 
         private void RecordOutsideFromScope(TSqlFragment node, params ScalarExpression[] operands)
         {
-            if (!operands.Any(BaseColumnResolver.ContainsColumnReference))
+            if (!operands.Any(BaseColumnResolver.ContainsColumnReferenceOutsideSubqueries))
             {
                 return;
             }

@@ -138,6 +138,7 @@ public sealed class SkipLedgerTests
     [InlineData("IF @Flag BETWEEN 1 AND 2 RETURN;", false)]
     [InlineData("IF t.Id = 1 RETURN;", true)]
     [InlineData("IF @Flag IN (1, t.Id) RETURN;", true)]
+    [InlineData("IF (SELECT x.Id FROM dbo.Users AS x WHERE x.Id = 1) = 1 RETURN;", false)]
     public void TypedPredicateExtractor_ComparisonWithNoFromScope_IsLedgeredOnlyWhenItNamesAColumn(string statement, bool ledgered)
     {
         var result = SqlScriptParser.ParseText("test.sql", $"CREATE PROCEDURE dbo.usp_Check @Flag INT AS BEGIN {statement} END");

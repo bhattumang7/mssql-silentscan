@@ -93,6 +93,24 @@ internal static class BaseColumnResolver
         return collector.References.Count > 0;
     }
 
+    internal static bool ContainsColumnReferenceOutsideSubqueries(ScalarExpression expression)
+    {
+        var collector = new OutsideSubqueryColumnCollector();
+        expression.Accept(collector);
+        return collector.Found;
+    }
+
+    private sealed class OutsideSubqueryColumnCollector : TSqlFragmentVisitor
+    {
+        public bool Found { get; private set; }
+
+        public override void ExplicitVisit(ColumnReferenceExpression node) => Found = true;
+
+        public override void ExplicitVisit(ScalarSubquery node)
+        {
+        }
+    }
+
     public sealed class ColumnReferenceCollector(
         string sourcePath,
         IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
