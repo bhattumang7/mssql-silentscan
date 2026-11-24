@@ -134,17 +134,40 @@ public static class ProcCallGraphBuilder
             var assemblies = SqlTextValue.Expand(widenedTemplate, DynamicSqlFoldCap);
             if (assemblies.Count != 1 || SqlTextValue.ContainsHole(assemblies[0]))
             {
-                RecordUnresolvableCall(node, "dynamic SQL statement text does not fold to a single deterministic literal string - call graph edge not recorded");
+                if (!assemblies.All(assembly => CannotContainProcedureCall(assembly, walker)))
+                {
+                    RecordUnresolvableCall(node, "dynamic SQL statement text does not fold to a single deterministic literal string - call graph edge not recorded");
+                }
+
                 return;
             }
 
             var rendered = TemplateRenderer.Render(assemblies[0]);
-            if (!TryResolveFoldedProcedureCall(rendered.InnerText, walker, out var innerProcedureReference))
+            if (!TryParseFoldedStatements(rendered.InnerText, walker, out var innerExecutes))
             {
                 RecordUnresolvableCall(node, "dynamic SQL literal does not fold to a single statically named EXEC call");
                 return;
             }
 
+            foreach (var innerExecute in innerExecutes)
+            {
+                if (innerExecute.ExecuteSpecification.ExecutableEntity is not ExecutableProcedureReference
+                    {
+                        ProcedureReference.ProcedureReference.Name: { } innerCalleeName,
+                        ProcedureReference.ProcedureVariable: null,
+                    } innerProcedureReference
+                    || string.Equals(innerCalleeName.BaseIdentifier.Value, SpExecuteSqlName, StringComparison.OrdinalIgnoreCase))
+                {
+                    RecordUnresolvableCall(node, "dynamic SQL literal does not fold to a single statically named EXEC call");
+                    continue;
+                }
+
+                RecordFoldedCallEdge(node, innerProcedureReference, rendered, site, walker);
+            }
+        }
+
+        private void RecordFoldedCallEdge(ExecuteStatement node, ExecutableProcedureReference innerProcedureReference, RenderedScript rendered, SourceSpan site, ModuleWalker walker)
+        {
             var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(innerProcedureReference.ProcedureReference.ProcedureReference.Name));
             if (!catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
             {
@@ -158,25 +181,30 @@ public static class ProcCallGraphBuilder
             Edges.Add(new ProcCallEdge(walker.CurrentProcScope, qualifiedName, site, matched));
         }
 
-        private bool TryResolveFoldedProcedureCall(string innerText, ModuleWalker walker, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ExecutableProcedureReference? procedureReference)
+        private bool CannotContainProcedureCall(IReadOnlyList<FlatPiece> assembly, ModuleWalker walker) =>
+            TryParseFoldedStatements(TemplateRenderer.Render(assembly).InnerText, walker, out var innerExecutes) && innerExecutes.Count == 0;
+
+        private bool TryParseFoldedStatements(string innerText, ModuleWalker walker, out List<ExecuteStatement> executes)
         {
-            procedureReference = null;
+            executes = [];
             var initialQuotedIdentifiers = catalog.ResolveDynamicSqlQuotedIdentifier(walker.CurrentProcScope);
             var parseResult = SqlScriptParser.ParseText(sourcePath, innerText, initialQuotedIdentifiers, catalog.CompatibilityLevel);
-            if (parseResult.Errors.Count > 0
-                || parseResult.Fragment is not TSqlScript { Batches: [{ Statements: [ExecuteStatement innerExecute] }] }
-                || innerExecute.ExecuteSpecification.ExecutableEntity is not ExecutableProcedureReference
-                {
-                    ProcedureReference.ProcedureReference.Name: { } innerCalleeName,
-                    ProcedureReference.ProcedureVariable: null,
-                } candidate
-                || string.Equals(innerCalleeName.BaseIdentifier.Value, SpExecuteSqlName, StringComparison.OrdinalIgnoreCase))
+            if (parseResult.Errors.Count > 0)
             {
                 return false;
             }
 
-            procedureReference = candidate;
+            var collector = new ExecuteStatementCollector();
+            parseResult.Fragment.Accept(collector);
+            executes = collector.Executes;
             return true;
+        }
+
+        private sealed class ExecuteStatementCollector : TSqlFragmentVisitor
+        {
+            public List<ExecuteStatement> Executes { get; } = [];
+
+            public override void ExplicitVisit(ExecuteStatement node) => Executes.Add(node);
         }
 
         private const string SpExecuteSqlParameterConstructKind = "sp_executesql inline parameter type";

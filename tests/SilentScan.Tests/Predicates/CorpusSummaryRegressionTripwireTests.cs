@@ -40,15 +40,15 @@ public sealed class CorpusSummaryRegressionTripwireTests
         Assert.Equal(1, Assert.Contains("symbolic-value-not-positionable:whole-statement", dynamicSql.UnanalyzableReasonCounts));
 
         var skipped = report.SkippedConstructSummary;
-        Assert.Equal(5, skipped.TotalCount);
+        Assert.Equal(1, skipped.TotalCount);
         Assert.DoesNotContain("no column operand", skipped.CountsByConstructKind);
-        Assert.Equal(5, Assert.Contains("procedure call graph edge", skipped.CountsByConstructKind));
+        Assert.Equal(1, Assert.Contains("procedure call graph edge", skipped.CountsByConstructKind));
 
         Assert.Single(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));
         Assert.Equal(6, report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Count);
         Assert.Empty(report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor"));
         Assert.Empty(report.Find<WriteLossFinding>("TypedPredicateExtractor"));
         Assert.Equal(5, report.Find<DynamicSqlFinding>("DynamicSqlScanner").Count);
-        Assert.Equal(6, report.SkippedConstructs.Count);
+        Assert.Single(report.SkippedConstructs);
     }
 }

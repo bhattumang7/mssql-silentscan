@@ -120,14 +120,12 @@ public sealed class ProcCallGraphBuilderTests
     }
 
     [Fact]
-    public void Build_SpExecuteSqlLiteralNotFoldingToAStaticExecCall_RecordsNoEdgeButLedgersTheGap()
+    public void Build_SpExecuteSqlLiteralWithNoExecStatement_RecordsNoEdgeAndNoGap()
     {
         var (graph, ledger) = BuildFrom("EXEC sp_executesql N'SELECT 1';");
 
         Assert.Empty(graph.Edges);
-        Assert.Contains(
-            ledger.Entries,
-            e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("does not fold to a single statically named EXEC call", StringComparison.Ordinal));
+        Assert.DoesNotContain(ledger.Entries, e => e.ConstructKind == "procedure call graph edge");
     }
 
     [Fact]
@@ -145,14 +143,25 @@ public sealed class ProcCallGraphBuilderTests
     }
 
     [Fact]
-    public void Build_DynamicStringExecCallLiteralNotFoldingToAStaticExecCall_RecordsNoEdgeButLedgersTheGap()
+    public void Build_DynamicStringExecCallLiteralWithNoExecStatement_RecordsNoEdgeAndNoGap()
     {
         var (graph, ledger) = BuildFrom("EXEC ('SELECT 1');");
 
         Assert.Empty(graph.Edges);
-        Assert.Contains(
-            ledger.Entries,
-            e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("does not fold to a single statically named EXEC call", StringComparison.Ordinal));
+        Assert.DoesNotContain(ledger.Entries, e => e.ConstructKind == "procedure call graph edge");
+    }
+
+    [Theory]
+    [InlineData("EXEC ('SELECT ' + @Columns + ' FROM dbo.T');", false)]
+    [InlineData("EXEC ('SELECT 1 FROM dbo.T WHERE Code = ''' + @Columns + '''');", false)]
+    [InlineData("EXEC (@Columns);", true)]
+    [InlineData("EXEC (@Columns + ' FROM dbo.T');", true)]
+    public void Build_DynamicStringExecCallWithUnknownValue_LedgersOnlyWhenAProcedureCallCouldBeHidden(string statement, bool ledgered)
+    {
+        var (graph, ledger) = BuildFrom($"CREATE PROCEDURE dbo.Caller AS BEGIN DECLARE @Columns varchar(100) = CONVERT(varchar(100), NEWID()); {statement} END");
+
+        Assert.Empty(graph.Edges);
+        Assert.True(ledgered == ledger.Entries.Any(e => e.ConstructKind == "procedure call graph edge"), string.Join("; ", ledger.Entries.Select(e => e.Reason)));
     }
 
     [Fact]
@@ -242,7 +251,7 @@ public sealed class ProcCallGraphBuilderTests
     }
 
     [Fact]
-    public void Build_ExecOfLiteralStringWithMultipleStatements_FallsBackToUnresolvable()
+    public void Build_ExecOfLiteralStringWithMultipleStatements_RecordsTheEdgeOfTheCallStatement()
     {
         var (graph, ledger) = BuildFrom("""
             CREATE PROCEDURE dbo.Callee (@Code varchar(3)) AS SELECT @Code;
@@ -250,10 +259,9 @@ public sealed class ProcCallGraphBuilderTests
             EXEC ('EXEC dbo.Callee @Code = ''AB''; SELECT 1;');
             """);
 
-        Assert.Empty(graph.Edges);
-        Assert.Contains(
-            ledger.Entries,
-            e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("does not fold to a single statically named EXEC call", StringComparison.Ordinal));
+        var edge = Assert.Single(graph.Edges);
+        Assert.Equal("dbo.Callee", edge.CalleeQualifiedName);
+        Assert.DoesNotContain(ledger.Entries, e => e.ConstructKind == "procedure call graph edge");
     }
 
     [Fact]
