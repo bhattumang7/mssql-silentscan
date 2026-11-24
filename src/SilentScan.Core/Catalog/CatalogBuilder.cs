@@ -778,6 +778,11 @@ public static class CatalogBuilder
             foreach (var target in dropTable.Objects)
             {
                 var qualifiedName = SchemaObjectNameHelper.Qualify(target);
+                if (SchemaObjectNameHelper.IsLocalTempName(qualifiedName))
+                {
+                    continue;
+                }
+
                 if (catalog.Find(qualifiedName, _currentScope) is null)
                 {
                     pendingDrops.Add(new PendingDrop(dropTable, qualifiedName, _currentScope, sourcePath));

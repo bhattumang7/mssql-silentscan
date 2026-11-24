@@ -1410,7 +1410,7 @@ public sealed class CatalogBuilderTests
     }
 
     [Fact]
-    public void Build_DropTable_OnSelectIntoTempTableFromEarlierInSameProcedure_RemovesItWithoutSkip()
+    public void Build_DropTable_OnSelectIntoTempTableFromEarlierInSameProcedure_KeepsItForTheStatementsThatUsedItWithoutSkip()
     {
         var catalog = BuildFrom("""
             CREATE TABLE dbo.Orders (Id INT NOT NULL);
@@ -1423,12 +1423,12 @@ public sealed class CatalogBuilderTests
             END
             """);
 
-        Assert.Null(catalog.Find("#snapshot", "dbo.usp_Snapshot"));
+        Assert.NotNull(catalog.Find("#snapshot", "dbo.usp_Snapshot"));
         Assert.DoesNotContain(catalog.Skipped.Entries, e => e.ConstructKind == "DROP TABLE" && e.Reason.Contains("#snapshot", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void Build_DropTable_GuardingItsOwnLaterCreateTableInSameProcedure_StillRecordsUnresolvedSkip()
+    public void Build_DropTable_GuardingItsOwnLaterCreateTableInSameProcedure_RecordsNoSkip()
     {
         var catalog = BuildFrom("""
             CREATE PROCEDURE dbo.usp_Rebuild
@@ -1441,7 +1441,7 @@ public sealed class CatalogBuilderTests
             """);
 
         Assert.NotNull(catalog.Find("#work", "dbo.usp_Rebuild"));
-        Assert.Contains(catalog.Skipped.Entries, e => e.ConstructKind == "DROP TABLE" && e.Reason.Contains("#work", StringComparison.Ordinal));
+        Assert.DoesNotContain(catalog.Skipped.Entries, e => e.ConstructKind == "DROP TABLE");
     }
 
     [Fact]

@@ -151,6 +151,28 @@ public sealed class SkipLedgerTests
     }
 
     [Fact]
+    public void LineageResolver_TempTableDroppedAfterItsLastUse_StillResolvesTheEarlierReferences()
+    {
+        var sql = """
+            CREATE PROCEDURE dbo.usp_Work
+            AS
+            BEGIN
+                CREATE TABLE #Work (Id INT NOT NULL, Label VARCHAR(10) NULL);
+                INSERT INTO #Work (Id, Label) VALUES (1, 'a');
+                SELECT w.Label FROM #Work AS w WHERE w.Id = 1;
+                DROP TABLE #Work;
+            END
+            """;
+        var result = SqlScriptParser.ParseText("test.sql", sql);
+        Assert.False(result.HasErrors);
+
+        var catalog = CatalogBuilder.Build([result]);
+        var report = ScanReportBuilder.BuildFromParseResults([result], catalog);
+
+        Assert.Empty(report.SkippedConstructs);
+    }
+
+    [Fact]
     public void TypedPredicateExtractor_OrdinaryWhereClause_RecordsNoSkip()
     {
         var sql = "CREATE TABLE dbo.Users (Id INT NOT NULL);\nGO\nSELECT Id FROM dbo.Users WHERE Id = 1;";
