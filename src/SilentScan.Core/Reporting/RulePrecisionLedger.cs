@@ -58,7 +58,7 @@ public static class RulePrecisionLedger
         new("silentscan/predicates/float-order-dependent-aggregate", 3, 3, 0, 0),
         new("silentscan/predicates/isnull-replacement-value-truncation", 11, 4, 7, 0),
         new("silentscan/predicates/local-variable-predicate", 3177, 20, 0, 0),
-        new("silentscan/predicates/reassigned-parameter", 26, 18, 0, 0),
+        new("silentscan/predicates/reassigned-parameter", 26, 26, 0, 0),
         new("silentscan/predicates/under-length-parameter", 39, 7, 13, 0),
         new("silentscan/query/bare-top-no-order-by", 265, 19, 1, 0),
         new("silentscan/query/count-star-variable-existence-check", 3, 3, 0, 0),
