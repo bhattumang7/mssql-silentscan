@@ -42,6 +42,22 @@ public sealed class ParameterReassignmentPredicateScannerTests
     }
 
     [Fact]
+    public void SetReassignsParameter_ThenPredicateOnATableVariableColumn_NeverFires()
+    {
+        var findings = Scan(
+            """
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                DECLARE @t TABLE (Code VARCHAR(20));
+                SET @p = 'OVERWRITTEN';
+                SELECT 1 FROM @t WHERE Code = @p;
+            END
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
     public void SetReassignsParameter_ThenPredicateUse_Fires()
     {
         var findings = Scan(

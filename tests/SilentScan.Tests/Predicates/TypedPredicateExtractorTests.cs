@@ -1935,6 +1935,27 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
+    public void Extract_ColumnOfATableVariableComparedToDeclaredLocalVariable_NeverFiresLocalVariablePredicate()
+    {
+        var result = ExtractAll(
+            string.Empty,
+            "CREATE PROCEDURE dbo.P AS BEGIN DECLARE @t TABLE (Id INT, Code VARCHAR(20)); DECLARE @v VARCHAR(20) = 'x'; "
+            + "INSERT INTO @t (Id, Code) VALUES (1, 'a'); IF EXISTS (SELECT * FROM @t R WHERE R.Code = @v) SELECT 1; END;");
+
+        Assert.Empty(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_ColumnOfATemporaryTableComparedToDeclaredLocalVariable_StillFires()
+    {
+        var result = ExtractAll(
+            string.Empty,
+            "CREATE TABLE #t (Id INT, Code VARCHAR(20)); DECLARE @v VARCHAR(20) = 'x'; SELECT 1 FROM #t WHERE Code = @v;");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
     public void Extract_CompositeUniqueKeyPinnedOnlyPartlyByLiteral_StillFires()
     {
         var result = ExtractAll(

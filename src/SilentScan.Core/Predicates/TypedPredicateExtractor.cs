@@ -1025,6 +1025,7 @@ public static class TypedPredicateExtractor
         private void TryAddLocalVariablePredicateFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
         {
             if (HasActiveRecompileGuard
+                || column.TableQualifiedName.StartsWith('@')
                 || other is not PredicateOperand.Value { VariableName: { } variableName, IsFormalParameter: false }
                 || _statementOptimizeForVariables.Contains(variableName)
                 || IsUniqueSingleColumnEquality(column, operatorText))

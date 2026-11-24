@@ -327,7 +327,8 @@ public static class ParameterReassignmentPredicateScanner
             }
 
             var provenance = ScalarExpressionResolver.ResolveColumnReference(columnRef, scopeChain, sourcePath, ledger: null, catalog);
-            if (provenance is not ColumnProvenance.BaseColumn { Depth: 0 } baseColumn)
+            if (provenance is not ColumnProvenance.BaseColumn { Depth: 0 } baseColumn
+                || baseColumn.TableQualifiedName.StartsWith('@'))
             {
                 return;
             }
