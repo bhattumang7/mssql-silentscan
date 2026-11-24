@@ -298,6 +298,13 @@ public static class ExpressionEvaluator
     private static SqlTextValue FoldFunctionCall(
         string functionName, IList<ScalarExpression> parameters, TSqlFragment site, Dictionary<string, SqlTextValue> state, string sourcePath, int cap, DatabaseCatalog? catalog)
     {
+        if (string.Equals(functionName, "DB_NAME", StringComparison.OrdinalIgnoreCase)
+            && parameters.Count == 0
+            && catalog?.CurrentDatabaseName is { Length: > 0 } currentDatabaseName)
+        {
+            return new SqlTextValue.Template([new TemplatePiece.Lit(currentDatabaseName, Span(sourcePath, site), PrefixLength: 0)]);
+        }
+
         if (!BuiltinRegistry.IsKnownBuiltin(functionName)
             && site is FunctionCall userFunctionCall
             && TryFoldUserScalarFunction(userFunctionCall, catalog, sourcePath, out var userFunctionResult))
