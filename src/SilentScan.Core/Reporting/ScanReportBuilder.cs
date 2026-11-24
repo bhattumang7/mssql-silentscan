@@ -76,6 +76,7 @@ public static class ScanReportBuilder
             callerScopeByCalleeScope[group.Key] = group.Select(e => e.CallerScopeQualifiedName!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
+        catalog.SetCallerScopes(callerScopeByCalleeScope);
         SelectIntoLineagePass.Apply(catalog, lineage, usableParseResults, callerScopeByCalleeScope);
 
 

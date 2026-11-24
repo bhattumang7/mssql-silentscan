@@ -1,3 +1,4 @@
+using SilentScan.Core.Common;
 using SilentScan.Core.Diagnostics;
 using SilentScan.Core.TypeInference;
 
@@ -12,6 +13,70 @@ public sealed class DatabaseCatalog
     private Dictionary<string, CatalogTable> _tablesByQualifiedName;
 
     private Dictionary<string, CatalogTable>? _scriptTablesByScopedName;
+
+    private IReadOnlyDictionary<string, IReadOnlyList<string>>? _callerScopesByCalleeScope;
+
+    public void SetCallerScopes(IReadOnlyDictionary<string, IReadOnlyList<string>> callerScopesByCalleeScope) =>
+        _callerScopesByCalleeScope = callerScopesByCalleeScope;
+
+    private CatalogTable? FindThroughCallers(string qualifiedName, string scope)
+    {
+        if (_callerScopesByCalleeScope is not { } callerScopes || !SchemaObjectNameHelper.IsLocalTempName(qualifiedName))
+        {
+            return null;
+        }
+
+        var visited = new HashSet<string>(_identifierComparer) { scope };
+        var frontier = new List<string> { scope };
+        CatalogTable? resolved = null;
+        while (frontier.Count > 0)
+        {
+            var next = new List<string>();
+            foreach (var current in frontier)
+            {
+                if (!callerScopes.TryGetValue(current, out var callers))
+                {
+                    continue;
+                }
+
+                foreach (var caller in callers)
+                {
+                    if (!visited.Add(caller))
+                    {
+                        continue;
+                    }
+
+                    if (FindScopedOnly(qualifiedName, caller) is { } candidate)
+                    {
+                        if (resolved is not null && !resolved.HasSameShapeAs(candidate))
+                        {
+                            return null;
+                        }
+
+                        resolved ??= candidate;
+                        continue;
+                    }
+
+                    next.Add(caller);
+                }
+            }
+
+            frontier = next;
+        }
+
+        return resolved;
+    }
+
+    private CatalogTable? FindScopedOnly(string qualifiedName, string scope)
+    {
+        var key = Key(qualifiedName, scope);
+        if (_scriptTablesByScopedName is not null && _scriptTablesByScopedName.TryGetValue(key, out var scriptScoped))
+        {
+            return scriptScoped;
+        }
+
+        return _tablesByQualifiedName.GetValueOrDefault(key);
+    }
 
     private Dictionary<string, SqlType> _typeAliasesByQualifiedName;
 
@@ -524,6 +589,11 @@ public sealed class DatabaseCatalog
         if (qualifiedName.StartsWith('@'))
         {
             return null;
+        }
+
+        if (scope is not null && FindThroughCallers(qualifiedName, scope) is { } fromCaller)
+        {
+            return fromCaller;
         }
 
         return Find(qualifiedName);
