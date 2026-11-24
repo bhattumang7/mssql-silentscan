@@ -9,6 +9,11 @@ public static class ReadableDocumentRenderer
     {
         ArgumentNullException.ThrowIfNull(document);
 
+        if (style == ReadableStyle.Html)
+        {
+            return HtmlDocumentRenderer.Render(document);
+        }
+
         var builder = new StringBuilder();
         var first = true;
 

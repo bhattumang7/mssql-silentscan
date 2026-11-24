@@ -5,6 +5,8 @@ public enum ReadableStyle
     Text,
 
     Markdown,
+
+    Html,
 }
 
 public enum ReadableVerbosity

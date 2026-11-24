@@ -8,6 +8,7 @@ internal enum ReportFormat
 {
     Text,
     Markdown,
+    Html,
     Json,
     Sarif,
 }
@@ -17,13 +18,13 @@ internal readonly record struct ReportOptions(string Format, string? OutputPath,
 internal static class ReportOutput
 {
     internal const string FormatOptionDescription =
-        "Output format: text (default, human-readable), markdown (the same report as a shareable document), json (the complete findings schema), or sarif (for CI).";
+        "Output format: text (default, human-readable), markdown (the same report as a shareable document), html (the same report as one self-contained, offline HTML page with search, filters and sortable tables), json (the complete findings schema), or sarif (for CI).";
 
     internal const string OutputOptionDescription =
         "Write the report to this file instead of standard output. The parent directory must exist.";
 
     internal const string VerbosityOptionDescription =
-        "How much detail the text/markdown report gives for sections about what could NOT be established (parse errors, unresolvable dynamic SQL, ambiguous types, stale metadata): brief (default - each such section states its count only) or full (every row, as the JSON carries it). Never affects json/sarif output, and never hides an actual finding - only these coverage/caveat sections.";
+        "How much detail the text/markdown/html report gives for sections about what could NOT be established (parse errors, unresolvable dynamic SQL, ambiguous types, stale metadata): brief (default - each such section states its count only) or full (every row, as the JSON carries it). Never affects json/sarif output, and never hides an actual finding - only these coverage/caveat sections.";
 
     internal const string BaselineOptionDescription =
         "Suppress findings already recorded in this baseline file (written earlier with --write-baseline), so only findings that are new since then are reported. Findings are matched by rule and module, not by line number, so edits that only move code do not resurface them.";
@@ -61,6 +62,9 @@ internal static class ReportOutput
             case "markdown":
                 parsed = ReportFormat.Markdown;
                 return true;
+            case "html":
+                parsed = ReportFormat.Html;
+                return true;
             case "json":
                 parsed = ReportFormat.Json;
                 return true;
@@ -74,10 +78,14 @@ internal static class ReportOutput
     }
 
     internal static string UnknownFormatMessage(string format) =>
-        $"error: unknown --format '{format}' (expected 'text', 'markdown', 'json' or 'sarif')";
+        $"error: unknown --format '{format}' (expected 'text', 'markdown', 'html', 'json' or 'sarif')";
 
-    internal static ReadableStyle ToStyle(ReportFormat format) =>
-        format == ReportFormat.Markdown ? ReadableStyle.Markdown : ReadableStyle.Text;
+    internal static ReadableStyle ToStyle(ReportFormat format) => format switch
+    {
+        ReportFormat.Markdown => ReadableStyle.Markdown,
+        ReportFormat.Html => ReadableStyle.Html,
+        _ => ReadableStyle.Text,
+    };
 
     internal static bool TryParseVerbosity(string verbosity, out ReadableVerbosity parsed)
     {

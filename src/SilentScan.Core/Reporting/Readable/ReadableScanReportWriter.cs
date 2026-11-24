@@ -12,6 +12,10 @@ namespace SilentScan.Core.Reporting.Readable;
 
 public static class ReadableScanReportWriter
 {
+    public const string SummaryHeading = "Summary";
+
+    public const string SummaryWhatHeader = "What";
+
     private const string WhereHeader = "Where";
 
     private const string ColumnHeader = "Column";
@@ -168,7 +172,7 @@ public static class ReadableScanReportWriter
         var health = report.ParseHealth;
         var summary = report.TypedPredicateSummary;
 
-        yield return new ReadableBlock.Heading(level, "Summary");
+        yield return new ReadableBlock.Heading(level, SummaryHeading);
 
         var parsed = health.TotalFiles - health.FilesWithErrors;
         yield return new ReadableBlock.Paragraph(
@@ -261,7 +265,7 @@ public static class ReadableScanReportWriter
         }
         else
         {
-            yield return new ReadableBlock.Table(["What", "Occurrences", "Distinct"], counts);
+            yield return new ReadableBlock.Table([SummaryWhatHeader, "Occurrences", "Distinct"], counts);
         }
 
         yield return new ReadableBlock.Paragraph(

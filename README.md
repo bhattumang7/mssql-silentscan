@@ -45,7 +45,7 @@ repeated invocations.
 
 ```
 dotnet run --project src/SilentScan.Cli -- scan-db <connection-string> \
-  [--format text|markdown|json|sarif] [--output <file>]
+  [--format text|markdown|html|json|sarif] [--output <file>]
 ```
 
 Connects to a live SQL Server database, reads its catalog straight from
@@ -54,6 +54,8 @@ trigger through all 159 rules in one read-only pass — no DDL or DML is ever
 executed against the database you point it at.
 
 * `--format text` (default) — a readable report, grouped and explained.
+* `--format markdown` — the same report as a shareable Markdown document.
+* `--format html` — the same report as one self-contained HTML file that works offline: a summary with bars that jump to each section, global search, per-table filters, sortable columns and light/dark themes.
 * `--format json` — the full versioned findings schema, for another tool or an AI assistant.
 * `--format sarif` — for CI gating; each rule's `helpUri` links to its own page in the rule catalog.
 
@@ -111,7 +113,7 @@ flowchart TD
     LIVEEXTRA["SilentScan.Live<br/>plan-cache reader, dangling-ref checker,<br/>temp-table exec shape (optional, live-only)"] -.-> SRB
 
     SRB --> WRITERS{"Report writers"}
-    WRITERS --> TXT["Readable text / markdown"]
+    WRITERS --> TXT["Readable text / markdown / html"]
     WRITERS --> JSON["Versioned JSON findings"]
     WRITERS --> SARIF["SARIF (CI gating,<br/>helpUri → rule docs)"]
 

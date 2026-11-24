@@ -24,6 +24,7 @@ public sealed class ReportOutputTests : IDisposable
     [Theory]
     [InlineData("text", "Text")]
     [InlineData("markdown", "Markdown")]
+    [InlineData("html", "Html")]
     [InlineData("json", "Json")]
     [InlineData("sarif", "Sarif")]
     public void TryParseFormat_KnownFormat_ReturnsTrueAndParsedValue(string input, string expectedName)
@@ -51,14 +52,16 @@ public sealed class ReportOutputTests : IDisposable
         Assert.Contains("'xml'", message);
         Assert.Contains("'text'", message);
         Assert.Contains("'markdown'", message);
+        Assert.Contains("'html'", message);
         Assert.Contains("'json'", message);
         Assert.Contains("'sarif'", message);
     }
 
     [Fact]
-    public void ToStyle_OnlyMarkdownMapsToMarkdownStyle()
+    public void ToStyle_MarkdownAndHtmlMapToTheirOwnStyleAndEverythingElseToText()
     {
         Assert.Equal(ReadableStyle.Markdown, ReportOutput.ToStyle(ReportFormat.Markdown));
+        Assert.Equal(ReadableStyle.Html, ReportOutput.ToStyle(ReportFormat.Html));
         Assert.Equal(ReadableStyle.Text, ReportOutput.ToStyle(ReportFormat.Text));
         Assert.Equal(ReadableStyle.Text, ReportOutput.ToStyle(ReportFormat.Json));
         Assert.Equal(ReadableStyle.Text, ReportOutput.ToStyle(ReportFormat.Sarif));

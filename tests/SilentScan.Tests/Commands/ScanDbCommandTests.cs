@@ -20,6 +20,22 @@ public sealed class ScanDbCommandTests
     }
 
     [Fact]
+    public async Task RunAsync_HtmlFormat_IsAcceptedAndValidationMovesOnToTheNextOption()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        var options = new ReportOptions("html", null, "not-a-real-verbosity");
+
+        var exitCode = await ScanDbCommand.RunAsync(
+            "Server=nonexistent-host;Database=db", new ScanFlags(false, false, false), options, stdout, stderr, CancellationToken.None);
+
+        Assert.Equal(1, exitCode);
+        Assert.DoesNotContain("unknown --format", stderr.ToString());
+        Assert.Contains("unknown --verbosity", stderr.ToString());
+        Assert.Equal(string.Empty, stdout.ToString());
+    }
+
+    [Fact]
     public async Task RunAsync_MissingBaselineFile_ReturnsOneAndWritesErrorWithoutConnecting()
     {
         var stdout = new StringWriter();

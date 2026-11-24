@@ -13,6 +13,8 @@
     <!-- Checked-in top-down construct coverage matrix (Phase 0.1 of docs/coverage-remediation-plan.md). -->
     <EmbeddedResource Include="Diagnostics/ConstructCoverage.json" />
     <EmbeddedResource Include="TypeInference/CollationCodePages.json" />
+    <EmbeddedResource Include="Reporting/Readable/HtmlReport.css" />
+    <EmbeddedResource Include="Reporting/Readable/HtmlReport.js" />
   </ItemGroup>
 
 </Project>
