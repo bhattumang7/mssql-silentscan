@@ -403,7 +403,7 @@ tbody tr:last-child > * { border-bottom: 0; }
 
 table.cap > tbody > tr:nth-child(n+501) { display: none; }
 
-.dash .scroll { max-height: none; border: 0; background: transparent; }
+.dash .scroll { max-height: none; overflow: visible; border: 0; background: transparent; }
 
 .bars { width: 100%; }
 
