@@ -1,12 +1,15 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Diagnostics;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Lineage;
 
 public static class QueryExpressionResolver
 {
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyCteRelations = new Dictionary<string, ResolvedRelation>();
+
+    private static readonly SqlType ForClauseTextType = new(SqlTypeCategory.NVarChar, IsMax: true);
 
     public static List<ResolvedColumn> Resolve(
         QueryExpression queryExpression,
@@ -90,7 +93,20 @@ public static class QueryExpressionResolver
             }
         }
 
-        return result;
+        return spec.ForClause is XmlForClause or JsonForClause ? [ForClauseResultColumn(spec.ForClause)] : result;
+    }
+
+    private static ResolvedColumn ForClauseResultColumn(ForClause forClause)
+    {
+        var isXmlType = forClause is XmlForClause { Options: { } options } && options.Any(o => o.OptionKind == XmlForClauseOptions.Type);
+        var (name, type) = (forClause, isXmlType) switch
+        {
+            (XmlForClause, true) => ("XML_F52E2B61-18A1-11d1-B105-00805F49916B", new SqlType(SqlTypeCategory.Xml)),
+            (XmlForClause, false) => ("XML_F52E2B61-18A1-11d1-B105-00805F49916B", ForClauseTextType),
+            _ => ("JSON_F52E2B61-18A1-11d1-B105-00805F49916B", ForClauseTextType),
+        };
+
+        return new ResolvedColumn(name, new ColumnProvenance.Expression(type, Inputs: []));
     }
 
     private static bool EmitsSuperAggregateNulls(GroupByClause? groupBy) =>

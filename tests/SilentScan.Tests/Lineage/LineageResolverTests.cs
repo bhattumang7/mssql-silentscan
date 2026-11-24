@@ -35,6 +35,37 @@ public sealed class LineageResolverTests
         Assert.Equal(0, baseColumn.Depth);
     }
 
+    [Theory]
+    [InlineData("FOR XML PATH('')", SqlTypeCategory.NVarChar, true)]
+    [InlineData("FOR XML RAW", SqlTypeCategory.NVarChar, true)]
+    [InlineData("FOR XML PATH(''), TYPE", SqlTypeCategory.Xml, false)]
+    [InlineData("FOR JSON PATH", SqlTypeCategory.NVarChar, true)]
+    public void Resolve_DerivedTableWithForClause_ExposesTheEnginesSingleResultColumnType(string forClause, SqlTypeCategory expectedCategory, bool expectedMax)
+    {
+        var (_, lineage) = Build(
+            "CREATE TABLE dbo.Notes (Note VARCHAR(20) NOT NULL);",
+            $"CREATE VIEW dbo.vw_Notes AS SELECT sn.Joined FROM (SELECT Note + ';' AS [data()] FROM dbo.Notes {forClause}) sn(Joined);");
+
+        var column = Assert.Single(lineage.Find("dbo.vw_Notes")!.Columns);
+        var type = ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance)!;
+
+        Assert.Equal(expectedCategory, type.Category);
+        Assert.Equal(expectedMax, type.IsMax);
+    }
+
+    [Fact]
+    public void Resolve_DerivedTableWithoutForClause_KeepsTheSourceColumnType()
+    {
+        var (_, lineage) = Build(
+            "CREATE TABLE dbo.Notes (Note VARCHAR(20) NOT NULL);",
+            "CREATE VIEW dbo.vw_Notes AS SELECT sn.Joined FROM (SELECT Note + ';' AS [data()] FROM dbo.Notes) sn(Joined);");
+
+        var column = Assert.Single(lineage.Find("dbo.vw_Notes")!.Columns);
+        var type = ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance)!;
+
+        Assert.Equal(SqlTypeCategory.VarChar, type.Category);
+    }
+
     [Fact]
     public void Resolve_CastOfStringColumnToStringType_PropagatesSourceCollation()
     {
