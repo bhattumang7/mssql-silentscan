@@ -61,25 +61,19 @@ public static class CteResolver
         SkipLedger? ledger, List<RecursiveCteTypeMismatch>? typeMismatches)
     {
         var name = cte.ExpressionName.Value;
-        ledger?.Record(
-            AnalysisPass.Lineage, context.SourcePath, cte.StartLine, cte.StartColumn, "recursive CTE",
-            $"'{name}' is a recursive CTE - only the anchor member was resolved; T-SQL requires the recursive member's column types to match the anchor's exactly (Msg 240), so the anchor's types are used directly, with any base-table index claim dropped (a recursive CTE materializes through a spool, not a direct index access)");
+        var comparer = context.Catalog.IdentifierComparer;
 
+        var anchorExpression = FindAnchorExpression(cte.QueryExpression, name, comparer);
+        if (anchorExpression is null)
+        {
+            ledger?.Record(
+                AnalysisPass.Lineage, context.SourcePath, cte.StartLine, cte.StartColumn, "recursive CTE",
+                $"'{name}' is a recursive CTE whose members are not the anchor members followed by self-referencing members - its columns are left unresolved");
+            return [];
+        }
+
+        var anchorBranchCount = FlattenUnionBranches(anchorExpression).Count;
         var branches = FlattenUnionBranches(cte.QueryExpression);
-        if (branches.Count < 2 || ReferencesSelf(branches[0], name, context.Catalog.IdentifierComparer))
-        {
-
-            return [];
-        }
-
-        var anchorCount = branches.TakeWhile(b => !ReferencesSelf(b, name, context.Catalog.IdentifierComparer)).Count();
-        if (anchorCount != 1 || !branches.Skip(1).All(b => ReferencesSelf(b, name, context.Catalog.IdentifierComparer)))
-        {
-
-            return [];
-        }
-
-        var anchorExpression = branches[0];
         var anchorColumns = QueryExpressionResolver.Resolve(
             anchorExpression, context.Catalog, context.ResolvedViews, context.SourcePath, ledger, priorCtes, context.ProcScope);
         var finalColumns = anchorColumns.Select(c => c with
@@ -87,6 +81,7 @@ public static class CteResolver
             Provenance = c.Provenance switch
             {
                 ColumnProvenance.BaseColumn { Type: { } type } => new ColumnProvenance.Declared(type, TableQualifiedName: name),
+                ColumnProvenance.Union union => MergeAnchorBranches(name, union),
 
                 ColumnProvenance.BaseColumn => new ColumnProvenance.Unknown($"recursive CTE '{name}' anchor column has an unresolved declared type"),
                 _ => c.Provenance,
@@ -95,14 +90,14 @@ public static class CteResolver
 
         if (typeMismatches is not null)
         {
-            CompareRecursiveBranchTypes(name, cte, branches, finalColumns, context, priorCtes, typeMismatches);
+            CompareRecursiveBranchTypes(name, cte, branches.Skip(anchorBranchCount).ToList(), finalColumns, context, priorCtes, typeMismatches);
         }
 
         return finalColumns;
     }
 
     private static void CompareRecursiveBranchTypes(
-        string name, CommonTableExpression cte, List<QueryExpression> branches, List<ResolvedColumn> anchorColumns,
+        string name, CommonTableExpression cte, List<QueryExpression> recursiveBranches, List<ResolvedColumn> anchorColumns,
         CteResolutionContext context, IReadOnlyDictionary<string, ResolvedRelation> priorCtes, List<RecursiveCteTypeMismatch> mismatches)
     {
         var selfRelation = new ResolvedRelation(QualifiedName: null, anchorColumns);
@@ -115,7 +110,7 @@ public static class CteResolver
             ? [.. cte.Columns.Select(c => c.Value)]
             : anchorColumns.Select(c => c.Name).ToList();
 
-        foreach (var branch in branches.Skip(1))
+        foreach (var branch in recursiveBranches)
         {
             var recursiveColumns = QueryExpressionResolver.Resolve(
                 branch, context.Catalog, context.ResolvedViews, context.SourcePath, ledger: null, priorCtesWithSelf, context.ProcScope);
@@ -172,6 +167,30 @@ public static class CteResolver
             && anchor.Collation?.Name is { } anchorCollation
             && recursive.Collation?.Name is { } recursiveCollation
             && !string.Equals(anchorCollation, recursiveCollation, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ColumnProvenance MergeAnchorBranches(string cteName, ColumnProvenance.Union union)
+    {
+        var merged = ExpressionTypeInferencer.MergeBranchTypes(LeafTypes(union));
+        return merged is null
+            ? new ColumnProvenance.Unknown($"recursive CTE '{cteName}' anchor members' column types could not be merged")
+            : new ColumnProvenance.Declared(merged, TableQualifiedName: cteName);
+    }
+
+    private static IEnumerable<SqlType?> LeafTypes(ColumnProvenance provenance) => provenance is ColumnProvenance.Union union
+        ? union.Branches.SelectMany(LeafTypes)
+        : [ColumnProvenanceAnalysis.TryGetScalarType(provenance)];
+
+    private static QueryExpression? FindAnchorExpression(QueryExpression queryExpression, string cteName, StringComparer comparer)
+    {
+        if (UnwrapParentheses(queryExpression) is not BinaryQueryExpression binary || !ReferencesSelf(binary.SecondQueryExpression, cteName, comparer))
+        {
+            return null;
+        }
+
+        return ReferencesSelf(binary.FirstQueryExpression, cteName, comparer)
+            ? FindAnchorExpression(binary.FirstQueryExpression, cteName, comparer)
+            : binary.FirstQueryExpression;
     }
 
     private static List<QueryExpression> FlattenUnionBranches(QueryExpression queryExpression)

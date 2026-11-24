@@ -275,6 +275,8 @@ public static class ExpressionTypeInferencer
         IEnumerable<ScalarExpression> branches, Func<ScalarExpression, SqlType?> resolveLeaf, IReadOnlyDictionary<string, SqlType>? typeAliases) =>
         CombineAll(branches.Where(e => e is not NullLiteral).Select(e => Resolve(e, resolveLeaf, typeAliases)));
 
+    public static SqlType? MergeBranchTypes(IEnumerable<SqlType?> branchTypes) => CombineAll(branchTypes);
+
     private static SqlType? CombineAll(IEnumerable<SqlType?> branchTypes)
     {
         SqlType? result = null;

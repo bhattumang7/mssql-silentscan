@@ -62,6 +62,26 @@ public sealed class CaseMergeMatrixGeneratorTests
         Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
     }
 
+    public static TheoryData<string> SpecGroups => new()
+    {
+        nameof(CaseMergeSpecs.DecimalSpecs),
+        nameof(CaseMergeSpecs.StringSpecs),
+        nameof(CaseMergeSpecs.ExactNumericSpecs),
+        nameof(CaseMergeSpecs.DateTimeSpecs),
+        nameof(CaseMergeSpecs.BinarySpecs),
+        nameof(CaseMergeSpecs.AllTypeSpecs),
+    };
+
+    [Theory]
+    [MemberData(nameof(SpecGroups))]
+    public async Task RunAsync_UnionAllOfTwoTypes_PredictedMergeMatchesEngine(string group)
+    {
+        var specs = (IReadOnlyList<CaseMergeTypeSpec>)typeof(CaseMergeSpecs).GetProperty(group)!.GetValue(null)!;
+        var mismatches = await new CaseMergeMatrixGenerator(Options).RunAsync(specs, MergeForm.UnionAll);
+
+        Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
+    }
+
     private static string DescribeMismatches(IReadOnlyList<CaseMergeMismatch> mismatches) =>
         string.Join(
             Environment.NewLine,

@@ -6,6 +6,12 @@ using SilentScan.Verify.Deployment;
 
 namespace SilentScan.Verify.Oracle;
 
+public enum MergeForm
+{
+    CaseExpression,
+    UnionAll,
+}
+
 public sealed record CaseMergeTypeSpec(SqlTypeCategory Category, string Syntax, SqlType Declared);
 
 public sealed record CaseMergeMismatch(
@@ -115,8 +121,12 @@ public sealed class CaseMergeMatrixGenerator
         _provisioner = new DatabaseProvisioner(options);
     }
 
+    public Task<IReadOnlyList<CaseMergeMismatch>> RunAsync(
+        IReadOnlyList<CaseMergeTypeSpec> specs, CancellationToken cancellationToken = default) =>
+        RunAsync(specs, MergeForm.CaseExpression, cancellationToken);
+
     public async Task<IReadOnlyList<CaseMergeMismatch>> RunAsync(
-        IReadOnlyList<CaseMergeTypeSpec> specs, CancellationToken cancellationToken = default)
+        IReadOnlyList<CaseMergeTypeSpec> specs, MergeForm form, CancellationToken cancellationToken = default)
     {
         var mismatches = new List<CaseMergeMismatch>();
         var database = "SilentScanCaseMergeMatrix_" + Guid.NewGuid().ToString("N")[..8];
@@ -142,7 +152,9 @@ public sealed class CaseMergeMatrixGenerator
                     await create.ExecuteNonQueryAsync(cancellationToken);
                 }
 
-                var probe = $"SELECT CASE WHEN L IS NOT NULL THEN L ELSE R END AS Merged FROM {tableName}";
+                var probe = form == MergeForm.UnionAll
+                    ? $"SELECT L AS Merged FROM {tableName} UNION ALL SELECT R FROM {tableName}"
+                    : $"SELECT CASE WHEN L IS NOT NULL THEN L ELSE R END AS Merged FROM {tableName}";
                 var (compileFailed, actual) = await DescribeMergedColumnAsync(connection, probe, cancellationToken);
 
                 if (compileFailed)
@@ -150,7 +162,9 @@ public sealed class CaseMergeMatrixGenerator
                     continue;
                 }
 
-                var predicted = PredictMerge(left.Declared, right.Declared);
+                var predicted = form == MergeForm.UnionAll
+                    ? ExpressionTypeInferencer.MergeBranchTypes([left.Declared, right.Declared])
+                    : PredictMerge(left.Declared, right.Declared);
 
                 if (!TypesMatch(predicted, actual))
                 {

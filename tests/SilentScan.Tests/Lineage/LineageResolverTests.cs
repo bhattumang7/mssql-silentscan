@@ -630,7 +630,7 @@ public sealed class LineageResolverTests
     }
 
     [Fact]
-    public void Resolve_RecursiveCte_RecordsSkipInLedger()
+    public void Resolve_RecursiveCteWithTheAnchorTypesItUses_RecordsNoSkip()
     {
         var (_, lineage) = Build(
             "CREATE TABLE dbo.Employees (EmployeeId INT NOT NULL, ManagerId INT NULL);",
@@ -644,7 +644,21 @@ public sealed class LineageResolverTests
             SELECT EmployeeId FROM OrgChart;
             """);
 
-        Assert.Contains(lineage.Skipped.Entries, e => e.ConstructKind == "recursive CTE");
+        Assert.DoesNotContain(lineage.Skipped.Entries, e => e.ConstructKind == "recursive CTE");
+    }
+
+    [Theory]
+    [InlineData("SELECT CAST(1 AS INT) AS a UNION ALL SELECT CAST(2 AS BIGINT) UNION ALL SELECT CAST(c.a + 1 AS BIGINT) FROM c WHERE c.a < 3", "BigInt")]
+    [InlineData("SELECT CAST(1 AS INT) AS a UNION ALL SELECT CAST(c.a + 1 AS INT) FROM c WHERE c.a < 3 UNION ALL SELECT CAST(c.a + 2 AS INT) FROM c WHERE c.a < 3", "Int")]
+    [InlineData("(SELECT CAST(1 AS SMALLINT) AS a UNION ALL SELECT CAST(2 AS INT)) UNION ALL SELECT CAST(c.a + 1 AS INT) FROM c WHERE c.a < 3", "Int")]
+    public void Resolve_RecursiveCteWithSeveralAnchorOrRecursiveMembers_TypesFromTheMergedAnchors(string body, string expected)
+    {
+        var (_, lineage) = Build($"CREATE VIEW dbo.vw_Multi AS WITH c AS ({body}) SELECT a FROM c;");
+
+        var type = ColumnProvenanceAnalysis.TryGetScalarType(lineage.Find("dbo.vw_Multi")!.FindColumn("a")!.Provenance);
+
+        Assert.Equal(expected, type?.ToString());
+        Assert.DoesNotContain(lineage.Skipped.Entries, e => e.ConstructKind == "recursive CTE");
     }
 
     [Fact]
