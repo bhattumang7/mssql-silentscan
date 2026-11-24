@@ -11,6 +11,20 @@ public static class ColumnProvenanceAnalysis
         _ => false,
     };
 
+    public static bool IsConstantOnly(ColumnProvenance provenance) => provenance switch
+    {
+        ColumnProvenance.Expression expression => expression.Inputs.Count == 0,
+        ColumnProvenance.Cast cast => IsConstantOnly(cast.Inner),
+        ColumnProvenance.Union union => union.Branches.All(b => !IsExpressionDerived(b) || IsConstantOnly(b)),
+        _ => false,
+    };
+
+    public static bool IsExpressionDerivedBeyondConstants(ColumnProvenance provenance) => provenance switch
+    {
+        ColumnProvenance.Union union => union.Branches.Any(IsExpressionDerivedBeyondConstants),
+        _ => IsExpressionDerived(provenance) && !IsConstantOnly(provenance),
+    };
+
     public static SqlType? TryGetScalarType(ColumnProvenance provenance) => provenance switch
     {
         ColumnProvenance.BaseColumn baseColumn => baseColumn.Type,
@@ -32,6 +46,11 @@ public static class ColumnProvenanceAnalysis
             var branchType = TryGetScalarType(branch);
             if (branchType is null)
             {
+                if (IsConstantOnly(branch))
+                {
+                    continue;
+                }
+
                 return false;
             }
 

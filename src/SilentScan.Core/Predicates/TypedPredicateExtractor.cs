@@ -1406,7 +1406,7 @@ public static class TypedPredicateExtractor
                 return new PredicateOperand.Column(declared.TableQualifiedName ?? "?", columnName, declared.Type, Indexed: false, declared.Depth, declared);
             }
 
-            if (ColumnProvenanceAnalysis.IsExpressionDerived(provenance))
+            if (ColumnProvenanceAnalysis.IsExpressionDerivedBeyondConstants(provenance))
             {
                 if (ReferenceEquals(columnRef, _directPredicateOperand))
                 {
