@@ -528,6 +528,30 @@ public static class CatalogBuilder
             node.AcceptChildren(this);
         }
 
+        public override void ExplicitVisit(DeclareVariableStatement node)
+        {
+            if (phase == BuildPhase.ApplyEverythingElse)
+            {
+                RegisterTableTypedVariables(node);
+            }
+
+            node.AcceptChildren(this);
+        }
+
+        private void RegisterTableTypedVariables(DeclareVariableStatement declare)
+        {
+            foreach (var element in declare.Declarations)
+            {
+                if (element.DataType is not UserDataTypeReference userType
+                    || catalog.Find(SchemaObjectNameHelper.Qualify(userType.Name)) is not { Kind: CatalogTableKind.TableType } tableType)
+                {
+                    continue;
+                }
+
+                catalog.AddOrReplace(tableType with { SchemaName = null, Name = element.VariableName.Value, Kind = CatalogTableKind.TableVariable }, _currentScope);
+            }
+        }
+
         public override void ExplicitVisit(SelectStatement node)
         {
             if (phase == BuildPhase.ApplyEverythingElse && node.Into is not null)
