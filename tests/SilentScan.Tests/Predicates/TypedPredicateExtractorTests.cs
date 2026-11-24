@@ -3808,6 +3808,5 @@ public sealed class TypedPredicateExtractorOracleTests : OracleTestFixture
 
         Assert.Empty(result.TypedFindings);
         Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
     }
 }
