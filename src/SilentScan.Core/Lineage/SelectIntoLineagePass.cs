@@ -9,14 +9,16 @@ namespace SilentScan.Core.Lineage;
 
 public static class SelectIntoLineagePass
 {
-    public static void Apply(DatabaseCatalog catalog, LineageCatalog lineage, IEnumerable<SqlParseResult> parseResults)
+    public static void Apply(
+        DatabaseCatalog catalog, LineageCatalog lineage, IEnumerable<SqlParseResult> parseResults,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope = null)
     {
         foreach (var result in parseResults)
         {
             var rule = new Rule(catalog, lineage.AllRelations, result.SourcePath);
             var walker = new ModuleWalker(
                 result.SourcePath, catalog, lineage.AllRelations,
-                rules: [rule], callerContext: new ModuleWalkerCallerContext(catalog.Skipped, null, null), triggerScopeAnalysisPass: AnalysisPass.Lineage);
+                rules: [rule], callerContext: new ModuleWalkerCallerContext(catalog.Skipped, null, callerScopeByCalleeScope), triggerScopeAnalysisPass: AnalysisPass.Lineage);
             result.Fragment.Accept(walker);
         }
     }

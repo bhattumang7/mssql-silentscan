@@ -279,7 +279,7 @@ public static class ScalarExpressionResolver
 
                 var column = entry.Relation.FindColumn(columnName, identifierComparer);
                 return column is null
-                    ? Unresolved($"column '{columnName}' not found on '{qualifier}'")
+                    ? Unresolved($"column '{columnName}' not found on '{qualifier}'{DescribeRelation(entry.Relation)}")
                     : ApplyExplicitCollate(columnRef, BumpDepthIfViewLayer(column.Provenance, entry.IsViewLayer), sourcePath);
             }
 
@@ -306,6 +306,11 @@ public static class ScalarExpressionResolver
 
         return Unresolved($"column '{columnName}' not found in FROM scope");
     }
+
+    private static string DescribeRelation(ResolvedRelation relation) =>
+        relation.QualifiedName is { Length: > 0 } name
+            ? $" (relation '{name}' exposes {relation.Columns.Count} columns)"
+            : $" (derived relation exposes {relation.Columns.Count} columns)";
 
     internal static (string RelationQualifiedName, string ExposedColumnName)? TryResolveImmediateRelation(
         ColumnReferenceExpression columnRef,

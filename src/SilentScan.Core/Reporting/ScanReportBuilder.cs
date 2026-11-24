@@ -68,8 +68,6 @@ public static class ScanReportBuilder
         var dynamicSqlFindings = dynamicSqlExtractions.SelectMany(r => r.Findings).ToList();
         var dynamicSqlScripts = dynamicSqlExtractions.SelectMany(r => r.AnalyzableScripts).ToList();
 
-        SelectIntoLineagePass.Apply(catalog, lineage, usableParseResults);
-
         var callerScopeByCalleeScope = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in procCallGraph.Edges
                      .Where(e => e.CallerScopeQualifiedName is not null)
@@ -77,6 +75,9 @@ public static class ScanReportBuilder
         {
             callerScopeByCalleeScope[group.Key] = group.Select(e => e.CallerScopeQualifiedName!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
+
+        SelectIntoLineagePass.Apply(catalog, lineage, usableParseResults, callerScopeByCalleeScope);
+
 
         var ruleContext = new RuleHarness.RuleContext(
             catalog, lineage, new SkipLedger(), procCallGraph,

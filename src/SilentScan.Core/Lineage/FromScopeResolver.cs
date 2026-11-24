@@ -327,7 +327,7 @@ public static class FromScopeResolver
             return (named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value, new ScopeEntry(ResolvedRelation.Empty, IsViewLayer: false));
         }
 
-        var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject));
+        var qualifiedName = catalog.StripSelfReferencingDatabasePrefix(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)));
         var isViewLayer = resolvedViews.TryGetValue(qualifiedName, out var view);
         var catalogTable = catalog.Find(qualifiedName, procScope);
 

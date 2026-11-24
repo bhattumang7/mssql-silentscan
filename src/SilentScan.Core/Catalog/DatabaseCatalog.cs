@@ -544,6 +544,9 @@ public sealed class DatabaseCatalog
         return (Find(qualifiedName, scope: null), null);
     }
 
+    public string StripSelfReferencingDatabasePrefix(string qualifiedName) =>
+        TryStripSelfReferencingDatabasePrefix(qualifiedName) ?? qualifiedName;
+
     private string? TryStripSelfReferencingDatabasePrefix(string qualifiedName)
     {
         if (CurrentDatabaseName is not { Length: > 0 } currentDatabaseName)
