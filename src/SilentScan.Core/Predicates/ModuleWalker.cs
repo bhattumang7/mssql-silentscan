@@ -35,6 +35,8 @@ public sealed class ModuleWalker : TSqlFragmentVisitor
 
     private readonly Stack<IReadOnlyDictionary<string, ResolvedRelation>> _cteStack = new();
     private readonly Stack<(Dictionary<string, ScopeEntry> ByAlias, List<ScopeEntry> Ordered)> _scopeStack = new();
+
+    private readonly Stack<ScopeEntry?> _modificationTargetEntries = new();
     private readonly Stack<IReadOnlySet<TSqlFragment>> _deadPredicateStack = new();
     private readonly Dictionary<IModuleRule, Exception> _crashed = [];
 
@@ -94,6 +96,17 @@ public sealed class ModuleWalker : TSqlFragmentVisitor
 
     public ScopeChain CurrentScopeChain() =>
         _scopeStack.Select(s => ((IReadOnlyDictionary<string, ScopeEntry>)s.ByAlias, (IReadOnlyList<ScopeEntry>)s.Ordered)).ToList();
+
+    public ScopeChain? CurrentModificationTargetScopeChain()
+    {
+        if (_modificationTargetEntries.Count == 0 || _modificationTargetEntries.Peek() is not { } targetEntry || _scopeStack.Count == 0)
+        {
+            return null;
+        }
+
+        var top = _scopeStack.Peek();
+        return [(top.ByAlias, new List<ScopeEntry> { targetEntry })];
+    }
 
     public IReadOnlySet<TSqlFragment> ComputeDeadPredicates(BooleanExpression? searchCondition)
     {
@@ -1210,26 +1223,33 @@ public sealed class ModuleWalker : TSqlFragmentVisitor
 
     private void WithDataModificationScope(TableReference target, FromClause? extraFromClause, Action body)
     {
-        _scopeStack.Push(FromScopeResolver.ResolveForDataModification(target, extraFromClause, CurrentResolutionContext()));
+        var context = CurrentResolutionContext();
+        var scope = FromScopeResolver.ResolveForDataModification(target, extraFromClause, context);
+        _scopeStack.Push(scope);
+        _modificationTargetEntries.Push(FromScopeResolver.ResolveDataModificationTargetEntry(target, extraFromClause, scope.Ordered, context));
         try
         {
             body();
         }
         finally
         {
+            _modificationTargetEntries.Pop();
             _scopeStack.Pop();
         }
     }
 
     private void WithMergeScope(TableReference target, Identifier? targetAlias, TableReference source, Action body)
     {
-        _scopeStack.Push(FromScopeResolver.ResolveForMerge(target, targetAlias, source, CurrentResolutionContext()));
+        var scope = FromScopeResolver.ResolveForMerge(target, targetAlias, source, CurrentResolutionContext());
+        _scopeStack.Push(scope);
+        _modificationTargetEntries.Push(scope.Ordered.Count > 0 ? scope.Ordered[0] : null);
         try
         {
             body();
         }
         finally
         {
+            _modificationTargetEntries.Pop();
             _scopeStack.Pop();
         }
     }

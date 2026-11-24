@@ -68,7 +68,31 @@ public static class FromScopeResolver
         return (byAlias, ordered);
     }
 
-    private static bool TargetBindsToFromEntry(TableReference target, FromClause fromClause, ResolutionContext context)
+    private const int TargetNotInFrom = -1;
+
+    private const int TargetKindUnmodeled = -2;
+
+    private static bool TargetBindsToFromEntry(TableReference target, FromClause fromClause, ResolutionContext context) =>
+        BoundFromLeafIndex(target, fromClause, context) != TargetNotInFrom;
+
+    internal static ScopeEntry? ResolveDataModificationTargetEntry(
+        TableReference target, FromClause? extraFromClause, IReadOnlyList<ScopeEntry> ordered, ResolutionContext context)
+    {
+        if (extraFromClause is null)
+        {
+            return ordered.Count > 0 ? ordered[0] : null;
+        }
+
+        var index = BoundFromLeafIndex(target, extraFromClause, context);
+        return index switch
+        {
+            TargetNotInFrom => ordered.Count > 0 ? ordered[^1] : null,
+            TargetKindUnmodeled => null,
+            _ => index < ordered.Count ? ordered[index] : null,
+        };
+    }
+
+    private static int BoundFromLeafIndex(TableReference target, FromClause fromClause, ResolutionContext context)
     {
         var leaves = fromClause.TableReferences.SelectMany(t => FlattenJoins(t)).Select(l => l.Reference).ToList();
         var comparer = context.Catalog.IdentifierComparer;
@@ -76,20 +100,29 @@ public static class FromScopeResolver
         switch (target)
         {
             case NamedTableReference named when named.SchemaObject.ServerIdentifier is not { Value.Length: > 0 }:
-                if (named.SchemaObject.SchemaIdentifier is null
-                    && leaves.Any(l => ExposedName(l) is { } exposed && comparer.Equals(exposed, named.SchemaObject.BaseIdentifier.Value)))
+                if (named.SchemaObject.SchemaIdentifier is null)
                 {
-                    return true;
+                    var byExposedName = leaves.FindIndex(l => ExposedName(l) is { } exposed && comparer.Equals(exposed, named.SchemaObject.BaseIdentifier.Value));
+                    if (byExposedName >= 0)
+                    {
+                        return byExposedName;
+                    }
                 }
 
                 var targetObject = CatalogObjectName(named, context);
-                return targetObject is not null && leaves.Any(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject));
+                return targetObject is null
+                    ? TargetNotInFrom
+                    : leaves.FindIndex(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject)) is var byObject and >= 0
+                        ? byObject
+                        : TargetNotInFrom;
 
             case VariableTableReference variable:
-                return leaves.Any(l => l is VariableTableReference leaf && comparer.Equals(leaf.Variable.Name, variable.Variable.Name));
+                return leaves.FindIndex(l => l is VariableTableReference leaf && comparer.Equals(leaf.Variable.Name, variable.Variable.Name)) is var byVariable and >= 0
+                    ? byVariable
+                    : TargetNotInFrom;
 
             default:
-                return true;
+                return TargetKindUnmodeled;
         }
     }
 

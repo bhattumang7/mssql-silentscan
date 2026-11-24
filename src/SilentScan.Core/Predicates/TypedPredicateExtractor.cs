@@ -384,7 +384,7 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            var scopeChain = walker.CurrentScopeChain();
+            var scopeChain = walker.CurrentModificationTargetScopeChain() ?? walker.CurrentScopeChain();
             if (ResolveOperand(columnRef, scopeChain, walker) is PredicateOperand.Column target && target.Type is { } targetType)
             {
                 EmitResolvedAssignment(WriteLossTarget.Column, target.TableQualifiedName, target.ColumnName, targetType, node.NewValue, walker);
