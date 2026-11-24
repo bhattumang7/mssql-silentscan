@@ -5,16 +5,15 @@ namespace SilentScan.Verify.Oracle;
 [VerifierSupport]
 internal static class WidenedVariableProbe
 {
-    public static Perturbation Describe(string? tableQualifiedName, string variable, string modulePath, string typePattern, Func<string, string> widen)
+    public static Perturbation Describe(string target, string name, string modulePath, string typePattern, Func<string, string> widen)
     {
-        if (tableQualifiedName is not null || !variable.StartsWith('@'))
+        var head = DeclarationHead(target, name);
+        if (head is null)
         {
-            return Perturbation.NotApplicable("The finding does not name a variable target.");
+            return Perturbation.NotApplicable("The finding does not name a variable, parameter or return target.");
         }
 
-        var declaration = new Regex(
-            @"(\bDECLARE\s+" + Regex.Escape(variable) + @"\s+(?:AS\s+)?)(" + typePattern + ")",
-            RegexOptions.IgnoreCase);
+        var declaration = new Regex("(" + head + ")(" + typePattern + ")" + (target == "ParameterDefault" ? @"(?=\s*=)" : string.Empty), RegexOptions.IgnoreCase);
         string? original = null;
         return new Perturbation(
             [],
@@ -33,5 +32,17 @@ internal static class WidenedVariableProbe
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, modulePath, string.Empty, definition => original ?? definition, cancellationToken),
             static _ => false);
+    }
+
+    private static string? DeclarationHead(string target, string name)
+    {
+        var escaped = Regex.Escape(name);
+        return target switch
+        {
+            "Variable" when name.StartsWith('@') => @"\bDECLARE\s+" + escaped + @"\s+(?:AS\s+)?",
+            "ParameterDefault" => @"(?<!\bDECLARE\s+)" + escaped + @"\s+(?:AS\s+)?",
+            "FunctionReturn" when name == "RETURN" => @"\bRETURNS\s+",
+            _ => null,
+        };
     }
 }

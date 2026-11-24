@@ -9,7 +9,7 @@ public sealed class WriteLossLengthTruncationVerifier : RuleVerifier<WriteLossFi
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"(?:n?var(?:char|binary)|n?char|binary)\s*\(\s*\d+\s*\)",

@@ -9,7 +9,7 @@ public sealed class WriteLossNumericScaleNarrowingVerifier : RuleVerifier<WriteL
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"(?:decimal|numeric)\s*\(\s*\d+\s*,\s*\d+\s*\)",

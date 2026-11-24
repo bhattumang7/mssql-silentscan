@@ -9,7 +9,7 @@ public sealed class WriteLossTemporalScaleNarrowingVerifier : RuleVerifier<Write
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"(?:datetime2|time|datetimeoffset)\s*\(\s*\d+\s*\)",

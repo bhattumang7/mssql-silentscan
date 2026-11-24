@@ -80,6 +80,10 @@ public interface IModuleRule
     {
     }
 
+    void OnEnterReturnStatement(ReturnStatement node, ModuleWalker walker)
+    {
+    }
+
     void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
     {
     }

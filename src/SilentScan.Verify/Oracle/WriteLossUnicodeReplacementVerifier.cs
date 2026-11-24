@@ -9,7 +9,7 @@ public sealed class WriteLossUnicodeReplacementVerifier : RuleVerifier<WriteLoss
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"(?:var)?char\s*\(\s*\d+\s*\)",

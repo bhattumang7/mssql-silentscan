@@ -630,4 +630,102 @@ public sealed class WriteLossExtractionTests
     {
         Assert.Contains(Extract(statement), f => f.Kind == WriteLossKind.UnicodeToNonUnicodeReplacement && f.ColumnName == "@m");
     }
+
+    [Theory]
+    [InlineData("VARCHAR(3)", "DECLARE @v VARCHAR(10) = 'abcdef'; RETURN @v;", WriteLossKind.LengthTruncation)]
+    [InlineData("NVARCHAR(3)", "DECLARE @v NVARCHAR(10) = N'abcdef'; RETURN @v;", WriteLossKind.LengthTruncation)]
+    [InlineData("DECIMAL(5, 1)", "DECLARE @v DECIMAL(10, 4) = 1.2345; RETURN @v;", WriteLossKind.NumericScaleNarrowing)]
+    public void Extract_ScalarFunctionReturnsWiderValueThanDeclaredReturnType_FlagsTheReturnedValue(string returnType, string body, WriteLossKind expected)
+    {
+        var finding = Assert.Single(Extract($"CREATE FUNCTION dbo.F() RETURNS {returnType} AS BEGIN {body} END"));
+
+        Assert.Equal(expected, finding.Kind);
+        Assert.Null(finding.TableQualifiedName);
+        Assert.Equal("RETURN", finding.ColumnName);
+        Assert.Equal(WriteLossTarget.FunctionReturn, finding.Target);
+    }
+
+    [Theory]
+    [InlineData("VARCHAR(10)", "DECLARE @v VARCHAR(3) = 'abc'; RETURN @v;")]
+    [InlineData("VARCHAR(3)", "DECLARE @v VARCHAR(3) = 'abc'; RETURN @v;")]
+    [InlineData("DECIMAL(10, 4)", "DECLARE @v DECIMAL(5, 1) = 1.2; RETURN @v;")]
+    [InlineData("INT", "DECLARE @v INT = 1; RETURN @v;")]
+    public void Extract_ScalarFunctionReturnsValueThatFitsTheDeclaredReturnType_NoFinding(string returnType, string body)
+    {
+        Assert.Empty(Extract($"CREATE FUNCTION dbo.F() RETURNS {returnType} AS BEGIN {body} END"));
+    }
+
+    [Fact]
+    public void Extract_ProcedureReturnStatus_NoFinding()
+    {
+        Assert.Empty(Extract("CREATE PROCEDURE dbo.P AS BEGIN DECLARE @v DECIMAL(10, 4) = 1.2345; RETURN 1; END"));
+    }
+
+    [Fact]
+    public void Extract_MultiStatementTableFunctionBareReturn_NoFinding()
+    {
+        Assert.Empty(Extract("CREATE FUNCTION dbo.F() RETURNS @t TABLE (S VARCHAR(3)) AS BEGIN INSERT @t (S) VALUES ('a'); RETURN; END"));
+    }
+
+    [Theory]
+    [InlineData("DECLARE @l VARCHAR(10) = 'abcdef'; DECLARE @v VARCHAR(3); SELECT @v = @l;", WriteLossKind.LengthTruncation)]
+    [InlineData("CREATE TABLE #t (C VARCHAR(10)); DECLARE @v VARCHAR(3); SELECT @v = C FROM #t;", WriteLossKind.LengthTruncation)]
+    [InlineData("DECLARE @d DECIMAL(10, 4) = 1.2345; DECLARE @v DECIMAL(5, 1); SELECT @v = @d;", WriteLossKind.NumericScaleNarrowing)]
+    public void Extract_SelectAssignmentOfWiderValueIntoNarrowerVariable_FlagsTheVariable(string body, WriteLossKind expected)
+    {
+        var finding = Assert.Single(Extract(body));
+
+        Assert.Equal(expected, finding.Kind);
+        Assert.Equal("@v", finding.ColumnName);
+        Assert.Equal(WriteLossTarget.Variable, finding.Target);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @l VARCHAR(3) = 'abc'; DECLARE @v VARCHAR(10); SELECT @v = @l;")]
+    [InlineData("DECLARE @v INT; SELECT @v = 1;")]
+    public void Extract_SelectAssignmentThatFits_NoFinding(string body)
+    {
+        Assert.Empty(Extract(body));
+    }
+
+    [Theory]
+    [InlineData("@a VARCHAR(3) = 'abcdef'", WriteLossKind.LengthTruncation)]
+    [InlineData("@a DECIMAL(5, 1) = 1.2345", WriteLossKind.NumericScaleNarrowing)]
+    public void Extract_ParameterDefaultWiderThanDeclaredType_FlagsTheParameter(string parameter, WriteLossKind expected)
+    {
+        var finding = Assert.Single(Extract($"CREATE PROCEDURE dbo.P {parameter} AS SELECT @a;"));
+
+        Assert.Equal(expected, finding.Kind);
+        Assert.Equal("@a", finding.ColumnName);
+        Assert.Equal(WriteLossTarget.ParameterDefault, finding.Target);
+    }
+
+    [Theory]
+    [InlineData("@a VARCHAR(10) = 'abc'")]
+    [InlineData("@a VARCHAR(3) = 'abc'")]
+    [InlineData("@a DECIMAL(5, 2) = 1.25")]
+    [InlineData("@a INT = 1")]
+    [InlineData("@a VARCHAR(3)")]
+    public void Extract_ParameterDefaultThatFits_NoFinding(string parameter)
+    {
+        Assert.Empty(Extract($"CREATE PROCEDURE dbo.P {parameter} AS SELECT @a;"));
+    }
+
+    [Fact]
+    public void Extract_ScalarFunctionReturnsFloatThroughIntegerReturnType_FlagsApproximateTruncation()
+    {
+        var finding = Assert.Single(Extract("CREATE FUNCTION dbo.F() RETURNS INT AS BEGIN DECLARE @f FLOAT = 1.9; RETURN @f; END"));
+
+        Assert.Equal(WriteLossKind.ApproximateToExactTruncation, finding.Kind);
+        Assert.Equal(WriteLossTarget.FunctionReturn, finding.Target);
+    }
+
+    [Fact]
+    public void Extract_FloatParameterDefaultIntoIntegerParameter_FlagsApproximateTruncation()
+    {
+        var finding = Assert.Single(Extract("CREATE PROCEDURE dbo.P @a INT = 1.9E0 AS SELECT @a;"));
+
+        Assert.Equal(WriteLossKind.ApproximateToExactTruncation, finding.Kind);
+        Assert.Equal(WriteLossTarget.ParameterDefault, finding.Target);
+    }
 }

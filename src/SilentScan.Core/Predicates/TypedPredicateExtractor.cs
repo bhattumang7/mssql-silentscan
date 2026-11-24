@@ -152,6 +152,8 @@ public static class TypedPredicateExtractor
 
         private bool _procedureHasWithRecompile;
 
+        private SqlType? _scalarReturnType;
+
         private bool _statementHasOptionRecompile;
 
         private readonly Stack<(bool Recompile, HashSet<string> OptimizeFor)> _statementRecompileStack = new();
@@ -182,14 +184,49 @@ public static class TypedPredicateExtractor
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
             RecordParameters(node.Parameters);
+            EmitParameterDefaultFindings(node.Parameters, walker);
+
+            _scalarReturnType = node is FunctionStatementBody { ReturnType: ScalarFunctionReturnType scalarReturn }
+                ? SqlTypeReferenceResolver.Resolve(scalarReturn.DataType, columnCollation: null, catalog.TypeAliases)
+                : null;
 
             _previousProcedureHasWithRecompile = _procedureHasWithRecompile;
             _procedureHasWithRecompile = node is ProcedureStatementBody { Options: { } options }
                 && options.Any(o => o.OptionKind == ProcedureOptionKind.Recompile);
         }
 
-        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker) =>
+        public void OnLeaveProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker)
+        {
             _procedureHasWithRecompile = _previousProcedureHasWithRecompile;
+            _scalarReturnType = null;
+        }
+
+        public void OnEnterSelectSetVariable(SelectSetVariable node, ModuleWalker walker)
+        {
+            if (node.Expression is { } sourceExpression)
+            {
+                AssignToVariable(node.Variable.Name, sourceExpression, walker);
+            }
+        }
+
+        private void EmitParameterDefaultFindings(IList<ProcedureParameter> parameters, ModuleWalker walker)
+        {
+            foreach (var parameter in parameters)
+            {
+                if (parameter.Value is { } defaultValue)
+                {
+                    AssignToVariable(parameter.VariableName.Value, defaultValue, walker, WriteLossTarget.ParameterDefault);
+                }
+            }
+        }
+
+        public void OnEnterReturnStatement(ReturnStatement node, ModuleWalker walker)
+        {
+            if (_scalarReturnType is { } returnType && node.Expression is { } returned)
+            {
+                EmitResolvedAssignment(WriteLossTarget.FunctionReturn, tableQualifiedName: null, "RETURN", returnType, returned, walker);
+            }
+        }
 
         public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker)
         {
@@ -346,8 +383,7 @@ public static class TypedPredicateExtractor
             var scopeChain = walker.CurrentScopeChain();
             if (ResolveOperand(columnRef, scopeChain, walker) is PredicateOperand.Column target && target.Type is { } targetType)
             {
-                var sourceType = OperandType(ResolveOperand(node.NewValue, scopeChain, walker));
-                EmitWriteLossFinding(target.TableQualifiedName, target.ColumnName, targetType, sourceType, node.NewValue, scopeChain, walker);
+                EmitResolvedAssignment(WriteLossTarget.Column, target.TableQualifiedName, target.ColumnName, targetType, node.NewValue, walker);
             }
         }
 
@@ -355,15 +391,10 @@ public static class TypedPredicateExtractor
         {
             _currentWriteStatement = node;
 
-            if (node.Expression is not { } sourceExpression
-                || !_variables.TryGetValue(node.Variable.Name, out var targetType) || targetType is not { } target)
+            if (node.Expression is { } sourceExpression)
             {
-                return;
+                AssignToVariable(node.Variable.Name, sourceExpression, walker);
             }
-
-            var scopeChain = walker.CurrentScopeChain();
-            var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-            EmitWriteLossFinding(tableQualifiedName: null, node.Variable.Name, target, sourceType, sourceExpression, scopeChain, walker);
         }
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
@@ -421,7 +452,7 @@ public static class TypedPredicateExtractor
                 }
 
                 var (sourceType, sourceExpression) = sources[i];
-                EmitWriteLossFinding(tableQualifiedName: null, variableName, target, sourceType, sourceExpression);
+                EmitAssignment(new AssignmentSite(WriteLossTarget.Variable, null, variableName, target, sourceType, sourceExpression));
             }
         }
 
@@ -450,8 +481,7 @@ public static class TypedPredicateExtractor
 
                 if (declaration.Value is { } sourceExpression && targetType is { } resolvedTargetType)
                 {
-                    var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                    EmitWriteLossFinding(tableQualifiedName: null, declaration.VariableName.Value, resolvedTargetType, sourceType, sourceExpression, scopeChain, walker);
+                    EmitResolvedAssignment(WriteLossTarget.Variable, tableQualifiedName: null, declaration.VariableName.Value, resolvedTargetType, sourceExpression, walker);
                 }
             }
         }
@@ -593,7 +623,7 @@ public static class TypedPredicateExtractor
 
                     var sourceExpression = columnValues[i];
                     var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                    EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker);
+                    EmitAssignment(new AssignmentSite(WriteLossTarget.Column, targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker));
                 }
             }
         }
@@ -612,34 +642,48 @@ public static class TypedPredicateExtractor
                 }
 
                 var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                EmitWriteLossFinding(targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker);
+                EmitAssignment(new AssignmentSite(WriteLossTarget.Column, targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker));
             }
         }
 
-        private void EmitWriteLossFinding(
-            string? tableQualifiedName, string columnName, SqlType targetType, SqlType? sourceType, ScalarExpression sourceExpression,
-            ScopeChain? scopeChain = null, ModuleWalker? walker = null)
+        private void AssignToVariable(string variableName, ScalarExpression source, ModuleWalker walker, WriteLossTarget target = WriteLossTarget.Variable)
         {
-            Func<ScalarExpression, SqlType?>? operandType = scopeChain is null || walker is null
+            if (_variables.TryGetValue(variableName, out var variableType) && variableType is { } targetType)
+            {
+                EmitResolvedAssignment(target, tableQualifiedName: null, variableName, targetType, source, walker);
+            }
+        }
+
+        private void EmitResolvedAssignment(
+            WriteLossTarget target, string? tableQualifiedName, string name, SqlType targetType, ScalarExpression source, ModuleWalker walker)
+        {
+            var scopeChain = walker.CurrentScopeChain();
+            var sourceType = OperandType(ResolveOperand(source, scopeChain, walker));
+            EmitAssignment(new AssignmentSite(target, tableQualifiedName, name, targetType, sourceType, source, scopeChain, walker));
+        }
+
+        private void EmitAssignment(AssignmentSite site)
+        {
+            Func<ScalarExpression, SqlType?>? operandType = site.Scope is null || site.Walker is null
                 ? null
-                : leaf => OperandType(ResolveOperand(leaf, scopeChain, walker));
+                : leaf => OperandType(ResolveOperand(leaf, site.Scope, site.Walker));
             var kind = Rules.WriteLossClassifier.Classify(
-                targetType, sourceType, sourceExpression, isVariableTarget: tableQualifiedName is null, operandType);
-            if (kind is null)
+                site.TargetType, site.SourceType, site.Source, isVariableTarget: site.Target.IsSilentTarget(), operandType);
+            if (kind is null || !site.Target.IsOracleVerified(kind.Value))
             {
                 return;
             }
 
             if (kind.Value == WriteLossKind.NumericScaleNarrowing
-                && targetType.Category == SqlTypeCategory.Decimal && sourceType!.Category == SqlTypeCategory.Decimal
+                && site.TargetType.Category == SqlTypeCategory.Decimal && site.SourceType!.Category == SqlTypeCategory.Decimal
                 && IsNumericRoundAbortOnForCurrentStatement)
             {
                 return;
             }
 
             WriteLossFindings.Add(new WriteLossFinding(
-                tableQualifiedName, columnName, kind.Value, targetType, sourceType!,
-                sourcePath, sourceExpression.StartLine, sourceExpression.StartColumn));
+                site.TableQualifiedName, site.Name, kind.Value, site.TargetType, site.SourceType!,
+                sourcePath, site.Source.StartLine, site.Source.StartColumn, Site: site.Target));
         }
 
         public void OnBooleanComparisonExpression(BooleanComparisonExpression node, ModuleWalker walker)

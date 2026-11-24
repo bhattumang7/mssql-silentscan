@@ -107,4 +107,24 @@ public sealed class DynamicSqlWriteLossPipelineTests
         Assert.Empty(extraction.AnalyzableScripts);
         Assert.Empty(extraction.Findings);
     }
+
+    [Fact]
+    public void Analyze_ExecOfConstantSqlWithLossySelectAssignment_FlagsWriteLoss()
+    {
+        var result = AnalyzeExecOfConstantSql("DECLARE @l VARCHAR(10) = 'abcdef'; DECLARE @v VARCHAR(3); SELECT @v = @l;");
+
+        var finding = Assert.Single(result.WriteLossFindings);
+        Assert.Equal(WriteLossKind.LengthTruncation, finding.Kind);
+        Assert.Equal("@v", finding.ColumnName);
+    }
+
+    [Fact]
+    public void Analyze_ExecOfConstantSqlCreatingFunctionThatReturnsWiderValue_FlagsReturn()
+    {
+        var result = AnalyzeExecOfConstantSql("CREATE FUNCTION dbo.F() RETURNS VARCHAR(3) AS BEGIN DECLARE @v VARCHAR(10) = 'abcdef'; RETURN @v; END");
+
+        var finding = Assert.Single(result.WriteLossFindings);
+        Assert.Equal(WriteLossKind.LengthTruncation, finding.Kind);
+        Assert.Equal(WriteLossTarget.FunctionReturn, finding.Target);
+    }
 }

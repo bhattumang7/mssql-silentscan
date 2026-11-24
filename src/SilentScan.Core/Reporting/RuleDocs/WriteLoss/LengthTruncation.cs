@@ -20,6 +20,11 @@ internal static class LengthTruncation
             actually silent - local variable assignment - never for INSERT/UPDATE into a real
             column, where the engine already stops you.
 
+            A scalar function's RETURN is the same kind of assignment: the returned value is
+            converted to the function's declared RETURNS type, so a longer value is cut to the
+            declared length with no error and the caller receives the shortened result. A parameter's
+            default value is converted the same way when the procedure runs without that argument.
+
             The same narrowing happening across a stored procedure call boundary instead - a
             parameter passed in, or an OUTPUT parameter's final value copied back to the caller -
             is tracked separately under the call-graph argument-type-mismatch rule, since that

@@ -17,8 +17,11 @@ public sealed record WriteLossFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int ColumnPosition,
     SourceSpan? DynamicSqlCallSite = null,
-    FindingConfidence Confidence = FindingConfidence.High) : IRelocatableFinding<WriteLossFinding>, IFinding
+    FindingConfidence Confidence = FindingConfidence.High,
+    [property: JsonIgnore] WriteLossTarget? Site = null) : IRelocatableFinding<WriteLossFinding>, IFinding
 {
+    public WriteLossTarget Target => Site ?? (TableQualifiedName is null ? WriteLossTarget.Variable : WriteLossTarget.Column);
+
     public string RuleId { get; } = FindingRuleIds.WriteLossRuleId(Kind);
 
     public SourceSpan Location => new(SourcePath, Line, ColumnPosition);

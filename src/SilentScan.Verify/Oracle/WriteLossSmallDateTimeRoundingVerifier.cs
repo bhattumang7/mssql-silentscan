@@ -9,7 +9,7 @@ public sealed class WriteLossSmallDateTimeRoundingVerifier : RuleVerifier<WriteL
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"smalldatetime",

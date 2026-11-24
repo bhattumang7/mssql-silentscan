@@ -17,6 +17,11 @@ internal static class NumericScaleNarrowing
             Server does not reject the assignment or raise a truncation error. It silently rounds
             the value to the target's scale and stores the rounded result.
 
+            A scalar function's RETURN is subject to the same rounding: the returned value is
+            converted to the declared RETURNS type, so a value with more digits after the point
+            than the declared scale reaches the caller already rounded. A parameter's default value is
+            rounded the same way when the procedure runs without that argument.
+
             This is easy to miss precisely because DECIMAL-to-DECIMAL narrowing looks like it
             "should" be safe - both sides are exact numeric types, unlike the approximate-to-exact
             case, so there's no obvious representational mismatch to raise suspicion. But scale

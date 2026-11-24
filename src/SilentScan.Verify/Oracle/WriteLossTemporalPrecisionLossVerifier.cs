@@ -9,7 +9,7 @@ public sealed class WriteLossTemporalPrecisionLossVerifier : RuleVerifier<WriteL
 
     protected override Perturbation Describe(WriteLossFinding finding) =>
         WidenedVariableProbe.Describe(
-            finding.TableQualifiedName,
+            finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
             @"date(?![\w(])",
