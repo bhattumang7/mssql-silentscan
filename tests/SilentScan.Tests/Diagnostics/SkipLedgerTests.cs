@@ -131,29 +131,23 @@ public sealed class SkipLedgerTests
         Assert.Equal(Verdict.SeekPreserved, finding.Verdict);
     }
 
-    [Fact]
-    public void TypedPredicateExtractor_BareIfComparison_StillRecordsSkip()
+    [Theory]
+    [InlineData("IF @Flag = 1 RETURN;", false)]
+    [InlineData("IF @@TRANCOUNT > 0 RETURN;", false)]
+    [InlineData("IF @Flag IN (1, 2) RETURN;", false)]
+    [InlineData("IF @Flag BETWEEN 1 AND 2 RETURN;", false)]
+    [InlineData("IF t.Id = 1 RETURN;", true)]
+    [InlineData("IF @Flag IN (1, t.Id) RETURN;", true)]
+    public void TypedPredicateExtractor_ComparisonWithNoFromScope_IsLedgeredOnlyWhenItNamesAColumn(string statement, bool ledgered)
     {
-
-        var sql = """
-            CREATE PROCEDURE dbo.usp_Check @Flag INT
-            AS
-            BEGIN
-                IF @Flag = 1
-                BEGIN
-                    RETURN;
-                END
-            END
-            """;
-        var result = SqlScriptParser.ParseText("test.sql", sql);
-        Assert.False(result.HasErrors);
+        var result = SqlScriptParser.ParseText("test.sql", $"CREATE PROCEDURE dbo.usp_Check @Flag INT AS BEGIN {statement} END");
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var catalog = CatalogBuilder.Build([result]);
-        var lineage = LineageResolver.Resolve(catalog, [result]);
-        var extraction = TypedPredicateExtractor.Extract(result, catalog, lineage);
+        var extraction = TypedPredicateExtractor.Extract(result, catalog, LineageResolver.Resolve(catalog, [result]));
 
         Assert.Empty(extraction.TypedFindings);
-        Assert.Contains(extraction.SkippedConstructs, e => e.ConstructKind == "comparison outside FROM scope");
+        Assert.Equal(ledgered, extraction.SkippedConstructs.Any(e => e.ConstructKind == "comparison outside FROM scope"));
     }
 
     [Fact]
@@ -182,7 +176,7 @@ public sealed class SkipLedgerTests
             CREATE PROCEDURE dbo.usp_RenameUser @Id NVARCHAR(40)
             AS
             BEGIN
-                UPDATE dbo.Users SET DisplayName = 'x' WHERE Id = @Id;
+                UPDATE dbo.Users SET DisplayName = 'x' WHERE Id <> @Id;
                 IF @Id = N'0'
                 BEGIN
                     RETURN;

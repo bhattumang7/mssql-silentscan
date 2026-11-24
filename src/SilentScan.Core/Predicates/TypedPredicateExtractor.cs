@@ -782,7 +782,7 @@ public static class TypedPredicateExtractor
             var scopeChain = walker.CurrentScopeChain();
             if (scopeChain.Count == 0)
             {
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, "comparison outside FROM scope", "no FROM scope in effect (a bare IF/WHILE condition, or another comparison genuinely outside any FROM clause)");
+                RecordOutsideFromScope(node, [node.Expression, .. node.Values]);
                 return;
             }
 
@@ -830,7 +830,7 @@ public static class TypedPredicateExtractor
             var scopeChain = walker.CurrentScopeChain();
             if (scopeChain.Count == 0)
             {
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, "comparison outside FROM scope", "no FROM scope in effect (a bare IF/WHILE condition, or another comparison genuinely outside any FROM clause)");
+                RecordOutsideFromScope(node, node.Expression);
                 return;
             }
 
@@ -909,13 +909,35 @@ public static class TypedPredicateExtractor
             }
         }
 
+        private static ScalarExpression UnwrapParentheses(ScalarExpression expression)
+        {
+            while (expression is ParenthesisExpression parenthesis)
+            {
+                expression = parenthesis.Expression;
+            }
+
+            return expression;
+        }
+
+        private void RecordOutsideFromScope(TSqlFragment node, params ScalarExpression[] operands)
+        {
+            if (!operands.Any(BaseColumnResolver.ContainsColumnReference))
+            {
+                return;
+            }
+
+            ledger.Record(
+                AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, "comparison outside FROM scope",
+                "a column reference appears where no FROM scope is in effect - its type cannot be resolved");
+        }
+
         private void TryAddFinding(ScalarExpression first, ScalarExpression second, string operatorText, TSqlFragment node, ModuleWalker walker)
         {
             var scopeChain = walker.CurrentScopeChain();
             if (scopeChain.Count == 0)
             {
 
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, "comparison outside FROM scope", "no FROM scope in effect (a bare IF/WHILE condition, or another comparison genuinely outside any FROM clause)");
+                RecordOutsideFromScope(node, first, second);
                 return;
             }
 
@@ -924,7 +946,7 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            if (operatorText == "<>")
+            if (operatorText == "<>" && (UnwrapParentheses(first) is ColumnReferenceExpression || UnwrapParentheses(second) is ColumnReferenceExpression))
             {
 
                 ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "<> is not sargable regardless of type match - not attributed to a type-conversion verdict");
@@ -988,6 +1010,12 @@ public static class TypedPredicateExtractor
                 ledger.Record(
                     AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, FoldableLiteralComparisonConstructKind,
                     $"both sides are literals (optionally with one level of arithmetic) provably {(truth ? "always true" : "always false")} - not an arbitrary unresolvable comparison");
+                return;
+            }
+
+            var operandsWithColumns = new[] { first, second }.Where(BaseColumnResolver.ContainsColumnReference).ToList();
+            if (operandsWithColumns.All(NonSargablePredicateScanner.CoversComparisonSide))
+            {
                 return;
             }
 
@@ -1137,10 +1165,7 @@ public static class TypedPredicateExtractor
 
         private PredicateOperand ResolvePredicateOperand(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
         {
-            while (expression is ParenthesisExpression parenthesis)
-            {
-                expression = parenthesis.Expression;
-            }
+            expression = UnwrapParentheses(expression);
 
             var previous = _directPredicateOperand;
             _directPredicateOperand = expression as ColumnReferenceExpression;

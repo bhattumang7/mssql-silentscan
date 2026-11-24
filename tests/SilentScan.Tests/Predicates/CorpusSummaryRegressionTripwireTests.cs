@@ -40,8 +40,8 @@ public sealed class CorpusSummaryRegressionTripwireTests
         Assert.Equal(1, Assert.Contains("symbolic-value-not-positionable:whole-statement", dynamicSql.UnanalyzableReasonCounts));
 
         var skipped = report.SkippedConstructSummary;
-        Assert.Equal(6, skipped.TotalCount);
-        Assert.Equal(1, Assert.Contains("no column operand", skipped.CountsByConstructKind));
+        Assert.Equal(5, skipped.TotalCount);
+        Assert.DoesNotContain("no column operand", skipped.CountsByConstructKind);
         Assert.Equal(5, Assert.Contains("procedure call graph edge", skipped.CountsByConstructKind));
 
         Assert.Single(report.Find<SargabilityFinding>("NonSargablePredicateScanner"));

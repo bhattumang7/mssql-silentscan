@@ -232,13 +232,14 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_BareIfComparisonOutsideAnyQuery_StillLedgeredAsSkip()
+    public void Extract_BareIfComparisonOfVariablesOutsideAnyQuery_HasNoColumnToAnalyseSoIsNotLedgered()
     {
 
         var result = ExtractAll(
             "CREATE PROCEDURE dbo.usp_Test @Id INT AS BEGIN IF @Id = 1 BEGIN RETURN; END END;");
 
-        Assert.Contains(result.SkippedConstructs, c => c.Reason.Contains("no FROM scope in effect", StringComparison.Ordinal));
+        Assert.Empty(result.TypedFindings);
+        Assert.DoesNotContain(result.SkippedConstructs, c => c.ConstructKind == "comparison outside FROM scope");
     }
 
     [Fact]
@@ -858,12 +859,23 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_ColumnWrappedInCoalesceComparedToLiteral_NoTypedFinding_ButLedgered()
+    public void Extract_ColumnWrappedInCoalesceComparedToLiteral_NoTypedFinding_AndNotLedgeredBecauseSargabilityOwnsIt()
     {
 
         var result = ExtractAll(
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT 1 FROM dbo.T WHERE COALESCE(Col, '') = N'x';");
+
+        Assert.Empty(result.TypedFindings);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
+    }
+
+    [Fact]
+    public void Extract_ColumnInsideScalarSubqueryComparedToLiteral_IsStillLedgered()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.T (Col INT NOT NULL);",
+            "SELECT 1 FROM dbo.T AS o WHERE (SELECT MAX(i.Col) FROM dbo.T AS i) = 1;");
 
         Assert.Empty(result.TypedFindings);
         Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
@@ -2285,13 +2297,13 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_InPredicateOutsideAnyFromScope_LedgeredAsSkip()
+    public void Extract_InPredicateOfVariablesOutsideAnyFromScope_IsNotLedgered()
     {
 
         var result = ExtractAll(
             "CREATE PROCEDURE dbo.usp_Test @Id INT AS BEGIN IF @Id IN (1, 2, 3) BEGIN RETURN; END END;");
 
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "comparison outside FROM scope");
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "comparison outside FROM scope");
     }
 
     [Fact]
@@ -2343,14 +2355,14 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_SubqueryComparisonOutsideAnyFromScope_LedgeredAsSkip()
+    public void Extract_SubqueryComparisonOfAVariableOutsideAnyFromScope_IsNotLedgered()
     {
 
         var result = ExtractAll(
             "CREATE TABLE dbo.U (Id INT NOT NULL);",
             "CREATE PROCEDURE dbo.usp_Test @Id INT AS BEGIN IF @Id = ANY (SELECT Id FROM dbo.U) BEGIN RETURN; END END;");
 
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "comparison outside FROM scope");
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "comparison outside FROM scope");
     }
 
     [Fact]
@@ -2486,7 +2498,7 @@ public sealed class TypedPredicateExtractorTests
             "SELECT 1 FROM dbo.T WHERE (CASE Col WHEN 1 THEN 1 ELSE 0 END) = 1;");
 
         Assert.DoesNotContain(result.TypedFindings, f => f.Column.ColumnName == "Col");
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
     }
 }
 
@@ -3785,5 +3797,17 @@ public sealed class TypedPredicateExtractorOracleTests : OracleTestFixture
         var boundedSide = Assert.Single(findings, f => f.Column.ColumnName == "B");
         Assert.Equal(Verdict.Unknown, boundedSide.Verdict);
         Assert.Equal("max-length-column-comparison", boundedSide.UnknownReason);
+    }
+
+    [Fact]
+    public void Extract_NotEqualBetweenAnXmlMethodResultAndALiteral_IsNotClaimedAsABareColumnNotEqual()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.T (Id INT NOT NULL, Doc XML NULL);",
+            "SELECT 1 FROM dbo.T AS t WHERE t.Doc.exist('/a') <> 1;");
+
+        Assert.Empty(result.TypedFindings);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
+        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
     }
 }

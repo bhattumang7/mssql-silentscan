@@ -44,6 +44,8 @@ public static class NonSargablePredicateScanner
         return (rule.Findings, rule.TemporalBoundaryFindings);
     }
 
+    internal static bool CoversComparisonSide(ScalarExpression expression) => Rule.CoversSide(expression);
+
     internal static bool IsSeekableThroughConvert(SqlType targetType, SqlType sourceType) =>
         (targetType.IsNumericFamily && sourceType.IsNumericFamily)
         || (targetType.IsDateTimeFamily && sourceType.IsDateTimeFamily
@@ -427,6 +429,17 @@ public static class NonSargablePredicateScanner
 
             return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
         }
+
+        internal static bool CoversSide(ScalarExpression expression) => UnwrapParentheses(expression) switch
+        {
+            FunctionCall { Parameters.Count: > 0 } functionCall =>
+                !AggregateFunctionNames.Contains(functionCall.FunctionName.Value) && FirstNamedColumn(functionCall.Parameters) is not null,
+            CastCall castCall => FindAnyColumn(castCall.Parameter) is not null,
+            ConvertCall convertCall => FindAnyColumn(convertCall.Parameter) is not null,
+            BinaryExpression binary => FindAnyColumn(binary.FirstExpression) is not null || FindAnyColumn(binary.SecondExpression) is not null,
+            CoalesceExpression or NullIfExpression or IIfCall or SearchedCaseExpression or SimpleCaseExpression => FindAnyColumn(UnwrapParentheses(expression)) is not null,
+            _ => false,
+        };
 
         private void InspectSide(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker)
         {
