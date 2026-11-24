@@ -49,15 +49,9 @@ public static class DynamicSqlTempTableDiscovery
     }
 
     public static DatabaseCatalog? BuildScriptCatalog(
-        DatabaseCatalog catalog, Lineage.LineageCatalog lineage, string scope, string innerText, string sourcePath, bool? ansiNullDfltOverride = null)
+        DatabaseCatalog catalog, Lineage.LineageCatalog lineage, string scope, string innerText, SqlParseResult innerParseResult)
     {
-        if (!MayDefineTempTable(innerText))
-        {
-            return null;
-        }
-
-        var initialQuotedIdentifiers = catalog.ResolveDynamicSqlQuotedIdentifier(scope);
-        if (TryWrapAsScopedProcedure(innerText, scope, sourcePath, initialQuotedIdentifiers, catalog.CompatibilityLevel, ansiNullDfltOverride) is not { } wrapped)
+        if (!MayDefineTempTable(innerText) || WrapAsScopedProcedure(innerParseResult, scope) is not { } wrapped)
         {
             return null;
         }
@@ -74,6 +68,30 @@ public static class DynamicSqlTempTableDiscovery
         var scoped = catalog.WithScriptTables(scope, defined.Select(t => local.Find(t.QualifiedName, scope) ?? t));
         Lineage.SelectIntoLineagePass.Apply(scoped, lineage, [wrapped]);
         return scoped;
+    }
+
+    private static SqlParseResult? WrapAsScopedProcedure(SqlParseResult inner, string scope)
+    {
+        var dotIndex = scope.IndexOf('.', StringComparison.Ordinal);
+        if (inner.Fragment is not TSqlScript script || dotIndex <= 0 || dotIndex == scope.Length - 1)
+        {
+            return null;
+        }
+
+        var name = new SchemaObjectName();
+        name.Identifiers.Add(new Identifier { Value = scope[..dotIndex] });
+        name.Identifiers.Add(new Identifier { Value = scope[(dotIndex + 1)..] });
+        var procedure = new CreateProcedureStatement { ProcedureReference = new ProcedureReference { Name = name }, StatementList = new StatementList() };
+        foreach (var statement in script.Batches.SelectMany(batch => batch.Statements))
+        {
+            procedure.StatementList.Statements.Add(statement);
+        }
+
+        var wrappedBatch = new TSqlBatch();
+        wrappedBatch.Statements.Add(procedure);
+        var wrappedScript = new TSqlScript();
+        wrappedScript.Batches.Add(wrappedBatch);
+        return new SqlParseResult(inner.SourcePath, wrappedScript, []);
     }
 
     private static bool MayDefineTempTable(string innerText) =>

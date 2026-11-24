@@ -38,6 +38,21 @@ public sealed class DynamicSqlScriptTempTableScopeTests
     }
 
     [Fact]
+    public void ScriptWithUnknownValueSpliced_StillResolvesTheTempTableItDefines()
+    {
+        var report = Scan("""
+            CREATE PROCEDURE dbo.p AS
+            BEGIN
+                DECLARE @v varchar(40) = CONVERT(varchar(40), NEWID()), @sql varchar(max);
+                SET @sql = 'CREATE TABLE #T (A INT, Label VARCHAR(10)); SELECT x.Label FROM #T AS x WHERE x.Label = ''' + @v + ''';';
+                EXEC (@sql);
+            END
+            """);
+
+        Assert.DoesNotContain(report.SkippedConstructs, s => s.ConstructKind is "column reference" or "unresolved column comparison" or "FROM table reference");
+    }
+
+    [Fact]
     public void SelectIntoInsideDynamicSql_TypesTheTempTableForLaterStatementsInTheSameScript()
     {
         var report = Scan("""
