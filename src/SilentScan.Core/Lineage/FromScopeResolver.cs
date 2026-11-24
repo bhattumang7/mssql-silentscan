@@ -296,6 +296,8 @@ public static class FromScopeResolver
         PivotedTableReference pivot => ResolvePivotedTableReference(pivot, context),
         UnpivotedTableReference unpivot => ResolveUnpivotedTableReference(unpivot, context),
         FullTextTableReference fullText => ResolveFullTextTableReference(fullText, context),
+        OpenXmlTableReference openXml => ResolveOpenXmlTableReference(openXml, context),
+        InlineDerivedTable inline => ResolveInlineDerivedTable(inline, context),
         _ => ResolveUnsupportedTableReference(tableReference, context),
     };
 
@@ -431,7 +433,7 @@ public static class FromScopeResolver
             return (tvf.Alias?.Value, new ScopeEntry(ResolvedRelation.Empty, IsViewLayer: false));
         }
 
-        var tvfQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(tvf.SchemaObject));
+        var tvfQualifiedName = catalog.StripSelfReferencingDatabasePrefix(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(tvf.SchemaObject)));
         if (!resolvedViews.TryGetValue(tvfQualifiedName, out var tvfRelation))
         {
 
@@ -603,6 +605,52 @@ public static class FromScopeResolver
             new("RANK", new ColumnProvenance.Declared(new SqlType(SqlTypeCategory.Int))),
         };
         return (fullText.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
+    }
+
+    private static (string? Alias, ScopeEntry Entry) ResolveOpenXmlTableReference(OpenXmlTableReference openXml, ResolutionContext context)
+    {
+        var (catalog, _, sourcePath, ledger, _, procScope, _) = context;
+
+        if (openXml.TableName is { } schemaTable)
+        {
+            var tableName = catalog.StripSelfReferencingDatabasePrefix(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(schemaTable)));
+            var table = catalog.Find(tableName, procScope);
+            if (table is null)
+            {
+                ledger?.Record(
+                    AnalysisPass.Lineage, sourcePath, openXml.StartLine, openXml.StartColumn,
+                    FromTableReferenceConstructKind, $"OPENXML schema table '{tableName}' has no known DDL");
+            }
+
+            return (openXml.Alias?.Value, new ScopeEntry(ToResolvedRelation(table, tableName), IsViewLayer: false));
+        }
+
+        var columns = openXml.SchemaDeclarationItems
+            .Where(item => item.ColumnDefinition?.ColumnIdentifier is not null)
+            .Select(item => new ResolvedColumn(
+                item.ColumnDefinition.ColumnIdentifier.Value,
+                new ColumnProvenance.Declared(SqlTypeReferenceResolver.Resolve(item.ColumnDefinition.DataType, columnCollation: null, catalog.TypeAliases) is { } declared
+                    ? declared
+                    : new SqlType(SqlTypeCategory.SqlVariant))))
+            .ToList();
+        return (openXml.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
+    }
+
+    private static (string? Alias, ScopeEntry Entry) ResolveInlineDerivedTable(InlineDerivedTable inline, ResolutionContext context)
+    {
+        var columns = new List<ResolvedColumn>(inline.Columns.Count);
+        for (var index = 0; index < inline.Columns.Count; index++)
+        {
+            var literalTypes = inline.RowValues
+                .Select(row => index < row.ColumnValues.Count && row.ColumnValues[index] is Literal literal ? LiteralTypeResolver.Resolve(literal) : null)
+                .ToList();
+            var uniformType = literalTypes.Count > 0 && literalTypes.All(t => t is not null && t.Equals(literalTypes[0])) ? literalTypes[0] : null;
+            columns.Add(new ResolvedColumn(
+                inline.Columns[index].Value,
+                uniformType is not null ? new ColumnProvenance.Declared(uniformType) : new ColumnProvenance.Unknown("VALUES column without a uniform literal type")));
+        }
+
+        return (inline.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
     }
 
     private static (string? Alias, ScopeEntry Entry) ResolveUnsupportedTableReference(TableReference tableReference, ResolutionContext context)
