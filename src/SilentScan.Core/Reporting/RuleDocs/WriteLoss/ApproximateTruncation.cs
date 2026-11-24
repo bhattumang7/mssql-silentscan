@@ -18,6 +18,12 @@ internal static class ApproximateTruncation
             settings. 19.99 assigned into an INT column silently becomes 19, not 20; -4.7 becomes
             -4, not -5.
 
+            A scalar function's RETURN is subject to the same truncation: the returned value is
+            converted to the declared RETURNS type, so a REAL/FLOAT result returned from a
+            function declared to return an integer type reaches the caller already truncated. A
+            parameter's default value is truncated the same way when the procedure runs without
+            that argument.
+
             The truncation-not-rounding behavior is the part that catches people off guard even
             when they know narrowing is happening: many developers reasonably assume SQL Server
             "rounds" numeric conversions the way CAST/ROUND-aware code paths do elsewhere, but the
