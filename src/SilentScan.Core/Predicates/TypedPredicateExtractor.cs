@@ -275,13 +275,14 @@ public static class TypedPredicateExtractor
 
         private sealed record WhereEqualityScope(
             HashSet<BooleanExpression> TopLevelConjuncts,
-            List<(LocalVariablePredicateFinding Finding, string Table, string Column)> Equalities);
+            List<(LocalVariablePredicateFinding Finding, string Table, string Column)> Equalities,
+            List<(string Table, string Column)> PinnedByValue);
 
         public void OnEnterWhereClause(WhereClause node, ModuleWalker walker)
         {
             _positionStack.Push(_position);
             _position = PredicatePosition.Seekable;
-            _whereEqualityScopes.Push(new WhereEqualityScope([.. PredicateTreeWalker.FlattenAnd(node.SearchCondition)], []));
+            _whereEqualityScopes.Push(new WhereEqualityScope([.. PredicateTreeWalker.FlattenAnd(node.SearchCondition)], [], []));
         }
 
         public void OnLeaveWhereClause(WhereClause node, ModuleWalker walker)
@@ -291,6 +292,9 @@ public static class TypedPredicateExtractor
             foreach (var tableGroup in scope.Equalities.GroupBy(e => e.Table, catalog.IdentifierComparer))
             {
                 var pinnedColumns = tableGroup.Select(e => e.Column).ToHashSet(catalog.IdentifierComparer);
+                pinnedColumns.UnionWith(scope.PinnedByValue
+                    .Where(p => catalog.IdentifierComparer.Equals(p.Table, tableGroup.Key))
+                    .Select(p => p.Column));
                 if (catalog.Find(tableGroup.Key) is { } table && table.Indexes.Any(index => IsFullyPinnedUniqueKey(index, pinnedColumns)))
                 {
                     LocalVariablePredicateFindings.RemoveAll(f => tableGroup.Any(e => ReferenceEquals(e.Finding, f)));
@@ -999,10 +1003,23 @@ public static class TypedPredicateExtractor
                 PredicateFragmentText: _currentPredicateFragment is { } fragment ? Common.FragmentTextRenderer.Render(fragment) : null,
                 Fingerprint: TypedPredicateFindingIdentity.ComputeFingerprint(column, other, operatorText)));
 
+            RecordColumnPinnedByValue(column, other, operatorText, node);
             TryAddUnderLengthParameterFinding(column, other, otherIsLiteral, operatorText, node);
             TryAddAnsiPaddingMismatchFinding(column, other, operatorText, node, walker);
             TryAddLocalVariablePredicateFinding(column, other, operatorText, node);
             TryAddFilteredIndexParameterMismatchFinding(column, other, operatorText, node);
+        }
+
+        private void RecordColumnPinnedByValue(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
+        {
+            if (operatorText == "="
+                && other is PredicateOperand.Value
+                && node is BooleanExpression comparison
+                && _whereEqualityScopes.TryPeek(out var scope)
+                && scope.TopLevelConjuncts.Contains(comparison))
+            {
+                scope.PinnedByValue.Add((column.TableQualifiedName, column.ColumnName));
+            }
         }
 
         private void TryAddLocalVariablePredicateFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)

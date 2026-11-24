@@ -1921,6 +1921,29 @@ public sealed class TypedPredicateExtractorTests
         Assert.Empty(result.LocalVariablePredicateFindings);
     }
 
+    [Theory]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Id = @v AND Region = 8;")]
+    [InlineData("DELETE FROM dbo.Customers WHERE Region = 8 AND Id = @v;")]
+    [InlineData("UPDATE dbo.Customers SET Code = 'x' WHERE Id = @v AND Region = 8;")]
+    public void Extract_CompositeUniqueKeyPinnedByLocalVariableAndLiteral_NeverFiresLocalVariablePredicate(string statement)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Region INT NOT NULL, Code VARCHAR(20) NULL, PRIMARY KEY (Id, Region));",
+            "DECLARE @v INT = 7; " + statement);
+
+        Assert.Empty(result.LocalVariablePredicateFindings);
+    }
+
+    [Fact]
+    public void Extract_CompositeUniqueKeyPinnedOnlyPartlyByLiteral_StillFires()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Region INT NOT NULL, Code VARCHAR(20) NULL, PRIMARY KEY (Id, Region));",
+            "DECLARE @v INT = 7; SELECT 1 FROM dbo.Customers WHERE Id = @v AND Code = 'x';");
+
+        Assert.Single(result.LocalVariablePredicateFindings);
+    }
+
     [Fact]
     public void Extract_CompositeUniqueKeyPinnedOnlyThroughOr_StillFires()
     {
