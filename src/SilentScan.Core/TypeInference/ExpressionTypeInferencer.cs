@@ -76,6 +76,11 @@ public static class ExpressionTypeInferencer
                 : null;
         }
 
+        if (ArgumentShapedFunctionTypes.IsArgumentShaped(name) && parameters.Count > 0)
+        {
+            return ArgumentShapedFunctionTypes.Resolve(name, Resolve(parameters[0], resolveLeaf, typeAliases));
+        }
+
         return BuiltinFunctionTypeResolver.ResolveFixedReturnType(name);
     }
 

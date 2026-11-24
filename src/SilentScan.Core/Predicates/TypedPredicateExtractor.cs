@@ -1210,10 +1210,16 @@ public static class TypedPredicateExtractor
                 case ConvertCall convertCall:
                     return ResolveCastOrConvertOperand(convertCall.DataType, convertCall.Parameter, scopeChain, walker);
 
+                case TryCastCall tryCast:
+                    return ResolveCastOrConvertOperand(tryCast.DataType, tryCast.Parameter, scopeChain, walker);
+
+                case TryConvertCall tryConvert:
+                    return ResolveCastOrConvertOperand(tryConvert.DataType, tryConvert.Parameter, scopeChain, walker);
+
                 case ScalarSubquery scalarSubquery:
                     return new PredicateOperand.Value(ResolveInSubqueryType(scalarSubquery, walker), IsDerivedType: true);
 
-                case ParenthesisExpression or UnaryExpression or BinaryExpression
+                case ParenthesisExpression or UnaryExpression or BinaryExpression or LeftFunctionCall or RightFunctionCall
                     or CoalesceExpression or NullIfExpression or IIfCall
                     or SearchedCaseExpression or SimpleCaseExpression:
                     return new PredicateOperand.Value(
@@ -1281,6 +1287,12 @@ public static class TypedPredicateExtractor
                     ? OperandType(ResolveOperand(functionCall.Parameters[maxWidenedIndex], scopeChain, walker))
                     : null;
                 return new PredicateOperand.Value(TypeInference.BuiltinFunctionTypeResolver.ResolveMaxWidenedReturnType(decidingType));
+            }
+
+            if (TypeInference.ArgumentShapedFunctionTypes.IsArgumentShaped(name) && functionCall.Parameters.Count > 0)
+            {
+                var shapingType = OperandType(ResolveOperand(functionCall.Parameters[0], scopeChain, walker));
+                return new PredicateOperand.Value(TypeInference.ArgumentShapedFunctionTypes.Resolve(name, shapingType));
             }
 
             var fixedType = TypeInference.BuiltinFunctionTypeResolver.ResolveFixedReturnType(name);

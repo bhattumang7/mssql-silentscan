@@ -145,6 +145,7 @@ public static class BuiltinFunctionTypeResolver
         ["GET_BIT"] = new SqlType(SqlTypeCategory.Bit),
         ["CURSOR_STATUS"] = new SqlType(SqlTypeCategory.SmallInt),
         ["EOMONTH"] = new SqlType(SqlTypeCategory.Date),
+        ["DATABASE_PRINCIPAL_ID"] = new SqlType(SqlTypeCategory.Int),
     };
 
     private static readonly Dictionary<string, SqlType> GlobalVariableTypes = new(StringComparer.OrdinalIgnoreCase)

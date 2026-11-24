@@ -87,7 +87,7 @@ public sealed class BuiltinReturnTypeOracleTests : OracleTestFixture
         ["COLLATIONPROPERTY"] = "COLLATIONPROPERTY('a', 'b')", ["TYPEPROPERTY"] = "TYPEPROPERTY('int', 'Precision')", ["STATS_DATE"] = "STATS_DATE(1, 1)",
         ["APPLOCK_MODE"] = "APPLOCK_MODE('public', 'a', 'Transaction')", ["APPLOCK_TEST"] = "APPLOCK_TEST('public', 'a', 'Shared', 'Transaction')",
         ["MIN_ACTIVE_ROWVERSION"] = "MIN_ACTIVE_ROWVERSION()", ["REGEXP_COUNT"] = "REGEXP_COUNT('a', 'a')", ["REGEXP_INSTR"] = "REGEXP_INSTR('a', 'a')",
-        ["BIT_COUNT"] = "BIT_COUNT(1)", ["GET_BIT"] = "GET_BIT(1, 0)", ["CURSOR_STATUS"] = "CURSOR_STATUS('local', 'c')",
+        ["BIT_COUNT"] = "BIT_COUNT(1)", ["GET_BIT"] = "GET_BIT(1, 0)", ["CURSOR_STATUS"] = "CURSOR_STATUS('local', 'c')", ["DATABASE_PRINCIPAL_ID"] = "DATABASE_PRINCIPAL_ID('dbo')",
     };
 
     private static readonly Dictionary<string, string> GlobalVariableInvocations = BuiltinFunctionTypeResolver.GlobalVariableNames
