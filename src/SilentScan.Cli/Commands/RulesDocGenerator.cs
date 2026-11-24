@@ -4,11 +4,14 @@ namespace SilentScan.Cli.Commands;
 
 public static class RulesDocGenerator
 {
+    private static void WriteLf(string path, string content) =>
+        File.WriteAllText(path, content.Replace("\r\n", "\n", StringComparison.Ordinal));
+
     public static int WriteAll(string repoRoot, string indexPath, string rulesDir)
     {
         Directory.CreateDirectory(rulesDir);
 
-        File.WriteAllText(indexPath, RuleCatalogHtmlWriter.Write());
+        WriteLf(indexPath, RuleCatalogHtmlWriter.Write());
 
         var expectedFileNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var rule in RuleCatalog.BaseRules)
@@ -16,7 +19,7 @@ public static class RulesDocGenerator
             var examples = rule.Examples.Select(firesPath => ReadExample(repoRoot, firesPath)).ToList();
             var fileName = RuleDocSite.Slug(rule.Id) + ".html";
             expectedFileNames.Add(fileName);
-            File.WriteAllText(Path.Combine(rulesDir, fileName), RulePageHtmlWriter.Write(rule, examples));
+            WriteLf(Path.Combine(rulesDir, fileName), RulePageHtmlWriter.Write(rule, examples));
         }
 
         var stale = Directory.EnumerateFiles(rulesDir, "*.html")
