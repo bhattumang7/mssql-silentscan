@@ -193,7 +193,7 @@ public static class PartialCompositeForeignKeyJoinScanner
                 return;
             }
 
-            if (IsSuppressedByUniqueIndex(fk, coveredLocally))
+            if (IsSuppressedByUniqueIndex(fk, coveredLocally, statementWideEqualities, scopeChain))
             {
                 return;
             }
@@ -203,7 +203,11 @@ public static class PartialCompositeForeignKeyJoinScanner
                 fk.Pairs, coveredLocally, missingEverywhere, sourcePath, line, column));
         }
 
-        private bool IsSuppressedByUniqueIndex(CompositeForeignKey fk, IReadOnlyList<ForeignKeyColumnPair> coveredLocally)
+        private bool IsSuppressedByUniqueIndex(
+            CompositeForeignKey fk,
+            IReadOnlyList<ForeignKeyColumnPair> coveredLocally,
+            IReadOnlyList<BooleanComparisonExpression> statementWideEqualities,
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain)
         {
             var referencedTable = catalog.Find(fk.ReferencedTableQualifiedName);
             if (referencedTable is null)
@@ -212,6 +216,19 @@ public static class PartialCompositeForeignKeyJoinScanner
             }
 
             var usedReferencedColumns = new HashSet<string>(coveredLocally.Select(p => p.ReferencedColumnName), catalog.IdentifierComparer);
+            foreach (var equality in statementWideEqualities)
+            {
+                foreach (var (columnSide, valueSide) in new[] { (equality.FirstExpression, equality.SecondExpression), (equality.SecondExpression, equality.FirstExpression) })
+                {
+                    if (valueSide is VariableReference or Literal
+                        && BaseColumnResolver.ResolveBaseColumn(columnSide, sourcePath, scopeChain, catalog) is { } pinned
+                        && Eq(pinned.TableQualifiedName, fk.ReferencedTableQualifiedName))
+                    {
+                        usedReferencedColumns.Add(pinned.ColumnName);
+                    }
+                }
+            }
+
             return referencedTable.Indexes.Any(i => i.IsUnique && !i.IsFiltered && !i.IsDisabled && i.KeyColumns.Count > 0 && i.KeyColumns.All(usedReferencedColumns.Contains));
         }
 

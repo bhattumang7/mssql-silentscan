@@ -57,6 +57,47 @@ public sealed class ParameterReassignmentPredicateScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("WHERE Code = @p AND Region = 'EU'")]
+    [InlineData("WHERE Region = 'EU' AND Code = @p")]
+    public void SetReassignsParameter_WhenTheEqualitiesPinEveryColumnOfAUniqueKey_NeverFires(string where)
+    {
+        var findings = ScanWithKey(
+            $$"""
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                SET @p = 'OVERWRITTEN';
+                SELECT 1 FROM dbo.Keyed {{where}};
+            END
+            """);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void SetReassignsParameter_WhenTheKeyIsOnlyPartlyPinned_StillFires()
+    {
+        var findings = ScanWithKey(
+            """
+            CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS
+            BEGIN
+                SET @p = 'OVERWRITTEN';
+                SELECT 1 FROM dbo.Keyed WHERE Code = @p AND Note = 'x';
+            END
+            """);
+
+        Assert.Single(findings);
+    }
+
+    private static IReadOnlyList<ParameterReassignmentPredicateFinding> ScanWithKey(string sql)
+    {
+        var result = SqlScriptParser.ParseText(
+            "test.sql",
+            $"CREATE TABLE dbo.Keyed (Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, Note VARCHAR(20) NULL, PRIMARY KEY (Code, Region));\nGO\n{sql}");
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        return ParameterReassignmentPredicateScanner.Scan(result, CatalogBuilder.Build([result]));
+    }
+
     [Fact]
     public void SetReassignsParameter_ThenPredicateUse_Fires()
     {

@@ -268,10 +268,52 @@ public static class ParameterReassignmentPredicateScanner
 
         private void InspectSearchConditionCore(BooleanExpression condition, ScopeChain scopeChain, FlowState state)
         {
+            var firstNew = Findings.Count;
             foreach (var comparison in FindComparisons(condition))
             {
                 TryMatch(comparison.FirstExpression, comparison.SecondExpression, comparison, scopeChain, state);
                 TryMatch(comparison.SecondExpression, comparison.FirstExpression, comparison, scopeChain, state);
+            }
+
+            if (Findings.Count > firstNew)
+            {
+                RemoveFindingsOnPinnedUniqueKeys(condition, scopeChain, firstNew);
+            }
+        }
+
+        private void RemoveFindingsOnPinnedUniqueKeys(BooleanExpression condition, ScopeChain scopeChain, int firstNew)
+        {
+            var pinned = new List<(string Table, string Column)>();
+            foreach (var conjunct in PredicateTreeWalker.FlattenAnd(condition))
+            {
+                if (conjunct is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } equality)
+                {
+                    continue;
+                }
+
+                foreach (var (columnSide, valueSide) in new[] { (equality.FirstExpression, equality.SecondExpression), (equality.SecondExpression, equality.FirstExpression) })
+                {
+                    if (columnSide is ColumnReferenceExpression columnRef
+                        && valueSide is VariableReference or Literal
+                        && ScalarExpressionResolver.ResolveColumnReference(columnRef, scopeChain, sourcePath, ledger: null, catalog) is ColumnProvenance.BaseColumn { Depth: 0 } baseColumn)
+                    {
+                        pinned.Add((baseColumn.TableQualifiedName, baseColumn.ColumnName));
+                    }
+                }
+            }
+
+            for (var i = Findings.Count - 1; i >= firstNew; i--)
+            {
+                var table = catalog.Find(Findings[i].TableQualifiedName);
+                var pinnedColumns = pinned
+                    .Where(p => catalog.IdentifierComparer.Equals(p.Table, Findings[i].TableQualifiedName))
+                    .Select(p => p.Column)
+                    .ToHashSet(catalog.IdentifierComparer);
+                if (table is not null && table.Indexes.Any(index =>
+                        index.IsUnique && !index.IsFiltered && !index.IsDisabled && index.KeyColumns.All(pinnedColumns.Contains)))
+                {
+                    Findings.RemoveAt(i);
+                }
             }
         }
 

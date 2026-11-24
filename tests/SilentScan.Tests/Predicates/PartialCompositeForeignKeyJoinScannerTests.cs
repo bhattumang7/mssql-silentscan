@@ -91,6 +91,28 @@ public sealed class PartialCompositeForeignKeyJoinScannerTests
         Assert.Empty(findings);
     }
 
+    [Theory]
+    [InlineData("WHERE o.RevisionId = 3")]
+    [InlineData("WHERE o.RevisionId = @rev")]
+    public void MissingReferencedColumnPinnedToAConstantOrVariable_NeverFires(string where)
+    {
+        var catalog = BuildCatalog();
+        var findings = Scan(
+            $"DECLARE @rev INT = 3; SELECT 1 FROM dbo.OrderLines ol JOIN dbo.Orders o ON ol.OrderId = o.OrderId {where};", catalog);
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void MissingReferencedColumnFilteredByARangeOnly_StillFires()
+    {
+        var catalog = BuildCatalog();
+        var findings = Scan(
+            "SELECT 1 FROM dbo.OrderLines ol JOIN dbo.Orders o ON ol.OrderId = o.OrderId WHERE o.RevisionId > 3;", catalog);
+
+        Assert.Single(findings);
+    }
+
     [Fact]
     public void CteSharesNameWithReferencedTable_JoinNeverFires()
     {
