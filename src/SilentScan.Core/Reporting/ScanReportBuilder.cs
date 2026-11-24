@@ -216,6 +216,7 @@ public static class ScanReportBuilder
             .ThenBy(f => f.Line)
             .ThenBy(f => f.Column)];
         var orderedSkippedConstructs = skippedConstructs
+            .Distinct()
             .OrderBy(s => s.Pass)
             .ThenBy(s => s.SourcePath, StringComparer.Ordinal)
             .ThenBy(s => s.Line)

@@ -1,3 +1,5 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+
 namespace SilentScan.Core.TypeInference;
 
 public static class BuiltinFunctionTypeResolver
@@ -6,18 +8,14 @@ public static class BuiltinFunctionTypeResolver
     {
         ["GETDATE"] = new SqlType(SqlTypeCategory.DateTime),
         ["GETUTCDATE"] = new SqlType(SqlTypeCategory.DateTime),
-        ["SYSDATETIME"] = new SqlType(SqlTypeCategory.DateTime2, Precision: 7),
-        ["SYSUTCDATETIME"] = new SqlType(SqlTypeCategory.DateTime2, Precision: 7),
-        ["SYSDATETIMEOFFSET"] = new SqlType(SqlTypeCategory.DateTimeOffset, Precision: 7),
+        ["SYSDATETIME"] = new SqlType(SqlTypeCategory.DateTime2, Scale: 7),
+        ["SYSUTCDATETIME"] = new SqlType(SqlTypeCategory.DateTime2, Scale: 7),
+        ["SYSDATETIMEOFFSET"] = new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 7),
         ["NEWID"] = new SqlType(SqlTypeCategory.UniqueIdentifier),
         ["NEWSEQUENTIALID"] = new SqlType(SqlTypeCategory.UniqueIdentifier),
         ["TEXTPTR"] = new SqlType(SqlTypeCategory.VarBinary, Length: 16),
 
-        ["LEN"] = new SqlType(SqlTypeCategory.Int),
-        ["DATALENGTH"] = new SqlType(SqlTypeCategory.Int),
         ["ASCII"] = new SqlType(SqlTypeCategory.Int),
-        ["CHARINDEX"] = new SqlType(SqlTypeCategory.Int),
-        ["PATINDEX"] = new SqlType(SqlTypeCategory.Int),
         ["ISNUMERIC"] = new SqlType(SqlTypeCategory.Int),
         ["ISDATE"] = new SqlType(SqlTypeCategory.Int),
 
@@ -45,6 +43,13 @@ public static class BuiltinFunctionTypeResolver
         ["DB_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
         ["HOST_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
         ["ORIGINAL_LOGIN"] = new SqlType(SqlTypeCategory.NVarChar, Length: 4000),
+        ["ERROR_NUMBER"] = new SqlType(SqlTypeCategory.Int),
+        ["ERROR_SEVERITY"] = new SqlType(SqlTypeCategory.Int),
+        ["ERROR_STATE"] = new SqlType(SqlTypeCategory.Int),
+        ["ERROR_LINE"] = new SqlType(SqlTypeCategory.Int),
+        ["ERROR_PROCEDURE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["ERROR_MESSAGE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 4000),
+
 
         ["UNICODE"] = new SqlType(SqlTypeCategory.Int),
         ["CHAR"] = new SqlType(SqlTypeCategory.Char, Length: 1),
@@ -54,6 +59,92 @@ public static class BuiltinFunctionTypeResolver
         ["SOUNDEX"] = new SqlType(SqlTypeCategory.VarChar, Length: 5),
         ["DIFFERENCE"] = new SqlType(SqlTypeCategory.Int),
         ["ISJSON"] = new SqlType(SqlTypeCategory.Int),
+        ["DB_ID"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["SCHEMA_ID"] = new SqlType(SqlTypeCategory.Int),
+        ["TYPE_ID"] = new SqlType(SqlTypeCategory.Int),
+        ["USER_ID"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["SUSER_ID"] = new SqlType(SqlTypeCategory.Int),
+        ["COL_LENGTH"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["COLUMNPROPERTY"] = new SqlType(SqlTypeCategory.Int),
+        ["INDEXPROPERTY"] = new SqlType(SqlTypeCategory.Int),
+        ["FILE_ID"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["FILE_IDEX"] = new SqlType(SqlTypeCategory.Int),
+        ["FILEGROUP_ID"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["XACT_STATE"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["SCOPE_IDENTITY"] = new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0),
+        ["IDENT_CURRENT"] = new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0),
+        ["IDENT_INCR"] = new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0),
+        ["IDENT_SEED"] = new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0),
+        ["ROWCOUNT_BIG"] = new SqlType(SqlTypeCategory.BigInt),
+        ["OBJECT_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["OBJECT_SCHEMA_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["SCHEMA_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["TYPE_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["COL_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["FILE_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["FILEGROUP_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["INDEX_COL"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["PROGRAM_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["DATENAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 30),
+        ["DATEFROMPARTS"] = new SqlType(SqlTypeCategory.Date),
+        ["DATETIMEFROMPARTS"] = new SqlType(SqlTypeCategory.DateTime),
+        ["SMALLDATETIMEFROMPARTS"] = new SqlType(SqlTypeCategory.SmallDateTime),
+        ["CURRENT_TIMEZONE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["CURRENT_TIMEZONE_ID"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["JSON_VALUE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 4000),
+        ["JSON_MODIFY"] = new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
+        ["STRING_ESCAPE"] = new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
+        ["HASHBYTES"] = new SqlType(SqlTypeCategory.VarBinary, Length: 8000),
+        ["CHECKSUM"] = new SqlType(SqlTypeCategory.Int),
+        ["BINARY_CHECKSUM"] = new SqlType(SqlTypeCategory.Int),
+        ["PI"] = new SqlType(SqlTypeCategory.Float),
+        ["RAND"] = new SqlType(SqlTypeCategory.Float),
+        ["SQRT"] = new SqlType(SqlTypeCategory.Float),
+        ["SQUARE"] = new SqlType(SqlTypeCategory.Float),
+        ["EXP"] = new SqlType(SqlTypeCategory.Float),
+        ["LOG"] = new SqlType(SqlTypeCategory.Float),
+        ["LOG10"] = new SqlType(SqlTypeCategory.Float),
+        ["SIN"] = new SqlType(SqlTypeCategory.Float),
+        ["COS"] = new SqlType(SqlTypeCategory.Float),
+        ["TAN"] = new SqlType(SqlTypeCategory.Float),
+        ["COT"] = new SqlType(SqlTypeCategory.Float),
+        ["ASIN"] = new SqlType(SqlTypeCategory.Float),
+        ["ACOS"] = new SqlType(SqlTypeCategory.Float),
+        ["ATAN"] = new SqlType(SqlTypeCategory.Float),
+        ["ATN2"] = new SqlType(SqlTypeCategory.Float),
+        ["CONTEXT_INFO"] = new SqlType(SqlTypeCategory.VarBinary, Length: 128),
+        ["SESSION_CONTEXT"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["SERVERPROPERTY"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["CONNECTIONPROPERTY"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["DATABASEPROPERTYEX"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["HAS_PERMS_BY_NAME"] = new SqlType(SqlTypeCategory.Int),
+        ["IS_MEMBER"] = new SqlType(SqlTypeCategory.Int),
+        ["IS_ROLEMEMBER"] = new SqlType(SqlTypeCategory.Int),
+        ["IS_SRVROLEMEMBER"] = new SqlType(SqlTypeCategory.Int),
+        ["SUSER_SID"] = new SqlType(SqlTypeCategory.VarBinary, Length: 85),
+        ["ORIGINAL_DB_NAME"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        ["HOST_ID"] = new SqlType(SqlTypeCategory.Char, Length: 10),
+        ["FORMATMESSAGE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 4000),
+        ["COMPRESS"] = new SqlType(SqlTypeCategory.VarBinary, IsMax: true),
+        ["DECOMPRESS"] = new SqlType(SqlTypeCategory.VarBinary, IsMax: true),
+        ["CURRENT_REQUEST_ID"] = new SqlType(SqlTypeCategory.Int),
+        ["CURRENT_TRANSACTION_ID"] = new SqlType(SqlTypeCategory.BigInt),
+        ["TRIGGER_NESTLEVEL"] = new SqlType(SqlTypeCategory.Int),
+        ["GETANSINULL"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["OBJECTPROPERTYEX"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["SQL_VARIANT_PROPERTY"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["COLLATIONPROPERTY"] = new SqlType(SqlTypeCategory.SqlVariant),
+        ["TYPEPROPERTY"] = new SqlType(SqlTypeCategory.Int),
+        ["STATS_DATE"] = new SqlType(SqlTypeCategory.DateTime),
+        ["APPLOCK_MODE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 32),
+        ["APPLOCK_TEST"] = new SqlType(SqlTypeCategory.Int),
+        ["MIN_ACTIVE_ROWVERSION"] = new SqlType(SqlTypeCategory.VarBinary, Length: 8),
+        ["REGEXP_COUNT"] = new SqlType(SqlTypeCategory.Int),
+        ["REGEXP_INSTR"] = new SqlType(SqlTypeCategory.Int),
+        ["BIT_COUNT"] = new SqlType(SqlTypeCategory.BigInt),
+        ["GET_BIT"] = new SqlType(SqlTypeCategory.Bit),
+        ["CURSOR_STATUS"] = new SqlType(SqlTypeCategory.SmallInt),
+        ["EOMONTH"] = new SqlType(SqlTypeCategory.Date),
     };
 
     private static readonly Dictionary<string, SqlType> GlobalVariableTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -70,6 +161,25 @@ public static class BuiltinFunctionTypeResolver
         ["@@LANGID"] = new SqlType(SqlTypeCategory.SmallInt),
         ["@@PACK_RECEIVED"] = new SqlType(SqlTypeCategory.Int),
         ["@@CPU_BUSY"] = new SqlType(SqlTypeCategory.Int),
+        ["@@IDENTITY"] = new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0),
+    };
+
+    private static readonly Dictionary<string, int> MaxArgumentWidenedToBigIntFunctions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["LEN"] = 0,
+        ["DATALENGTH"] = 0,
+        ["CHARINDEX"] = 1,
+        ["PATINDEX"] = 1,
+    };
+
+    private static readonly Dictionary<ParameterlessCallType, SqlType> ParameterlessCallTypes = new()
+    {
+        [ParameterlessCallType.CurrentTimestamp] = new SqlType(SqlTypeCategory.DateTime),
+        [ParameterlessCallType.CurrentDate] = new SqlType(SqlTypeCategory.Date),
+        [ParameterlessCallType.CurrentUser] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        [ParameterlessCallType.SessionUser] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        [ParameterlessCallType.SystemUser] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
+        [ParameterlessCallType.User] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
     };
 
     private static readonly Dictionary<string, int> ArgumentTypeFunctions = new(StringComparer.OrdinalIgnoreCase)
@@ -166,6 +276,27 @@ public static class BuiltinFunctionTypeResolver
 
     public static SqlType? ResolveFixedReturnType(string functionName) =>
         FixedReturnTypes.GetValueOrDefault(functionName);
+
+    public static IReadOnlyCollection<string> FixedReturnTypeFunctionNames => FixedReturnTypes.Keys;
+
+    public static IReadOnlyCollection<string> GlobalVariableNames => GlobalVariableTypes.Keys;
+
+    public static IReadOnlyCollection<ParameterlessCallType> TypedParameterlessCalls => ParameterlessCallTypes.Keys;
+
+    public static int? TryGetMaxWidenedArgumentIndex(string functionName) =>
+        MaxArgumentWidenedToBigIntFunctions.TryGetValue(functionName, out var index) ? index : null;
+
+    public static IReadOnlyCollection<string> MaxWidenedFunctionNames => MaxArgumentWidenedToBigIntFunctions.Keys;
+
+    public static SqlType? ResolveMaxWidenedReturnType(SqlType? decidingArgumentType) => decidingArgumentType switch
+    {
+        null => null,
+        { IsMax: true } when decidingArgumentType.IsStringFamily || decidingArgumentType.IsBinaryFamily => new SqlType(SqlTypeCategory.BigInt),
+        _ => new SqlType(SqlTypeCategory.Int),
+    };
+
+    public static SqlType? ResolveParameterlessCall(ParameterlessCallType callType) =>
+        ParameterlessCallTypes.GetValueOrDefault(callType);
 
     public static int? TryGetArgumentTypeIndex(string functionName) =>
         ArgumentTypeFunctions.TryGetValue(functionName, out var index) ? index : null;

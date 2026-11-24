@@ -3,6 +3,7 @@ using SilentScan.Core.Catalog;
 using SilentScan.Core.Diagnostics;
 using SilentScan.Core.TypeInference;
 using SilentScan.Core.Common;
+using SilentScan.Core.Parsing;
 
 namespace SilentScan.Core.Lineage;
 
@@ -52,7 +53,13 @@ public static class FromScopeResolver
     {
         if (extraFromClause is not null)
         {
-            return Resolve(extraFromClause, context);
+            var fromScope = Resolve(extraFromClause, context);
+            if (!TargetBindsToFromEntry(target, extraFromClause, context))
+            {
+                AddResolved(target, context, aliasOverride: null, fromScope.ByAlias, fromScope.Ordered);
+            }
+
+            return fromScope;
         }
 
         var byAlias = new Dictionary<string, ScopeEntry>(context.Catalog.IdentifierComparer);
@@ -60,6 +67,44 @@ public static class FromScopeResolver
         AddResolved(target, context, aliasOverride: null, byAlias, ordered);
         return (byAlias, ordered);
     }
+
+    private static bool TargetBindsToFromEntry(TableReference target, FromClause fromClause, ResolutionContext context)
+    {
+        var leaves = fromClause.TableReferences.SelectMany(t => FlattenJoins(t)).Select(l => l.Reference).ToList();
+        var comparer = context.Catalog.IdentifierComparer;
+
+        switch (target)
+        {
+            case NamedTableReference named when named.SchemaObject.ServerIdentifier is not { Value.Length: > 0 }:
+                if (named.SchemaObject.SchemaIdentifier is null
+                    && leaves.Any(l => ExposedName(l) is { } exposed && comparer.Equals(exposed, named.SchemaObject.BaseIdentifier.Value)))
+                {
+                    return true;
+                }
+
+                var targetObject = CatalogObjectName(named, context);
+                return targetObject is not null && leaves.Any(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject));
+
+            case VariableTableReference variable:
+                return leaves.Any(l => l is VariableTableReference leaf && comparer.Equals(leaf.Variable.Name, variable.Variable.Name));
+
+            default:
+                return true;
+        }
+    }
+
+    private static string? ExposedName(TableReference leaf) => leaf switch
+    {
+        TableReferenceWithAlias { Alias: { } alias } => alias.Value,
+        NamedTableReference named => named.SchemaObject.BaseIdentifier.Value,
+        VariableTableReference variable => variable.Variable.Name,
+        _ => null,
+    };
+
+    private static string? CatalogObjectName(NamedTableReference named, ResolutionContext context) =>
+        named.SchemaObject.SchemaIdentifier is null && context.CteRelations.ContainsKey(named.SchemaObject.BaseIdentifier.Value)
+            ? null
+            : context.Catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject));
 
     internal static (Dictionary<string, ScopeEntry> ByAlias, List<ScopeEntry> Ordered) ResolveForMerge(
         TableReference target, Identifier? targetAlias, TableReference source, ResolutionContext context)
@@ -78,7 +123,7 @@ public static class FromScopeResolver
     {
         foreach (var (leaf, isNullableSide) in FlattenJoins(tableReference))
         {
-            var (alias, entry) = ResolveTableReference(leaf, context, aliasOverride);
+            var (alias, entry) = TryResolveXmlRowsetMethod(leaf, context, byAlias, ordered) ?? ResolveTableReference(leaf, context, aliasOverride);
             if (isNullableSide)
             {
                 entry = entry with { Relation = WithNullableSideColumns(entry.Relation) };
@@ -103,6 +148,46 @@ public static class FromScopeResolver
             ordered.Add(entry);
         }
     }
+
+    private static (string? Alias, ScopeEntry Entry)? TryResolveXmlRowsetMethod(
+        TableReference leaf, ResolutionContext context, Dictionary<string, ScopeEntry> byAlias, List<ScopeEntry> ordered)
+    {
+        switch (leaf)
+        {
+            case VariableMethodCallTableReference variableMethod
+                when IsXmlRowsetMethod(variableMethod.MethodName.Value):
+                return (variableMethod.Alias?.Value, XmlRowsetEntry(variableMethod.Columns));
+
+            case SchemaObjectFunctionTableReference tvf
+                when IsXmlRowsetMethod(tvf.SchemaObject.BaseIdentifier.Value)
+                     && tvf.SchemaObject.ServerIdentifier is not { Value.Length: > 0 }
+                     && tvf.SchemaObject.Identifiers.Count > 1:
+                var target = new ColumnReferenceExpression
+                {
+                    ColumnType = ColumnType.Regular,
+                    MultiPartIdentifier = new MultiPartIdentifier(),
+                };
+                foreach (var identifier in tvf.SchemaObject.Identifiers.Take(tvf.SchemaObject.Identifiers.Count - 1))
+                {
+                    target.MultiPartIdentifier.Identifiers.Add(identifier);
+                }
+
+                var targetProvenance = ScalarExpressionResolver.ResolveColumnReference(
+                    target, byAlias, ordered, context.SourcePath, ledger: null, context.Catalog);
+                return ColumnProvenanceAnalysis.TryGetScalarType(targetProvenance) is { Category: SqlTypeCategory.Xml }
+                    ? (tvf.Alias?.Value, XmlRowsetEntry(tvf.Columns))
+                    : null;
+
+            default:
+                return null;
+        }
+    }
+
+    private static bool IsXmlRowsetMethod(string name) =>
+        string.Equals(name, MethodCallTypeResolver.XmlRowsetMethodName, StringComparison.OrdinalIgnoreCase);
+
+    private static ScopeEntry XmlRowsetEntry(IList<Identifier> columns) =>
+        new(new ResolvedRelation(QualifiedName: null, [.. columns.Select(c => new ResolvedColumn(c.Value, new ColumnProvenance.Declared(new SqlType(SqlTypeCategory.Xml))))]), IsViewLayer: false);
 
     private static ResolvedRelation WithNullableSideColumns(ResolvedRelation relation) =>
         relation with
@@ -177,6 +262,7 @@ public static class FromScopeResolver
         VariableTableReference variableTable => ResolveVariableTableReference(variableTable, context),
         PivotedTableReference pivot => ResolvePivotedTableReference(pivot, context),
         UnpivotedTableReference unpivot => ResolveUnpivotedTableReference(unpivot, context),
+        FullTextTableReference fullText => ResolveFullTextTableReference(fullText, context),
         _ => ResolveUnsupportedTableReference(tableReference, context),
     };
 
@@ -453,6 +539,37 @@ public static class FromScopeResolver
 
         var variableTableAlias = variableTable.Alias?.Value ?? variableName;
         return (variableTableAlias, new ScopeEntry(ToResolvedRelation(variableTableCatalog, variableName), IsViewLayer: false));
+    }
+
+    private static (string? Alias, ScopeEntry Entry) ResolveFullTextTableReference(FullTextTableReference fullText, ResolutionContext context)
+    {
+        var catalog = context.Catalog;
+        var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(fullText.TableName));
+        var table = catalog.Find(qualifiedName, context.ProcScope);
+        var keyType = table?.FullTextKeyColumnName is { } keyColumnName
+            ? table.FindColumn(keyColumnName, catalog.IdentifierComparer)?.Type
+            : null;
+
+        ColumnProvenance keyProvenance;
+        if (keyType is null)
+        {
+            const string reason = "the full-text key column type of the searched table is not known to the catalog";
+            context.Ledger?.Record(
+                AnalysisPass.Lineage, context.SourcePath, fullText.StartLine, fullText.StartColumn,
+                FromTableReferenceConstructKind, $"'{qualifiedName}': {fullText.FullTextFunctionType} KEY column left unresolved - {reason}");
+            keyProvenance = new ColumnProvenance.Unknown(reason);
+        }
+        else
+        {
+            keyProvenance = new ColumnProvenance.Declared(keyType);
+        }
+
+        var columns = new List<ResolvedColumn>
+        {
+            new("KEY", keyProvenance),
+            new("RANK", new ColumnProvenance.Declared(new SqlType(SqlTypeCategory.Int))),
+        };
+        return (fullText.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
     }
 
     private static (string? Alias, ScopeEntry Entry) ResolveUnsupportedTableReference(TableReference tableReference, ResolutionContext context)

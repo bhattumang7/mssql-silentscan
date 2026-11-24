@@ -16,6 +16,12 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
         GO
         CREATE PROCEDURE dbo.ReadAmounts @t dbo.AmountTable READONLY AS SELECT Amt FROM @t;
         GO
+        CREATE FUNCTION dbo.MstvfAmounts (@v DECIMAL(10,4)) RETURNS @r TABLE (Narrow DECIMAL(10,2), Same DECIMAL(10,4)) AS
+        BEGIN
+            INSERT INTO @r (Narrow, Same) VALUES (@v, @v);
+            RETURN;
+        END;
+        GO
         """;
 
     [Fact]
@@ -81,5 +87,18 @@ public sealed class WriteLossAndCallSiteEngineFactOracleTests : OracleTestFixtur
 
         Assert.Equal(1.24m, await ScalarAsync<decimal>(connection, "SELECT Amt FROM #narrow;"));
         Assert.Equal(1.2399m, await ScalarAsync<decimal>(connection, "SELECT Amt FROM #same;"));
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.WriteLossNumericScaleNarrowingRuleId)]
+    public async Task InsertIntoTableVariableOrMultiStatementReturnTable_RoundsWideDecimal_SameScaleControlKeepsIt()
+    {
+        var declared = await RowsAsync("DECLARE @t TABLE (Narrow DECIMAL(10,2), Same DECIMAL(10,4)); DECLARE @v DECIMAL(10,4) = 1.2399; INSERT INTO @t (Narrow, Same) VALUES (@v, @v); SELECT Narrow, Same FROM @t;");
+        var returned = await RowsAsync("SELECT Narrow, Same FROM dbo.MstvfAmounts(1.2399);");
+
+        Assert.Equal(1.24m, declared[0][0]);
+        Assert.Equal(1.2399m, declared[0][1]);
+        Assert.Equal(1.24m, returned[0][0]);
+        Assert.Equal(1.2399m, returned[0][1]);
     }
 }

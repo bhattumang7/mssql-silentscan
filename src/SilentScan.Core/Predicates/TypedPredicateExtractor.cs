@@ -568,6 +568,11 @@ public static class TypedPredicateExtractor
 
         private CatalogTable? ResolveWriteTargetTable(TableReference target, ModuleWalker walker)
         {
+            if (target is VariableTableReference variableTable)
+            {
+                return catalog.Find(variableTable.Variable.Name, walker.CurrentProcScope);
+            }
+
             if (target is not NamedTableReference named)
             {
                 return null;
@@ -1167,6 +1172,10 @@ public static class TypedPredicateExtractor
                 case GlobalVariableExpression globalVariable:
                     return ResolveGlobalVariableOperand(globalVariable) with { IsDerivedType = true };
 
+                case ParameterlessCall parameterless
+                    when TypeInference.BuiltinFunctionTypeResolver.ResolveParameterlessCall(parameterless.ParameterlessCallType) is { } parameterlessType:
+                    return new PredicateOperand.Value(parameterlessType, IsDerivedType: true);
+
                 case FunctionCall functionCall:
                     return ResolveFunctionCallOperand(functionCall, scopeChain, walker) with { IsDerivedType = true };
 
@@ -1219,11 +1228,34 @@ public static class TypedPredicateExtractor
         {
             var name = functionCall.FunctionName.Value;
 
+            if (ScalarExpressionResolver.TryResolveMethodCall(
+                    functionCall, scopeChain, sourcePath,
+                    new ScalarExpressionResolver.ScalarTypeContext(Ledger: null, catalog.TypeAliases, catalog, _variables)) is { } methodCall)
+            {
+                if (methodCall.ResultType is null)
+                {
+                    ledger.Record(
+                        AnalysisPass.Predicates, sourcePath, functionCall.StartLine, functionCall.StartColumn,
+                        PredicateOperandConstructKind,
+                        $"method '{name}' on a value of type '{methodCall.TargetType?.ToString() ?? "unresolved"}' has no return-type model - resolved Unknown");
+                }
+
+                return new PredicateOperand.Value(methodCall.ResultType);
+            }
+
             if (TypeInference.BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(name) is { } argumentIndex && functionCall.Parameters.Count > argumentIndex)
             {
                 var argumentType = OperandType(ResolveOperand(functionCall.Parameters[argumentIndex], scopeChain, walker));
                 argumentType = TypeInference.BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
                 return new PredicateOperand.Value(argumentType);
+            }
+
+            if (TypeInference.BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name) is { } maxWidenedIndex)
+            {
+                var decidingType = functionCall.Parameters.Count > maxWidenedIndex
+                    ? OperandType(ResolveOperand(functionCall.Parameters[maxWidenedIndex], scopeChain, walker))
+                    : null;
+                return new PredicateOperand.Value(TypeInference.BuiltinFunctionTypeResolver.ResolveMaxWidenedReturnType(decidingType));
             }
 
             var fixedType = TypeInference.BuiltinFunctionTypeResolver.ResolveFixedReturnType(name);

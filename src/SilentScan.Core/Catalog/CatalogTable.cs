@@ -28,7 +28,8 @@ public sealed record CatalogTable(
     bool CdcPartitionSwitchDisallowed = false,
     string? PartitionSchemeName = null,
     bool HasFullTextIndex = false,
-    IReadOnlyList<string>? SemanticFullTextColumnNames = null)
+    IReadOnlyList<string>? SemanticFullTextColumnNames = null,
+    string? FullTextKeyColumnName = null)
 {
 
     public string QualifiedName => SchemaName is null ? Name : $"{SchemaName}.{Name}";

@@ -99,18 +99,18 @@ public static class BuiltinRegistry
         yield return CharOrNChar("NCHAR", maxCodePoint: 65535, SqlTypeCategory.NChar);
         yield return Str();
 
-        yield return NonDeterministicTyped("NEWID", new SqlType(SqlTypeCategory.UniqueIdentifier));
-        yield return NonDeterministicTyped("NEWSEQUENTIALID", new SqlType(SqlTypeCategory.UniqueIdentifier));
-        yield return NonDeterministicTyped("GETDATE", new SqlType(SqlTypeCategory.DateTime));
-        yield return NonDeterministicTyped("GETUTCDATE", new SqlType(SqlTypeCategory.DateTime));
-        yield return NonDeterministicTyped("SYSDATETIME", new SqlType(SqlTypeCategory.DateTime2));
-        yield return NonDeterministicTyped("SYSUTCDATETIME", new SqlType(SqlTypeCategory.DateTime2));
-        yield return NonDeterministicTyped("SYSDATETIMEOFFSET", new SqlType(SqlTypeCategory.DateTimeOffset));
-        yield return NonDeterministicTyped("RAND", new SqlType(SqlTypeCategory.Float));
-        yield return NonDeterministicTyped("CHECKSUM", new SqlType(SqlTypeCategory.Int));
-        yield return NonDeterministicTyped("BINARY_CHECKSUM", new SqlType(SqlTypeCategory.Int));
+        yield return NonDeterministicTyped("NEWID");
+        yield return NonDeterministicTyped("NEWSEQUENTIALID");
+        yield return NonDeterministicTyped("GETDATE");
+        yield return NonDeterministicTyped("GETUTCDATE");
+        yield return NonDeterministicTyped("SYSDATETIME");
+        yield return NonDeterministicTyped("SYSUTCDATETIME");
+        yield return NonDeterministicTyped("SYSDATETIMEOFFSET");
+        yield return NonDeterministicTyped("RAND");
+        yield return NonDeterministicTyped("CHECKSUM");
+        yield return NonDeterministicTyped("BINARY_CHECKSUM");
 
-        yield return FixedTypeSpec("SERVERPROPERTY", new SqlType(SqlTypeCategory.SqlVariant), HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("SERVERPROPERTY", HoleKind.EnvironmentDependent);
 
         yield return EnvironmentNameSpec("DB_NAME");
         yield return EnvironmentNameSpec("USER_NAME");
@@ -119,23 +119,23 @@ public static class BuiltinRegistry
         yield return EnvironmentNameSpec("APP_NAME");
         yield return EnvironmentNameSpec("HOST_NAME");
         yield return EnvironmentNameSpec("SCHEMA_NAME");
-        yield return FixedTypeSpec("ORIGINAL_LOGIN", new SqlType(SqlTypeCategory.NVarChar, Length: 4000), HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ORIGINAL_LOGIN", HoleKind.EnvironmentDependent);
 
         yield return DateAdd();
-        yield return FixedTypeSpec("DATEPART", new SqlType(SqlTypeCategory.Int), HoleKind.ArgumentIndependentReturnType);
-        yield return FixedTypeSpec("DATEDIFF", new SqlType(SqlTypeCategory.Int), HoleKind.ArgumentIndependentReturnType);
-        yield return FixedTypeSpec("CHARINDEX", new SqlType(SqlTypeCategory.Int), HoleKind.ArgumentIndependentReturnType);
-        yield return FixedTypeSpec("DATALENGTH", new SqlType(SqlTypeCategory.Int), HoleKind.ArgumentIndependentReturnType);
-        yield return FixedTypeSpec("LEN", new SqlType(SqlTypeCategory.Int), HoleKind.ArgumentIndependentReturnType);
+        yield return FixedTypeSpec("DATEPART", HoleKind.ArgumentIndependentReturnType);
+        yield return FixedTypeSpec("DATEDIFF", HoleKind.ArgumentIndependentReturnType);
+        yield return MaxWidenedSpec("CHARINDEX");
+        yield return MaxWidenedSpec("DATALENGTH");
+        yield return MaxWidenedSpec("LEN");
         yield return StuffSpec();
 
-        yield return FixedTypeSpec("ERROR_MESSAGE", new SqlType(SqlTypeCategory.NVarChar, Length: 4000), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("ERROR_NUMBER", new SqlType(SqlTypeCategory.Int), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("ERROR_SEVERITY", new SqlType(SqlTypeCategory.Int), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("ERROR_STATE", new SqlType(SqlTypeCategory.Int), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("ERROR_LINE", new SqlType(SqlTypeCategory.Int), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("ERROR_PROCEDURE", new SqlType(SqlTypeCategory.NVarChar, Length: 128), HoleKind.EnvironmentDependent);
-        yield return FixedTypeSpec("SCOPE_IDENTITY", new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: 0), HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_MESSAGE", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_NUMBER", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_SEVERITY", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_STATE", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_LINE", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("ERROR_PROCEDURE", HoleKind.EnvironmentDependent);
+        yield return FixedTypeSpec("SCOPE_IDENTITY", HoleKind.EnvironmentDependent);
     }
 
     private static BuiltinSpec DateAdd() => new(
@@ -160,7 +160,34 @@ public static class BuiltinRegistry
         UnconditionalFailReason: null);
 
     private static BuiltinSpec EnvironmentNameSpec(string name) =>
-        FixedTypeSpec(name, new SqlType(SqlTypeCategory.NVarChar, Length: 128), HoleKind.EnvironmentDependent);
+        FixedTypeSpec(name, HoleKind.EnvironmentDependent);
+
+    private static BuiltinSpec MaxWidenedSpec(string name)
+    {
+        var decidingIndex = BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name)
+            ?? throw new InvalidOperationException($"'{name}' has no MAX-widened argument in BuiltinFunctionTypeResolver");
+        return new BuiltinSpec(
+            name,
+            Evaluate: null,
+            HoleTransfer: call =>
+            {
+                var decidingType = call.Arguments.Count > decidingIndex ? DecidingArgumentType(call.Arguments[decidingIndex]) : null;
+                return BuiltinFunctionTypeResolver.ResolveMaxWidenedReturnType(decidingType) is { } returnType
+                    ? BuiltinFoldResult.OkHole(returnType, call.Site, HoleKind.ArgumentIndependentReturnType)
+                    : UnresolvedOrGeneric(call.Arguments);
+            },
+            ReturnType: null,
+            ReturnKind: default,
+            UnconditionalFailReason: null);
+    }
+
+    private static SqlType? DecidingArgumentType(BuiltinArgument argument) => argument switch
+    {
+        BuiltinArgument.Hole hole => hole.Type,
+        BuiltinArgument.Unresolved unresolved => unresolved.Type,
+        BuiltinArgument.Number => new SqlType(SqlTypeCategory.Int),
+        _ => null,
+    };
 
     private static BuiltinSpec CaseConversionSpec(string name, Func<string, string> convert) => new(
         name,
@@ -519,10 +546,16 @@ public static class BuiltinRegistry
         ReturnKind: default,
         UnconditionalFailReason: null);
 
-    private static BuiltinSpec NonDeterministicTyped(string name, SqlType returnType) => FixedTypeSpec(name, returnType, HoleKind.NonDeterministicTyped);
+    private static BuiltinSpec NonDeterministicTyped(string name) => FixedTypeSpec(name, HoleKind.NonDeterministicTyped);
 
-    private static BuiltinSpec FixedTypeSpec(string name, SqlType returnType, HoleKind kind) => new(
-        name, Evaluate: null, HoleTransfer: null, ReturnType: returnType, ReturnKind: kind, UnconditionalFailReason: null);
+    private static BuiltinSpec FixedTypeSpec(string name, HoleKind kind) => new(
+        name,
+        Evaluate: null,
+        HoleTransfer: null,
+        ReturnType: BuiltinFunctionTypeResolver.ResolveFixedReturnType(name)
+            ?? throw new InvalidOperationException($"'{name}' has no fixed return type in BuiltinFunctionTypeResolver"),
+        ReturnKind: kind,
+        UnconditionalFailReason: null);
 }
 
 public sealed record BuiltinSpec(

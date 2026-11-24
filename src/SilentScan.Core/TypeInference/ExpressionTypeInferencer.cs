@@ -49,6 +49,8 @@ public static class ExpressionTypeInferencer
 
         RightFunctionCall right => ResolveBuiltinCall("RIGHT", right.Parameters, resolveLeaf, typeAliases),
 
+        ParameterlessCall parameterless => BuiltinFunctionTypeResolver.ResolveParameterlessCall(parameterless.ParameterlessCallType),
+
         _ => resolveLeaf(expression),
     };
 
@@ -65,6 +67,13 @@ public static class ExpressionTypeInferencer
         {
             var argumentType = Resolve(parameters[argumentIndex], resolveLeaf, typeAliases);
             return BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
+        }
+
+        if (BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name) is { } maxWidenedIndex)
+        {
+            return parameters.Count > maxWidenedIndex
+                ? BuiltinFunctionTypeResolver.ResolveMaxWidenedReturnType(Resolve(parameters[maxWidenedIndex], resolveLeaf, typeAliases))
+                : null;
         }
 
         return BuiltinFunctionTypeResolver.ResolveFixedReturnType(name);

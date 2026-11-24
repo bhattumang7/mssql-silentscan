@@ -7,7 +7,7 @@ namespace SilentScan.Tests.Support;
 
 public abstract class OracleTestFixture : IAsyncLifetime
 {
-    protected SqlServerOptions Options { get; } = SqlServerOptions.LocalDocker;
+    protected virtual SqlServerOptions Options => SqlServerOptions.LocalDocker;
 
     protected abstract string DatabaseNameSeed { get; }
 

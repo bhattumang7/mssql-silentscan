@@ -90,10 +90,11 @@ public sealed class LiveCatalogReader
                 HasRuleConstraint: ruleConstraintTables.Contains(objectId),
                 CdcPartitionSwitchDisallowed: cdcPartitionSwitchDisallowedTables.Contains(objectId),
                 PartitionSchemeName: partitionSchemeByTable.GetValueOrDefault(objectId),
-                HasFullTextIndex: fullTextIndexTables.Contains(objectId),
-                SemanticFullTextColumnNames: fullTextIndexTables.Contains(objectId)
+                HasFullTextIndex: fullTextIndexTables.ContainsKey(objectId),
+                SemanticFullTextColumnNames: fullTextIndexTables.ContainsKey(objectId)
                     ? semanticFullTextColumnsByTable.GetValueOrDefault(objectId, [])
-                    : null));
+                    : null,
+                FullTextKeyColumnName: fullTextIndexTables.GetValueOrDefault(objectId)));
         }
 
         foreach (var (schemaName, functionName, columns) in await ReadClrTableValuedFunctionShapesAsync(connection, catalog.Skipped, cancellationToken))
@@ -594,11 +595,12 @@ public sealed class LiveCatalogReader
     {
         const string sql = """
             SELECT o.object_id, s.name AS schema_name, o.name AS function_name, c.name AS column_name,
-                   ty.name AS type_name, c.max_length, c.precision, c.scale, c.collation_name, c.is_nullable
+                   COALESCE(bt.name, ty.name) AS type_name, c.max_length, c.precision, c.scale, c.collation_name, c.is_nullable
             FROM sys.objects o
             JOIN sys.schemas s ON s.schema_id = o.schema_id
             JOIN sys.columns c ON c.object_id = o.object_id
             JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = ty.system_type_id AND ty.is_user_defined = 1 AND ty.is_assembly_type = 0 AND ty.is_table_type = 0
             WHERE o.type = 'FT' AND o.is_ms_shipped = 0
             ORDER BY o.object_id, c.column_id;
             """;
@@ -646,11 +648,12 @@ public sealed class LiveCatalogReader
     {
         const string sql = """
             SELECT tt.user_type_id, s.name AS schema_name, tt.name AS type_name, c.name AS column_name,
-                   ty.name AS column_type_name, c.max_length, c.precision, c.scale, c.collation_name, c.is_nullable
+                   COALESCE(bt.name, ty.name) AS column_type_name, c.max_length, c.precision, c.scale, c.collation_name, c.is_nullable
             FROM sys.table_types tt
             JOIN sys.schemas s ON s.schema_id = tt.schema_id
             JOIN sys.columns c ON c.object_id = tt.type_table_object_id
             JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = ty.system_type_id AND ty.is_user_defined = 1 AND ty.is_assembly_type = 0 AND ty.is_table_type = 0
             WHERE tt.is_user_defined = 1
             ORDER BY tt.user_type_id, c.column_id;
             """;
@@ -698,11 +701,12 @@ public sealed class LiveCatalogReader
     {
         const string sql = """
             SELECT s.name AS schema_name, o.name AS function_name,
-                   ty.name AS type_name, p.max_length, p.precision, p.scale
+                   COALESCE(bt.name, ty.name) AS type_name, p.max_length, p.precision, p.scale
             FROM sys.objects o
             JOIN sys.schemas s ON s.schema_id = o.schema_id
             JOIN sys.parameters p ON p.object_id = o.object_id AND p.parameter_id = 0
             JOIN sys.types ty ON ty.user_type_id = p.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = ty.system_type_id AND ty.is_user_defined = 1 AND ty.is_assembly_type = 0 AND ty.is_table_type = 0
             WHERE o.type = 'FS' AND o.is_ms_shipped = 0;
             """;
 
@@ -921,13 +925,14 @@ public sealed class LiveCatalogReader
     {
         const string sql = """
             SELECT c.object_id, s.name AS schema_name, t.name AS table_name, c.name AS column_name,
-                   ty.name AS type_name, c.max_length, c.precision, c.scale, c.collation_name,
+                   COALESCE(bt.name, ty.name) AS type_name, c.max_length, c.precision, c.scale, c.collation_name,
                    c.is_nullable, c.is_identity, c.is_computed, cc.is_persisted, c.is_ansi_padded,
                    CONVERT(decimal(38,0), idc.seed_value), CONVERT(decimal(38,0), idc.increment_value),
                    CONVERT(decimal(38,0), idc.last_value), c.encryption_type,
                    c.is_masked, mc.masking_function, c.generated_always_type, c.is_hidden
             FROM sys.columns c
             JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = ty.system_type_id AND ty.is_user_defined = 1 AND ty.is_assembly_type = 0 AND ty.is_table_type = 0
             JOIN sys.tables t ON t.object_id = c.object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             LEFT JOIN sys.computed_columns cc ON cc.object_id = c.object_id AND cc.column_id = c.column_id
@@ -1295,18 +1300,23 @@ public sealed class LiveCatalogReader
         return tables;
     }
 
-    private static async Task<HashSet<int>> ReadFullTextIndexTablesAsync(
+    private static async Task<Dictionary<int, string?>> ReadFullTextIndexTablesAsync(
         SqlConnection connection, CancellationToken cancellationToken)
     {
-        const string sql = "SELECT object_id FROM sys.fulltext_indexes;";
+        const string sql = """
+            SELECT fi.object_id, c.name
+            FROM sys.fulltext_indexes fi
+            LEFT JOIN sys.index_columns ic ON ic.object_id = fi.object_id AND ic.index_id = fi.unique_index_id AND ic.key_ordinal = 1
+            LEFT JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id;
+            """;
 
         await using var command = connection.CreateReadOnlyCommand(sql);
 
-        var tables = new HashSet<int>();
+        var tables = new Dictionary<int, string?>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            tables.Add(reader.GetInt32(0));
+            tables[reader.GetInt32(0)] = await reader.IsDBNullAsync(1, cancellationToken) ? null : reader.GetString(1);
         }
 
         return tables;

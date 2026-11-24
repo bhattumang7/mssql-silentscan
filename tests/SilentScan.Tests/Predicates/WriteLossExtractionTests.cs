@@ -728,4 +728,26 @@ public sealed class WriteLossExtractionTests
         Assert.Equal(WriteLossKind.ApproximateToExactTruncation, finding.Kind);
         Assert.Equal(WriteLossTarget.ParameterDefault, finding.Target);
     }
+
+    [Theory]
+    [InlineData("CREATE PROCEDURE dbo.p @v DECIMAL(10,4) AS DECLARE @t TABLE (Amt DECIMAL(10,2)); INSERT INTO @t (Amt) VALUES (@v);", "@t")]
+    [InlineData("CREATE FUNCTION dbo.f (@v DECIMAL(10,4)) RETURNS @r TABLE (Amt DECIMAL(10,2)) AS BEGIN INSERT INTO @r (Amt) VALUES (@v); RETURN; END;", "@r")]
+    [InlineData("CREATE FUNCTION dbo.f (@v DECIMAL(10,4)) RETURNS @r TABLE (Amt DECIMAL(10,2)) AS BEGIN INSERT INTO @r SELECT @v; RETURN; END;", "@r")]
+    public void Extract_InsertIntoTableVariable_IsAnalysedLikeATable(string module, string target)
+    {
+        var result = ExtractAll(module);
+
+        var finding = Assert.Single(result.WriteLossFindings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.Equal(target, finding.TableQualifiedName);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "write target");
+    }
+
+    [Fact]
+    public void Extract_InsertIntoTableVariableOfSameScale_NoFinding()
+    {
+        var result = ExtractAll("CREATE PROCEDURE dbo.p @v DECIMAL(10,4) AS DECLARE @t TABLE (Amt DECIMAL(10,4)); INSERT INTO @t (Amt) VALUES (@v);");
+
+        Assert.Empty(result.WriteLossFindings);
+    }
 }

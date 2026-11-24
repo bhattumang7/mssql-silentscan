@@ -51,6 +51,8 @@ public static class ScalarExpressionResolver
         ColumnReferenceExpression columnRef => ResolveColumnReference(columnRef, context.ScopeChain, context.SourcePath, context.Ledger, context.Catalog),
         VariableReference variableRef => ResolveVariableReference(variableRef, context),
         GlobalVariableExpression globalVariable => ResolveGlobalVariableExpression(globalVariable, context),
+        ParameterlessCall parameterless when BuiltinFunctionTypeResolver.ResolveParameterlessCall(parameterless.ParameterlessCallType) is { } parameterlessType =>
+            new ColumnProvenance.Expression(parameterlessType, Inputs: [], context.SourcePath, parameterless.StartLine),
         ScalarSubquery scalarSubquery => ResolveScalarSubquery(scalarSubquery, context),
         CastCall castCall => ResolveCastOrConvert(castCall.DataType, castCall.Parameter, context, castCall.StartLine),
         ConvertCall convertCall => ResolveCastOrConvert(convertCall.DataType, convertCall.Parameter, context, convertCall.StartLine),
@@ -90,13 +92,18 @@ public static class ScalarExpressionResolver
     private static ColumnProvenance.Expression ResolveFunctionCall(FunctionCall functionCall, ExpressionContext context)
     {
         var inputs = CollectColumnInputs(functionCall, context);
-
-        if (functionCall.CallTarget is ExpressionCallTarget)
-        {
-            return new ColumnProvenance.Expression(InferredType: null, inputs, context.SourcePath, functionCall.StartLine);
-        }
-
         var name = functionCall.FunctionName.Value;
+
+        if (TryResolveMethodTarget(functionCall.CallTarget, context) is { } methodTarget)
+        {
+            if (methodTarget.Provenance is { } targetProvenance)
+            {
+                inputs.Add(targetProvenance);
+            }
+
+            var methodType = MethodCallTypeResolver.Resolve(methodTarget.Type, name, functionCall.Parameters, context.TypeAliases);
+            return new ColumnProvenance.Expression(methodType, inputs, context.SourcePath, functionCall.StartLine);
+        }
 
         if (string.Equals(name, "STRING_AGG", StringComparison.OrdinalIgnoreCase) && functionCall.Parameters.Count == 2)
         {
@@ -110,6 +117,14 @@ public static class ScalarExpressionResolver
             var argumentType = ColumnProvenanceAnalysis.TryGetScalarType(Resolve(functionCall.Parameters[argumentIndex], context));
             argumentType = BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
             return new ColumnProvenance.Expression(argumentType, inputs, context.SourcePath, functionCall.StartLine);
+        }
+
+        if (BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name) is { } maxWidenedIndex)
+        {
+            var decidingType = functionCall.Parameters.Count > maxWidenedIndex
+                ? ColumnProvenanceAnalysis.TryGetScalarType(Resolve(functionCall.Parameters[maxWidenedIndex], context))
+                : null;
+            return new ColumnProvenance.Expression(BuiltinFunctionTypeResolver.ResolveMaxWidenedReturnType(decidingType), inputs, context.SourcePath, functionCall.StartLine);
         }
 
         var fixedType = BuiltinFunctionTypeResolver.ResolveFixedReturnType(name);
@@ -128,6 +143,46 @@ public static class ScalarExpressionResolver
         }
 
         return new ColumnProvenance.Expression(InferredType: null, inputs, context.SourcePath, functionCall.StartLine);
+    }
+
+    public readonly record struct MethodCallType(SqlType? TargetType, SqlType? ResultType);
+
+    public static MethodCallType? TryResolveMethodCall(
+        FunctionCall functionCall,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+        string sourcePath,
+        ScalarTypeContext context)
+    {
+        var expressionContext = new ExpressionContext(
+            scopeChain, sourcePath, context.Ledger, context.TypeAliases, context.Catalog, context.Variables, context.ResolveSubquery);
+        return TryResolveMethodTarget(functionCall.CallTarget, expressionContext) is { } target
+            ? new MethodCallType(target.Type, MethodCallTypeResolver.Resolve(target.Type, functionCall.FunctionName.Value, functionCall.Parameters, context.TypeAliases))
+            : null;
+    }
+
+    private readonly record struct MethodTarget(SqlType? Type, ColumnProvenance? Provenance);
+
+    private static MethodTarget? TryResolveMethodTarget(CallTarget? callTarget, ExpressionContext context)
+    {
+        switch (callTarget)
+        {
+            case ExpressionCallTarget expressionTarget:
+                return new MethodTarget(ColumnProvenanceAnalysis.TryGetScalarType(Resolve(expressionTarget.Expression, context)), Provenance: null);
+
+            case UserDefinedTypeCallTarget typeTarget:
+                return new MethodTarget(MethodCallTypeResolver.ResolveTypeName(typeTarget.SchemaObjectName, context.TypeAliases), Provenance: null);
+
+            case MultiPartIdentifierCallTarget multiPartTarget:
+                var columnProvenance = ResolveColumnReference(
+                    new ColumnReferenceExpression { ColumnType = ColumnType.Regular, MultiPartIdentifier = multiPartTarget.MultiPartIdentifier },
+                    context.ScopeChain, context.SourcePath, ledger: null, context.Catalog);
+                return columnProvenance is ColumnProvenance.Unknown
+                    ? null
+                    : new MethodTarget(ColumnProvenanceAnalysis.TryGetScalarType(columnProvenance), columnProvenance);
+
+            default:
+                return null;
+        }
     }
 
     private static ColumnProvenance.Expression ResolveTypedExpression(ScalarExpression expression, ExpressionContext context)
