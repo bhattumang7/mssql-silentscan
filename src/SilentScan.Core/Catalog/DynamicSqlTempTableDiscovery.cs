@@ -10,6 +10,8 @@ public static class DynamicSqlTempTableDiscovery
 {
     private const string CreateTableMarker = "CREATE TABLE";
 
+    private const string SelectIntoMarker = "INTO";
+
     public static DatabaseCatalog Discover(
         IEnumerable<SqlParseResult> parseResults, string? manifestDeclaredCollation = null, string? manifestTempdbCollation = null, int? compatibilityLevel = null,
         DatabaseCatalog? enclosingCatalog = null, IScanStage? stage = null)
@@ -28,8 +30,7 @@ public static class DynamicSqlTempTableDiscovery
 
             foreach (var script in DynamicSqlScannerV2.Scan(result).AnalyzableScripts)
             {
-                if (script.Scope.ProcScope is not { Length: > 0 } scope
-                    || !script.InnerText.Contains(CreateTableMarker, StringComparison.OrdinalIgnoreCase))
+                if (script.Scope.ProcScope is not { Length: > 0 } scope || !MayDefineTempTable(script.InnerText))
                 {
                     continue;
                 }
@@ -46,6 +47,38 @@ public static class DynamicSqlTempTableDiscovery
 
         return wrapped.Count == 0 ? new DatabaseCatalog() : CatalogBuilder.Build(wrapped, manifestDeclaredCollation, manifestTempdbCollation, enclosingCatalog?.IsAnsiNullDefaultOn);
     }
+
+    public static DatabaseCatalog? BuildScriptCatalog(
+        DatabaseCatalog catalog, Lineage.LineageCatalog lineage, string scope, string innerText, string sourcePath, bool? ansiNullDfltOverride = null)
+    {
+        if (!MayDefineTempTable(innerText))
+        {
+            return null;
+        }
+
+        var initialQuotedIdentifiers = catalog.ResolveDynamicSqlQuotedIdentifier(scope);
+        if (TryWrapAsScopedProcedure(innerText, scope, sourcePath, initialQuotedIdentifiers, catalog.CompatibilityLevel, ansiNullDfltOverride) is not { } wrapped)
+        {
+            return null;
+        }
+
+        var permanentTables = catalog.Tables.Where(t => t.Kind is CatalogTableKind.Table or CatalogTableKind.TableType).ToList();
+        var local = CatalogBuilder.Build(
+            [wrapped], catalog.DefaultCollation?.Name, catalog.TempdbCollation?.Name, catalog.IsAnsiNullDefaultOn, knownTables: permanentTables);
+        var defined = local.Tables.Where(t => t.Kind == CatalogTableKind.TemporaryTable && t.SchemaName is null).ToList();
+        if (defined.Count == 0)
+        {
+            return null;
+        }
+
+        var scoped = catalog.WithScriptTables(scope, defined.Select(t => local.Find(t.QualifiedName, scope) ?? t));
+        Lineage.SelectIntoLineagePass.Apply(scoped, lineage, [wrapped]);
+        return scoped;
+    }
+
+    private static bool MayDefineTempTable(string innerText) =>
+        innerText.Contains(CreateTableMarker, StringComparison.OrdinalIgnoreCase)
+        || innerText.Contains(SelectIntoMarker, StringComparison.OrdinalIgnoreCase);
 
     private static SqlParseResult? TryWrapAsScopedProcedure(
         string innerText, string scope, string sourcePath, bool initialQuotedIdentifiers, int? compatibilityLevel, bool? ansiNullDfltOverride)

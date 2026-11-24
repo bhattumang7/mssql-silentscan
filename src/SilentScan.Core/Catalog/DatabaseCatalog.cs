@@ -11,6 +11,8 @@ public sealed class DatabaseCatalog
 
     private Dictionary<string, CatalogTable> _tablesByQualifiedName;
 
+    private Dictionary<string, CatalogTable>? _scriptTablesByScopedName;
+
     private Dictionary<string, SqlType> _typeAliasesByQualifiedName;
 
     private Dictionary<string, SqlType?> _scalarFunctionReturnTypesByQualifiedName;
@@ -471,8 +473,29 @@ public sealed class DatabaseCatalog
 
     public void AddOrReplace(CatalogTable table) => AddOrReplace(table, scope: null);
 
-    public void AddOrReplace(CatalogTable table, string? scope) =>
-        _tablesByQualifiedName[Key(table.QualifiedName, scope)] = table;
+    public void AddOrReplace(CatalogTable table, string? scope)
+    {
+        var key = Key(table.QualifiedName, scope);
+        if (_scriptTablesByScopedName is not null && scope is not null && _scriptTablesByScopedName.ContainsKey(key))
+        {
+            _scriptTablesByScopedName[key] = table;
+            return;
+        }
+
+        _tablesByQualifiedName[key] = table;
+    }
+
+    public DatabaseCatalog WithScriptTables(string scope, IEnumerable<CatalogTable> tables)
+    {
+        var clone = (DatabaseCatalog)MemberwiseClone();
+        clone._scriptTablesByScopedName = new Dictionary<string, CatalogTable>(_scriptTablesByScopedName ?? [], _identifierComparer);
+        foreach (var table in tables)
+        {
+            clone._scriptTablesByScopedName[Key(table.QualifiedName, scope)] = table;
+        }
+
+        return clone;
+    }
 
     public CatalogTable? Find(string qualifiedName)
     {
@@ -488,6 +511,11 @@ public sealed class DatabaseCatalog
 
     public CatalogTable? Find(string qualifiedName, string? scope)
     {
+        if (scope is not null && _scriptTablesByScopedName is not null && _scriptTablesByScopedName.TryGetValue(Key(qualifiedName, scope), out var scriptScoped))
+        {
+            return scriptScoped;
+        }
+
         if (scope is not null && _tablesByQualifiedName.TryGetValue(Key(qualifiedName, scope), out var scoped))
         {
             return scoped;
@@ -503,6 +531,11 @@ public sealed class DatabaseCatalog
 
     public (CatalogTable? Table, string? ActualScope) FindForMutation(string qualifiedName, string? scope)
     {
+        if (scope is not null && _scriptTablesByScopedName is not null && _scriptTablesByScopedName.TryGetValue(Key(qualifiedName, scope), out var scriptScoped))
+        {
+            return (scriptScoped, scope);
+        }
+
         if (scope is not null && _tablesByQualifiedName.TryGetValue(Key(qualifiedName, scope), out var scoped))
         {
             return (scoped, scope);

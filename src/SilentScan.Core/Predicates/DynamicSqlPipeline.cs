@@ -480,6 +480,12 @@ public static partial class DynamicSqlPipeline
         Dictionary<DynamicSqlScript, IReadOnlyDictionary<string, SqlType?>>? seeds,
         ResultAccumulator accumulator)
     {
+        if (script.Scope.ProcScope is { Length: > 0 } procScope
+            && DynamicSqlTempTableDiscovery.BuildScriptCatalog(context.Catalog, context.Lineage, procScope, script.InnerText, script.CallSite.SourcePath) is { } scriptCatalog)
+        {
+            context = context with { Catalog = scriptCatalog };
+        }
+
         var placeholders = script.PlaceholderOccurrences;
         var parseOptions = new DynamicSqlParseOptions(
             context.Catalog.ResolveDynamicSqlQuotedIdentifier(script.Scope.ProcScope), context.Catalog.CompatibilityLevel);
