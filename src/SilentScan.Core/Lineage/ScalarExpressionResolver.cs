@@ -28,6 +28,15 @@ public static class ScalarExpressionResolver
         DatabaseCatalog? catalog = null) =>
         Resolve(expression, new ExpressionContext([(scope, orderedRelations)], sourcePath, ledger, typeAliases, catalog));
 
+    internal static ColumnProvenance Resolve(
+        ScalarExpression expression,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+        string sourcePath,
+        SkipLedger? ledger,
+        IReadOnlyDictionary<string, SqlType>? typeAliases,
+        DatabaseCatalog? catalog) =>
+        Resolve(expression, new ExpressionContext(scopeChain, sourcePath, ledger, typeAliases, catalog));
+
     public readonly record struct ScalarTypeContext(
         SkipLedger? Ledger,
         IReadOnlyDictionary<string, SqlType>? TypeAliases,

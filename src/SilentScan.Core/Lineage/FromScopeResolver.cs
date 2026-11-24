@@ -18,7 +18,8 @@ public static class FromScopeResolver
         SkipLedger? Ledger,
         IReadOnlyDictionary<string, ResolvedRelation> CteRelations,
         string? ProcScope,
-        IReadOnlyDictionary<string, IReadOnlyList<string>>? CallerScopeByCalleeScope = null);
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? CallerScopeByCalleeScope = null,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? OuterScopes = null);
 
     public static (Dictionary<string, ScopeEntry> ByAlias, List<ScopeEntry> Ordered) Resolve(
         FromClause? fromClause,
@@ -156,7 +157,8 @@ public static class FromScopeResolver
     {
         foreach (var (leaf, isNullableSide) in FlattenJoins(tableReference))
         {
-            var (alias, entry) = TryResolveXmlRowsetMethod(leaf, context, byAlias, ordered) ?? ResolveTableReference(leaf, context, aliasOverride);
+            var leafContext = context with { OuterScopes = [(byAlias, ordered), .. context.OuterScopes ?? []] };
+            var (alias, entry) = TryResolveXmlRowsetMethod(leaf, context, byAlias, ordered) ?? ResolveTableReference(leaf, leafContext, aliasOverride);
             if (isNullableSide)
             {
                 entry = entry with { Relation = WithNullableSideColumns(entry.Relation) };
@@ -311,7 +313,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveNamedTableReference(NamedTableReference named, ResolutionContext context, string? aliasOverride)
     {
-        var (catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, callerScopeByCalleeScope) = context;
+        var (catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, callerScopeByCalleeScope, _) = context;
 
         if (named.SchemaObject.SchemaIdentifier is null
             && cteRelations is not null
@@ -397,9 +399,9 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveDerivedTableReference(QueryDerivedTable derived, ResolutionContext context)
     {
-        var (catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, _) = context;
+        var (catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, _, _) = context;
 
-        var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope);
+        var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, context.OuterScopes);
         if (derived.Columns.Count > 0)
         {
             if (innerColumns.Count == derived.Columns.Count)
@@ -423,7 +425,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveTvfTableReference(SchemaObjectFunctionTableReference tvf, ResolutionContext context)
     {
-        var (catalog, resolvedViews, sourcePath, ledger, _, _, _) = context;
+        var (catalog, resolvedViews, sourcePath, ledger, _, _, _, _) = context;
 
         if (tvf.SchemaObject.ServerIdentifier is { Value.Length: > 0 })
         {
@@ -457,7 +459,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolvePivotedTableReference(PivotedTableReference pivot, ResolutionContext context)
     {
-        var (catalog, _, sourcePath, ledger, _, _, _) = context;
+        var (catalog, _, sourcePath, ledger, _, _, _, _) = context;
         var innerColumns = ResolveFlattenedSourceColumns(pivot.TableReference, context);
 
         if (pivot.ValueColumns.Count != 1)
@@ -502,7 +504,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveUnpivotedTableReference(UnpivotedTableReference unpivot, ResolutionContext context)
     {
-        var (catalog, _, sourcePath, ledger, _, _, _) = context;
+        var (catalog, _, sourcePath, ledger, _, _, _, _) = context;
         var innerColumns = ResolveFlattenedSourceColumns(unpivot.TableReference, context);
 
         var inColumnNames = unpivot.InColumns
@@ -561,7 +563,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveVariableTableReference(VariableTableReference variableTable, ResolutionContext context)
     {
-        var (catalog, _, sourcePath, ledger, _, procScope, _) = context;
+        var (catalog, _, sourcePath, ledger, _, procScope, _, _) = context;
 
         var variableName = variableTable.Variable.Name;
         var variableTableCatalog = catalog.Find(variableName, procScope);
@@ -609,7 +611,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveOpenXmlTableReference(OpenXmlTableReference openXml, ResolutionContext context)
     {
-        var (catalog, _, sourcePath, ledger, _, procScope, _) = context;
+        var (catalog, _, sourcePath, ledger, _, procScope, _, _) = context;
 
         if (openXml.TableName is { } schemaTable)
         {
@@ -655,7 +657,7 @@ public static class FromScopeResolver
 
     private static (string? Alias, ScopeEntry Entry) ResolveUnsupportedTableReference(TableReference tableReference, ResolutionContext context)
     {
-        var (_, _, sourcePath, ledger, _, _, _) = context;
+        var (_, _, sourcePath, ledger, _, _, _, _) = context;
 
         ledger?.Record(
             AnalysisPass.Lineage, sourcePath, tableReference.StartLine, tableReference.StartColumn,

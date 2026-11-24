@@ -18,12 +18,13 @@ public static class QueryExpressionResolver
         string sourcePath,
         SkipLedger? ledger = null,
         IReadOnlyDictionary<string, ResolvedRelation>? cteRelations = null,
-        string? procScope = null) =>
+        string? procScope = null,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes = null) =>
         queryExpression switch
         {
-            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope),
-            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope),
-            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope),
+            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
+            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
+            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
             _ => ResolveUnsupported(queryExpression, sourcePath, ledger),
         };
 
@@ -42,10 +43,11 @@ public static class QueryExpressionResolver
         string sourcePath,
         SkipLedger? ledger,
         IReadOnlyDictionary<string, ResolvedRelation>? cteRelations,
-        string? procScope)
+        string? procScope,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes)
     {
-        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope);
-        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope);
+        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes);
+        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes);
 
         if (first.Count != second.Count)
         {
@@ -67,9 +69,13 @@ public static class QueryExpressionResolver
         string sourcePath,
         SkipLedger? ledger,
         IReadOnlyDictionary<string, ResolvedRelation>? cteRelations,
-        string? procScope)
+        string? procScope,
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes)
     {
-        var (byAlias, ordered) = FromScopeResolver.Resolve(spec.FromClause, catalog, resolvedViews, sourcePath, ledger, cteRelations ?? EmptyCteRelations, procScope);
+        var (byAlias, ordered) = FromScopeResolver.Resolve(
+            spec.FromClause,
+            new FromScopeResolver.ResolutionContext(catalog, resolvedViews, sourcePath, ledger, cteRelations ?? EmptyCteRelations, procScope, OuterScopes: outerScopes));
+        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain = [(byAlias, ordered), .. outerScopes ?? []];
         var result = new List<ResolvedColumn>();
 
         foreach (var element in spec.SelectElements)
@@ -82,7 +88,7 @@ public static class QueryExpressionResolver
 
                 case SelectScalarExpression scalar:
                     var name = scalar.ColumnName?.Value ?? InferName(scalar.Expression);
-                    var provenance = ScalarExpressionResolver.Resolve(scalar.Expression, byAlias, ordered, sourcePath, ledger, catalog.TypeAliases, catalog);
+                    var provenance = ScalarExpressionResolver.Resolve(scalar.Expression, scopeChain, sourcePath, ledger, catalog.TypeAliases, catalog);
                     if (EmitsSuperAggregateNulls(spec.GroupByClause) && provenance is ColumnProvenance.BaseColumn grouped)
                     {
                         provenance = grouped with { IsNullableSide = true };
