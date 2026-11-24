@@ -585,9 +585,19 @@ public sealed class WriteLossExtractionTests
     [InlineData("DECLARE @s SMALLDATETIME = '2024-01-15 13:45:00.500';")]
     public void Extract_SourceThatMayCarrySeconds_IntoSmallDateTime_FlagsSmallDateTimeRounding(string statement)
     {
-        var finding = Assert.Single(Extract(statement));
+        var finding = Assert.Single(Extract(statement), f => f.Kind == WriteLossKind.SmallDateTimeRounding);
 
-        Assert.Equal(WriteLossKind.SmallDateTimeRounding, finding.Kind);
+        Assert.Equal(SqlTypeCategory.SmallDateTime, finding.TargetType.Category);
+    }
+
+    [Fact]
+    public void Extract_SysDateTimeIntoNarrowerDateTime2_FlagsTheLostFractionalSeconds()
+    {
+        var findings = Extract("DECLARE @t DATETIME2(3) = SYSDATETIME();");
+
+        var finding = Assert.Single(findings);
+        Assert.Equal(7, finding.SourceType.Scale);
+        Assert.Equal(3, finding.TargetType.Scale);
     }
 
     [Theory]
