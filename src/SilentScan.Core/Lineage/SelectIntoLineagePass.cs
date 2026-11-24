@@ -50,27 +50,28 @@ public static class SelectIntoLineagePass
             var resolved = QueryExpressionResolver.Resolve(
                 select.QueryExpression, catalog, resolvedViews, sourcePath, catalog.Skipped, walker.CurrentCteRelations(), walker.CurrentProcScope);
 
-            if (existing.Columns.Count == 0 && resolved.Count > 0)
+            var existingByName = new Dictionary<string, CatalogColumn>(catalog.IdentifierComparer);
+            foreach (var column in existing.Columns)
             {
-
-                var freshColumns = resolved
-                    .Select(r => new CatalogColumn(r.Name, ColumnProvenanceAnalysis.TryGetScalarType(r.Provenance), IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false))
-                    .ToList();
-                catalog.AddOrReplace(existing with { Columns = freshColumns }, isTemp ? walker.CurrentProcScope : null);
-                return;
+                existingByName.TryAdd(column.Name, column);
             }
 
-            var resolvedByName = new Dictionary<string, ResolvedColumn>(catalog.IdentifierComparer);
+            var mergedColumns = new List<CatalogColumn>();
+            var resolvedNames = new HashSet<string>(catalog.IdentifierComparer);
             foreach (var r in resolved)
             {
-                resolvedByName.TryAdd(r.Name, r);
+                if (!resolvedNames.Add(r.Name))
+                {
+                    continue;
+                }
+
+                var resolvedType = ColumnProvenanceAnalysis.TryGetScalarType(r.Provenance);
+                mergedColumns.Add(existingByName.TryGetValue(r.Name, out var known)
+                    ? known with { Type = known.Type ?? resolvedType }
+                    : new CatalogColumn(r.Name, resolvedType, IsNullable: true, IsIdentity: false, IsComputed: false, IsPersisted: false));
             }
 
-            var mergedColumns = existing.Columns
-                .Select(column => column.Type is null && resolvedByName.TryGetValue(column.Name, out var r)
-                    ? column with { Type = ColumnProvenanceAnalysis.TryGetScalarType(r.Provenance) }
-                    : column)
-                .ToList();
+            mergedColumns.AddRange(existing.Columns.Where(column => !resolvedNames.Contains(column.Name)));
 
             catalog.AddOrReplace(existing with { Columns = mergedColumns }, isTemp ? walker.CurrentProcScope : null);
         }
