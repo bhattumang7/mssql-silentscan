@@ -431,7 +431,7 @@ public static class QueryAntiPatternScanner
             var matchedColumns = new HashSet<string>(catalog.IdentifierComparer);
             var collector = new MatchColumnCollector(targetNames, catalog.IdentifierComparer, matchedColumns);
             spec.SearchCondition.Accept(collector);
-            if (collector.HasUnqualifiedColumn)
+            if (collector.HasUnqualifiedColumn || matchedColumns.Count == 0)
             {
                 return false;
             }

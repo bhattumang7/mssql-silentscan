@@ -16,6 +16,8 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         CREATE TABLE dbo.HeapTargetLocked (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetUpdlock (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetSerializable (K INT NOT NULL, V INT NOT NULL);
+        CREATE TABLE dbo.ConstantFalseTarget (K INT NOT NULL, V INT NOT NULL);
+        CREATE TABLE dbo.ConstantFalseTargetLocked (K INT NOT NULL, V INT NOT NULL);
         GO
         """;
 
@@ -78,7 +80,8 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         Assert.True(await KeyLockStillHeldMidTransactionAsync(targetHint: "WITH (HOLDLOCK)"));
     }
 
-    private async Task<(int DuplicateKeys, int Errors)> RaceAsync(string table, string hint, string isolationLevel = "READ COMMITTED")
+    private async Task<(int DuplicateKeys, int Errors)> RaceAsync(
+        string table, string hint, string isolationLevel = "READ COMMITTED", string matchCondition = "t.K = s.K")
     {
         const int Sessions = 6;
         const int Keys = 300;
@@ -98,7 +101,7 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
             {
                 barriers[key].SignalAndWait();
                 await using var command = new SqlCommand(
-                    $"MERGE dbo.{table} {hint} AS t USING (VALUES (@k, 1)) AS s (K, V) ON t.K = s.K WHEN NOT MATCHED THEN INSERT (K, V) VALUES (s.K, s.V);",
+                    $"MERGE dbo.{table} {hint} AS t USING (VALUES (@k, 1)) AS s (K, V) ON {matchCondition} WHEN NOT MATCHED THEN INSERT (K, V) VALUES (s.K, s.V);",
                     connection);
                 command.Parameters.AddWithValue("@k", key);
                 try
@@ -141,6 +144,16 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         var (duplicateKeys, _) = await RaceAsync("HeapTargetLocked", "WITH (HOLDLOCK)");
 
         Assert.Equal(0, duplicateKeys);
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithAConstantFalseMatchCondition_InsertsEveryRow_WithOrWithoutHoldlock()
+    {
+        var (withoutHint, _) = await RaceAsync("ConstantFalseTarget", string.Empty, matchCondition: "1 = 0");
+        var (withHoldlock, _) = await RaceAsync("ConstantFalseTargetLocked", "WITH (HOLDLOCK)", matchCondition: "1 = 0");
+
+        Assert.Equal(withoutHint, withHoldlock);
+        Assert.True(withHoldlock > 0, $"duplicate keys {withHoldlock}");
     }
 
     [Fact]

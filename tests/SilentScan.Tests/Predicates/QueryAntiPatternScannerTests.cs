@@ -624,6 +624,19 @@ public sealed class QueryAntiPatternScannerTests
         Assert.Contains(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
     }
 
+    [Theory]
+    [InlineData("1 = 0")]
+    [InlineData("0 = 1")]
+    [InlineData("(1 = 0)")]
+    public void MergeWithAConstantFalseMatchCondition_NeverFiresMissingHoldlock(string matchCondition)
+    {
+        var findings = Scan(
+            $"MERGE dbo.H AS t USING dbo.B AS s ON {matchCondition} "
+            + "WHEN NOT MATCHED THEN INSERT (Id, V) VALUES (s.AId, s.AId);");
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.MergeMissingHoldlock);
+    }
+
     [Fact]
     public void MergeWithAnUnqualifiedMatchColumn_NeverFiresMissingHoldlock()
     {
