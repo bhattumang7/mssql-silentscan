@@ -38,6 +38,10 @@ False-positive shapes still to remove:
 - float-equality: a stored float compared to a same-typed value with no arithmetic.
 - case-expression-missing-else: the CASE is exhaustive over a domain bounded by DATEPART, an
   IN filter or the statement's own WHERE.
+- partial-composite-fk: the omitted foreign key column is equated to a constant or variable on the
+  referenced table elsewhere in the same statement, so the matched columns identify one row.
+- local-variable-predicate: the equality covers every key column of a unique index, or the
+  column belongs to a table variable, which has no column statistics to fall back from.
 - unresolved-transaction: BEGIN and COMMIT guarded by the same trancount flag, or a reported
   exit that cannot leave the transaction open.
 - argument-type-mismatch, length-truncation, under-length-parameter,
