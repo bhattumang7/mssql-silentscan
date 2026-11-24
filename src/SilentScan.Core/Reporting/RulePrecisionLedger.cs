@@ -22,6 +22,8 @@ public static class RulePrecisionLedger
         new("silentscan/catalog/tvf-return-database-collation", 27, 20, 0, 0),
         new("silentscan/catalog/untrusted-check-constraint", 16, 16, 0, 0),
         new("silentscan/control-flow/case-expression-missing-else", 55, 9, 11, 0),
+        new("silentscan/control-flow/dirty-read-isolation-hint", 80, 19, 1, 0),
+        new("silentscan/control-flow/legacy-identity-intrinsic", 234, 19, 1, 0),
         new("silentscan/control-flow/unassigned-output-parameter", 627, 17, 3, 0),
         new("silentscan/correctness/nonunique-update-source", 3, 2, 1, 0),
         new("silentscan/correctness/not-in-nullable-subquery", 5, 3, 1, 1),
