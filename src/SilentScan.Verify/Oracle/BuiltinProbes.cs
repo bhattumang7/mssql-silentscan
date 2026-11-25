@@ -204,6 +204,7 @@ public static class BuiltinProbes
         P("XML_SCHEMA_NAMESPACE", "XML_SCHEMA_NAMESPACE('dbo', 'x')", None), P("GET_TRANSMISSION_STATUS", "GET_TRANSMISSION_STATUS(NEWID())", None),
         P("PUBLISHINGSERVERNAME", "PUBLISHINGSERVERNAME()", None), P("TEXTVALID", "TEXTVALID('t.c', 0x00)", None),
         P("DEFAULT_DOMAIN", "DEFAULT_DOMAIN()", None),
+        P("COLUMNS_UPDATED", "COLUMNS_UPDATED()", None), P("KEY_NAME", "KEY_NAME(0x00)", None),
     ];
 
     public static readonly IReadOnlyList<BuiltinProbe> LatestOnly = BuildLatestOnly();
@@ -220,7 +221,7 @@ public static class BuiltinProbes
         P("SUSER_OID", "SUSER_OID()", None), P("USER_OID", "USER_OID()", None),
         P("DECRYPTBYPASSPHRASE", "DECRYPTBYPASSPHRASE('p', {0})", Binaries), P("DECRYPTBYKEY", "DECRYPTBYKEY({0})", Binaries),
         P("DECRYPTBYKEYAUTOCERT", "DECRYPTBYKEYAUTOCERT(1, NULL, {0})", Binaries), P("DECRYPTBYCERT", "DECRYPTBYCERT(1, {0})", Binaries),
-        P("DECRYPTBYASYMKEY", "DECRYPTBYASYMKEY(1, {0})", Binaries),
+        P("DECRYPTBYASYMKEY", "DECRYPTBYASYMKEY(1, {0})", Binaries), P("DECRYPTBYKEYAUTOASYMKEY", "DECRYPTBYKEYAUTOASYMKEY(1, NULL, {0})", Binaries),
         P("VERIFYSIGNEDBYCERT", "VERIFYSIGNEDBYCERT(1, {0}, 0x00)", Strings), P("VERIFYSIGNEDBYASYMKEY", "VERIFYSIGNEDBYASYMKEY(1, {0}, 0x00)", Strings),
     ];
 }

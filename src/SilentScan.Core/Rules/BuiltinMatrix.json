@@ -14292,6 +14292,26 @@
       "Deterministic": "0",
       "Precise": "1",
       "Parallel": "NonParallelizableIntrinsicFunction"
+    },
+    {
+      "Function": "COLUMNS_UPDATED",
+      "Shape": "()",
+      "ResultType": "varbinary(4000)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NonParallelizableIntrinsicFunction"
+    },
+    {
+      "Function": "KEY_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
     }
   ]
 }

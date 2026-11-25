@@ -904,6 +904,36 @@
       "Parallel": "NoSerialReason"
     },
     {
+      "Function": "DECRYPTBYKEYAUTOASYMKEY",
+      "Shape": "VARBINARY(20)",
+      "ResultType": "varbinary(8000)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DECRYPTBYKEYAUTOASYMKEY",
+      "Shape": "VARBINARY(MAX)",
+      "ResultType": "varbinary(8000)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DECRYPTBYKEYAUTOASYMKEY",
+      "Shape": "BINARY(10)",
+      "ResultType": "varbinary(8000)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
       "Function": "VERIFYSIGNEDBYCERT",
       "Shape": "VARCHAR(20)",
       "ResultType": "int",
