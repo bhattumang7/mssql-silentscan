@@ -578,7 +578,7 @@ public static class TypedPredicateExtractor
 
                 case SelectInsertSource { Select: { } selectSource }
                     when FlattenInsertBranches(selectSource) is { } branches
-                         && branches.All(b => b.SelectElements.All(e => e is SelectScalarExpression)):
+                         && branches.All(b => b.SelectElements.All(e => e is SelectScalarExpression or SelectStarExpression)):
                     _pendingInsertBranches.Clear();
                     _pendingInsertBranches.UnionWith(branches);
                     _pendingInsertTargetColumns = targetColumns;
@@ -667,19 +667,71 @@ public static class TypedPredicateExtractor
         private void AnalyzeSelectListWriteLoss(
             IList<SelectElement> selectElements, IReadOnlyList<CatalogColumn?> targetColumns, string targetTableQualifiedName, ScopeChain scopeChain, ModuleWalker walker)
         {
-            var count = Math.Min(selectElements.Count, targetColumns.Count);
-            for (var i = 0; i < count; i++)
+            var position = 0;
+            foreach (var element in selectElements)
             {
-
-                var sourceExpression = ((SelectScalarExpression)selectElements[i]).Expression;
-                if (targetColumns[i]?.Type is not { } targetType)
+                if (position >= targetColumns.Count)
                 {
-                    continue;
+                    return;
                 }
 
-                var sourceType = OperandType(ResolveOperand(sourceExpression, scopeChain, walker));
-                EmitAssignment(new AssignmentSite(WriteLossTarget.Column, targetTableQualifiedName, targetColumns[i]!.Name, targetType, sourceType, sourceExpression, scopeChain, walker));
+                switch (element)
+                {
+                    case SelectScalarExpression scalar:
+                        if (targetColumns[position]?.Type is { } targetType)
+                        {
+                            var sourceType = OperandType(ResolveOperand(scalar.Expression, scopeChain, walker));
+                            EmitAssignment(new AssignmentSite(WriteLossTarget.Column, targetTableQualifiedName, targetColumns[position]!.Name, targetType, sourceType, scalar.Expression, scopeChain, walker));
+                        }
+
+                        position++;
+                        break;
+
+                    case SelectStarExpression star:
+                        if (ExpandStarColumns(star, scopeChain) is not { } expanded)
+                        {
+                            return;
+                        }
+
+                        foreach (var column in expanded)
+                        {
+                            if (position >= targetColumns.Count)
+                            {
+                                return;
+                            }
+
+                            if (targetColumns[position]?.Type is { } starTargetType)
+                            {
+                                EmitAssignment(new AssignmentSite(
+                                    WriteLossTarget.Column, targetTableQualifiedName, targetColumns[position]!.Name, starTargetType,
+                                    ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance), star));
+                            }
+
+                            position++;
+                        }
+
+                        break;
+
+                    default:
+                        return;
+                }
             }
+        }
+
+        private static IReadOnlyList<ResolvedColumn>? ExpandStarColumns(SelectStarExpression star, ScopeChain scopeChain)
+        {
+            if (scopeChain.Count == 0)
+            {
+                return null;
+            }
+
+            var (byAlias, ordered) = scopeChain[0];
+            if (star.Qualifier is { Count: > 0 } qualifier)
+            {
+                return byAlias.TryGetValue(qualifier.Identifiers[^1].Value, out var entry) ? [.. entry.Relation.Columns] : null;
+            }
+
+            return [.. ordered.SelectMany(entry => entry.Relation.Columns)];
         }
 
         private void AssignToVariable(string variableName, ScalarExpression source, ModuleWalker walker, WriteLossTarget target = WriteLossTarget.Variable)
@@ -704,7 +756,7 @@ public static class TypedPredicateExtractor
                 ? null
                 : leaf => OperandType(ResolveOperand(leaf, site.Scope, site.Walker));
             var kind = Rules.WriteLossClassifier.Classify(
-                site.TargetType, site.SourceType, site.Source, isVariableTarget: site.Target.IsSilentTarget(), operandType);
+                site.TargetType, site.SourceType, site.Source as ScalarExpression, isVariableTarget: site.Target.IsSilentTarget(), operandType);
             if (kind is null || !site.Target.IsOracleVerified(kind.Value))
             {
                 return;

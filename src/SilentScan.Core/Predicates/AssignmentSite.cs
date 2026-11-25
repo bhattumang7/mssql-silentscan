@@ -10,6 +10,6 @@ internal readonly record struct AssignmentSite(
     string Name,
     SqlType TargetType,
     SqlType? SourceType,
-    ScalarExpression Source,
+    TSqlFragment Source,
     ScopeChain? Scope = null,
     ModuleWalker? Walker = null);

@@ -45,4 +45,27 @@ public sealed class InsertSelectUnionWriteLossTests
         Assert.Empty(extraction.WriteLossFindings);
         Assert.DoesNotContain(extraction.SkippedConstructs, s => s.ConstructKind == "write source");
     }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.Dest SELECT * FROM dbo.Wide;")]
+    [InlineData("INSERT INTO dbo.Dest SELECT w.* FROM dbo.Wide AS w;")]
+    [InlineData("INSERT INTO dbo.Dest (Code) SELECT * FROM dbo.Wide;")]
+    public void InsertFromStar_FlagsTheNarrowedColumn(string insert)
+    {
+        var extraction = Extract(insert);
+
+        var finding = Assert.Single(extraction.WriteLossFindings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.Equal("Code", finding.ColumnName);
+        Assert.DoesNotContain(extraction.SkippedConstructs, s => s.ConstructKind == "write source");
+    }
+
+    [Fact]
+    public void InsertFromStarWhereEveryColumnFits_FlagsNothing()
+    {
+        var extraction = Extract("INSERT INTO dbo.Dest SELECT * FROM dbo.Narrow;");
+
+        Assert.Empty(extraction.WriteLossFindings);
+        Assert.DoesNotContain(extraction.SkippedConstructs, s => s.ConstructKind == "write source");
+    }
 }
