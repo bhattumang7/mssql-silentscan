@@ -78,6 +78,7 @@ public static class ScanReportBuilder
 
         catalog.SetCallerScopes(callerScopeByCalleeScope);
         SelectIntoLineagePass.Apply(catalog, lineage, usableParseResults, callerScopeByCalleeScope);
+        ProcedureResultShapePass.Apply(catalog, lineage, usableParseResults, callerScopeByCalleeScope);
 
 
         var ruleContext = new RuleHarness.RuleContext(

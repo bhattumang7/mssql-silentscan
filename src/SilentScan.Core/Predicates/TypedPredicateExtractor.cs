@@ -633,6 +633,13 @@ public static class TypedPredicateExtractor
                     _pendingInsertTargetTable = table.QualifiedName;
                     return;
 
+                case ExecuteInsertSource { Execute.ExecutableEntity: ExecutableProcedureReference { ProcedureReference.ProcedureReference.Name: { } calleeName } } execSource
+                    when !table.QualifiedName.StartsWith('#')
+                         && catalog.TryGetProcedureResultColumns(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(calleeName)), out var resultTypes)
+                         && resultTypes.Count == targetColumns.Count:
+                    AnalyzeInsertExecWriteLoss(execSource, targetColumns, resultTypes, table.QualifiedName);
+                    return;
+
                 default:
                     ledger.Record(
                         AnalysisPass.Predicates, sourcePath, spec.StartLine, spec.StartColumn,
@@ -786,6 +793,19 @@ public static class TypedPredicateExtractor
                 foreach (var source in typed)
                 {
                     EmitInsertAssignment(targetTableQualifiedName, targetColumn.Name, combined, source.Type, source);
+                }
+            }
+        }
+
+        private void AnalyzeInsertExecWriteLoss(
+            ExecuteInsertSource source, List<CatalogColumn?> targetColumns, IReadOnlyList<SqlType?> resultTypes, string targetTableQualifiedName)
+        {
+            for (var position = 0; position < targetColumns.Count; position++)
+            {
+                if (targetColumns[position] is { Type: { } targetType } targetColumn)
+                {
+                    EmitAssignment(new AssignmentSite(
+                        WriteLossTarget.Column, targetTableQualifiedName, targetColumn.Name, targetType, resultTypes[position], source));
                 }
             }
         }

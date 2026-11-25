@@ -19,6 +19,14 @@ public sealed class DatabaseCatalog
     public void SetCallerScopes(IReadOnlyDictionary<string, IReadOnlyList<string>> callerScopesByCalleeScope) =>
         _callerScopesByCalleeScope = callerScopesByCalleeScope;
 
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IReadOnlyList<SqlType?>> _procedureResultColumns = new(StringComparer.OrdinalIgnoreCase);
+
+    public void SetProcedureResultColumns(string qualifiedName, IReadOnlyList<SqlType?> columnTypes) =>
+        _procedureResultColumns[qualifiedName] = columnTypes;
+
+    public bool TryGetProcedureResultColumns(string qualifiedName, out IReadOnlyList<SqlType?> columnTypes) =>
+        _procedureResultColumns.TryGetValue(qualifiedName, out columnTypes!);
+
     private CatalogTable? FindThroughCallers(string qualifiedName, string scope)
     {
         if (_callerScopesByCalleeScope is not { } callerScopes || !SchemaObjectNameHelper.IsLocalTempName(qualifiedName))
