@@ -31,6 +31,38 @@ public sealed class BareTopNoOrderByEngineFactOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task OrderByNamingAnAliasedConstant_IgnoresTheSortDirection_ButTheQualifiedColumnDoesNot()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(
+            @"DECLARE @k INT = 7, @aliasAsc INT, @aliasDesc INT, @columnAsc INT, @columnDesc INT;
+              SELECT TOP (1) @aliasAsc = Val FROM (SELECT @k AS Id, Val FROM dbo.Items) AS s ORDER BY Id ASC;
+              SELECT TOP (1) @aliasDesc = Val FROM (SELECT @k AS Id, Val FROM dbo.Items) AS s ORDER BY Id DESC;
+              SELECT TOP (1) @columnAsc = Val FROM dbo.Items ORDER BY Id ASC;
+              SELECT TOP (1) @columnDesc = Val FROM dbo.Items ORDER BY Id DESC;
+              SELECT CASE WHEN @aliasAsc = @aliasDesc THEN 1 ELSE 0 END, CASE WHEN @columnAsc <> @columnDesc THEN 1 ELSE 0 END;",
+            connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+
+        Assert.Equal(1, reader.GetInt32(0));
+        Assert.Equal(1, reader.GetInt32(1));
+    }
+
+    [Fact]
+    public async Task SelectListAliasedConstant_IsWhatAnUnqualifiedOrderByNameBindsTo()
+    {
+        await using var connection = await OpenConnectionAsync();
+        await using var command = new SqlCommand(
+            "DECLARE @k INT = 7; SELECT TOP (1) @k AS Id, Val FROM dbo.Items ORDER BY Id DESC;",
+            connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+
+        Assert.NotEqual(0, reader.GetInt32(1));
+    }
+
+    [Fact]
     public async Task TopOverNoFromClause_ReturnsOneRowWhateverTheTopValue()
     {
         await using var connection = await OpenConnectionAsync();

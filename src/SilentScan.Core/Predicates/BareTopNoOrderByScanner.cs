@@ -40,7 +40,7 @@ public static class BareTopNoOrderByScanner
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (node.TopRowFilter is { } top && (node.OrderByClause is null || RowIndependentExpression.OrderKeysAreAllRowIndependent(node.OrderByClause.OrderByElements)) && !IsHundredPercent(top) && !CannotVaryByRowChoice(node, top))
+            if (node.TopRowFilter is { } top && (node.OrderByClause is null || RowIndependentExpression.OrderKeysAreAllRowIndependent(node.OrderByClause.OrderByElements, node.SelectElements)) && !IsHundredPercent(top) && !CannotVaryByRowChoice(node, top))
             {
                 Findings.Add(new BareTopNoOrderByFinding(sourcePath, top.StartLine, top.StartColumn));
             }
