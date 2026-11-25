@@ -1102,7 +1102,7 @@ public static class TypedPredicateExtractor
 
                 if (operatorText == "<>")
                 {
-                    ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "<> between two columns is not attributed to a type-conversion verdict - the seek shape of a column-to-column range join was not established");
+                    ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "<> between two columns plans as a scan with a residual filter even when the types match, so a type clash loses no seek - not attributed to a type-conversion verdict");
                     return;
                 }
 
