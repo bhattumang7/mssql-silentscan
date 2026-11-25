@@ -166,6 +166,8 @@ public static class TypedPredicateExtractor
 
         private string? _pendingInsertTargetTable;
 
+        private readonly HashSet<QuerySpecification> _pendingInsertBranches = new(ReferenceEqualityComparer.Instance);
+
         private bool _previousProcedureHasWithRecompile;
 
         private TSqlStatement? _currentWriteStatement;
@@ -244,12 +246,14 @@ public static class TypedPredicateExtractor
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (_pendingInsertTargetColumns is { } pendingColumns)
+            if (_pendingInsertTargetColumns is { } pendingColumns && _pendingInsertBranches.Remove(node))
             {
-                _pendingInsertTargetColumns = null;
-                var pendingTable = _pendingInsertTargetTable!;
-                _pendingInsertTargetTable = null;
-                AnalyzeSelectListWriteLoss(node.SelectElements, pendingColumns, pendingTable, scopeChain, walker);
+                AnalyzeSelectListWriteLoss(node.SelectElements, pendingColumns, _pendingInsertTargetTable!, scopeChain, walker);
+                if (_pendingInsertBranches.Count == 0)
+                {
+                    _pendingInsertTargetColumns = null;
+                    _pendingInsertTargetTable = null;
+                }
             }
 
             if (_pendingCursorDeclarationName is { } pendingCursorName)
@@ -533,6 +537,26 @@ public static class TypedPredicateExtractor
             return true;
         }
 
+        private static List<QuerySpecification>? FlattenInsertBranches(QueryExpression expression)
+        {
+            switch (expression)
+            {
+                case QuerySpecification specification:
+                    return [specification];
+
+                case QueryParenthesisExpression parenthesis:
+                    return FlattenInsertBranches(parenthesis.QueryExpression);
+
+                case BinaryQueryExpression { BinaryQueryExpressionType: BinaryQueryExpressionType.Union } binary
+                    when FlattenInsertBranches(binary.FirstQueryExpression) is { } first
+                         && FlattenInsertBranches(binary.SecondQueryExpression) is { } second:
+                    return [.. first, .. second];
+
+                default:
+                    return null;
+            }
+        }
+
         private void AnalyzeInsertWriteLoss(InsertSpecification spec, ModuleWalker walker)
         {
             var table = ResolveWriteTargetTable(spec.Target, walker);
@@ -552,8 +576,11 @@ public static class TypedPredicateExtractor
                     AnalyzeValuesInsertSource(values, targetColumns, table.QualifiedName, walker);
                     return;
 
-                case SelectInsertSource { Select: QuerySpecification querySpec }
-                    when querySpec.SelectElements.All(e => e is SelectScalarExpression):
+                case SelectInsertSource { Select: { } selectSource }
+                    when FlattenInsertBranches(selectSource) is { } branches
+                         && branches.All(b => b.SelectElements.All(e => e is SelectScalarExpression)):
+                    _pendingInsertBranches.Clear();
+                    _pendingInsertBranches.UnionWith(branches);
                     _pendingInsertTargetColumns = targetColumns;
                     _pendingInsertTargetTable = table.QualifiedName;
                     return;
