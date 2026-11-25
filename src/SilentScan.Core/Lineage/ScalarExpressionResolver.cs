@@ -287,6 +287,11 @@ public static class ScalarExpressionResolver
                 }
 
                 var column = entry.Relation.FindColumn(columnName, identifierComparer);
+                if (column is null && entry.Relation.Columns.Count == 0)
+                {
+                    return new ColumnProvenance.Unknown($"column '{columnName}' not found on '{qualifier}'{DescribeRelation(entry.Relation)}");
+                }
+
                 return column is null
                     ? Unresolved($"column '{columnName}' not found on '{qualifier}'{DescribeRelation(entry.Relation)}")
                     : ApplyExplicitCollate(columnRef, BumpDepthIfViewLayer(column.Provenance, entry.IsViewLayer), sourcePath);
@@ -311,6 +316,11 @@ public static class ScalarExpressionResolver
             {
                 return Unresolved($"column '{columnName}' is ambiguous across the FROM scope");
             }
+        }
+
+        if (scopeChain.Any(level => level.Ordered.Any(entry => entry.Relation.Columns.Count == 0)))
+        {
+            return new ColumnProvenance.Unknown($"column '{columnName}' not found in FROM scope, which holds a relation whose columns are unknown");
         }
 
         return Unresolved($"column '{columnName}' not found in FROM scope");

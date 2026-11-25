@@ -86,10 +86,10 @@ public sealed class SkipLedgerTests
         var catalog = CatalogBuilder.Build([view]);
         var lineage = LineageResolver.Resolve(catalog, [view]);
 
-        Assert.Equal(2, lineage.Skipped.Entries.Count);
-        Assert.All(lineage.Skipped.Entries, e => Assert.Equal(AnalysisPass.Lineage, e.Pass));
-        Assert.Contains(lineage.Skipped.Entries, e => e.ConstructKind == "FROM table reference" && e.Reason.Contains("dbo.Ghost", StringComparison.Ordinal));
-        Assert.Contains(lineage.Skipped.Entries, e => e.ConstructKind == "column reference");
+        var entry = Assert.Single(lineage.Skipped.Entries);
+        Assert.Equal(AnalysisPass.Lineage, entry.Pass);
+        Assert.Equal("FROM table reference", entry.ConstructKind);
+        Assert.Contains("dbo.Ghost", entry.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public sealed class SkipLedgerTests
             CREATE PROCEDURE dbo.usp_RenameUser @Id NVARCHAR(40)
             AS
             BEGIN
-                UPDATE dbo.Users SET DisplayName = 'x' WHERE Id <> @Id;
+                UPDATE dbo.Users SET DisplayName = 'x' WHERE DisplayName NOT LIKE @Id;
                 IF @Id = N'0'
                 BEGIN
                     RETURN;
