@@ -77,8 +77,7 @@ public sealed class WriteLossFetchIntoOracleTests : OracleTestFixture
         Assert.True(await reader.ReadAsync());
         Assert.Equal(1.23m, reader.GetDecimal(0));
 
-        var finding = Assert.Single(Extract(batch.Replace("SELECT @d;
-", string.Empty, StringComparison.Ordinal)));
+        var finding = Assert.Single(Extract(batch.Replace("SELECT @d;", string.Empty, StringComparison.Ordinal)));
         Assert.Equal("@d", finding.ColumnName);
         Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
     }
