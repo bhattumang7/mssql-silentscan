@@ -48,12 +48,16 @@ public static class LiveScanRunner
             catalog.AddModuleUsesDatabaseCollation(module.QualifiedName, module.UsesDatabaseCollation);
         }
 
+        var moduleNames = new HashSet<string>(modules.Select(m => m.QualifiedName), catalog.IdentifierComparer);
+
         IEnumerable<SqlParseResult> parseResultSource(IScanStage? parseStage = null) =>
             modules.AsParallel().AsOrdered()
                 .Select(m =>
                 {
                     parseStage?.Advance(currentItem: m.QualifiedName);
-                    return SqlScriptParser.ParseText(m.QualifiedName, m.Definition, m.UsesQuotedIdentifier, catalog.CompatibilityLevel);
+                    var parsed = SqlScriptParser.ParseText(m.QualifiedName, m.Definition, m.UsesQuotedIdentifier, catalog.CompatibilityLevel);
+                    ModuleSchemaNameBinding.Bind(parsed, name => ModuleSchemaNameBinding.ObjectExists(catalog, moduleNames, name), catalog.IdentifierComparer);
+                    return parsed;
                 });
 
         var knownPermanentTables = catalog.Tables.Where(t => t.Kind is CatalogTableKind.Table or CatalogTableKind.TableType).ToList();

@@ -14,7 +14,7 @@ public static class SchemaObjectNameHelper
             return (null, name.BaseIdentifier.Value);
         }
 
-        var schema = name.SchemaIdentifier?.Value ?? DefaultSchema;
+        var schema = name.SchemaIdentifier?.Value ?? (Catalog.ModuleSchemaNameBinding.TryGetBoundSchema(name, out var bound) ? bound : DefaultSchema);
         return (schema, name.BaseIdentifier.Value);
     }
 
