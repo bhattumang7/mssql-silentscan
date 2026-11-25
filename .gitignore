@@ -33,11 +33,10 @@ vendor/
 # (this ignore entry is belt-and-braces for any untracked state)
 local-test-database.md
 
-# Cross-reference from docs/detection-tasklist.md checkbox items back to
-# vendor/sql2025 internal method names - local-only, never committed.
+# Local-only notes - never committed.
 gap-survey-checklist-xref.md
 .dotnet-safe.lock/
 
-# Local-only notes derived from the reference engine source - never committed.
+# Local-only notes - never committed.
 skip-classes-engine-findings.md
 gap-survey.db

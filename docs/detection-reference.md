@@ -2476,41 +2476,36 @@ rule for any of these shapes.
   plumbing cost (a new cross-call-site counting pass) isn't justified without
   a real corpus signal that any statement gets remotely close.
 
-* **Query optimizer's internal "Normalize" transformation-rule stage
-  (`CSubRuleNormalize*` in `sqllang`) - closed, no actionable gap.** This is
+* **Query optimizer's internal "Normalize" transformation-rule stage - closed, no actionable gap.** This is
   the Cascades-style rule-based rewrite stage distinct from the
-  `CConstraintProp`-based predicate normalize/simplify pass the "Predicate
-  survival" section above already audits. Exactly three rules exist in this
-  stage, each carrying its own pattern description as an embedded string:
-  a `GROUP BY` column elided via functional dependency
-  (`Gb(a,b,c) sum(b) -> Gb(a,b) any(c), sum(b)`), a constant key dropped from
-  an `ORDER BY` under `TOP` (`Top(OrderBy a, const, b) -> Top(OrderBy a, b)`),
-  and adjacent window-function sequence-project merging
-  (`SeqPrj(x0, x1) -> SeqPrj(x0, x2)`). All three are cost-based
+  predicate normalize/simplify pass the "Predicate
+  survival" section above already audits. It covers three
+  rewrites: a `GROUP BY` column elided via functional dependency, a constant
+  key dropped from an `ORDER BY` under `TOP`, and adjacent window-function
+  merging. All three are cost-based
   physical-plan-shape rewrites over an already-bound, already-normalized
   logical tree; none changes query result semantics, and none intersects any
   shipped rule's claim. No rescue candidate, no new finding opportunity.
 
-* **Full Cascades exploration/implementation rule catalogue (every
-  `CSubRule*`/`CExpRule*` in `sqllang`, ~300 names surveyed) - closed as a
+* **Full Cascades exploration/implementation rule catalogue (~300 rules
+  surveyed) - closed as a
   class, one exception already covered elsewhere.** These are the
   cost-based search rules that generate alternative *equivalent* logical/
   physical shapes for the optimizer to cost against each other - join
   commute/associate/exchange, semijoin/apply conversions, group-by
   push-below/pull-above-join placement, star-join and spatial-join
   strategies, remote/distributed query shaping, and similar. None of them
-  eliminate or rewrite a predicate's own truth-condition the way the
-  `CConstraintProp`-based normalize/simplify pass does - a rule that pushes
+  eliminate or rewrite a predicate's own truth-condition the way the predicate
+  normalize/simplify pass does - a rule that pushes
   an *additional*, engine-derived implied predicate down to enable an index
   path elsewhere (e.g. an implied `IS NOT NULL`) doesn't retroactively make
   the query's own predicate, as the user wrote it, sargable; it adds a
   separate condition the engine can additionally exploit, which is not what
   any shipped "this predicate forces a scan" claim is about. The sole rule
   in the entire catalogue that rewrites a predicate's own content -
-  `Sel(X, p) -> Sel(X, Normalized(p))` / `JoinPredNorm`'s join-condition
-  equivalent - is exactly the mechanism the "Predicate survival" section
-  above already audits shape-by-shape (`CConstraintProp` is this
-  normalization's actual home; these two Cascades rules are just its
+  predicate
+  normalization of a filter and its join-condition equivalent - is exactly the mechanism the "Predicate survival" section
+  above already audits shape-by-shape (these two rules are just its
   call site during exploration, not a second, independent normalizer to
   re-audit). No further rescue candidate found across the class.
 
@@ -2574,13 +2569,8 @@ rule for any of these shapes.
   '$2-$1')` returns `'$2-$1def'` unchanged with no error, while the
   backslash form (`'\2-\1'`) correctly returns `'123-abcdef'`. `$`-digit is
   the backreference convention in .NET `Regex.Replace`, JavaScript, and most
-  other regex flavors, making this an easy, silent port-over mistake. Traced
-  the engine's `alg_RegExp_Replace` (`sqllang`) - it only performs
-  LOB-length/type validation at bind time; the actual RE2-backed replace
-  execution has no named symbols in the decompiled tree (RE2 is statically
-  linked with its replacement logic inlined), so the exact `$N` inertness
-  was established by oracle probing rather than reading a named function -
-  documented here as the boundary of what the decompiled tree can show.
+  other regex flavors, making this an easy, silent port-over mistake. The exact `$N` inertness was
+  established by oracle probing.
   The scanner counts real capturing groups in the pattern (skipping
   `(?:...)` non-capturing groups and parens inside a character class,
   including the leading-`]`-is-literal RE2 rule - all oracle-confirmed) and
@@ -2605,11 +2595,7 @@ rule for any of these shapes.
   first-wins or "any 'i' present": `'ci'` (ends in `i`) matches
   case-insensitively, `'ic'` (ends in `c`) does not - oracle-confirmed with
   several orderings/combinations including `'iic'`, `'cci'`, and `'sim'`.
-  Traced `alg_RegExp_Replace`/`InitRegexpCompCtxt`/`FetchRegexpPatternData`
-  in `the reference engine code` (`sqllang`) looking for the case-folding decision
-  itself - none of the named symbols touch it (RE2 is statically linked
-  with its match-compilation logic inlined, the same boundary already hit
-  for `RegexpReplaceDollarBackreferenceRuleId`'s `$N` inertness), so the
+  The
   default-case-sensitivity fact and the last-flag-wins resolution rule were
   both established by oracle probing. The scanner only fires when the
   subject is a column resolved via the catalog with a known

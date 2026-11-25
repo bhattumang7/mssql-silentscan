@@ -87,9 +87,7 @@ Before writing (or re-auditing) a rule whose rationale depends on a session
 setting, a keyword list, a data-type set, or a fixed option enum: find the
 engine's own closed enumeration for it - a ScriptDom enum, a live catalog/DMV
 (`sys.dm_os_performance_counters`, `sys.configurations`,
-`sys.database_scoped_configurations`), or an internal engine table via
-`the reference engine code` (target the function that *consumes* a fixed-size table,
-not a decompiled enum's member names - those rarely survive compilation) -
+`sys.database_scoped_configurations`), or an internal engine table -
 and diff every member against the rule's actual coverage. Free-text sources
 (`sys.messages`) don't work for this: there's no reliable way to rank them by
 relevance, so don't try. Oracle-verify every surviving candidate before

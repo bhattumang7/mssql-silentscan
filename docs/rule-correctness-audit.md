@@ -1,8 +1,7 @@
 # Rule correctness audit
 
 Ongoing pass auditing each shipped rule scanner's own logic against real SQL
-Server engine behaviour (oracle-verified against a live instance where
-possible, `the reference engine code` reference source otherwise) — not missing
+Server engine behaviour (oracle-verified against a live instance) — not missing
 detections (`detection-tasklist.md` covers those), but places where a
 scanner's own reported verdict diverges from what the real engine actually
 does: a false positive, a false negative, or a materially wrong claim in a
