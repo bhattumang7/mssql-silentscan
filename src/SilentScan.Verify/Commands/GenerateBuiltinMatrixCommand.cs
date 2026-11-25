@@ -17,21 +17,36 @@ public static class GenerateBuiltinMatrixCommand
         };
 
         var command = new Command("generate-builtin-matrix", "Probe the Docker SQL Server oracle for the result type, collation, nullability, determinism and precision of built-in functions over several argument shapes.");
+        var latestOption = new Option<bool>("--latest")
+        {
+            Description = "Probe the functions that only the newest engine knows or whose properties changed in it, against the newest Docker SQL Server, and write the latest matrix.",
+        };
+
         command.Options.Add(outputOption);
+        command.Options.Add(latestOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
-            var output = parseResult.GetValue(outputOption)!;
-            return await RunAsync(output, SqlServerOptions.LocalDocker, Console.Out, cancellationToken);
+            var latest = parseResult.GetValue(latestOption);
+            var output = latest && parseResult.GetResult(outputOption) is null or { Implicit: true } ? LatestOutputPath : parseResult.GetValue(outputOption)!;
+            return latest
+                ? await RunAsync(output, SqlServerOptions.LocalDockerLatest, BuiltinProbes.LatestOnly, Console.Out, cancellationToken)
+                : await RunAsync(output, SqlServerOptions.LocalDocker, Console.Out, cancellationToken);
         });
 
         return command;
     }
 
-    internal static async Task<int> RunAsync(string outputPath, SqlServerOptions sqlOptions, TextWriter stdout, CancellationToken cancellationToken = default)
+    internal const string LatestOutputPath = "src/SilentScan.Core/Rules/BuiltinMatrixLatest.json";
+
+    internal static Task<int> RunAsync(string outputPath, SqlServerOptions sqlOptions, TextWriter stdout, CancellationToken cancellationToken = default) =>
+        RunAsync(outputPath, sqlOptions, BuiltinProbes.All, stdout, cancellationToken);
+
+    internal static async Task<int> RunAsync(
+        string outputPath, SqlServerOptions sqlOptions, IReadOnlyList<BuiltinProbe> probes, TextWriter stdout, CancellationToken cancellationToken = default)
     {
         var generator = new BuiltinMatrixGenerator(sqlOptions);
-        var (cells, serverVersion) = await generator.GenerateAsync(BuiltinProbes.All, cancellationToken);
+        var (cells, serverVersion) = await generator.GenerateAsync(probes, cancellationToken);
 
         var document = new
         {

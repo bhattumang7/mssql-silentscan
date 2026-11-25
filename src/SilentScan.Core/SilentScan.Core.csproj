@@ -14,6 +14,7 @@
     <EmbeddedResource Include="Rules/CastMatrix.json" />
     <EmbeddedResource Include="Rules/OperatorMatrix.json" />
     <EmbeddedResource Include="Rules/BuiltinMatrix.json" />
+    <EmbeddedResource Include="Rules/BuiltinMatrixLatest.json" />
     <EmbeddedResource Include="Rules/SargShapeMatrix.json" />
     <EmbeddedResource Include="Rules/GuessMatrix.json" />
     <EmbeddedResource Include="Rules/SetOptionMatrix.json" />

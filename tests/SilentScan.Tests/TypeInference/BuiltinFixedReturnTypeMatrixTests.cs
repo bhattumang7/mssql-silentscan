@@ -7,7 +7,7 @@ namespace SilentScan.Tests.TypeInference;
 
 public sealed class BuiltinFixedReturnTypeMatrixTests
 {
-    private static readonly string[] NotProbed = ["NEWSEQUENTIALID", "REGEXP_COUNT", "REGEXP_INSTR"];
+    private static readonly string[] NotProbed = ["NEWSEQUENTIALID"];
 
     private static SqlType FromEngineText(string systemTypeName)
     {
@@ -26,7 +26,7 @@ public sealed class BuiltinFixedReturnTypeMatrixTests
     public void FixedReturnType_MatchesWhatTheEngineReportsForEveryProbedShape(string function)
     {
         var ours = BuiltinFunctionTypeResolver.ResolveFixedReturnType(function)!;
-        var cells = BuiltinMatrix.Instance.ForFunction(function).Where(c => !c.ResultType.StartsWith(BuiltinMatrix.ErrorPrefix, StringComparison.Ordinal)).ToList();
+        var cells = BuiltinMatrix.Instance.ForFunction(function).Concat(BuiltinMatrix.Latest.ForFunction(function)).Where(c => !c.ResultType.StartsWith(BuiltinMatrix.ErrorPrefix, StringComparison.Ordinal)).ToList();
 
         Assert.NotEmpty(cells);
         foreach (var cell in cells)

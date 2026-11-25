@@ -21,7 +21,9 @@ public sealed class BuiltinMatrix
 
     public const string NoSerialReasonOutcome = "NoSerialReason";
 
-    public static BuiltinMatrix Instance { get; } = LoadEmbedded();
+    public static BuiltinMatrix Instance { get; } = LoadEmbedded("BuiltinMatrix.json");
+
+    public static BuiltinMatrix Latest { get; } = LoadEmbedded("BuiltinMatrixLatest.json");
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -46,15 +48,15 @@ public sealed class BuiltinMatrix
     public BuiltinCell? TryGet(string function, string shape) =>
         _byFunction[function].FirstOrDefault(c => string.Equals(c.Shape, shape, StringComparison.OrdinalIgnoreCase));
 
-    private static BuiltinMatrix LoadEmbedded()
+    private static BuiltinMatrix LoadEmbedded(string fileName)
     {
         var assembly = typeof(BuiltinMatrix).Assembly;
-        var resourceName = $"{assembly.GetName().Name}.Rules.BuiltinMatrix.json";
+        var resourceName = $"{assembly.GetName().Name}.Rules.{fileName}";
         using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException($"Embedded resource '{resourceName}' not found - the matrix data is missing from the build.");
 
         var document = JsonSerializer.Deserialize<MatrixDocument>(stream, JsonOptions)
-            ?? throw new InvalidOperationException("BuiltinMatrix.json deserialized to null.");
+            ?? throw new InvalidOperationException($"{fileName} deserialized to null.");
 
         return new BuiltinMatrix(document.ServerVersion, document.ProbedAtUtc, document.Entries);
     }

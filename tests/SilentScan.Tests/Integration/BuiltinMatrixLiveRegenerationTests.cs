@@ -13,11 +13,16 @@ public sealed class BuiltinMatrixLiveRegenerationTests
     [Fact]
     public Task LatestEngineMatrix_MatchesCheckedInMatrix() => AssertMatchesAsync(SqlServerOptions.LocalDockerLatest);
 
-    private static async Task AssertMatchesAsync(SqlServerOptions options)
+    [Fact]
+    public Task LatestEngineOnlyFunctions_MatchCheckedInLatestMatrix() =>
+        AssertMatchesAsync(SqlServerOptions.LocalDockerLatest, BuiltinProbes.LatestOnly, BuiltinMatrix.Latest);
+
+    private static Task AssertMatchesAsync(SqlServerOptions options) => AssertMatchesAsync(options, BuiltinProbes.All, BuiltinMatrix.Instance);
+
+    private static async Task AssertMatchesAsync(SqlServerOptions options, IReadOnlyList<BuiltinProbe> probes, BuiltinMatrix checkedIn)
     {
         var generator = new BuiltinMatrixGenerator(options);
-        var (live, _) = await generator.GenerateAsync(BuiltinProbes.All);
-        var checkedIn = BuiltinMatrix.Instance;
+        var (live, _) = await generator.GenerateAsync(probes);
         var mismatches = new List<string>();
 
         foreach (var cell in live)

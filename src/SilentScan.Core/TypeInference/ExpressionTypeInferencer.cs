@@ -43,6 +43,9 @@ public static class ExpressionTypeInferencer
 
         SimpleCaseExpression simple => CombineCase(simple.WhenClauses, simple.ElseExpression, resolveLeaf, typeAliases),
 
+        FunctionCall { WithinGroupClause.OrderByClause.OrderByElements: [var ordered, ..] } distribution
+            when DerivedResultFunctionTypes.IsOrderedSetDistribution(distribution.FunctionName.Value) => Resolve(ordered.Expression, resolveLeaf, typeAliases),
+
         FunctionCall functionCall => ResolveBuiltinCall(functionCall.FunctionName.Value, functionCall.Parameters, resolveLeaf, typeAliases),
 
         LeftFunctionCall left => ResolveBuiltinCall("LEFT", left.Parameters, resolveLeaf, typeAliases),
@@ -77,6 +80,11 @@ public static class ExpressionTypeInferencer
         if (DerivedResultFunctionTypes.IsBoundedComparison(name))
         {
             return parameters.Count > 0 ? DerivedResultFunctionTypes.BoundComparisonResult(CombineBranches(parameters, resolveLeaf, typeAliases)) : null;
+        }
+
+        if (DerivedResultFunctionTypes.IsChoice(name))
+        {
+            return parameters.Count > 1 ? CombineBranches([.. parameters.Skip(1)], resolveLeaf, typeAliases) : null;
         }
 
         if (DerivedResultFunctionTypes.IsDerived(name))

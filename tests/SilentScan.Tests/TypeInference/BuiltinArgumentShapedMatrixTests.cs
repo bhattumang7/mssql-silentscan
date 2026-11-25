@@ -55,12 +55,14 @@ public sealed class BuiltinArgumentShapedMatrixTests
     {
         var wrong = new List<string>();
         var unresolved = new List<string>();
-        foreach (var probe in BuiltinProbes.All)
+        var sources = BuiltinProbes.All.Select(p => (Probe: p, Matrix: BuiltinMatrix.Instance))
+            .Concat(BuiltinProbes.LatestOnly.Select(p => (Probe: p, Matrix: BuiltinMatrix.Latest)));
+        foreach (var (probe, matrix) in sources)
         {
             var expression = ParseExpression(Text(probe));
             foreach (var shape in BuiltinMatrixGenerator.Shapes(probe))
             {
-                var cell = BuiltinMatrix.Instance.TryGet(probe.Function, BuiltinMatrixGenerator.ShapeText(shape.Types));
+                var cell = matrix.TryGet(probe.Function, BuiltinMatrixGenerator.ShapeText(shape.Types));
                 if (cell is null || cell.ResultType.StartsWith(BuiltinMatrix.ErrorPrefix, StringComparison.Ordinal))
                 {
                     continue;

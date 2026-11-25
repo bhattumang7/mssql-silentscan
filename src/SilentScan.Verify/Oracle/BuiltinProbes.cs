@@ -20,6 +20,8 @@ public static class BuiltinProbes
 
     private static readonly string[] Int = ["INT"];
 
+    private static readonly string[] Integers = ["INT", "BIGINT", "SMALLINT", "TINYINT"];
+
     private static readonly string[] None = [];
 
     private static readonly string[] Image = ["IMAGE"];
@@ -170,5 +172,55 @@ public static class BuiltinProbes
         P("PROCID_VAR", "@@PROCID", None), P("REMSERVER_VAR", "@@REMSERVER", None), P("SERVERNAME_VAR", "@@SERVERNAME", None),
         P("SERVICENAME_VAR", "@@SERVICENAME", None), P("TEXTSIZE_VAR", "@@TEXTSIZE", None), P("TIMETICKS_VAR", "@@TIMETICKS", None),
         P("TOTAL_ERRORS_VAR", "@@TOTAL_ERRORS", None), P("TOTAL_READ_VAR", "@@TOTAL_READ", None), P("TOTAL_WRITE_VAR", "@@TOTAL_WRITE", None),
+        P("LEFT_SHIFT", "LEFT_SHIFT({0}, 1)", Integers), P("RIGHT_SHIFT", "RIGHT_SHIFT({0}, 1)", Integers), P("SET_BIT", "SET_BIT({0}, 1)", Integers),
+        P("DATETIME2FROMPARTS", "DATETIME2FROMPARTS({0}, {0}, {0}, {0}, {0}, {0}, {0}, 3)", Int),
+        P("DATETIMEOFFSETFROMPARTS", "DATETIMEOFFSETFROMPARTS({0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, 3)", Int),
+        P("TIMEFROMPARTS", "TIMEFROMPARTS({0}, {0}, {0}, {0}, 3)", Int),
+        P("CHOOSE", "CHOOSE(1, {0}, {1})", Numbers, Numbers), P("CHOOSE_STRINGS", "CHOOSE(1, {0}, {1})", Strings, Strings),
+        P("PARSENAME", "PARSENAME({0}, 1)", Strings), P("JSON_OBJECT", "JSON_OBJECT('a':{0})", Strings), P("JSON_ARRAY", "JSON_ARRAY({0})", Strings),
+        P("PERCENTILE_CONT", "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {0}) OVER ()", Numbers),
+        P("PERCENTILE_DISC", "PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY {0}) OVER ()", Numbers), P("PERCENTILE_DISC", "PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY {0}) OVER ()", Strings),
+        P("APPROX_PERCENTILE_CONT", "APPROX_PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {0})", Numbers),
+        P("APPROX_PERCENTILE_DISC", "APPROX_PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY {0})", Numbers),
+        P("CUME_DIST", "CUME_DIST() OVER (ORDER BY {0})", Int), P("PERCENT_RANK", "PERCENT_RANK() OVER (ORDER BY {0})", Int),
+        P("COLUMNPROPERTYEX", "COLUMNPROPERTYEX(1, 'c', 'IsIdentity')", None), P("DATABASEPROPERTY", "DATABASEPROPERTY('master', 'IsShutdown')", None),
+        P("FILEPROPERTY", "FILEPROPERTY('f', 'SpaceUsed')", None), P("FILEGROUPPROPERTY", "FILEGROUPPROPERTY('PRIMARY', 'IsDefault')", None),
+        P("FILEPROPERTYEX", "FILEPROPERTYEX('f', 'SpaceUsed')", None), P("FULLTEXTCATALOGPROPERTY", "FULLTEXTCATALOGPROPERTY('c', 'IndexSize')", None),
+        P("FULLTEXTSERVICEPROPERTY", "FULLTEXTSERVICEPROPERTY('IsFulltextInstalled')", None), P("ASSEMBLYPROPERTY", "ASSEMBLYPROPERTY('a', 'PublicKey')", None),
+        P("CRYPT_GEN_RANDOM", "CRYPT_GEN_RANDOM(4)", None), P("ENCRYPTBYPASSPHRASE", "ENCRYPTBYPASSPHRASE('p', {0})", Strings),
+        P("ENCRYPTBYKEY", "ENCRYPTBYKEY(KEY_GUID('k'), {0})", Strings), P("ENCRYPTBYCERT", "ENCRYPTBYCERT(1, {0})", Strings),
+        P("ENCRYPTBYASYMKEY", "ENCRYPTBYASYMKEY(1, {0})", Strings),
+        P("SIGNBYCERT", "SIGNBYCERT(1, {0})", Strings), P("SIGNBYASYMKEY", "SIGNBYASYMKEY(1, {0})", Strings),
+        P("PWDENCRYPT", "PWDENCRYPT({0})", Strings), P("PWDCOMPARE", "PWDCOMPARE({0}, 0x00)", Strings),
+        P("SYMKEYPROPERTY", "SYMKEYPROPERTY(1, 'algorithm_desc')", None), P("CERTPRIVATEKEY", "CERTPRIVATEKEY(1, 'p')", None),
+        P("IS_OBJECTSIGNED", "IS_OBJECTSIGNED('OBJECT', 1, 'certificate', 0x00)", None), P("EVENTDATA", "EVENTDATA()", None),
+        P("CHANGE_TRACKING_MIN_VALID_VERSION", "CHANGE_TRACKING_MIN_VALID_VERSION(1)", None),
+        P("CHANGE_TRACKING_IS_COLUMN_IN_MASK", "CHANGE_TRACKING_IS_COLUMN_IN_MASK(1, 0x00)", None),
+        P("GET_FILESTREAM_TRANSACTION_CONTEXT", "GET_FILESTREAM_TRANSACTION_CONTEXT()", None), P("FILETABLEROOTPATH", "FILETABLEROOTPATH()", None),
+        P("NODE_ID_FROM_PARTS", "NODE_ID_FROM_PARTS(1, 1)", None), P("EDGE_ID_FROM_PARTS", "EDGE_ID_FROM_PARTS(1, 1)", None),
+        P("OBJECT_ID_FROM_NODE_ID", "OBJECT_ID_FROM_NODE_ID({0})", Strings), P("GRAPH_ID_FROM_NODE_ID", "GRAPH_ID_FROM_NODE_ID({0})", Strings),
+        P("OBJECT_ID_FROM_EDGE_ID", "OBJECT_ID_FROM_EDGE_ID({0})", Strings), P("GRAPH_ID_FROM_EDGE_ID", "GRAPH_ID_FROM_EDGE_ID({0})", Strings),
+        P("TERTIARY_WEIGHTS", "TERTIARY_WEIGHTS({0})", Strings), P("SID_BINARY", "SID_BINARY({0})", Strings),
+        P("XML_SCHEMA_NAMESPACE", "XML_SCHEMA_NAMESPACE('dbo', 'x')", None), P("GET_TRANSMISSION_STATUS", "GET_TRANSMISSION_STATUS(NEWID())", None),
+        P("PUBLISHINGSERVERNAME", "PUBLISHINGSERVERNAME()", None), P("TEXTVALID", "TEXTVALID('t.c', 0x00)", None),
+        P("DEFAULT_DOMAIN", "DEFAULT_DOMAIN()", None),
+    ];
+
+    public static readonly IReadOnlyList<BuiltinProbe> LatestOnly = BuildLatestOnly();
+
+    private static List<BuiltinProbe> BuildLatestOnly() =>
+    [
+        P("REGEXP_REPLACE", "REGEXP_REPLACE({0}, 'a', 'b')", Strings), P("REGEXP_SUBSTR", "REGEXP_SUBSTR({0}, 'a')", Strings),
+        P("REGEXP_COUNT", "REGEXP_COUNT({0}, 'a')", Strings), P("REGEXP_INSTR", "REGEXP_INSTR({0}, 'a')", Strings),
+        P("EDIT_DISTANCE", "EDIT_DISTANCE({0}, {0})", Strings), P("EDIT_DISTANCE_SIMILARITY", "EDIT_DISTANCE_SIMILARITY({0}, {0})", Strings),
+        P("JARO_WINKLER_DISTANCE", "JARO_WINKLER_DISTANCE({0}, {0})", Strings), P("JARO_WINKLER_SIMILARITY", "JARO_WINKLER_SIMILARITY({0}, {0})", Strings),
+        P("JSON_OBJECTAGG", "JSON_OBJECTAGG('a':{0})", Strings), P("JSON_ARRAYAGG", "JSON_ARRAYAGG({0})", Strings),
+        P("BASE64_ENCODE", "BASE64_ENCODE({0})", Binaries), P("BASE64_DECODE", "BASE64_DECODE({0})", Strings),
+        P("UNISTR", "UNISTR({0})", ["NVARCHAR(20)", "NVARCHAR(MAX)", "NCHAR(10)"]), P("CURRENT_DATE", "CURRENT_DATE", None),
+        P("SUSER_OID", "SUSER_OID()", None), P("USER_OID", "USER_OID()", None),
+        P("DECRYPTBYPASSPHRASE", "DECRYPTBYPASSPHRASE('p', {0})", Binaries), P("DECRYPTBYKEY", "DECRYPTBYKEY({0})", Binaries),
+        P("DECRYPTBYKEYAUTOCERT", "DECRYPTBYKEYAUTOCERT(1, NULL, {0})", Binaries), P("DECRYPTBYCERT", "DECRYPTBYCERT(1, {0})", Binaries),
+        P("DECRYPTBYASYMKEY", "DECRYPTBYASYMKEY(1, {0})", Binaries),
+        P("VERIFYSIGNEDBYCERT", "VERIFYSIGNEDBYCERT(1, {0}, 0x00)", Strings), P("VERIFYSIGNEDBYASYMKEY", "VERIFYSIGNEDBYASYMKEY(1, {0}, 0x00)", Strings),
     ];
 }

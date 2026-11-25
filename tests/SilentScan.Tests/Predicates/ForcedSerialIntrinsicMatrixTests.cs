@@ -35,9 +35,11 @@ public sealed class ForcedSerialIntrinsicMatrixTests
         var disagreements = new List<string>();
         var compared = 0;
         var serial = 0;
-        foreach (var probe in BuiltinProbes.All.GroupBy(p => p.Function).Select(g => g.First()))
+        var sources = BuiltinProbes.All.Select(p => (Probe: p, Matrix: BuiltinMatrix.Instance))
+            .Concat(BuiltinProbes.LatestOnly.Select(p => (Probe: p, Matrix: BuiltinMatrix.Latest)));
+        foreach (var (probe, matrix) in sources.GroupBy(s => s.Probe.Function).Select(g => g.First()))
         {
-            var cells = BuiltinMatrix.Instance.ForFunction(probe.Function);
+            var cells = matrix.ForFunction(probe.Function);
             if (cells.Count == 0 || cells.Any(c => c.Parallel.StartsWith(BuiltinMatrix.ErrorPrefix, StringComparison.Ordinal)))
             {
                 continue;
