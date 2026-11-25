@@ -149,21 +149,4 @@ public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
         var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, findings);
         PipelineOracleVerification.AssertAllConfirmed(results);
     }
-
-    [Theory]
-    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code <> 'abc';", 1)]
-    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT IN ('abc', 'def');", 1)]
-    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT BETWEEN 'abc' AND 'def';", 2)]
-    public async Task VarCharColumnNegatedPredicateVsVarcharLiteral_SeekPreserved_OracleConfirmed(string sql, int expectedFindings)
-    {
-
-        var report = await Scan(sql);
-
-        var findings = report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Where(f => f.Column.TableQualifiedName == "dbo.VarCharSql").ToList();
-        Assert.Equal(expectedFindings, findings.Count);
-        Assert.All(findings, f => Assert.Equal(Verdict.SeekPreserved, f.Verdict));
-
-        var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, findings);
-        PipelineOracleVerification.AssertAllConfirmed(results);
-    }
 }

@@ -37,3 +37,7 @@ local-test-database.md
 # vendor/sql2025 internal method names - local-only, never committed.
 gap-survey-checklist-xref.md
 .dotnet-safe.lock/
+
+# Local-only notes derived from the reference engine source - never committed.
+skip-classes-engine-findings.md
+gap-survey.db
