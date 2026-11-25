@@ -5,6 +5,8 @@ public enum ScopeObservableKind
     Witness,
 
     Binding,
+
+    OutputColumns,
 }
 
 public sealed record ScopeScenario(
@@ -18,6 +20,8 @@ public sealed record ScopeScenario(
 
 public static class ScopeScenarios
 {
+    private const string TwoTables = "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);";
+
     private const string OneColumnTable = "CREATE TABLE {P}t (id INT); INSERT {P}t VALUES (1);";
 
     private const string TwoColumnTable = "CREATE TABLE {P}t (a INT, b INT); INSERT {P}t VALUES (1, 20), (2, 10);";
@@ -93,5 +97,40 @@ public static class ScopeScenarios
             "CREATE PROCEDURE {P}m AS SELECT id AS x FROM dbo.{P}t ORDER BY x"),
         new("bind-missing-table-is-recorded-by-name", "dependencies", "D6", ScopeObservableKind.Binding, false, string.Empty,
             "CREATE PROCEDURE {P}m AS SELECT id FROM dbo.{P}missing"),
+        new("columns-alias-swaps-names", "output-columns", "A2", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT b AS a, a AS x FROM {P}t"),
+        new("columns-derived-table-column", "output-columns", "A3", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT d.v FROM (SELECT c AS v FROM {P}u) AS d CROSS JOIN {P}t"),
+        new("columns-cte-named-like-table-hides-it", "output-columns", "B9", ScopeObservableKind.OutputColumns, false, TwoTables, "WITH {P}t AS (SELECT c AS id FROM {P}u) SELECT id FROM {P}t"),
+        new("columns-unqualified-picks-the-only-owner", "output-columns", "B2", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT a, c FROM {P}t CROSS JOIN {P}u"),
+        new("columns-qualified-star-then-column", "output-columns", "B6", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT {P}t.*, {P}u.c FROM {P}t CROSS JOIN {P}u"),
+        new("columns-derived-table-column-list", "output-columns", "A3", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT d.k FROM (SELECT a FROM {P}t) AS d (k)"),
+        new("columns-alias-named-like-another-table", "output-columns", "B1", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT {P}u.a FROM {P}t AS {P}u"),
+        new("columns-two-aliases-same-column-name", "output-columns", "B2", ScopeObservableKind.OutputColumns, false, TwoTables,
+            "SELECT t1.id, u1.id AS uid FROM {P}t AS t1 JOIN {P}u AS u1 ON t1.id = u1.id"),
+        new("columns-cross-apply-derived", "output-columns", "A3", ScopeObservableKind.OutputColumns, false, TwoTables,
+            "SELECT o.c FROM {P}t AS t1 CROSS APPLY (SELECT TOP 1 c FROM {P}u WHERE {P}u.id = t1.id ORDER BY c) AS o"),
+        new("columns-through-synonym", "output-columns", "D5", ScopeObservableKind.OutputColumns, false, TwoTables + " CREATE SYNONYM {P}syn FOR dbo.{P}t;", "SELECT a FROM {P}syn"),
+        new("columns-through-view", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables + "\nGO\nCREATE VIEW {P}vw AS SELECT a AS va FROM {P}t;\nGO\n", "SELECT va FROM {P}vw"),
+        new("columns-union-takes-first-branch-name", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT a AS z FROM {P}t UNION ALL SELECT c FROM {P}u"),
+        new("columns-order-by-expression-does-not-change-sources", "output-columns", "A2", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT b AS a FROM {P}t ORDER BY a"),
+        new("columns-nested-ctes-chain", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "WITH c1 AS (SELECT a AS x FROM {P}t), c2 AS (SELECT x AS y FROM c1) SELECT y FROM c2"),
+        new("columns-sibling-subqueries-reuse-alias", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT d.a FROM (SELECT a FROM {P}t) AS d WHERE EXISTS (SELECT 1 FROM (SELECT c FROM {P}u) AS d WHERE d.c = 1)"),
+        new("columns-inner-alias-shadows-outer-alias", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT t1.a FROM {P}t AS t1 WHERE EXISTS (SELECT 1 FROM {P}u AS t1 WHERE t1.c = 1)"),
+        new("columns-two-derived-tables-same-column-name", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT x.v, y.v AS v2 FROM (SELECT a AS v FROM {P}t) AS x CROSS JOIN (SELECT c AS v FROM {P}u) AS y"),
+        new("columns-values-constructor", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT v.k FROM (VALUES (1)) AS v (k)"),
+        new("columns-cte-named-like-other-table-hides-it", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "WITH {P}u AS (SELECT a AS c FROM {P}t) SELECT c FROM {P}u"),
+        new("columns-alias-collides-with-other-tables-column", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT {P}t.a AS c, {P}u.c AS a FROM {P}t CROSS JOIN {P}u"),
+        new("columns-star-inside-derived-table", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT d.a FROM (SELECT * FROM {P}t) AS d"),
+        new("columns-aliased-star", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT x.* FROM {P}t AS x"),
+        new("columns-expression-and-plain-column", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT ISNULL(a, 0) AS z, a FROM {P}t"),
+        new("columns-cast-column", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT CAST(a AS BIGINT) AS z, a FROM {P}t"),
+        new("columns-pivot-output", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT p.[1] FROM (SELECT id, a FROM {P}t) AS s PIVOT (MAX(a) FOR id IN ([1])) AS p"),
+        new("columns-window-function-beside-column", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT a, ROW_NUMBER() OVER (ORDER BY a) AS rn FROM {P}t"),
+        new("columns-nested-derived-tables", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT e.q FROM (SELECT d.v AS q FROM (SELECT a AS v FROM {P}t) AS d) AS e"),
+        new("columns-cte-column-list-reorders", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "WITH c (p, q) AS (SELECT a, b FROM {P}t) SELECT q, p FROM c"),
+        new("columns-view-over-view-chain", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables + "\nGO\nCREATE VIEW {P}vw1 AS SELECT a AS va FROM {P}t;\nGO\nCREATE VIEW {P}vw2 AS SELECT va AS vb FROM {P}vw1;\nGO\n", "SELECT vb FROM {P}vw2"),
+        new("columns-left-join-null-side-column", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT {P}u.c FROM {P}t LEFT JOIN {P}u ON {P}t.id = {P}u.id"),
+        new("columns-qualified-by-schema-and-table", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT dbo.{P}t.a FROM dbo.{P}t"),
+        new("columns-same-cte-referenced-twice", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "WITH c AS (SELECT a AS x FROM {P}t) SELECT c1.x, c2.x AS x2 FROM c AS c1 CROSS JOIN c AS c2"),
+        new("columns-top-with-order-by-alias", "output-columns", "B7", ScopeObservableKind.OutputColumns, false, TwoTables, "SELECT TOP 1 b AS a FROM {P}t ORDER BY a"),
     ];
 }

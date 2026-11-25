@@ -322,6 +322,336 @@
       "Setup": "",
       "Body": "CREATE PROCEDURE {P}m AS SELECT id FROM dbo.{P}missing",
       "Observed": "warning:2020"
+    },
+    {
+      "Id": "columns-alias-swaps-names",
+      "Family": "output-columns",
+      "Step": "A2",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT b AS a, a AS x FROM {P}t",
+      "Observed": "a=dbo.P_t.b;x=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-derived-table-column",
+      "Family": "output-columns",
+      "Step": "A3",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT d.v FROM (SELECT c AS v FROM {P}u) AS d CROSS JOIN {P}t",
+      "Observed": "v=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-cte-named-like-table-hides-it",
+      "Family": "output-columns",
+      "Step": "B9",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "WITH {P}t AS (SELECT c AS id FROM {P}u) SELECT id FROM {P}t",
+      "Observed": "id=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-unqualified-picks-the-only-owner",
+      "Family": "output-columns",
+      "Step": "B2",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT a, c FROM {P}t CROSS JOIN {P}u",
+      "Observed": "a=dbo.P_t.a;c=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-qualified-star-then-column",
+      "Family": "output-columns",
+      "Step": "B6",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT {P}t.*, {P}u.c FROM {P}t CROSS JOIN {P}u",
+      "Observed": "id=dbo.P_t.id;a=dbo.P_t.a;b=dbo.P_t.b;c=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-derived-table-column-list",
+      "Family": "output-columns",
+      "Step": "A3",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT d.k FROM (SELECT a FROM {P}t) AS d (k)",
+      "Observed": "k=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-alias-named-like-another-table",
+      "Family": "output-columns",
+      "Step": "B1",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT {P}u.a FROM {P}t AS {P}u",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-two-aliases-same-column-name",
+      "Family": "output-columns",
+      "Step": "B2",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT t1.id, u1.id AS uid FROM {P}t AS t1 JOIN {P}u AS u1 ON t1.id = u1.id",
+      "Observed": "id=dbo.P_t.id;uid=dbo.P_u.id"
+    },
+    {
+      "Id": "columns-cross-apply-derived",
+      "Family": "output-columns",
+      "Step": "A3",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT o.c FROM {P}t AS t1 CROSS APPLY (SELECT TOP 1 c FROM {P}u WHERE {P}u.id = t1.id ORDER BY c) AS o",
+      "Observed": "c=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-through-synonym",
+      "Family": "output-columns",
+      "Step": "D5",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT); CREATE SYNONYM {P}syn FOR dbo.{P}t;",
+      "Body": "SELECT a FROM {P}syn",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-through-view",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);\nGO\nCREATE VIEW {P}vw AS SELECT a AS va FROM {P}t;\nGO\n",
+      "Body": "SELECT va FROM {P}vw",
+      "Observed": "va=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-union-takes-first-branch-name",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT a AS z FROM {P}t UNION ALL SELECT c FROM {P}u",
+      "Observed": "z=?"
+    },
+    {
+      "Id": "columns-order-by-expression-does-not-change-sources",
+      "Family": "output-columns",
+      "Step": "A2",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT b AS a FROM {P}t ORDER BY a",
+      "Observed": "a=dbo.P_t.b"
+    },
+    {
+      "Id": "columns-nested-ctes-chain",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "WITH c1 AS (SELECT a AS x FROM {P}t), c2 AS (SELECT x AS y FROM c1) SELECT y FROM c2",
+      "Observed": "y=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-sibling-subqueries-reuse-alias",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT d.a FROM (SELECT a FROM {P}t) AS d WHERE EXISTS (SELECT 1 FROM (SELECT c FROM {P}u) AS d WHERE d.c = 1)",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-inner-alias-shadows-outer-alias",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT t1.a FROM {P}t AS t1 WHERE EXISTS (SELECT 1 FROM {P}u AS t1 WHERE t1.c = 1)",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-two-derived-tables-same-column-name",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT x.v, y.v AS v2 FROM (SELECT a AS v FROM {P}t) AS x CROSS JOIN (SELECT c AS v FROM {P}u) AS y",
+      "Observed": "v=dbo.P_t.a;v2=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-values-constructor",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT v.k FROM (VALUES (1)) AS v (k)",
+      "Observed": "k=?"
+    },
+    {
+      "Id": "columns-cte-named-like-other-table-hides-it",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "WITH {P}u AS (SELECT a AS c FROM {P}t) SELECT c FROM {P}u",
+      "Observed": "c=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-alias-collides-with-other-tables-column",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT {P}t.a AS c, {P}u.c AS a FROM {P}t CROSS JOIN {P}u",
+      "Observed": "c=dbo.P_t.a;a=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-star-inside-derived-table",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT d.a FROM (SELECT * FROM {P}t) AS d",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-aliased-star",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT x.* FROM {P}t AS x",
+      "Observed": "id=dbo.P_t.id;a=dbo.P_t.a;b=dbo.P_t.b"
+    },
+    {
+      "Id": "columns-expression-and-plain-column",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT ISNULL(a, 0) AS z, a FROM {P}t",
+      "Observed": "z=?;a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-cast-column",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT CAST(a AS BIGINT) AS z, a FROM {P}t",
+      "Observed": "z=?;a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-pivot-output",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT p.[1] FROM (SELECT id, a FROM {P}t) AS s PIVOT (MAX(a) FOR id IN ([1])) AS p",
+      "Observed": "1=?"
+    },
+    {
+      "Id": "columns-window-function-beside-column",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT a, ROW_NUMBER() OVER (ORDER BY a) AS rn FROM {P}t",
+      "Observed": "a=dbo.P_t.a;rn=?"
+    },
+    {
+      "Id": "columns-nested-derived-tables",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT e.q FROM (SELECT d.v AS q FROM (SELECT a AS v FROM {P}t) AS d) AS e",
+      "Observed": "q=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-cte-column-list-reorders",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "WITH c (p, q) AS (SELECT a, b FROM {P}t) SELECT q, p FROM c",
+      "Observed": "q=dbo.P_t.b;p=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-view-over-view-chain",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);\nGO\nCREATE VIEW {P}vw1 AS SELECT a AS va FROM {P}t;\nGO\nCREATE VIEW {P}vw2 AS SELECT va AS vb FROM {P}vw1;\nGO\n",
+      "Body": "SELECT vb FROM {P}vw2",
+      "Observed": "vb=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-left-join-null-side-column",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT {P}u.c FROM {P}t LEFT JOIN {P}u ON {P}t.id = {P}u.id",
+      "Observed": "c=dbo.P_u.c"
+    },
+    {
+      "Id": "columns-qualified-by-schema-and-table",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT dbo.{P}t.a FROM dbo.{P}t",
+      "Observed": "a=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-same-cte-referenced-twice",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "WITH c AS (SELECT a AS x FROM {P}t) SELECT c1.x, c2.x AS x2 FROM c AS c1 CROSS JOIN c AS c2",
+      "Observed": "x=dbo.P_t.a;x2=dbo.P_t.a"
+    },
+    {
+      "Id": "columns-top-with-order-by-alias",
+      "Family": "output-columns",
+      "Step": "B7",
+      "Kind": "OutputColumns",
+      "CaseSensitiveDatabase": false,
+      "Setup": "CREATE TABLE {P}t (id INT, a INT, b INT); CREATE TABLE {P}u (id INT, c INT, b INT);",
+      "Body": "SELECT TOP 1 b AS a FROM {P}t ORDER BY a",
+      "Observed": "a=dbo.P_t.b"
     }
   ]
 }

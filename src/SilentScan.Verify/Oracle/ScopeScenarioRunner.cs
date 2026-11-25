@@ -70,9 +70,12 @@ public sealed class ScopeScenarioRunner
         await connection.OpenAsync(cancellationToken);
         try
         {
-            return scenario.Kind == ScopeObservableKind.Witness
-                ? await ReadWitnessAsync(connection, body, cancellationToken)
-                : await ReadBindingAsync(connection, body, prefix, cancellationToken);
+            return scenario.Kind switch
+            {
+                ScopeObservableKind.Witness => await ReadWitnessAsync(connection, body, cancellationToken),
+                ScopeObservableKind.Binding => await ReadBindingAsync(connection, body, prefix, cancellationToken),
+                _ => await ReadOutputColumnsAsync(connection, body, prefix, cancellationToken),
+            };
         }
         catch (SqlException ex)
         {
@@ -118,6 +121,27 @@ public sealed class ScopeScenarioRunner
         }
 
         return lines.Count == 0 ? NoDependencies : string.Join(";", lines);
+    }
+
+    private static async Task<string> ReadOutputColumnsAsync(SqlConnection connection, string select, string prefix, CancellationToken cancellationToken)
+    {
+        await using var command = new SqlCommand("EXEC sys.sp_describe_first_result_set @tsql = @tsql, @params = NULL, @browse_information_mode = 1;", connection) { CommandTimeout = 60 };
+        command.Parameters.AddWithValue("@tsql", select);
+        var columns = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var name = reader.GetOrdinal("name");
+        var schema = reader.GetOrdinal("source_schema");
+        var table = reader.GetOrdinal("source_table");
+        var column = reader.GetOrdinal("source_column");
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var source = reader.IsDBNull(table) || reader.IsDBNull(column)
+                ? "?"
+                : reader.GetString(schema) + "." + reader.GetString(table) + "." + reader.GetString(column);
+            columns.Add((reader.IsDBNull(name) ? string.Empty : reader.GetString(name)) + "=" + source.Replace(prefix, "P_", StringComparison.Ordinal));
+        }
+
+        return string.Join(";", columns);
     }
 
     private async Task<string> ReadServerVersionAsync(string database, CancellationToken cancellationToken)
