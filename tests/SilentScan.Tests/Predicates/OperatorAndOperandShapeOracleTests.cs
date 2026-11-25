@@ -16,6 +16,8 @@ public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
         CREATE TABLE dbo.NVarCharWin (Code NVARCHAR(20) COLLATE Latin1_General_CI_AS NOT NULL);
         GO
         CREATE TABLE dbo.VarCharSql (Code VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL, INDEX IX_CodeSql (Code));
+        GO
+        CREATE TABLE dbo.NVarCharSql (Code NVARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
         """;
 
     protected override string DatabaseNameSeed => nameof(OperatorAndOperandShapeOracleTests);
@@ -147,6 +149,20 @@ public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
         Assert.All(findings, f => Assert.Equal(Verdict.ScanForced, f.Verdict));
 
         var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, findings);
+        PipelineOracleVerification.AssertAllConfirmed(results);
+    }
+
+    [Fact]
+    public async Task NotInSubqueryWhereTheInnerVarCharColumnIsConverted_SqlCollation_IsScanForced_OracleConfirmed()
+    {
+
+        var report = await Scan("SELECT n.Code FROM dbo.NVarCharSql AS n WHERE n.Code NOT IN (SELECT v.Code FROM dbo.VarCharSql AS v);");
+
+        var finding = Assert.Single(report.Find<TypedPredicateFinding>("TypedPredicateExtractor"), f => f.Column.TableQualifiedName == "dbo.VarCharSql");
+        Assert.Equal(Verdict.ScanForced, finding.Verdict);
+        Assert.Equal("NOT IN", finding.Operator);
+
+        var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, [finding]);
         PipelineOracleVerification.AssertAllConfirmed(results);
     }
 }

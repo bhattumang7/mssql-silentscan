@@ -935,7 +935,7 @@ public static class TypedPredicateExtractor
             var isNotIn = node.NotDefined ^ _negated;
             if (isNotIn && node.Subquery is not null)
             {
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "NOT IN (subquery) plans as an anti semi join and never seeks the outer column, whatever the types - not attributed to a type-conversion verdict");
+                AnalyzeNotInSubquery(node, scopeChain, walker);
                 return;
             }
 
@@ -1516,6 +1516,31 @@ public static class TypedPredicateExtractor
             }
 
             return best;
+        }
+
+        private void AnalyzeNotInSubquery(InPredicate node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            _currentPredicateFragment = node;
+            var outerType = OperandType(ResolvePredicateOperand(node.Expression, scopeChain, walker));
+            var columns = QueryExpressionResolver.Resolve(
+                node.Subquery.QueryExpression, catalog, resolvedViews, sourcePath, ledger, walker.CurrentCteRelations(), walker.CurrentProcScope);
+
+            if (outerType is null || columns.Count != 1 || columns[0].Provenance is not ColumnProvenance.BaseColumn baseColumn)
+            {
+                ledger.Record(
+                    AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind,
+                    "NOT IN (subquery) is judged on the subquery's own base column, and either that column or the outer operand type could not be resolved");
+                return;
+            }
+
+            var tableEntry = catalog.Find(baseColumn.TableQualifiedName, walker.CurrentProcScope);
+            var matchedIndex = tableEntry?.FindIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer);
+            var innerColumn = new PredicateOperand.Column(
+                baseColumn.TableQualifiedName, baseColumn.ColumnName, baseColumn.Type, tableEntry is null ? null : matchedIndex is not null,
+                baseColumn.Depth, baseColumn, IndexName: matchedIndex?.Name);
+
+            var verdict = VerdictClassifier.Classify(innerColumn.Type, outerType, operatorText: "NOT IN");
+            Findings.Add(new TypedPredicateFinding(verdict, innerColumn, new PredicateOperand.Value(outerType), "NOT IN", sourcePath, node.StartLine, node.StartColumn));
         }
 
         private SqlType? ResolveInSubqueryType(ScalarSubquery subquery, ModuleWalker walker)

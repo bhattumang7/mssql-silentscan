@@ -977,18 +977,51 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_NotInSubquery_StaysLedgeredBecauseItPlansAsAntiSemiJoin()
+    public void Extract_NotInSubquery_JudgesTheSubqueryColumnWhenItIsTheConvertedSide()
+    {
+
+        var result = ExtractAll(
+            """
+            CREATE TABLE dbo.T (Col NVARCHAR(20) NOT NULL);
+            CREATE TABLE dbo.U (Key1 VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL PRIMARY KEY);
+            """,
+            "SELECT Col FROM dbo.T WHERE Col NOT IN (SELECT Key1 FROM dbo.U);");
+
+        var finding = Assert.Single(result.TypedFindings);
+        Assert.Equal(Verdict.ScanForced, finding.Verdict);
+        Assert.Equal("dbo.U", finding.Column.TableQualifiedName);
+        Assert.Equal("Key1", finding.Column.ColumnName);
+        Assert.Equal("NOT IN", finding.Operator);
+        Assert.True(finding.Column.Indexed);
+    }
+
+    [Fact]
+    public void Extract_NotInSubqueryWhereOnlyTheOuterSideIsConverted_PreservesTheInnerSeek()
     {
 
         var result = ExtractAll(
             """
             CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
-            CREATE TABLE dbo.U (Other NVARCHAR(20) NOT NULL);
+            CREATE TABLE dbo.U (Key1 NVARCHAR(20) NOT NULL PRIMARY KEY);
             """,
-            "SELECT Col FROM dbo.T WHERE Col NOT IN (SELECT Other FROM dbo.U);");
+            "SELECT Col FROM dbo.T WHERE Col NOT IN (SELECT Key1 FROM dbo.U);");
+
+        Assert.NotEqual(Verdict.ScanForced, Assert.Single(result.TypedFindings).Verdict);
+    }
+
+    [Fact]
+    public void Extract_NotInSubqueryOverAnExpression_StaysLedgered()
+    {
+
+        var result = ExtractAll(
+            """
+            CREATE TABLE dbo.T (Col VARCHAR(20) NOT NULL);
+            CREATE TABLE dbo.U (Key1 INT NOT NULL);
+            """,
+            "SELECT Col FROM dbo.T WHERE Col NOT IN (SELECT Key1 + 1 FROM dbo.U);");
 
         Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("anti semi join", StringComparison.Ordinal));
+        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("NOT IN (subquery)", StringComparison.Ordinal));
     }
 
     [Fact]
