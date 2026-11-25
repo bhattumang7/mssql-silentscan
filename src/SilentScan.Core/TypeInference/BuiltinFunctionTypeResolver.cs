@@ -92,7 +92,6 @@ public static class BuiltinFunctionTypeResolver
         ["CURRENT_TIMEZONE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
         ["CURRENT_TIMEZONE_ID"] = new SqlType(SqlTypeCategory.NVarChar, Length: 128),
         ["JSON_VALUE"] = new SqlType(SqlTypeCategory.NVarChar, Length: 4000),
-        ["JSON_MODIFY"] = new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
         ["STRING_ESCAPE"] = new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
         ["HASHBYTES"] = new SqlType(SqlTypeCategory.VarBinary, Length: 8000),
         ["CHECKSUM"] = new SqlType(SqlTypeCategory.Int),
@@ -229,6 +228,10 @@ public static class BuiltinFunctionTypeResolver
         ["JARO_WINKLER_DISTANCE"] = new SqlType(SqlTypeCategory.Float),
         ["SUSER_OID"] = new SqlType(SqlTypeCategory.UniqueIdentifier),
         ["USER_OID"] = new SqlType(SqlTypeCategory.UniqueIdentifier),
+        ["JSON_CONTAINS"] = new SqlType(SqlTypeCategory.Int),
+        ["VECTOR_DISTANCE"] = new SqlType(SqlTypeCategory.Float),
+        ["VECTOR_NORM"] = new SqlType(SqlTypeCategory.Float),
+        ["VECTORPROPERTY"] = new SqlType(SqlTypeCategory.SqlVariant),
     };
 
     private static readonly Dictionary<string, SqlType> GlobalVariableTypes = new(StringComparer.OrdinalIgnoreCase)

@@ -9,6 +9,8 @@ public sealed class BuiltinFixedReturnTypeMatrixTests
 {
     private static readonly string[] NotProbed = ["NEWSEQUENTIALID"];
 
+    private static readonly string[] CheckedByStoredTypeOracle = ["JSON_CONTAINS", "VECTOR_DISTANCE", "VECTOR_NORM", "VECTORPROPERTY"];
+
     private static SqlType FromEngineText(string systemTypeName)
     {
         var parser = new TSql160Parser(initialQuotedIdentifiers: true);
@@ -19,7 +21,7 @@ public sealed class BuiltinFixedReturnTypeMatrixTests
     }
 
     public static TheoryData<string> FixedReturnFunctions() =>
-        [.. BuiltinFunctionTypeResolver.FixedReturnTypeFunctionNames.Where(n => !NotProbed.Contains(n, StringComparer.OrdinalIgnoreCase)).OrderBy(n => n)];
+        [.. BuiltinFunctionTypeResolver.FixedReturnTypeFunctionNames.Where(n => !NotProbed.Contains(n, StringComparer.OrdinalIgnoreCase) && !CheckedByStoredTypeOracle.Contains(n, StringComparer.OrdinalIgnoreCase)).OrderBy(n => n)];
 
     [Theory]
     [MemberData(nameof(FixedReturnFunctions))]

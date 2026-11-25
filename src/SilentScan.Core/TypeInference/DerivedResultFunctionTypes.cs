@@ -13,7 +13,7 @@ public static class DerivedResultFunctionTypes
 
     private static readonly HashSet<string> ValueOfFirstArgument = new(StringComparer.OrdinalIgnoreCase)
     {
-        "LAG", "LEAD", "FIRST_VALUE", "LAST_VALUE", "LEFT_SHIFT", "RIGHT_SHIFT", "SET_BIT",
+        "LAG", "LEAD", "FIRST_VALUE", "LAST_VALUE", "LEFT_SHIFT", "RIGHT_SHIFT", "SET_BIT", "VECTOR_NORMALIZE",
     };
 
     private static readonly HashSet<string> OrderedSetDistributionFunctions = new(StringComparer.OrdinalIgnoreCase)
@@ -40,7 +40,7 @@ public static class DerivedResultFunctionTypes
 
     private static readonly HashSet<string> Names = new(StringComparer.OrdinalIgnoreCase)
     {
-        "LAG", "LEAD", "FIRST_VALUE", "LAST_VALUE", "GREATEST", "LEAST", "STR", "REPLICATE", "CONCAT", "CONCAT_WS", "JSON_QUERY", "DATETRUNC", "DATE_BUCKET",
+        "LAG", "LEAD", "FIRST_VALUE", "LAST_VALUE", "GREATEST", "LEAST", "STR", "REPLICATE", "CONCAT", "CONCAT_WS", "JSON_QUERY", "JSON_MODIFY", "DATETRUNC", "DATE_BUCKET",
         "REGEXP_REPLACE", "REGEXP_SUBSTR", "UNISTR", "TERTIARY_WEIGHTS", "BASE64_ENCODE", "BASE64_DECODE",
         "DATETIME2FROMPARTS", "DATETIMEOFFSETFROMPARTS", "TIMEFROMPARTS",
     };
@@ -71,9 +71,15 @@ public static class DerivedResultFunctionTypes
             "REPLICATE" when parameters.Count == 2 => ResolveReplicate(resolve(parameters[0]), parameters[1]),
             "CONCAT" when parameters.Count >= 2 => ResolveConcat([.. parameters.Select(resolve)], separator: null),
             "CONCAT_WS" when parameters.Count >= 3 => ResolveConcat([.. parameters.Skip(1).Select(resolve)], resolve(parameters[0])),
-            "JSON_QUERY" when parameters.Count >= 1 => resolve(parameters[0]) is { IsStringFamily: true } json
-                ? new SqlType(SqlTypeCategory.NVarChar, Length: json.IsMax ? null : UnicodeCap, IsMax: json.IsMax)
-                : null,
+            "JSON_QUERY" when parameters.Count >= 1 => resolve(parameters[0]) switch
+            {
+                { Category: SqlTypeCategory.Json } json => json,
+                { IsStringFamily: true } text => new SqlType(SqlTypeCategory.NVarChar, Length: text.IsMax ? null : UnicodeCap, IsMax: text.IsMax),
+                _ => null,
+            },
+            "JSON_MODIFY" when parameters.Count >= 1 => resolve(parameters[0]) is { Category: SqlTypeCategory.Json } modified
+                ? modified
+                : new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
             "DATETRUNC" when parameters.Count == 2 => DateTruncated(resolve(parameters[1])),
             "DATE_BUCKET" when parameters.Count >= 3 => resolve(parameters[2]) is { IsDateTimeFamily: true } bucketed ? bucketed : null,
             "REGEXP_REPLACE" when parameters.Count >= 1 => CappedString(resolve(parameters[0])),
