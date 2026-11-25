@@ -6941,6 +6941,600 @@
       "Nullable": true,
       "Deterministic": "Error:4108",
       "Precise": "Error:4108"
+    },
+    {
+      "Function": "ACOS",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "APPLOCK_MODE",
+      "Shape": "()",
+      "ResultType": "nvarchar(32)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "APPLOCK_TEST",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ASIN",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "ATAN",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "BIT_COUNT",
+      "Shape": "()",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1"
+    },
+    {
+      "Function": "COL_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "COLLATIONPROPERTY",
+      "Shape": "()",
+      "ResultType": "sql_variant",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "COLUMNPROPERTY",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "CONNECTIONPROPERTY",
+      "Shape": "()",
+      "ResultType": "sql_variant",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "COS",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "COT",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "CURRENT_REQUEST_ID",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "CURRENT_TIMEZONE",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "CURRENT_TIMEZONE_ID",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "CURRENT_TRANSACTION_ID",
+      "Shape": "()",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "CURSOR_STATUS",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "DATABASE_PRINCIPAL_ID",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "DATABASEPROPERTYEX",
+      "Shape": "()",
+      "ResultType": "sql_variant",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "DATETIMEFROMPARTS",
+      "Shape": "()",
+      "ResultType": "datetime",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1"
+    },
+    {
+      "Function": "DB_ID",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_LINE",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_MESSAGE",
+      "Shape": "()",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_NUMBER",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_PROCEDURE",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_SEVERITY",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ERROR_STATE",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FILE_ID",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FILE_IDEX",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FILE_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FILEGROUP_ID",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FILEGROUP_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "FORMATMESSAGE",
+      "Shape": "()",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "GET_BIT",
+      "Shape": "()",
+      "ResultType": "bit",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1"
+    },
+    {
+      "Function": "GETANSINULL",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "HAS_PERMS_BY_NAME",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "HOST_ID",
+      "Shape": "()",
+      "ResultType": "char(10)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "IDENT_INCR",
+      "Shape": "()",
+      "ResultType": "numeric(38,0)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "IDENT_SEED",
+      "Shape": "()",
+      "ResultType": "numeric(38,0)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "INDEX_COL",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "INDEXPROPERTY",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "IS_MEMBER",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "IS_ROLEMEMBER",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "IS_SRVROLEMEMBER",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "MIN_ACTIVE_ROWVERSION",
+      "Shape": "()",
+      "ResultType": "varbinary(8)",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1"
+    },
+    {
+      "Function": "OBJECT_SCHEMA_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "OBJECTPROPERTY",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "OBJECTPROPERTYEX",
+      "Shape": "()",
+      "ResultType": "sql_variant",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ORIGINAL_DB_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ORIGINAL_LOGIN",
+      "Shape": "()",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "PROGRAM_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "ROWCOUNT_BIG",
+      "Shape": "()",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "SCHEMA_ID",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "SMALLDATETIMEFROMPARTS",
+      "Shape": "()",
+      "ResultType": "smalldatetime",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1"
+    },
+    {
+      "Function": "SQL_VARIANT_PROPERTY",
+      "Shape": "()",
+      "ResultType": "sql_variant",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "STATS_DATE",
+      "Shape": "()",
+      "ResultType": "datetime",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "SUSER_ID",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "SUSER_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "SUSER_SID",
+      "Shape": "()",
+      "ResultType": "varbinary(85)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "TAN",
+      "Shape": "()",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0"
+    },
+    {
+      "Function": "TEXTPTR",
+      "Shape": "IMAGE",
+      "ResultType": "varbinary(16)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "TRIGGER_NESTLEVEL",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "TYPE_ID",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "TYPE_NAME",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "TYPEPROPERTY",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
+    },
+    {
+      "Function": "USER_ID",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1"
     }
   ]
 }
