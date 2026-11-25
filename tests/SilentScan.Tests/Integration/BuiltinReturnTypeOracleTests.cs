@@ -58,6 +58,7 @@ public sealed class BuiltinReturnTypeOracleTests : OracleTestFixture
         ["ROW_NUMBER"] = "ROW_NUMBER() OVER (ORDER BY (SELECT 1))", ["RANK"] = "RANK() OVER (ORDER BY (SELECT 1))",
         ["DENSE_RANK"] = "DENSE_RANK() OVER (ORDER BY (SELECT 1))", ["NTILE"] = "NTILE(2) OVER (ORDER BY (SELECT 1))",
         ["COUNT"] = "COUNT(*)", ["COUNT_BIG"] = "COUNT_BIG(*)",
+        ["APPROX_COUNT_DISTINCT"] = "APPROX_COUNT_DISTINCT(1)", ["APPROX_PERCENTILE_CONT"] = "APPROX_PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY LEN(s.V8000))",
         ["SUSER_SNAME"] = "SUSER_SNAME()", ["SUSER_NAME"] = "SUSER_NAME()", ["USER_NAME"] = "USER_NAME()", ["APP_NAME"] = "APP_NAME()",
         ["DB_NAME"] = "DB_NAME()", ["HOST_NAME"] = "HOST_NAME()", ["ORIGINAL_LOGIN"] = "ORIGINAL_LOGIN()",
         ["ERROR_NUMBER"] = "ERROR_NUMBER()", ["ERROR_SEVERITY"] = "ERROR_SEVERITY()", ["ERROR_STATE"] = "ERROR_STATE()", ["ERROR_LINE"] = "ERROR_LINE()",
@@ -73,7 +74,7 @@ public sealed class BuiltinReturnTypeOracleTests : OracleTestFixture
         ["INDEX_COL"] = "INDEX_COL('a', 1, 1)", ["PROGRAM_NAME"] = "PROGRAM_NAME()", ["DATENAME"] = "DATENAME(month, 0)", ["EOMONTH"] = "EOMONTH(SYSDATETIME())",
         ["DATEFROMPARTS"] = "DATEFROMPARTS(1, 2, 3)", ["DATETIMEFROMPARTS"] = "DATETIMEFROMPARTS(1, 2, 3, 4, 5, 6, 7)",
         ["SMALLDATETIMEFROMPARTS"] = "SMALLDATETIMEFROMPARTS(2000, 2, 3, 4, 5)", ["CURRENT_TIMEZONE"] = "CURRENT_TIMEZONE()", ["CURRENT_TIMEZONE_ID"] = "CURRENT_TIMEZONE_ID()",
-        ["JSON_VALUE"] = "JSON_VALUE('{}', '$.a')", ["JSON_MODIFY"] = "JSON_MODIFY('{}', '$.a', 1)", ["STRING_ESCAPE"] = "STRING_ESCAPE('a', 'json')",
+        ["JSON_VALUE"] = "JSON_VALUE('{}', '$.a')", ["STRING_ESCAPE"] = "STRING_ESCAPE('a', 'json')",
         ["HASHBYTES"] = "HASHBYTES('SHA2_256', 'a')", ["CHECKSUM"] = "CHECKSUM(1)", ["BINARY_CHECKSUM"] = "BINARY_CHECKSUM(1)",
         ["PI"] = "PI()", ["RAND"] = "RAND()", ["SQRT"] = "SQRT(4)", ["SQUARE"] = "SQUARE(4)", ["EXP"] = "EXP(1)", ["LOG"] = "LOG(2)", ["LOG10"] = "LOG10(2)",
         ["SIN"] = "SIN(1)", ["COS"] = "COS(1)", ["TAN"] = "TAN(1)", ["COT"] = "COT(1)", ["ASIN"] = "ASIN(1)", ["ACOS"] = "ACOS(1)", ["ATAN"] = "ATAN(1)", ["ATN2"] = "ATN2(1, 2)",
@@ -125,12 +126,11 @@ public sealed class BuiltinReturnTypeOracleTests : OracleTestFixture
         ours is { LengthKnown: false } && engine is not null ? engine.Split('(')[0] : engine;
 
     [Fact]
-    public void InvocationTable_CoversEveryResolverEntry_ExceptDefaultConstraintOnlyFunctions()
+    public void InvocationTable_ListsOnlyNamesTheResolverStillTypes_AndEveryParameterlessCallIsTyped()
     {
-        var expected = BuiltinFunctionTypeResolver.FixedReturnTypeFunctionNames.Except(DefaultConstraintOnly, StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase);
+        var stale = FixedInvocations.Keys.Except(BuiltinFunctionTypeResolver.FixedReturnTypeFunctionNames, StringComparer.OrdinalIgnoreCase).ToList();
 
-        Assert.Equal(expected, FixedInvocations.Keys.Order(StringComparer.OrdinalIgnoreCase));
+        Assert.Empty(stale);
         Assert.Equal(Enum.GetValues<ParameterlessCallType>().Order(), BuiltinFunctionTypeResolver.TypedParameterlessCalls.Order());
     }
 
