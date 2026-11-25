@@ -94,7 +94,31 @@ public static class ExpressionTypeInferencer
             return CombineStringConcat(left, right);
         }
 
+        if (binary.BinaryExpressionType == BinaryExpressionType.Add && left is { IsBinaryFamily: true } && right is { IsBinaryFamily: true })
+        {
+            return ConcatenateBinary(left, right);
+        }
+
         return ResolveExactArithmetic(binary.BinaryExpressionType, left, right) ?? Combine(left, right);
+    }
+
+    private const int MaxSizedBinaryLength = 8000;
+
+    private static SqlType ConcatenateBinary(SqlType left, SqlType right)
+    {
+        var category = left.Category == SqlTypeCategory.Binary && right.Category == SqlTypeCategory.Binary
+            ? SqlTypeCategory.Binary
+            : SqlTypeCategory.VarBinary;
+        if (left.IsMax || right.IsMax || left.Length is not { } l || right.Length is not { } r)
+        {
+            return left.IsMax || right.IsMax
+                ? new SqlType(SqlTypeCategory.VarBinary, IsMax: true)
+                : new SqlType(category, LengthKnown: false);
+        }
+
+        return l + r > MaxSizedBinaryLength
+            ? new SqlType(SqlTypeCategory.VarBinary, IsMax: true)
+            : new SqlType(category, Length: l + r);
     }
 
     private static SqlType? ResolveExactArithmetic(BinaryExpressionType op, SqlType? left, SqlType? right)
@@ -107,6 +131,15 @@ public static class ExpressionTypeInferencer
         if (left?.Category != SqlTypeCategory.Decimal && right?.Category != SqlTypeCategory.Decimal)
         {
             return null;
+        }
+
+        if (left?.Category == SqlTypeCategory.Decimal && TakesDecimalOperandShape(right))
+        {
+            right = left;
+        }
+        else if (right?.Category == SqlTypeCategory.Decimal && TakesDecimalOperandShape(left))
+        {
+            left = right;
         }
 
         if (ExactNumericPrecisionScale(left) is not { } l || ExactNumericPrecisionScale(right) is not { } r)
@@ -152,6 +185,9 @@ public static class ExpressionTypeInferencer
 
         return new SqlType(SqlTypeCategory.Decimal, Precision: 38, Scale: finalScale);
     }
+
+    private static bool TakesDecimalOperandShape(SqlType? type) =>
+        type is { Category: SqlTypeCategory.Bit } || type is { IsStringFamily: true } || type is { IsBinaryFamily: true };
 
     private static SqlType? MergeExactNumericPrecisionScale(SqlTypeCategory winnerCategory, SqlType left, SqlType right)
     {
@@ -340,8 +376,13 @@ public static class ExpressionTypeInferencer
 
         if (!loser.IsStringFamily)
         {
-            return loser.IsMax
-                ? winner with { Category = winnerCategory, IsMax = true }
+            if (loser.IsMax)
+            {
+                return winner with { Category = winnerCategory, IsMax = true, Length = null };
+            }
+
+            return loser.IsBinaryFamily && winner.Length is { } winnerLength && loser.Length is { } loserLength
+                ? winner with { Category = winnerCategory, Length = Math.Max(winnerLength, loserLength) }
                 : winner with { Category = winnerCategory };
         }
 
