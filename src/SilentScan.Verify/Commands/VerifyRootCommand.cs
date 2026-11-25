@@ -10,6 +10,7 @@ public static class VerifyRootCommand
         root.Subcommands.Add(GenerateTypeMatrixCommand.Create());
         root.Subcommands.Add(GenerateAssignMatrixCommand.Create());
         root.Subcommands.Add(GenerateCastMatrixCommand.Create());
+        root.Subcommands.Add(GenerateOperatorMatrixCommand.Create());
         root.Subcommands.Add(GenerateScopeCorpusCommand.Create());
         root.Subcommands.Add(GenerateCollationCodePagesCommand.Create());
         return root;
