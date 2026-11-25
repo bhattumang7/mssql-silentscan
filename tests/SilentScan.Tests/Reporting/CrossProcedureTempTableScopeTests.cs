@@ -67,7 +67,7 @@ public sealed class CrossProcedureTempTableScopeTests
         Assert.Equal(Verdict.ScanForced, finding.Verdict);
         Assert.Equal("#Results", finding.Column.TableQualifiedName);
 
-        Assert.Null(finding.Column.Indexed);
+        Assert.False(finding.Column.Indexed);
     }
 
     [Fact]
