@@ -230,7 +230,16 @@ public static partial class DynamicSqlPipeline
                 TemporalBoundary);
     }
 
-    private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel);
+    private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel, DatabaseCatalog? Catalog = null)
+    {
+        public void BindCallerSchemas(SqlParseResult parseResult)
+        {
+            if (Catalog is { CallerDefaultSchemas: { } defaultSchemas })
+            {
+                ModuleSchemaNameBinding.BindDynamicSqlTables(parseResult, Catalog, defaultSchemas);
+            }
+        }
+    }
 
     private static bool TryParseAndClassify(
         DynamicSqlScript script, IReadOnlyList<PlaceholderOccurrence>? placeholders, DynamicSqlParseOptions parseOptions, ResultAccumulator accumulator,
@@ -251,6 +260,7 @@ public static partial class DynamicSqlPipeline
 
         var virtualPath = $"{script.CallSite.SourcePath}::dynamic-sql@{script.CallSite.Line}";
         var parseResult = SqlScriptParser.ParseText(virtualPath, script.InnerText, parseOptions.InitialQuotedIdentifiers, parseOptions.CompatibilityLevel);
+        parseOptions.BindCallerSchemas(parseResult);
 
         if (parseResult.HasErrors)
         {
@@ -341,6 +351,7 @@ public static partial class DynamicSqlPipeline
             var toElideNow = placeholders.Where(p => toElide.Contains(PlaceholderToken(p))).ToList();
             var variant = NeutralElisionVariant.Build(script.InnerText, toElideNow, filler);
             var parseResult = SqlScriptParser.ParseText(virtualPath, variant.Text, parseOptions.InitialQuotedIdentifiers, parseOptions.CompatibilityLevel);
+            parseOptions.BindCallerSchemas(parseResult);
             if (!parseResult.HasErrors)
             {
                 elidedParseResult = parseResult;
@@ -482,7 +493,7 @@ public static partial class DynamicSqlPipeline
     {
         var placeholders = script.PlaceholderOccurrences;
         var parseOptions = new DynamicSqlParseOptions(
-            context.Catalog.ResolveDynamicSqlQuotedIdentifier(script.Scope.ProcScope), context.Catalog.CompatibilityLevel);
+            context.Catalog.ResolveDynamicSqlQuotedIdentifier(script.Scope.ProcScope), context.Catalog.CompatibilityLevel, context.Catalog);
         if (!TryParseAndClassify(script, placeholders, parseOptions, accumulator, out var innerParseResult, out var elisionMap))
         {
             return;

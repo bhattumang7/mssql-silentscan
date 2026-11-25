@@ -50,8 +50,28 @@ public sealed class UnqualifiedProcedureCallOracleTests : OracleTestFixture
         Assert.Equal("sa.only_in_sa", CalleeOfOnlyEdge("dbo.caller_only_in_sa"));
     }
 
+    private static string CalleeWithDefaultSchemas(IReadOnlyCollection<string> defaultSchemas)
+    {
+        var result = SqlScriptParser.ParseText("calls.sql", Setup);
+        var catalog = CatalogBuilder.Build([result]);
+        ModuleSchemaNameBinding.BindProcedureCalls(result, ModuleSchemaNameBinding.ProcedureNames([result], catalog.IdentifierComparer), catalog.IdentifierComparer, defaultSchemas);
+        var graph = ProcCallGraphBuilder.Build([result], catalog, new SkipLedger());
+        return graph.Edges.SingleOrDefault(e => e.CallerScopeQualifiedName == "dbo.caller_in_both")?.CalleeQualifiedName ?? "none";
+    }
+
     [Fact]
-    public void ProcedureExistingInTwoSchemas_StaysOnTheDefaultSchemaBecauseTheCallerDecides()
+    public async Task ProcedureExistingInTwoSchemas_FollowsTheCallersDefaultSchema_SoItIsOnlyBoundWhenEveryCallerAgrees()
+    {
+        Assert.Equal("dbo", await ScalarAsync<string>("DECLARE @t TABLE (src VARCHAR(10)); INSERT @t EXEC dbo.in_both; SELECT TOP 1 src FROM @t;"));
+        Assert.Equal("sa", await ScalarAsync<string>("EXECUTE AS USER = 'u_sa'; DECLARE @t TABLE (src VARCHAR(10)); INSERT @t EXEC dbo.caller_in_both; REVERT; SELECT TOP 1 src FROM @t;"));
+
+        Assert.Equal("dbo.in_both", CalleeWithDefaultSchemas(["dbo"]));
+        Assert.Equal("sa.in_both", CalleeWithDefaultSchemas(["sa"]));
+        Assert.NotEqual("dbo.in_both", CalleeWithDefaultSchemas(["dbo", "sa"]));
+    }
+
+    [Fact]
+    public void ProcedureExistingInTwoSchemas_WithoutKnownDefaultSchemas_StaysOnDbo()
     {
         Assert.Equal("dbo.in_both", CalleeOfOnlyEdge("dbo.caller_in_both"));
     }

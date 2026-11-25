@@ -32,8 +32,14 @@ public static class ModuleSchemaNameBinding
         }
     }
 
-    public static void BindProcedureCalls(SqlParseResult result, IReadOnlySet<string> procedureNames, StringComparer comparer) =>
-        result.Fragment.Accept(new ProcedureCallBinder(procedureNames, comparer));
+    public const string CallerDependentSchema = "?caller-dependent";
+
+    public static void BindDynamicSqlTables(SqlParseResult result, DatabaseCatalog catalog, IReadOnlyCollection<string> defaultSchemas) =>
+        result.Fragment.Accept(new DynamicTableBinder(catalog, defaultSchemas));
+
+    public static void BindProcedureCalls(
+        SqlParseResult result, IReadOnlySet<string> procedureNames, StringComparer comparer, IReadOnlyCollection<string>? defaultSchemas = null) =>
+        result.Fragment.Accept(new ProcedureCallBinder(procedureNames, comparer, defaultSchemas));
 
     public static IReadOnlySet<string> ProcedureNames(IEnumerable<SqlParseResult> results, StringComparer comparer)
     {
@@ -92,6 +98,46 @@ public static class ModuleSchemaNameBinding
         }
     }
 
+    private sealed class DynamicTableBinder(DatabaseCatalog catalog, IReadOnlyCollection<string> defaultSchemas) : TSqlFragmentVisitor
+    {
+        public override void Visit(NamedTableReference node)
+        {
+            if (node.SchemaObject is not { SchemaIdentifier: null, DatabaseIdentifier: null, ServerIdentifier: null, BaseIdentifier.Value: { Length: > 0 } baseName } name
+                || baseName.StartsWith('#')
+                || baseName.StartsWith('@'))
+            {
+                return;
+            }
+
+            var comparer = catalog.IdentifierComparer;
+            var candidates = catalog.Tables
+                .Where(t => t.Kind == CatalogTableKind.Table && t.SchemaName is not null && comparer.Equals(t.Name, baseName))
+                .Select(t => t.SchemaName!)
+                .Distinct(comparer)
+                .ToList();
+            if (candidates.Count == 0)
+            {
+                return;
+            }
+
+            var outcomes = new HashSet<string>(comparer);
+            foreach (var defaultSchema in defaultSchemas.Count == 0 ? [SchemaObjectNameHelper.DefaultSchema] : defaultSchemas)
+            {
+                var reached = candidates.FirstOrDefault(c => comparer.Equals(c, defaultSchema))
+                    ?? candidates.FirstOrDefault(c => comparer.Equals(c, SchemaObjectNameHelper.DefaultSchema));
+                if (reached is not null)
+                {
+                    outcomes.Add(reached);
+                }
+            }
+
+            if (outcomes.Count > 0)
+            {
+                BoundSchemas.AddOrUpdate(name, outcomes.Count == 1 ? outcomes.First() : CallerDependentSchema);
+            }
+        }
+    }
+
     private sealed class ProcedureNameCollector : TSqlFragmentVisitor
     {
         public List<string> Names { get; } = [];
@@ -105,7 +151,7 @@ public static class ModuleSchemaNameBinding
         }
     }
 
-    private sealed class ProcedureCallBinder(IReadOnlySet<string> procedureNames, StringComparer comparer) : TSqlFragmentVisitor
+    private sealed class ProcedureCallBinder(IReadOnlySet<string> procedureNames, StringComparer comparer, IReadOnlyCollection<string>? defaultSchemas) : TSqlFragmentVisitor
     {
         public override void Visit(ExecutableProcedureReference node)
         {
@@ -117,13 +163,35 @@ public static class ModuleSchemaNameBinding
 
             var candidates = procedureNames
                 .Where(n => n.IndexOf('.', StringComparison.Ordinal) is var dot and > 0 && comparer.Equals(n[(dot + 1)..], baseName) && n.IndexOf('.', dot + 1) < 0)
+                .Select(n => n[..n.IndexOf('.', StringComparison.Ordinal)])
                 .ToList();
-            if (candidates.Count != 1)
+            if (candidates.Count == 0)
             {
                 return;
             }
 
-            BoundSchemas.AddOrUpdate(name, candidates[0][..candidates[0].IndexOf('.', StringComparison.Ordinal)]);
+            if (defaultSchemas is null)
+            {
+                if (candidates.Count == 1)
+                {
+                    BoundSchemas.AddOrUpdate(name, candidates[0]);
+                }
+
+                return;
+            }
+
+            var outcomes = new HashSet<string>(comparer);
+            foreach (var defaultSchema in defaultSchemas.Count == 0 ? [SchemaObjectNameHelper.DefaultSchema] : defaultSchemas)
+            {
+                var reached = candidates.FirstOrDefault(c => comparer.Equals(c, defaultSchema))
+                    ?? candidates.FirstOrDefault(c => comparer.Equals(c, SchemaObjectNameHelper.DefaultSchema));
+                if (reached is not null)
+                {
+                    outcomes.Add(reached);
+                }
+            }
+
+            BoundSchemas.AddOrUpdate(name, outcomes.Count == 1 ? outcomes.First() : CallerDependentSchema);
         }
     }
 
