@@ -50,6 +50,12 @@ public static class ProcCallTableValuedArgumentMismatchScanner
 
         private readonly Dictionary<string, List<NarrowingWrite>> _narrowingWritesByVariable = new(StringComparer.OrdinalIgnoreCase);
 
+        private QuerySpecification? _pendingSelectSource;
+
+        private string? _pendingSelectTarget;
+
+        private List<CatalogColumn?>? _pendingSelectColumns;
+
         public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
         {
             foreach (var declaration in node.Declarations)
@@ -118,6 +124,17 @@ public static class ProcCallTableValuedArgumentMismatchScanner
                 return;
             }
 
+            if (insertSource is SelectInsertSource { Select: { } selectSource }
+                && UnwrapParentheses(selectSource) is QuerySpecification { SelectElements: { Count: > 0 } selectElements } specification
+                && selectElements.All(e => e is SelectScalarExpression)
+                && ResolveTargetColumns(node.InsertSpecification.Columns, tableType) is { } selectTargetColumns)
+            {
+                _pendingSelectSource = specification;
+                _pendingSelectTarget = targetName;
+                _pendingSelectColumns = selectTargetColumns;
+                return;
+            }
+
             if (insertSource is not ValuesInsertSource valuesSource)
             {
                 ledger.Record(
@@ -149,8 +166,37 @@ public static class ProcCallTableValuedArgumentMismatchScanner
             }
         }
 
+        private static QueryExpression UnwrapParentheses(QueryExpression expression) =>
+            expression is QueryParenthesisExpression parenthesis ? UnwrapParentheses(parenthesis.QueryExpression) : expression;
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (!ReferenceEquals(node, _pendingSelectSource) || _pendingSelectTarget is not { } targetName || _pendingSelectColumns is not { } targetColumns)
+            {
+                return;
+            }
+
+            _pendingSelectSource = null;
+            _pendingSelectTarget = null;
+            _pendingSelectColumns = null;
+
+            var values = node.SelectElements.Select(e => ((SelectScalarExpression)e).Expression).ToList();
+            if (values.Count != targetColumns.Count)
+            {
+                return;
+            }
+
+            var writes = _narrowingWritesByVariable.TryGetValue(targetName, out var existing) ? existing : [];
+            var seenColumns = new HashSet<string>(writes.Select(w => w.ColumnName), catalog.IdentifierComparer);
+            CollectRowNarrowing(values, targetColumns, seenColumns, writes, scopeChain);
+            if (writes.Count > 0)
+            {
+                _narrowingWritesByVariable[targetName] = writes;
+            }
+        }
+
         private void CollectRowNarrowing(
-            IList<ScalarExpression> rowValues, List<CatalogColumn?> targetColumns, HashSet<string> seenColumns, List<NarrowingWrite> writes)
+            IList<ScalarExpression> rowValues, List<CatalogColumn?> targetColumns, HashSet<string> seenColumns, List<NarrowingWrite> writes, ScopeChain? scopeChain = null)
         {
             for (var i = 0; i < targetColumns.Count; i++)
             {
@@ -162,7 +208,7 @@ public static class ProcCallTableValuedArgumentMismatchScanner
 
                 var valueExpression = rowValues[i];
                 var sourceType = ScalarExpressionResolver.ResolveScalarType(
-                    valueExpression, [], sourcePath,
+                    valueExpression, scopeChain ?? [], sourcePath,
                     new ScalarExpressionResolver.ScalarTypeContext(null, catalog.TypeAliases, catalog, _scalarVariableTypes));
 
                 if (WriteLossClassifier.Classify(column.Type, sourceType, valueExpression, isVariableTarget: false) is { } kind)
