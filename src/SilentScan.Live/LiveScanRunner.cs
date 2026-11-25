@@ -49,6 +49,7 @@ public static class LiveScanRunner
         }
 
         var moduleNames = new HashSet<string>(modules.Select(m => m.QualifiedName), catalog.IdentifierComparer);
+        var procedureNames = new HashSet<string>(modules.Where(m => m.ObjectTypeCode == "P").Select(m => m.QualifiedName), catalog.IdentifierComparer);
 
         IEnumerable<SqlParseResult> parseResultSource(IScanStage? parseStage = null) =>
             modules.AsParallel().AsOrdered()
@@ -57,6 +58,7 @@ public static class LiveScanRunner
                     parseStage?.Advance(currentItem: m.QualifiedName);
                     var parsed = SqlScriptParser.ParseText(m.QualifiedName, m.Definition, m.UsesQuotedIdentifier, catalog.CompatibilityLevel);
                     ModuleSchemaNameBinding.Bind(parsed, name => ModuleSchemaNameBinding.ObjectExists(catalog, moduleNames, name), catalog.IdentifierComparer);
+                    ModuleSchemaNameBinding.BindProcedureCalls(parsed, procedureNames, catalog.IdentifierComparer);
                     return parsed;
                 });
 

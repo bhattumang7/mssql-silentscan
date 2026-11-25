@@ -24,10 +24,28 @@ public static class ModuleSchemaNameBinding
     public static void Bind(IReadOnlyList<SqlParseResult> results, DatabaseCatalog catalog)
     {
         var moduleNames = ModuleNames(results, catalog.IdentifierComparer);
+        var procedureNames = ProcedureNames(results, catalog.IdentifierComparer);
         foreach (var result in results)
         {
             Bind(result, name => ObjectExists(catalog, moduleNames, name), catalog.IdentifierComparer);
+            BindProcedureCalls(result, procedureNames, catalog.IdentifierComparer);
         }
+    }
+
+    public static void BindProcedureCalls(SqlParseResult result, IReadOnlySet<string> procedureNames, StringComparer comparer) =>
+        result.Fragment.Accept(new ProcedureCallBinder(procedureNames, comparer));
+
+    public static IReadOnlySet<string> ProcedureNames(IEnumerable<SqlParseResult> results, StringComparer comparer)
+    {
+        var names = new HashSet<string>(comparer);
+        foreach (var result in results)
+        {
+            var collector = new ProcedureNameCollector();
+            result.Fragment.Accept(collector);
+            names.UnionWith(collector.Names);
+        }
+
+        return names;
     }
 
     public static void Bind(SqlParseResult result, Func<string, bool> objectExists, StringComparer comparer) =>
@@ -71,6 +89,41 @@ public static class ModuleSchemaNameBinding
             {
                 Names.Add(SchemaObjectNameHelper.Qualify(name));
             }
+        }
+    }
+
+    private sealed class ProcedureNameCollector : TSqlFragmentVisitor
+    {
+        public List<string> Names { get; } = [];
+
+        public override void Visit(ProcedureStatementBody node)
+        {
+            if (node.ProcedureReference?.Name is { } name)
+            {
+                Names.Add(SchemaObjectNameHelper.Qualify(name));
+            }
+        }
+    }
+
+    private sealed class ProcedureCallBinder(IReadOnlySet<string> procedureNames, StringComparer comparer) : TSqlFragmentVisitor
+    {
+        public override void Visit(ExecutableProcedureReference node)
+        {
+            if (node.ProcedureReference?.ProcedureReference?.Name is not { SchemaIdentifier: null, DatabaseIdentifier: null, ServerIdentifier: null, BaseIdentifier.Value: { Length: > 0 } baseName } name
+                || baseName.StartsWith('#'))
+            {
+                return;
+            }
+
+            var candidates = procedureNames
+                .Where(n => n.IndexOf('.', StringComparison.Ordinal) is var dot and > 0 && comparer.Equals(n[(dot + 1)..], baseName) && n.IndexOf('.', dot + 1) < 0)
+                .ToList();
+            if (candidates.Count != 1)
+            {
+                return;
+            }
+
+            BoundSchemas.AddOrUpdate(name, candidates[0][..candidates[0].IndexOf('.', StringComparison.Ordinal)]);
         }
     }
 
