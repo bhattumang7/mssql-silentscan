@@ -8532,6 +8532,2956 @@
       "Deterministic": "0",
       "Precise": "1",
       "Parallel": "NonParallelizableIntrinsicFunction"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;INT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;BIGINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;SMALLINT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;TINYINT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;DECIMAL(10,2)",
+      "ResultType": "decimal(12,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "INT;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;INT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;BIGINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;SMALLINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;TINYINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;DECIMAL(10,2)",
+      "ResultType": "decimal(21,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "BIGINT;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;INT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;BIGINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;SMALLINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;TINYINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;DECIMAL(10,2)",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "SMALLINT;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;INT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;BIGINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;SMALLINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;TINYINT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;DECIMAL(10,2)",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "TINYINT;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);INT",
+      "ResultType": "decimal(12,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);BIGINT",
+      "ResultType": "decimal(21,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);SMALLINT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);TINYINT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);DECIMAL(10,2)",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "DECIMAL(10,2);MONEY",
+      "ResultType": "decimal(19,4)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;INT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;BIGINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;SMALLINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;TINYINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;DECIMAL(10,2)",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;REAL",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "FLOAT;MONEY",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;INT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;BIGINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;SMALLINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;TINYINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;DECIMAL(10,2)",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "REAL;MONEY",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;INT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;BIGINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;SMALLINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;TINYINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;DECIMAL(10,2)",
+      "ResultType": "decimal(19,4)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED",
+      "Shape": "MONEY;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);VARCHAR(20)",
+      "ResultType": "varchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "varchar(8000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);CHAR(10)",
+      "ResultType": "varchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);VARCHAR(20)",
+      "ResultType": "nvarchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);CHAR(10)",
+      "ResultType": "nvarchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "varchar(8000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "varchar(8000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);CHAR(10)",
+      "ResultType": "varchar(8000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);CHAR(10)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);VARCHAR(20)",
+      "ResultType": "varchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);NVARCHAR(20)",
+      "ResultType": "nvarchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);VARCHAR(MAX)",
+      "ResultType": "varchar(8000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(4000)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);CHAR(10)",
+      "ResultType": "char(10)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "CHAR(10);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20)",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(20)",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(MAX)",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(MAX)",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;CHAR(10)",
+      "ResultType": "Error:468",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:468",
+      "Precise": "Error:468",
+      "Parallel": "Error:468"
+    },
+    {
+      "Function": "GREATEST_MIXED_STRINGS",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(20)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);VARCHAR(20)",
+      "ResultType": "varchar(40)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(40)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);CHAR(10)",
+      "ResultType": "varchar(30)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);VARCHAR(20)",
+      "ResultType": "nvarchar(40)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(40)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);CHAR(10)",
+      "ResultType": "nvarchar(30)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);CHAR(10)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);CHAR(10)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);VARCHAR(20)",
+      "ResultType": "varchar(30)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);NVARCHAR(20)",
+      "ResultType": "nvarchar(30)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);CHAR(10)",
+      "ResultType": "varchar(20)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "CHAR(10);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(20)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(MAX)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(MAX)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;CHAR(10)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_MIXED",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(40)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);VARCHAR(20)",
+      "ResultType": "varchar(100)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(100)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);CHAR(10)",
+      "ResultType": "varchar(70)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);VARCHAR(20)",
+      "ResultType": "nvarchar(100)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);NVARCHAR(20)",
+      "ResultType": "nvarchar(100)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);VARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);CHAR(10)",
+      "ResultType": "nvarchar(70)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(20);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);CHAR(10)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(20)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);VARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);CHAR(10)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "NVARCHAR(MAX);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);VARCHAR(20)",
+      "ResultType": "varchar(80)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);NVARCHAR(20)",
+      "ResultType": "nvarchar(80)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);CHAR(10)",
+      "ResultType": "varchar(50)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "CHAR(10);VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(20)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(MAX)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;NVARCHAR(MAX)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;CHAR(10)",
+      "ResultType": "Error:451",
+      "Collation": null,
+      "Nullable": null,
+      "Deterministic": "Error:451",
+      "Precise": "Error:451",
+      "Parallel": "Error:451"
+    },
+    {
+      "Function": "CONCAT_WS_THREE",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8;VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(100)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": false,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "VARCHAR(20)",
+      "ResultType": "varchar(60)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "NVARCHAR(20)",
+      "ResultType": "nvarchar(60)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "VARCHAR(MAX)",
+      "ResultType": "varchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "NVARCHAR(MAX)",
+      "ResultType": "nvarchar(max)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "CHAR(10)",
+      "ResultType": "varchar(30)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REPLICATE_LITERAL",
+      "Shape": "VARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(60)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "INT",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "BIGINT",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "SMALLINT",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "TINYINT",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "DECIMAL(10,2)",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "FLOAT",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "REAL",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH",
+      "Shape": "MONEY",
+      "ResultType": "varchar(5)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "INT",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "BIGINT",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "SMALLINT",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "TINYINT",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "DECIMAL(10,2)",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "FLOAT",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "REAL",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "STR_LENGTH_DECIMALS",
+      "Shape": "MONEY",
+      "ResultType": "varchar(25)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "0",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "UPPER_UTF8",
+      "Shape": "CHAR(10) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(80)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "UPPER_UTF8",
+      "Shape": "VARCHAR(2000) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(8000)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "UPPER_UTF8",
+      "Shape": "NVARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "nvarchar(20)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LOWER_UTF8",
+      "Shape": "CHAR(10) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(80)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LOWER_UTF8",
+      "Shape": "VARCHAR(2000) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "varchar(8000)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LOWER_UTF8",
+      "Shape": "NVARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8",
+      "ResultType": "nvarchar(20)",
+      "Collation": "Latin1_General_100_CI_AS_SC_UTF8",
+      "Nullable": true,
+      "Deterministic": "1",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;INT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;BIGINT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;SMALLINT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;TINYINT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;DECIMAL(10,2)",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;FLOAT",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;REAL",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "INT;MONEY",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;INT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;BIGINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;SMALLINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;TINYINT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;DECIMAL(10,2)",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;FLOAT",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;REAL",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "BIGINT;MONEY",
+      "ResultType": "bigint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;INT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;BIGINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;SMALLINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;TINYINT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;DECIMAL(10,2)",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;FLOAT",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;REAL",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "SMALLINT;MONEY",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;INT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;BIGINT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;SMALLINT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;TINYINT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;DECIMAL(10,2)",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;FLOAT",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;REAL",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "TINYINT;MONEY",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);INT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);BIGINT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);SMALLINT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);TINYINT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);DECIMAL(10,2)",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);FLOAT",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);REAL",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "DECIMAL(10,2);MONEY",
+      "ResultType": "decimal(10,2)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;INT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;BIGINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;SMALLINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;TINYINT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;DECIMAL(10,2)",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;FLOAT",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;REAL",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "FLOAT;MONEY",
+      "ResultType": "float",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;INT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;BIGINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;SMALLINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;TINYINT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;DECIMAL(10,2)",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;FLOAT",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;REAL",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "REAL;MONEY",
+      "ResultType": "real",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;INT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;BIGINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;SMALLINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;TINYINT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;DECIMAL(10,2)",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;FLOAT",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;REAL",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LAG_DEFAULT",
+      "Shape": "MONEY;MONEY",
+      "ResultType": "money",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "Error:4108",
+      "Precise": "Error:4108",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CONNECTIONS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CPU_BUSY_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "CURSOR_ROWS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DATEFIRST_VAR",
+      "Shape": "()",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DBTS_VAR",
+      "Shape": "()",
+      "ResultType": "varbinary(8)",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DEF_SORTORDER_ID_VAR",
+      "Shape": "()",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "DEFAULT_LANGID_VAR",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "FETCH_STATUS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "IDENTITY_VAR",
+      "Shape": "()",
+      "ResultType": "numeric(38,0)",
+      "Collation": null,
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "IDLE_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "IO_BUSY_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LANGID_VAR",
+      "Shape": "()",
+      "ResultType": "smallint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LANGUAGE_VAR",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "LOCK_TIMEOUT_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "MAX_CONNECTIONS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "MAX_PRECISION_VAR",
+      "Shape": "()",
+      "ResultType": "tinyint",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "MICROSOFTVERSION_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "NESTLEVEL_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "OPTIONS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "PACK_RECEIVED_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "PACK_SENT_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "PACKET_ERRORS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "PROCID_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "REMSERVER_VAR",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "SERVERNAME_VAR",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "SERVICENAME_VAR",
+      "Shape": "()",
+      "ResultType": "nvarchar(128)",
+      "Collation": "SQL_Latin1_General_CP1_CI_AS",
+      "Nullable": true,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "TEXTSIZE_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "TIMETICKS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "TOTAL_ERRORS_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "TOTAL_READ_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
+    },
+    {
+      "Function": "TOTAL_WRITE_VAR",
+      "Shape": "()",
+      "ResultType": "int",
+      "Collation": null,
+      "Nullable": false,
+      "Deterministic": "0",
+      "Precise": "1",
+      "Parallel": "NoSerialReason"
     }
   ]
 }

@@ -1639,11 +1639,11 @@ public sealed class TypedPredicateExtractorTests
 
         var result = ExtractAll(
             "CREATE TABLE dbo.T (Total INT NOT NULL);",
-            "SELECT 1 FROM dbo.T WHERE Total = @@REMSERVER;");
+            "SELECT 1 FROM dbo.T WHERE Total = @@UNRECOGNIZED_GLOBAL;");
 
         var finding = Assert.Single(result.TypedFindings);
         Assert.Equal(Verdict.Unknown, finding.Verdict);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "predicate operand" && s.Reason.Contains("@@REMSERVER", StringComparison.Ordinal));
+        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "predicate operand" && s.Reason.Contains("@@UNRECOGNIZED_GLOBAL", StringComparison.Ordinal));
     }
 
     [Fact]

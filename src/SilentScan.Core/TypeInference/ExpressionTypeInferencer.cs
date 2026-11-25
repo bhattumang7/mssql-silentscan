@@ -51,6 +51,12 @@ public static class ExpressionTypeInferencer
 
         ParameterlessCall parameterless => BuiltinFunctionTypeResolver.ResolveParameterlessCall(parameterless.ParameterlessCallType),
 
+        ParseCall parse => SqlTypeReferenceResolver.Resolve(parse.DataType, columnCollation: null, typeAliases, unsizedStringOrBinaryDefaultLength: 30),
+
+        TryParseCall tryParse => SqlTypeReferenceResolver.Resolve(tryParse.DataType, columnCollation: null, typeAliases, unsizedStringOrBinaryDefaultLength: 30),
+
+        GlobalVariableExpression global => BuiltinFunctionTypeResolver.ResolveGlobalVariable(global.Name) ?? resolveLeaf(expression),
+
         _ => resolveLeaf(expression),
     };
 
@@ -63,10 +69,25 @@ public static class ExpressionTypeInferencer
             return BuiltinFunctionTypeResolver.ResolveStringAggResult(valueType);
         }
 
+        if (DerivedResultFunctionTypes.IsValueOfFirstArgument(name))
+        {
+            return parameters.Count > 0 ? Resolve(parameters[0], resolveLeaf, typeAliases) : null;
+        }
+
+        if (DerivedResultFunctionTypes.IsBoundedComparison(name))
+        {
+            return parameters.Count > 0 ? DerivedResultFunctionTypes.BoundComparisonResult(CombineBranches(parameters, resolveLeaf, typeAliases)) : null;
+        }
+
+        if (DerivedResultFunctionTypes.IsDerived(name))
+        {
+            return DerivedResultFunctionTypes.Resolve(name, parameters, p => Resolve(p, resolveLeaf, typeAliases));
+        }
+
         if (BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(name) is { } argumentIndex && parameters.Count > argumentIndex)
         {
             var argumentType = Resolve(parameters[argumentIndex], resolveLeaf, typeAliases);
-            return BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
+            return DerivedResultFunctionTypes.AdjustCaseMapping(name, BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType));
         }
 
         if (BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name) is { } maxWidenedIndex)

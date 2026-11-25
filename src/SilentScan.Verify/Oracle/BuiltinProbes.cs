@@ -15,6 +15,9 @@ public static class BuiltinProbes
 
     private static readonly string[] Binaries = ["VARBINARY(20)", "VARBINARY(MAX)", "BINARY(10)"];
 
+    private static readonly string[] Utf8Strings =
+        ["CHAR(10) COLLATE Latin1_General_100_CI_AS_SC_UTF8", "VARCHAR(2000) COLLATE Latin1_General_100_CI_AS_SC_UTF8", "NVARCHAR(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8"];
+
     private static readonly string[] Int = ["INT"];
 
     private static readonly string[] None = [];
@@ -152,5 +155,20 @@ public static class BuiltinProbes
         P("TYPE_NAME", "TYPE_NAME(56)", None),
         P("TYPEPROPERTY", "TYPEPROPERTY('int','Precision')", None),
         P("USER_ID", "USER_ID()", None),
+        P("GREATEST_MIXED", "GREATEST({0}, {1})", Numbers, Numbers), P("GREATEST_MIXED_STRINGS", "GREATEST({0}, {1})", Strings, Strings),
+        P("CONCAT_MIXED", "CONCAT({0}, {1})", Strings, Strings), P("CONCAT_WS_THREE", "CONCAT_WS({0}, {1}, {1}, {1})", Strings, Strings),
+        P("REPLICATE_LITERAL", "REPLICATE({0}, 3)", Strings), P("STR_LENGTH", "STR({0}, 5)", Numbers), P("STR_LENGTH_DECIMALS", "STR({0}, 25, 3)", Numbers),
+        P("UPPER_UTF8", "UPPER({0})", Utf8Strings), P("LOWER_UTF8", "LOWER({0})", Utf8Strings),
+        P("LAG_DEFAULT", "LAG({0}, 1, {1}) OVER (ORDER BY {0})", Numbers, Numbers),
+        P("CONNECTIONS_VAR", "@@CONNECTIONS", None), P("CPU_BUSY_VAR", "@@CPU_BUSY", None), P("CURSOR_ROWS_VAR", "@@CURSOR_ROWS", None),
+        P("DATEFIRST_VAR", "@@DATEFIRST", None), P("DBTS_VAR", "@@DBTS", None), P("DEF_SORTORDER_ID_VAR", "@@DEF_SORTORDER_ID", None),
+        P("DEFAULT_LANGID_VAR", "@@DEFAULT_LANGID", None), P("FETCH_STATUS_VAR", "@@FETCH_STATUS", None), P("IDENTITY_VAR", "@@IDENTITY", None),
+        P("IDLE_VAR", "@@IDLE", None), P("IO_BUSY_VAR", "@@IO_BUSY", None), P("LANGID_VAR", "@@LANGID", None), P("LANGUAGE_VAR", "@@LANGUAGE", None),
+        P("LOCK_TIMEOUT_VAR", "@@LOCK_TIMEOUT", None), P("MAX_CONNECTIONS_VAR", "@@MAX_CONNECTIONS", None), P("MAX_PRECISION_VAR", "@@MAX_PRECISION", None),
+        P("MICROSOFTVERSION_VAR", "@@MICROSOFTVERSION", None), P("NESTLEVEL_VAR", "@@NESTLEVEL", None), P("OPTIONS_VAR", "@@OPTIONS", None),
+        P("PACK_RECEIVED_VAR", "@@PACK_RECEIVED", None), P("PACK_SENT_VAR", "@@PACK_SENT", None), P("PACKET_ERRORS_VAR", "@@PACKET_ERRORS", None),
+        P("PROCID_VAR", "@@PROCID", None), P("REMSERVER_VAR", "@@REMSERVER", None), P("SERVERNAME_VAR", "@@SERVERNAME", None),
+        P("SERVICENAME_VAR", "@@SERVICENAME", None), P("TEXTSIZE_VAR", "@@TEXTSIZE", None), P("TIMETICKS_VAR", "@@TIMETICKS", None),
+        P("TOTAL_ERRORS_VAR", "@@TOTAL_ERRORS", None), P("TOTAL_READ_VAR", "@@TOTAL_READ", None), P("TOTAL_WRITE_VAR", "@@TOTAL_WRITE", None),
     ];
 }

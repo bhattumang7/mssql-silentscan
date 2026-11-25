@@ -22,6 +22,7 @@ public static class ArgumentShapedFunctionTypes
         ["RADIANS"] = Shape.AngleDecimal,
         ["DEGREES"] = Shape.AngleDecimal,
         ["TODATETIMEOFFSET"] = Shape.DateTimeOffsetScale,
+        ["SWITCHOFFSET"] = Shape.DateTimeOffsetScale,
     };
 
     public static bool IsArgumentShaped(string functionName) => Shapes.ContainsKey(functionName);
@@ -42,7 +43,7 @@ public static class ArgumentShapedFunctionTypes
     {
         SqlTypeCategory.DateTime => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 3),
         SqlTypeCategory.SmallDateTime => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 0),
-        SqlTypeCategory.DateTime2 => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: argument.Scale ?? 7),
+        SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset or SqlTypeCategory.Time => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: argument.Scale ?? 7),
         SqlTypeCategory.Date => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 7),
         _ when argument.IsStringFamily => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 7),
         _ => null,
