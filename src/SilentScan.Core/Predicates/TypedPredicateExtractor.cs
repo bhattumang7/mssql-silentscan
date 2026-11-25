@@ -987,20 +987,29 @@ public static class TypedPredicateExtractor
 
             if (column is null || other is null)
             {
-                RecordNoColumnOperand(first, second, node);
+                RecordNoColumnOperand(first, second, node, scopeChain);
                 return;
             }
 
             AddFinding(column, other, operatorText, node, walker);
         }
 
-        private void RecordNoColumnOperand(ScalarExpression first, ScalarExpression second, TSqlFragment node)
+        private void RecordNoColumnOperand(ScalarExpression first, ScalarExpression second, TSqlFragment node, ScopeChain scopeChain)
         {
-            if (first is ColumnReferenceExpression || second is ColumnReferenceExpression)
+            var columnSides = new[] { first, second }.OfType<ColumnReferenceExpression>().ToList();
+            if (columnSides.Count > 0)
             {
-                ledger.Record(
-                    AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, UnresolvedColumnComparisonConstructKind,
-                    "at least one side of this comparison is a bare column reference that failed to resolve to a real column (most commonly an unresolved FROM-scope alias) - not the benign no-column-operand shape");
+                var unresolved = columnSides
+                    .Where(c => ScalarExpressionResolver.ResolveColumnReference(c, scopeChain, sourcePath, ledger: null, catalog) is ColumnProvenance.Unknown)
+                    .Select(c => string.Join('.', c.MultiPartIdentifier.Identifiers.Select(i => i.Value)))
+                    .ToList();
+                if (unresolved.Count > 0)
+                {
+                    ledger.Record(
+                        AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, UnresolvedColumnComparisonConstructKind,
+                        $"column reference ({string.Join(", ", unresolved)}) failed to resolve to a real column (most commonly an unresolved FROM-scope alias) - not the benign no-column-operand shape");
+                }
+
                 return;
             }
 
