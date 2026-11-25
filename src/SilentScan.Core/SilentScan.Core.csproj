@@ -17,6 +17,7 @@
     <EmbeddedResource Include="Rules/SargShapeMatrix.json" />
     <EmbeddedResource Include="Rules/GuessMatrix.json" />
     <EmbeddedResource Include="Rules/SetOptionMatrix.json" />
+    <EmbeddedResource Include="Rules/RescueMatrix.json" />
     <!-- Checked-in top-down construct coverage matrix (Phase 0.1 of docs/coverage-remediation-plan.md). -->
     <EmbeddedResource Include="Diagnostics/ConstructCoverage.json" />
     <EmbeddedResource Include="TypeInference/CollationCodePages.json" />
