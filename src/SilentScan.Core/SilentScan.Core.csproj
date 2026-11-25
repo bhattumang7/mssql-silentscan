@@ -14,6 +14,7 @@
     <EmbeddedResource Include="Rules/CastMatrix.json" />
     <EmbeddedResource Include="Rules/OperatorMatrix.json" />
     <EmbeddedResource Include="Rules/BuiltinMatrix.json" />
+    <EmbeddedResource Include="Rules/SargShapeMatrix.json" />
     <!-- Checked-in top-down construct coverage matrix (Phase 0.1 of docs/coverage-remediation-plan.md). -->
     <EmbeddedResource Include="Diagnostics/ConstructCoverage.json" />
     <EmbeddedResource Include="TypeInference/CollationCodePages.json" />
