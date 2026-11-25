@@ -14,6 +14,8 @@ public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
         CREATE TABLE dbo.VarCharWin (Code VARCHAR(20) COLLATE Latin1_General_CI_AS NOT NULL, OtherCode NVARCHAR(20) COLLATE Latin1_General_CI_AS NOT NULL, INDEX IX_Code (Code));
         GO
         CREATE TABLE dbo.NVarCharWin (Code NVARCHAR(20) COLLATE Latin1_General_CI_AS NOT NULL);
+        GO
+        CREATE TABLE dbo.VarCharSql (Code VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL, INDEX IX_CodeSql (Code));
         """;
 
     protected override string DatabaseNameSeed => nameof(OperatorAndOperandShapeOracleTests);
@@ -127,6 +129,41 @@ public sealed class OperatorAndOperandShapeOracleTests : OracleTestFixture
         Assert.True(finding.Column.Indexed);
 
         var results = await PipelineOracleVerification.DeployAndVerifyAsync(Options, DatabaseName, longNarrowDdl, [finding]);
+        PipelineOracleVerification.AssertAllConfirmed(results);
+    }
+
+    [Theory]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code <> N'abc';", 1)]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE NOT (Code = N'abc');", 1)]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT IN (N'abc', N'def');", 1)]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT BETWEEN N'abc' AND N'def';", 2)]
+    public async Task VarCharColumnNegatedPredicateVsNVarcharLiteral_SqlCollation_IsScanForced_OracleConfirmed(string sql, int expectedFindings)
+    {
+
+        var report = await Scan(sql);
+
+        var findings = report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Where(f => f.Column.TableQualifiedName == "dbo.VarCharSql").ToList();
+        Assert.Equal(expectedFindings, findings.Count);
+        Assert.All(findings, f => Assert.Equal(Verdict.ScanForced, f.Verdict));
+
+        var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, findings);
+        PipelineOracleVerification.AssertAllConfirmed(results);
+    }
+
+    [Theory]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code <> 'abc';", 1)]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT IN ('abc', 'def');", 1)]
+    [InlineData("SELECT Code FROM dbo.VarCharSql WHERE Code NOT BETWEEN 'abc' AND 'def';", 2)]
+    public async Task VarCharColumnNegatedPredicateVsVarcharLiteral_SeekPreserved_OracleConfirmed(string sql, int expectedFindings)
+    {
+
+        var report = await Scan(sql);
+
+        var findings = report.Find<TypedPredicateFinding>("TypedPredicateExtractor").Where(f => f.Column.TableQualifiedName == "dbo.VarCharSql").ToList();
+        Assert.Equal(expectedFindings, findings.Count);
+        Assert.All(findings, f => Assert.Equal(Verdict.SeekPreserved, f.Verdict));
+
+        var results = await PipelineOracleVerification.VerifyAsync(Options, DatabaseName, findings);
         PipelineOracleVerification.AssertAllConfirmed(results);
     }
 }

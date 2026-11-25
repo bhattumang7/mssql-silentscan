@@ -110,7 +110,7 @@ public static class CorpusFindingProbeBuilder
         }
     }
 
-    private static string NormalizeOperatorForProbe(string op) => op == "IN" ? "=" : op;
+    private static string NormalizeOperatorForProbe(string op) => op switch { "IN" => "=", "NOT IN" => "<>", _ => op };
 
     private static string? BuildValueProbe(string table, string column, string op, PredicateOperand.Value operand)
     {

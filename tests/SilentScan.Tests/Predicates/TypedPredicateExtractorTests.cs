@@ -952,15 +952,43 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_NotInList_IsNotAttributedToTypeConversionVerdict()
+    public void Extract_NotInList_ForcesScanWhenTheListTypeClashes()
     {
 
         var result = ExtractAll(
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT Col FROM dbo.T WHERE Col NOT IN (N'a', N'b');");
 
+        var finding = Assert.Single(result.TypedFindings);
+        Assert.Equal(Verdict.ScanForced, finding.Verdict);
+        Assert.Equal("NOT IN", finding.Operator);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
+    }
+
+    [Fact]
+    public void Extract_NotInListOfMatchingType_PreservesTheSeek()
+    {
+
+        var result = ExtractAll(
+            "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
+            "SELECT Col FROM dbo.T WHERE Col NOT IN ('a', 'b');");
+
+        Assert.Equal(Verdict.SeekPreserved, Assert.Single(result.TypedFindings).Verdict);
+    }
+
+    [Fact]
+    public void Extract_NotInSubquery_StaysLedgeredBecauseItPlansAsAntiSemiJoin()
+    {
+
+        var result = ExtractAll(
+            """
+            CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);
+            CREATE TABLE dbo.U (Other NVARCHAR(20) NOT NULL);
+            """,
+            "SELECT Col FROM dbo.T WHERE Col NOT IN (SELECT Other FROM dbo.U);");
+
         Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("NOT IN", StringComparison.Ordinal));
+        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("anti semi join", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1051,7 +1079,7 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_NotEqualsOperator_IsNotAttributedToTypeConversionVerdict()
+    public void Extract_NotEqualsOperator_ForcesScanWhenTheTypeClashes()
     {
 
         var result = ExtractAll(
@@ -1059,8 +1087,33 @@ public sealed class TypedPredicateExtractorTests
             "SELECT Col FROM dbo.T WHERE Col <> N'a';",
             "SELECT Col FROM dbo.T WHERE Col != N'a';");
 
+        Assert.Equal(2, result.TypedFindings.Count);
+        Assert.All(result.TypedFindings, f => Assert.Equal(Verdict.ScanForced, f.Verdict));
+        Assert.All(result.TypedFindings, f => Assert.Equal("<>", f.Operator));
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
+    }
+
+    [Fact]
+    public void Extract_NotEqualsOperatorOfMatchingType_PreservesTheSeek()
+    {
+
+        var result = ExtractAll(
+            "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
+            "SELECT Col FROM dbo.T WHERE Col <> 'a';");
+
+        Assert.Equal(Verdict.SeekPreserved, Assert.Single(result.TypedFindings).Verdict);
+    }
+
+    [Fact]
+    public void Extract_NotEqualsBetweenTwoColumns_StaysLedgered()
+    {
+
+        var result = ExtractAll(
+            "CREATE TABLE dbo.T (Col VARCHAR(20) NOT NULL, Other NVARCHAR(20) NOT NULL);",
+            "SELECT Col FROM dbo.T WHERE Col <> Other;");
+
         Assert.Empty(result.TypedFindings);
-        Assert.Equal(2, result.SkippedConstructs.Count(s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("<>", StringComparison.Ordinal)));
+        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("two columns", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1083,8 +1136,9 @@ public sealed class TypedPredicateExtractorTests
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT Col FROM dbo.T WHERE NOT (Col = N'a');");
 
-        Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("<>", StringComparison.Ordinal));
+        var finding = Assert.Single(result.TypedFindings);
+        Assert.Equal("<>", finding.Operator);
+        Assert.Equal(Verdict.ScanForced, finding.Verdict);
     }
 
     [Fact]
@@ -1123,26 +1177,27 @@ public sealed class TypedPredicateExtractorTests
     }
 
     [Fact]
-    public void Extract_NotWrappedInPredicate_IsNotAttributedToTypeConversionVerdict()
+    public void Extract_NotWrappedInPredicate_IsTreatedAsNotIn()
     {
         var result = ExtractAll(
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT Col FROM dbo.T WHERE NOT (Col IN (N'a', N'b'));");
 
-        Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
+        var finding = Assert.Single(result.TypedFindings);
+        Assert.Equal("NOT IN", finding.Operator);
+        Assert.Equal(Verdict.ScanForced, finding.Verdict);
     }
 
     [Fact]
-    public void Extract_NotBetweenKeyword_IsNotAttributedToTypeConversionVerdict()
+    public void Extract_NotBetweenKeyword_JudgesBothBounds()
     {
 
         var result = ExtractAll(
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT Col FROM dbo.T WHERE Col NOT BETWEEN N'a' AND N'z';");
 
-        Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("NOT BETWEEN", StringComparison.Ordinal));
+        Assert.Equal(2, result.TypedFindings.Count);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
     }
 
     [Fact]
@@ -1153,8 +1208,8 @@ public sealed class TypedPredicateExtractorTests
             "CREATE TABLE dbo.T (Col VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL);",
             "SELECT Col FROM dbo.T WHERE NOT (Col BETWEEN N'a' AND N'z');");
 
-        Assert.Empty(result.TypedFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator" && s.Reason.Contains("NOT BETWEEN", StringComparison.Ordinal));
+        Assert.Equal(2, result.TypedFindings.Count);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "non-seekable operator");
     }
 
     [Fact]

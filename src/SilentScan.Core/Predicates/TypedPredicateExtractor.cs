@@ -805,21 +805,6 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            var isNotBetween = node.TernaryExpressionType == BooleanTernaryExpressionType.NotBetween || _negated;
-            if (isNotBetween)
-            {
-                if (walker.CurrentScopeChain().Count > 0 && _position == PredicatePosition.Seekable)
-                {
-                    ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "NOT BETWEEN is not sargable regardless of type match - not attributed to a type-conversion verdict");
-                }
-                else if (_position == PredicatePosition.SuppressedOperand)
-                {
-                    ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, OperandPositionConstructKind, OperandPositionLedgerReason);
-                }
-
-                return;
-            }
-
             TryAddFinding(node.FirstExpression, node.SecondExpression, ">=", node, walker);
             TryAddFinding(node.FirstExpression, node.ThirdExpression, "<=", node, walker);
         }
@@ -870,10 +855,10 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            if (node.NotDefined || _negated)
+            var isNotIn = node.NotDefined ^ _negated;
+            if (isNotIn && node.Subquery is not null)
             {
-
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "NOT IN is not sargable regardless of type match - not attributed to a type-conversion verdict");
+                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "NOT IN (subquery) plans as an anti semi join and never seeks the outer column, whatever the types - not attributed to a type-conversion verdict");
                 return;
             }
 
@@ -894,8 +879,9 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            var verdict = VerdictClassifier.Classify(column.Type, otherType, operatorText: "IN");
-            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), "IN", sourcePath, node.StartLine, node.StartColumn));
+            var inOperator = isNotIn ? "NOT IN" : "IN";
+            var verdict = VerdictClassifier.Classify(column.Type, otherType, operatorText: inOperator);
+            Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), inOperator, sourcePath, node.StartLine, node.StartColumn));
         }
 
         public void OnSubqueryComparisonPredicate(SubqueryComparisonPredicate node, ModuleWalker walker)
@@ -1025,13 +1011,6 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            if (operatorText == "<>" && (UnwrapParentheses(first) is ColumnReferenceExpression || UnwrapParentheses(second) is ColumnReferenceExpression))
-            {
-
-                ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "<> is not sargable regardless of type match - not attributed to a type-conversion verdict");
-                return;
-            }
-
             _currentPredicateFragment = node;
             var left = ResolvePredicateOperand(first, scopeChain, walker);
             var right = ResolvePredicateOperand(second, scopeChain, walker);
@@ -1041,6 +1020,12 @@ public static class TypedPredicateExtractor
 
                 if (Rules.VerdictClassifier.HasGenuineCollationMismatch(leftColumn.Type, rightColumn.Type))
                 {
+                    return;
+                }
+
+                if (operatorText == "<>")
+                {
+                    ledger.Record(AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, NonSeekableOperatorConstructKind, "<> between two columns is not attributed to a type-conversion verdict - the seek shape of a column-to-column range join was not established");
                     return;
                 }
 
