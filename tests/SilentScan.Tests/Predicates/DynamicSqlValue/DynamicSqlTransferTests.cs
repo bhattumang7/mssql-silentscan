@@ -12,7 +12,7 @@ public sealed class DynamicSqlTransferTests
     private const int Cap = 32;
     private const string SourcePath = "test.sql";
 
-    private static Dictionary<string, SqlTextValue> Run(string sql) => Run(sql, out _, out _);
+    internal static Dictionary<string, SqlTextValue> Run(string sql) => Run(sql, out _, out _);
 
     private static Dictionary<string, SqlTextValue> Run(string sql, out List<DynamicSqlFinding> findings, out List<DynamicSqlScript> scripts)
     {
@@ -37,7 +37,7 @@ public sealed class DynamicSqlTransferTests
         return lit.Text;
     }
 
-    private static string FlattenLitText(SqlTextValue value)
+    internal static string FlattenLitText(SqlTextValue value)
     {
         var template = Assert.IsType<SqlTextValue.Template>(value);
         return string.Concat(template.Pieces.Select(p => Assert.IsType<TemplatePiece.Lit>(p).Text));
@@ -52,6 +52,30 @@ public sealed class DynamicSqlTransferTests
 
         Assert.Equal("hello", LitText(result["@x"]));
         Assert.Equal(new SqlType(SqlTypeCategory.NVarChar, Length: 50), result["@x"].DeclaredType);
+    }
+
+    [Theory]
+    [InlineData("DECLARE @x VARCHAR(10) = 'abcdefghij' + 'klmnop';", "abcdefghij")]
+    [InlineData("DECLARE @x NVARCHAR(4) = N'abcdef';", "abcd")]
+    [InlineData("DECLARE @x CHAR(3) = 'abcdef';", "abc")]
+    [InlineData("DECLARE @x VARCHAR(10) = 'abc'; SET @x = @x + 'defghijklm';", "abcdefghij")]
+    [InlineData("DECLARE @x VARCHAR(10) = 'abc'; SET @x += 'defghijklm';", "abcdefghij")]
+    public void AssignmentBeyondTheDeclaredLength_TruncatesTheFoldedText(string sql, string expected)
+    {
+        var result = Run(sql);
+
+        Assert.Equal(expected, FlattenLitText(result["@x"]));
+    }
+
+    [Theory]
+    [InlineData("DECLARE @x VARCHAR(MAX) = 'abcdefghij' + 'klmnop';", "abcdefghijklmnop")]
+    [InlineData("DECLARE @x VARCHAR(20) = 'abcdefghij' + 'klmnop';", "abcdefghijklmnop")]
+    [InlineData("DECLARE @x VARCHAR(10) = 'abcdefghij';", "abcdefghij")]
+    public void AssignmentWithinTheDeclaredLength_KeepsTheWholeFoldedText(string sql, string expected)
+    {
+        var result = Run(sql);
+
+        Assert.Equal(expected, FlattenLitText(result["@x"]));
     }
 
     [Fact]

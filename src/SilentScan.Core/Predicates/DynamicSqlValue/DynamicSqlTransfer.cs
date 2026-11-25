@@ -321,7 +321,33 @@ public static class DynamicSqlTransfer
         }
 
         var folded = ExpressionEvaluator.Fold(expression, state, context.SourcePath, context.Cap, context.Catalog);
-        return folded with { DeclaredType = declaredType };
+        return TruncateToDeclaredLength(folded, declaredType) with { DeclaredType = declaredType };
+    }
+
+    private static SqlTextValue TruncateToDeclaredLength(SqlTextValue value, SqlType? declaredType)
+    {
+        if (declaredType is not { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char or SqlTypeCategory.NVarChar or SqlTypeCategory.NChar, IsMax: false, Length: { } limit }
+            || value is not SqlTextValue.Template { Pieces: var pieces } template
+            || pieces.Any(piece => piece is not TemplatePiece.Lit)
+            || pieces.Sum(piece => ((TemplatePiece.Lit)piece).Text.Length) <= limit)
+        {
+            return value;
+        }
+
+        var remaining = limit;
+        var kept = new List<TemplatePiece>(pieces.Count);
+        foreach (var piece in pieces.Cast<TemplatePiece.Lit>())
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            kept.Add(piece.Text.Length <= remaining ? piece : piece with { Text = piece.Text[..remaining] });
+            remaining -= piece.Text.Length;
+        }
+
+        return template with { Pieces = kept };
     }
 
     private static SqlTextValue? TryFoldScalarSubqueryFromSingleKnownTable(ScalarSubquery subquery, TransferContext context, Dictionary<string, SqlTextValue> state)
@@ -376,7 +402,7 @@ public static class DynamicSqlTransfer
             }
 
             var rhs = ExpressionEvaluator.Fold(expression, state, context.SourcePath, context.Cap, context.Catalog);
-            state[name] = SqlTextValue.Concat(existing, rhs) with { DeclaredType = declaredType };
+            state[name] = TruncateToDeclaredLength(SqlTextValue.Concat(existing, rhs), declaredType) with { DeclaredType = declaredType };
             return;
         }
 
