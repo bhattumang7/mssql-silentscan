@@ -18,6 +18,8 @@ public sealed partial class PassOrderTests
     [
         (Path.Combine("Catalog", "DynamicSqlTempTableDiscovery.cs"), "Predicates"),
         (Path.Combine("Lineage", "SelectIntoLineagePass.cs"), "Predicates"),
+        (Path.Combine("Lineage", "ProcedureResultShapePass.cs"), "Predicates"),
+        (Path.Combine("Catalog", "DynamicSqlTempTableDiscovery.cs"), "Lineage"),
         (Path.Combine("Predicates", "DynamicSqlPipeline.cs"), "Reporting"),
     ];
 
