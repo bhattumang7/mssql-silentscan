@@ -760,4 +760,33 @@ public sealed class WriteLossExtractionTests
 
         Assert.Empty(result.WriteLossFindings);
     }
+
+    [Theory]
+    [InlineData("DECLARE c CURSOR FOR SELECT w.Amount FROM dbo.Wide AS w UNION ALL SELECT n.Amount FROM dbo.Narrow AS n;")]
+    [InlineData("DECLARE c CURSOR FOR SELECT n.Amount FROM dbo.Narrow AS n UNION SELECT w.Amount FROM dbo.Wide AS w;")]
+    [InlineData("DECLARE c CURSOR FOR SELECT w.Amount FROM dbo.Wide AS w EXCEPT SELECT n.Amount FROM dbo.Narrow AS n;")]
+    public void Extract_FetchIntoFromCursorOverSetOperation_JudgesTheCombinedColumnType(string declareCursor)
+    {
+        var result = ExtractAll(
+            """
+            CREATE TABLE dbo.Wide (Amount DECIMAL(10,4) NOT NULL);
+            CREATE TABLE dbo.Narrow (Amount DECIMAL(8,2) NOT NULL);
+            """,
+            "DECLARE @v DECIMAL(10,2); " + declareCursor + " OPEN c; FETCH NEXT FROM c INTO @v;");
+
+        var finding = Assert.Single(result.WriteLossFindings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.Equal("@v", finding.ColumnName);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "write source");
+    }
+
+    [Fact]
+    public void Extract_FetchIntoFromCursorOverUnionThatFits_FlagsNothing()
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Narrow (Amount DECIMAL(8,2) NOT NULL);",
+            "DECLARE @v DECIMAL(10,2); DECLARE c CURSOR FOR SELECT n.Amount FROM dbo.Narrow AS n UNION ALL SELECT n2.Amount FROM dbo.Narrow AS n2; OPEN c; FETCH NEXT FROM c INTO @v;");
+
+        Assert.Empty(result.WriteLossFindings);
+    }
 }

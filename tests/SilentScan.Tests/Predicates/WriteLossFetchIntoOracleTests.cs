@@ -57,6 +57,33 @@ public sealed class WriteLossFetchIntoOracleTests : OracleTestFixture
     }
 
     [Fact]
+    public async Task FetchInto_FromCursorOverUnion_RoundsAtTheTargetScale_ScannerFlagsTheVariable()
+    {
+        const string batch =
+            """
+            DECLARE @d DECIMAL(10,2);
+            DECLARE cur CURSOR LOCAL FOR SELECT CAST(1.2345 AS DECIMAL(10,4)) UNION ALL SELECT CAST(2.50 AS DECIMAL(8,2));
+            OPEN cur;
+            FETCH NEXT FROM cur INTO @d;
+            SELECT @d;
+            CLOSE cur;
+            DEALLOCATE cur;
+            """;
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand(batch, connection);
+        await using var reader = await command.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(1.23m, reader.GetDecimal(0));
+
+        var finding = Assert.Single(Extract(batch.Replace("SELECT @d;
+", string.Empty, StringComparison.Ordinal)));
+        Assert.Equal("@d", finding.ColumnName);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+    }
+
+    [Fact]
     public async Task FetchInto_VarcharLengthTruncation_SilentlyTruncates_ScannerFlags()
     {
         await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));

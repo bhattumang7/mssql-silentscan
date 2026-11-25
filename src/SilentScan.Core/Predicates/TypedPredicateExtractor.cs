@@ -91,10 +91,16 @@ public static class TypedPredicateExtractor
             ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(externalVariables.Keys, StringComparer.OrdinalIgnoreCase);
 
-        private readonly Dictionary<string, IReadOnlyList<(SqlType? Type, ScalarExpression Expression)>> _cursorSelectSourcesByName =
+        private readonly Dictionary<string, IReadOnlyList<(SqlType? Type, TSqlFragment Source)>> _cursorSelectSourcesByName =
             new(StringComparer.OrdinalIgnoreCase);
 
         private string? _pendingCursorDeclarationName;
+
+        private readonly HashSet<QuerySpecification> _pendingCursorBranches = new(ReferenceEqualityComparer.Instance);
+
+        private readonly List<QuerySpecification> _pendingCursorBranchOrder = [];
+
+        private readonly Dictionary<QuerySpecification, List<InsertSourceColumn>?> _collectedCursorBranches = new(ReferenceEqualityComparer.Instance);
 
         public List<TypedPredicateFinding> Findings { get; } = [];
 
@@ -265,10 +271,20 @@ public static class TypedPredicateExtractor
                 }
             }
 
-            if (_pendingCursorDeclarationName is { } pendingCursorName)
+            if (_pendingCursorDeclarationName is { } pendingCursorName && _pendingCursorBranches.Remove(node))
             {
-                _pendingCursorDeclarationName = null;
-                _cursorSelectSourcesByName[pendingCursorName] = ResolveCursorSelectSources(node.SelectElements, scopeChain, walker);
+                _collectedCursorBranches[node] = CollectSelectListSources(node.SelectElements, scopeChain, walker);
+                if (_pendingCursorBranches.Count == 0)
+                {
+                    if (CombineCursorBranchSources() is { } cursorSources)
+                    {
+                        _cursorSelectSourcesByName[pendingCursorName] = cursorSources;
+                    }
+
+                    _pendingCursorDeclarationName = null;
+                    _pendingCursorBranchOrder.Clear();
+                    _collectedCursorBranches.Clear();
+                }
             }
 
             _positionStack.Push(_position);
@@ -436,16 +452,22 @@ public static class TypedPredicateExtractor
             var name = node.Name.Value;
             _cursorSelectSourcesByName.Remove(name);
 
-            if (node.CursorDefinition.Select.QueryExpression is QuerySpecification { SelectElements: { Count: > 0 } elements }
-                && elements.All(e => e is SelectScalarExpression))
+            if (FlattenInsertBranches(node.CursorDefinition.Select.QueryExpression) is { Count: > 0 } branches
+                && branches.All(b => b.SelectElements.Count > 0 && b.SelectElements.All(e => e is SelectScalarExpression))
+                && branches.Select(b => b.SelectElements.Count).Distinct().Count() == 1)
             {
                 _pendingCursorDeclarationName = name;
+                _pendingCursorBranches.Clear();
+                _pendingCursorBranches.UnionWith(branches);
+                _pendingCursorBranchOrder.Clear();
+                _pendingCursorBranchOrder.AddRange(branches);
+                _collectedCursorBranches.Clear();
                 return;
             }
 
             ledger.Record(
                 AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn,
-                WriteSourceConstructKind, $"cursor '{name}' is defined by a query this pass does not resolve a flat scalar select list for (UNION/non-QuerySpecification top level) - FETCH INTO write-loss analysis skipped for it");
+                WriteSourceConstructKind, $"cursor '{name}' is defined by a query this pass does not resolve a flat scalar select list for (top level is not a SELECT, a parenthesized SELECT or a set operation over plain scalar select lists) - FETCH INTO write-loss analysis skipped for it");
         }
 
         public void OnEnterFetchCursorStatement(FetchCursorStatement node, ModuleWalker walker)
@@ -468,22 +490,36 @@ public static class TypedPredicateExtractor
                     continue;
                 }
 
-                var (sourceType, sourceExpression) = sources[i];
-                EmitAssignment(new AssignmentSite(WriteLossTarget.Variable, null, variableName, target, sourceType, sourceExpression));
+                var (sourceType, source) = sources[i];
+                EmitAssignment(new AssignmentSite(WriteLossTarget.Variable, null, variableName, target, sourceType, source));
             }
         }
 
-        private List<(SqlType? Type, ScalarExpression Expression)> ResolveCursorSelectSources(
-            IList<SelectElement> selectElements, ScopeChain scopeChain, ModuleWalker walker)
+        private List<(SqlType? Type, TSqlFragment Source)>? CombineCursorBranchSources()
         {
-            var sources = new List<(SqlType?, ScalarExpression)>(selectElements.Count);
-            foreach (var element in selectElements)
+            var branches = _pendingCursorBranchOrder.Select(branch => _collectedCursorBranches.GetValueOrDefault(branch)).ToList();
+            if (branches.Count == 0 || branches.Any(b => b is null))
             {
-                var expression = ((SelectScalarExpression)element).Expression;
-                sources.Add((OperandType(ResolveOperand(expression, scopeChain, walker)), expression));
+                return null;
             }
 
-            return sources;
+            var width = branches.Min(b => b!.Count);
+            var combinedSources = new List<(SqlType?, TSqlFragment)>(width);
+            for (var position = 0; position < width; position++)
+            {
+                var column = branches.Select(b => b![position]).ToList();
+                if (column.Count == 1)
+                {
+                    combinedSources.Add((column[0].Type, column[0].Source));
+                    continue;
+                }
+
+                var typed = column.Where(source => source.Expression is not NullLiteral).ToList();
+                var combined = typed.Count == 0 ? null : ExpressionTypeInferencer.MergeBranchTypes(typed.Select(source => source.Type));
+                combinedSources.Add((combined, typed.Count == 0 ? column[0].Source : typed[0].Source));
+            }
+
+            return combinedSources;
         }
 
         public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
