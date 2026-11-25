@@ -62,6 +62,7 @@ public static class ScalarExpressionResolver
         GlobalVariableExpression globalVariable => ResolveGlobalVariableExpression(globalVariable, context),
         ParameterlessCall parameterless when BuiltinFunctionTypeResolver.ResolveParameterlessCall(parameterless.ParameterlessCallType) is { } parameterlessType =>
             new ColumnProvenance.Expression(parameterlessType, Inputs: [], context.SourcePath, parameterless.StartLine),
+        NextValueForExpression nextValue => ResolveNextValueFor(nextValue, context),
         ScalarSubquery scalarSubquery => ResolveScalarSubquery(scalarSubquery, context),
         CastCall castCall => ResolveCastOrConvert(castCall.DataType, castCall.Parameter, context, castCall.StartLine),
         ConvertCall convertCall => ResolveCastOrConvert(convertCall.DataType, convertCall.Parameter, context, convertCall.StartLine),
@@ -69,7 +70,10 @@ public static class ScalarExpressionResolver
 
         ParenthesisExpression or UnaryExpression or BinaryExpression
             or CoalesceExpression or NullIfExpression or IIfCall
-            or SearchedCaseExpression or SimpleCaseExpression =>
+            or SearchedCaseExpression or SimpleCaseExpression
+            or TryCastCall or TryConvertCall or ParseCall or TryParseCall
+            or LeftFunctionCall or RightFunctionCall or AtTimeZoneCall
+            or OdbcFunctionCall or PartitionFunctionCall or IdentityFunctionCall =>
             ResolveTypedExpression(expression, context),
 
         FunctionCall functionCall => ResolveFunctionCall(functionCall, context),
@@ -89,6 +93,11 @@ public static class ScalarExpressionResolver
             ? ResolveGenericExpression(globalVariable, context)
             : new ColumnProvenance.Expression(type, Inputs: [], context.SourcePath, globalVariable.StartLine);
     }
+
+    private static ColumnProvenance.Expression ResolveNextValueFor(NextValueForExpression nextValue, ExpressionContext context) =>
+        context.Catalog is { } catalog && catalog.TryGetSequenceType(SchemaObjectNameHelper.Qualify(nextValue.SequenceName), out var sequenceType)
+            ? new ColumnProvenance.Expression(sequenceType, Inputs: [], context.SourcePath, nextValue.StartLine)
+            : ResolveGenericExpression(nextValue, context);
 
     private static ColumnProvenance.Expression ResolveScalarSubquery(ScalarSubquery scalarSubquery, ExpressionContext context)
     {
@@ -124,7 +133,8 @@ public static class ScalarExpressionResolver
         if (BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(name) is { } argumentIndex && functionCall.Parameters.Count > argumentIndex)
         {
             var argumentType = ColumnProvenanceAnalysis.TryGetScalarType(Resolve(functionCall.Parameters[argumentIndex], context));
-            argumentType = BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
+            var adjustedType = BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType);
+            argumentType = DerivedResultFunctionTypes.NarrowToLiteralLength(name, functionCall.Parameters, argumentType, adjustedType);
             return new ColumnProvenance.Expression(argumentType, inputs, context.SourcePath, functionCall.StartLine);
         }
 
@@ -151,7 +161,9 @@ public static class ScalarExpressionResolver
             }
         }
 
-        return new ColumnProvenance.Expression(InferredType: null, inputs, context.SourcePath, functionCall.StartLine);
+        var derivedType = ExpressionTypeInferencer.Resolve(
+            functionCall, sub => ColumnProvenanceAnalysis.TryGetScalarType(Resolve(sub, context)), context.TypeAliases);
+        return new ColumnProvenance.Expression(derivedType, inputs, context.SourcePath, functionCall.StartLine);
     }
 
     public readonly record struct MethodCallType(SqlType? TargetType, SqlType? ResultType);

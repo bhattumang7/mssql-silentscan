@@ -300,6 +300,9 @@ public static class FromScopeResolver
         FullTextTableReference fullText => ResolveFullTextTableReference(fullText, context),
         OpenXmlTableReference openXml => ResolveOpenXmlTableReference(openXml, context),
         InlineDerivedTable inline => ResolveInlineDerivedTable(inline, context),
+        OpenJsonTableReference openJson => ResolveOpenJsonTableReference(openJson, context),
+        GlobalFunctionTableReference globalFunction when GlobalFunctionRowsets.TryResolve(globalFunction, argument => ScalarExpressionResolver.ResolveScalarType(argument, context.OuterScopes ?? [], context.SourcePath, new ScalarExpressionResolver.ScalarTypeContext(null, context.Catalog.TypeAliases, context.Catalog))) is { } rowset =>
+            (globalFunction.Alias?.Value ?? globalFunction.Name.Value, new ScopeEntry(rowset, IsViewLayer: false)),
         _ => ResolveUnsupportedTableReference(tableReference, context),
     };
 
@@ -636,6 +639,22 @@ public static class FromScopeResolver
                     : new SqlType(SqlTypeCategory.SqlVariant))))
             .ToList();
         return (openXml.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
+    }
+
+    private static (string? Alias, ScopeEntry Entry) ResolveOpenJsonTableReference(OpenJsonTableReference openJson, ResolutionContext context)
+    {
+        var typeAliases = context.Catalog.TypeAliases;
+        List<ResolvedColumn> columns = openJson.SchemaDeclarationItems.Count == 0
+            ? GlobalFunctionRowsets.OpenJsonDefaultColumns()
+            : [.. openJson.SchemaDeclarationItems
+                .Where(item => item.ColumnDefinition?.ColumnIdentifier is not null)
+                .Select(item => new ResolvedColumn(
+                    item.ColumnDefinition.ColumnIdentifier.Value,
+                    new ColumnProvenance.Declared(
+                        item.AsJson
+                            ? new SqlType(SqlTypeCategory.NVarChar, IsMax: true)
+                            : SqlTypeReferenceResolver.Resolve(item.ColumnDefinition.DataType, columnCollation: null, typeAliases) ?? new SqlType(SqlTypeCategory.SqlVariant))))];
+        return (openJson.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
     }
 
     private static (string? Alias, ScopeEntry Entry) ResolveInlineDerivedTable(InlineDerivedTable inline, ResolutionContext context)

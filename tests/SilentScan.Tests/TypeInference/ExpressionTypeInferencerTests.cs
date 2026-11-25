@@ -729,14 +729,14 @@ public sealed class ExpressionTypeInferencerTests
     }
 
     [Fact]
-    public void Resolve_FunctionCall_LengthVaryingBuiltin_ClearsLengthRatherThanKeepingArgumentLength()
+    public void Resolve_FunctionCall_LengthVaryingBuiltin_TakesTheLiteralLengthCappedByTheArgument()
     {
         var typesByName = new Dictionary<string, SqlType?> { ["A"] = VarCharType };
 
-        var result = Resolve("SUBSTRING(A, 1, 5)", typesByName);
-
-        Assert.Equal(SqlTypeCategory.VarChar, result!.Category);
-        Assert.False(result.LengthKnown);
+        Assert.Equal(5, Resolve("SUBSTRING(A, 1, 5)", typesByName)!.Length);
+        Assert.Equal(20, Resolve("SUBSTRING(A, 1, 50)", typesByName)!.Length);
+        Assert.Equal(20, Resolve("SUBSTRING(A, 1, B)", new Dictionary<string, SqlType?> { ["A"] = VarCharType, ["B"] = new SqlType(SqlTypeCategory.Int) })!.Length);
+        Assert.False(Resolve("SUBSTRING(A, 1, 0)", typesByName)!.LengthKnown);
     }
 
     [Fact]
@@ -755,7 +755,7 @@ public sealed class ExpressionTypeInferencerTests
         var result = Resolve("LEFT(A, 5)", typesByName);
 
         Assert.Equal(SqlTypeCategory.VarChar, result!.Category);
-        Assert.False(result.LengthKnown);
+        Assert.Equal(5, result.Length);
     }
 
     [Fact]
@@ -766,7 +766,7 @@ public sealed class ExpressionTypeInferencerTests
         var result = Resolve("RIGHT(A, 5)", typesByName);
 
         Assert.Equal(SqlTypeCategory.VarChar, result!.Category);
-        Assert.False(result.LengthKnown);
+        Assert.Equal(5, result.Length);
     }
 
     [Fact]

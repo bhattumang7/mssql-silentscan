@@ -90,6 +90,8 @@ public sealed class DatabaseCatalog
 
     private Dictionary<string, SqlType?> _scalarFunctionReturnTypesByQualifiedName;
 
+    private Dictionary<string, SqlType> _sequenceTypesByQualifiedName;
+
     private Dictionary<string, TableValuedFunctionKind> _tableValuedFunctionKindsByQualifiedName;
 
     private Dictionary<string, ScalarUdfInfo> _scalarUdfInfoByQualifiedName;
@@ -150,6 +152,7 @@ public sealed class DatabaseCatalog
         _tablesByQualifiedName = new(_identifierComparer);
         _typeAliasesByQualifiedName = new(_identifierComparer);
         _scalarFunctionReturnTypesByQualifiedName = new(_identifierComparer);
+        _sequenceTypesByQualifiedName = new(_identifierComparer);
         _tableValuedFunctionKindsByQualifiedName = new(_identifierComparer);
         _scalarUdfInfoByQualifiedName = new(_identifierComparer);
         _indexedViewIndexesByQualifiedName = new(_identifierComparer);
@@ -180,6 +183,15 @@ public sealed class DatabaseCatalog
 
     public void AddScalarFunctionReturnType(string qualifiedName, SqlType? returnType) =>
         _scalarFunctionReturnTypesByQualifiedName[qualifiedName] = returnType;
+
+    public void AddSequenceType(string qualifiedName, SqlType type) =>
+        _sequenceTypesByQualifiedName[qualifiedName] = type;
+
+    public void RemoveSequenceType(string qualifiedName) =>
+        _sequenceTypesByQualifiedName.Remove(qualifiedName);
+
+    public bool TryGetSequenceType(string qualifiedName, out SqlType type) =>
+        _sequenceTypesByQualifiedName.TryGetValue(qualifiedName, out type!);
 
     public void RemoveScalarFunctionReturnType(string qualifiedName) =>
         _scalarFunctionReturnTypesByQualifiedName.Remove(qualifiedName);
@@ -485,6 +497,7 @@ public sealed class DatabaseCatalog
         _tablesByQualifiedName = new(_tablesByQualifiedName, comparer);
         _typeAliasesByQualifiedName = new(_typeAliasesByQualifiedName, comparer);
         _scalarFunctionReturnTypesByQualifiedName = new(_scalarFunctionReturnTypesByQualifiedName, comparer);
+        _sequenceTypesByQualifiedName = new(_sequenceTypesByQualifiedName, comparer);
         _tableValuedFunctionKindsByQualifiedName = new(_tableValuedFunctionKindsByQualifiedName, comparer);
         _scalarUdfInfoByQualifiedName = new(_scalarUdfInfoByQualifiedName, comparer);
         _indexedViewIndexesByQualifiedName = new(_indexedViewIndexesByQualifiedName, comparer);
@@ -660,6 +673,11 @@ public sealed class DatabaseCatalog
             {
                 _tablesByQualifiedName[key] = table;
             }
+        }
+
+        foreach (var (qualifiedName, sequenceType) in fileModeCatalog._sequenceTypesByQualifiedName)
+        {
+            _sequenceTypesByQualifiedName[qualifiedName] = sequenceType;
         }
 
         foreach (var (qualifiedName, returnType) in fileModeCatalog._scalarFunctionReturnTypesByQualifiedName)

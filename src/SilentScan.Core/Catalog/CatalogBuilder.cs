@@ -420,6 +420,33 @@ public static class CatalogBuilder
             node.AcceptChildren(this);
         }
 
+        public override void ExplicitVisit(CreateSequenceStatement node)
+        {
+            if (phase == BuildPhase.ApplyEverythingElse && node.Name is { } name)
+            {
+                var declared = node.SequenceOptions
+                    .OfType<DataTypeSequenceOption>()
+                    .Select(o => SqlTypeReferenceResolver.Resolve(o.DataType, columnCollation: null, catalog.TypeAliases))
+                    .FirstOrDefault(t => t is not null);
+                catalog.AddSequenceType(SchemaObjectNameHelper.Qualify(name), declared ?? new SqlType(SqlTypeCategory.BigInt));
+            }
+
+            node.AcceptChildren(this);
+        }
+
+        public override void ExplicitVisit(DropSequenceStatement node)
+        {
+            if (phase == BuildPhase.ApplyEverythingElse)
+            {
+                foreach (var target in node.Objects)
+                {
+                    catalog.RemoveSequenceType(SchemaObjectNameHelper.Qualify(target));
+                }
+            }
+
+            node.AcceptChildren(this);
+        }
+
         public override void ExplicitVisit(DropFunctionStatement node)
         {
             if (phase == BuildPhase.ApplyEverythingElse)

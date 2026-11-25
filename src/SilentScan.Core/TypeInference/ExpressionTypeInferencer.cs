@@ -21,7 +21,16 @@ public static class ExpressionTypeInferencer
 
         ParenthesisExpression parenthesis => Resolve(parenthesis.Expression, resolveLeaf, typeAliases),
 
-        UnaryExpression unary => Resolve(unary.Expression, resolveLeaf, typeAliases),
+        UnaryExpression unary => ResolveUnary(unary, resolveLeaf, typeAliases),
+
+        AtTimeZoneCall atTimeZone => ResolveAtTimeZone(Resolve(atTimeZone.DateValue, resolveLeaf, typeAliases)),
+
+        OdbcFunctionCall odbc => OdbcFunctionTypes.Resolve(
+            odbc, p => Resolve(p, resolveLeaf, typeAliases), (name, parameters) => ResolveBuiltinCall(name, parameters, resolveLeaf, typeAliases)),
+
+        PartitionFunctionCall => new SqlType(SqlTypeCategory.Int),
+
+        IdentityFunctionCall identity => SqlTypeReferenceResolver.Resolve(identity.DataType, columnCollation: null, typeAliases),
 
         CastCall castCall => SqlTypeReferenceResolver.Resolve(castCall.DataType, columnCollation: null, typeAliases, unsizedStringOrBinaryDefaultLength: 30),
 
@@ -46,6 +55,12 @@ public static class ExpressionTypeInferencer
         FunctionCall { WithinGroupClause.OrderByClause.OrderByElements: [var ordered, ..] } distribution
             when DerivedResultFunctionTypes.IsOrderedSetDistribution(distribution.FunctionName.Value) => Resolve(ordered.Expression, resolveLeaf, typeAliases),
 
+        FunctionCall { FunctionName.Value: var groupingName } when string.Equals(groupingName, "GROUPING", StringComparison.OrdinalIgnoreCase) =>
+            new SqlType(SqlTypeCategory.TinyInt),
+
+        FunctionCall { FunctionName.Value: var groupingIdName } when string.Equals(groupingIdName, "GROUPING_ID", StringComparison.OrdinalIgnoreCase) =>
+            new SqlType(SqlTypeCategory.Int),
+
         FunctionCall functionCall => ResolveBuiltinCall(functionCall.FunctionName.Value, functionCall.Parameters, resolveLeaf, typeAliases),
 
         LeftFunctionCall left => ResolveBuiltinCall("LEFT", left.Parameters, resolveLeaf, typeAliases),
@@ -61,6 +76,24 @@ public static class ExpressionTypeInferencer
         GlobalVariableExpression global => BuiltinFunctionTypeResolver.ResolveGlobalVariable(global.Name) ?? resolveLeaf(expression),
 
         _ => resolveLeaf(expression),
+    };
+
+    private static SqlType? ResolveUnary(UnaryExpression unary, Func<ScalarExpression, SqlType?> resolveLeaf, IReadOnlyDictionary<string, SqlType>? typeAliases)
+    {
+        var operand = Resolve(unary.Expression, resolveLeaf, typeAliases);
+        return unary.UnaryExpressionType == UnaryExpressionType.Negative && operand is { Category: SqlTypeCategory.TinyInt }
+            ? new SqlType(SqlTypeCategory.SmallInt)
+            : operand;
+    }
+
+    private const int DateTimeFractionalScale = 3;
+
+    private static SqlType? ResolveAtTimeZone(SqlType? input) => input?.Category switch
+    {
+        SqlTypeCategory.DateTime => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: DateTimeFractionalScale),
+        SqlTypeCategory.SmallDateTime => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: 0),
+        SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset when input.Scale is { } scale => new SqlType(SqlTypeCategory.DateTimeOffset, Scale: scale),
+        _ => null,
     };
 
     private static SqlType? ResolveBuiltinCall(
@@ -95,7 +128,8 @@ public static class ExpressionTypeInferencer
         if (BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(name) is { } argumentIndex && parameters.Count > argumentIndex)
         {
             var argumentType = Resolve(parameters[argumentIndex], resolveLeaf, typeAliases);
-            return DerivedResultFunctionTypes.AdjustCaseMapping(name, BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType));
+            return DerivedResultFunctionTypes.NarrowToLiteralLength(
+                name, parameters, argumentType, DerivedResultFunctionTypes.AdjustCaseMapping(name, BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(name, argumentType)));
         }
 
         if (BuiltinFunctionTypeResolver.TryGetMaxWidenedArgumentIndex(name) is { } maxWidenedIndex)

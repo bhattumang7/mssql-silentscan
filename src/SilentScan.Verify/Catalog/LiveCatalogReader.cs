@@ -115,6 +115,11 @@ public sealed class LiveCatalogReader
             catalog.AddScalarFunctionReturnType(qualifiedName, returnType);
         }
 
+        foreach (var (qualifiedName, sequenceType) in await ReadSequenceTypesAsync(connection, cancellationToken))
+        {
+            catalog.AddSequenceType(qualifiedName, sequenceType);
+        }
+
         foreach (var (schemaName, typeName, columns) in await ReadTableTypesAsync(connection, catalog.Skipped, cancellationToken))
         {
             catalog.AddOrReplace(new CatalogTable(
@@ -694,6 +699,32 @@ public sealed class LiveCatalogReader
         }
 
         return [.. byType.Values];
+    }
+
+    private static async Task<List<(string QualifiedName, SqlType Type)>> ReadSequenceTypesAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT s.name AS schema_name, q.name AS sequence_name, ty.name AS type_name, q.precision, q.scale
+            FROM sys.sequences q
+            JOIN sys.schemas s ON s.schema_id = q.schema_id
+            JOIN sys.types ty ON ty.user_type_id = q.user_type_id
+            WHERE q.is_ms_shipped = 0;
+            """;
+
+        await using var command = connection.CreateReadOnlyCommand(sql);
+
+        var sequences = new List<(string, SqlType)>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var type = LiveTypeMapper.BuildType(reader.GetString(2), maxLength: 0, reader.GetByte(3), reader.GetByte(4), collationName: null);
+            if (type is not null)
+            {
+                sequences.Add(($"{reader.GetString(0)}.{reader.GetString(1)}", type));
+            }
+        }
+
+        return sequences;
     }
 
     private static async Task<List<(string QualifiedName, SqlType? ReturnType)>> ReadClrScalarFunctionReturnTypesAsync(

@@ -69,7 +69,7 @@ public static class DerivedResultFunctionTypes
         {
             "STR" => ResolveStr(parameters),
             "REPLICATE" when parameters.Count == 2 => ResolveReplicate(resolve(parameters[0]), parameters[1]),
-            "CONCAT" when parameters.Count >= 2 => ResolveConcat([.. parameters.Select(resolve)], separator: null),
+            "CONCAT" when parameters.Count >= 2 => ResolveConcat([.. parameters.Select(p => AsConcatenatedText(resolve(p)))], separator: null),
             "CONCAT_WS" when parameters.Count >= 3 => ResolveConcat([.. parameters.Skip(1).Select(resolve)], resolve(parameters[0])),
             "JSON_QUERY" when parameters.Count >= 1 => resolve(parameters[0]) switch
             {
@@ -98,6 +98,29 @@ public static class DerivedResultFunctionTypes
             "DATETIME2FROMPARTS" or "DATETIMEOFFSETFROMPARTS" or "TIMEFROMPARTS" => ResolveFromParts(functionName, parameters),
             _ => null,
         };
+
+    public static SqlType? NarrowToLiteralLength(string functionName, IList<ScalarExpression> parameters, SqlType? argument, SqlType? result)
+    {
+        var lengthIndex = functionName.ToUpperInvariant() switch
+        {
+            "LEFT" or "RIGHT" => 1,
+            "SUBSTRING" => 2,
+            _ => -1,
+        };
+        if (lengthIndex < 0 || parameters.Count <= lengthIndex || result is not { IsStringFamily: true, IsMax: false }
+            || argument is not { IsMax: false, Length: { } argumentLength })
+        {
+            return result;
+        }
+
+        var requested = parameters[lengthIndex];
+        if (PositiveIntegerLiteral(requested) is { } characters)
+        {
+            return result with { Length = Math.Min(characters, argumentLength), LengthKnown = true };
+        }
+
+        return IsConstant(requested) ? result : result with { Length = argumentLength, LengthKnown = true };
+    }
 
     public static SqlType? AdjustCaseMapping(string functionName, SqlType? result) =>
         Utf8CaseMapping.Contains(functionName)
@@ -180,6 +203,25 @@ public static class DerivedResultFunctionTypes
             : new SqlType(category, LengthKnown: false, Collation: value.Collation);
     }
 
+    private static SqlType? AsConcatenatedText(SqlType? part) => part is null or { IsStringFamily: true }
+        ? part
+        : part.Category switch
+        {
+            SqlTypeCategory.TinyInt => TextOfWidth(4),
+            SqlTypeCategory.SmallInt => TextOfWidth(6),
+            SqlTypeCategory.Int => TextOfWidth(12),
+            SqlTypeCategory.BigInt => TextOfWidth(24),
+            SqlTypeCategory.Bit => TextOfWidth(1),
+            SqlTypeCategory.Decimal => TextOfWidth(41),
+            SqlTypeCategory.Money or SqlTypeCategory.SmallMoney => TextOfWidth(40),
+            SqlTypeCategory.Float or SqlTypeCategory.Real => TextOfWidth(23),
+            SqlTypeCategory.Date or SqlTypeCategory.Time or SqlTypeCategory.DateTime or SqlTypeCategory.SmallDateTime
+                or SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset or SqlTypeCategory.UniqueIdentifier => TextOfWidth(40),
+            _ => null,
+        };
+
+    private static SqlType TextOfWidth(int characters) => new(SqlTypeCategory.VarChar, Length: characters);
+
     private static SqlType? ResolveConcat(IReadOnlyList<SqlType?> parts, SqlType? separator)
     {
         if (parts.Any(p => p is not { IsStringFamily: true, IsLegacyLob: false })
@@ -204,6 +246,14 @@ public static class DerivedResultFunctionTypes
         var total = parts.Sum(p => (long)p!.Length!.Value) + (separator is null ? 0 : (long)separator.Length!.Value * (parts.Count - 1));
         return new SqlType(category, Length: (int)Math.Min(total, unicode ? UnicodeCap : NonUnicodeCap));
     }
+
+    private static bool IsConstant(ScalarExpression expression) => expression switch
+    {
+        Literal => true,
+        UnaryExpression unary => IsConstant(unary.Expression),
+        ParenthesisExpression parenthesis => IsConstant(parenthesis.Expression),
+        _ => false,
+    };
 
     private static int? PositiveIntegerLiteral(ScalarExpression expression) =>
         expression is IntegerLiteral literal
