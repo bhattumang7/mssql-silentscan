@@ -26,6 +26,16 @@ public static class SargShapes
         "VARCHAR(10) COLLATE Latin1_General_BIN2",
     ];
 
+    public const string NotNullSuffix = " NOT NULL";
+
+    public static readonly IReadOnlyList<string> ColumnTypesWithNullability = [.. ColumnTypes, .. ColumnTypes.Select(t => t + NotNullSuffix)];
+
+    public static string BaseType(string columnType) =>
+        columnType.EndsWith(NotNullSuffix, StringComparison.Ordinal) ? columnType[..^NotNullSuffix.Length] : columnType;
+
+    public static string ColumnDeclaration(string columnType) =>
+        columnType.EndsWith(NotNullSuffix, StringComparison.Ordinal) ? columnType : columnType + " NULL";
+
     public static readonly IReadOnlyList<SargShape> All =
     [
         new("eq", "c = @p", SargFamily.Any),
@@ -87,7 +97,7 @@ public static class SargShapes
 
     public static bool Applies(SargShape shape, string columnType)
     {
-        var upper = columnType.ToUpperInvariant();
+        var upper = BaseType(columnType).ToUpperInvariant();
         var temporal = upper.StartsWith("DATE", StringComparison.Ordinal) || upper.StartsWith("TIME", StringComparison.Ordinal) || upper.StartsWith("SMALLDATETIME", StringComparison.Ordinal);
         var withDate = temporal && !upper.StartsWith("TIME", StringComparison.Ordinal);
         var text = upper.Contains("CHAR", StringComparison.Ordinal);
@@ -104,7 +114,8 @@ public static class SargShapes
 
     public static string VariableType(string columnType)
     {
-        var index = columnType.IndexOf(" COLLATE ", StringComparison.OrdinalIgnoreCase);
-        return index < 0 ? columnType : columnType[..index];
+        var bare = BaseType(columnType);
+        var index = bare.IndexOf(" COLLATE ", StringComparison.OrdinalIgnoreCase);
+        return index < 0 ? bare : bare[..index];
     }
 }

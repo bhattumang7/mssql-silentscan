@@ -16,7 +16,7 @@ public sealed class SargShapeMatrixLiveRegenerationTests
     private static async Task AssertMatchesAsync(SqlServerOptions options)
     {
         var generator = new SargShapeMatrixGenerator(options);
-        var (live, _) = await generator.GenerateAsync(SargShapes.ColumnTypes, SargShapes.All);
+        var (live, _) = await generator.GenerateAsync(SargShapes.ColumnTypesWithNullability, SargShapes.All);
         var checkedIn = SargShapeMatrix.Instance;
         var mismatches = new List<string>();
 

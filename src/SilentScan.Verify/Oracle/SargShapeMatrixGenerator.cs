@@ -82,7 +82,7 @@ public sealed partial class SargShapeMatrixGenerator
     {
         await using var connection = new SqlConnection(_options.BuildConnectionString(database));
         await connection.OpenAsync(cancellationToken);
-        var sql = $"CREATE TABLE {table} (c {columnType} NULL, pad CHAR(10) NULL, filler CHAR(200) NULL); "
+        var sql = $"CREATE TABLE {table} (c {SargShapes.ColumnDeclaration(columnType)}, pad CHAR(10) NULL, filler CHAR(200) NULL); "
             + $"CREATE INDEX ix_{table} ON {table} (c); "
             + $"UPDATE STATISTICS {table} WITH ROWCOUNT = 1000000, PAGECOUNT = 100000;";
         await using var command = new SqlCommand(sql, connection) { CommandTimeout = 60 };

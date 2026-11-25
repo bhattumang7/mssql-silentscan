@@ -53,6 +53,12 @@ public static class NonSargablePredicateScanner
             && targetType.Category is not SqlTypeCategory.Time
             && sourceType.Category != SqlTypeCategory.Time);
 
+    private static bool IsIdenticalStringType(SqlType targetType, SqlType sourceType) =>
+        targetType.Category == sourceType.Category
+        && sourceType.Collation is null
+        && targetType.IsMax == sourceType.IsMax
+        && targetType.Length == sourceType.Length;
+
     internal static bool IsSeekableStringWidening(SqlType targetType, SqlType sourceType) =>
         targetType is { Category: SqlTypeCategory.NVarChar or SqlTypeCategory.NChar }
         && sourceType is { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char, IsMax: false, Collation: { IsSqlFamily: false } }
@@ -409,7 +415,7 @@ public static class NonSargablePredicateScanner
         private static ColumnReferenceExpression? AsDirectColumn(ScalarExpression expression) =>
             UnwrapParentheses(expression) as ColumnReferenceExpression;
 
-        private bool PreservesSeekability(DataTypeReference targetDataType, SqlType? sourceType)
+        private bool PreservesSeekability(DataTypeReference targetDataType, SqlType? sourceType, bool columnIsNotNull)
         {
             if (sourceType is null || sourceType.IsBinaryFamily)
             {
@@ -424,7 +430,7 @@ public static class NonSargablePredicateScanner
 
             if (sourceType.IsStringFamily)
             {
-                return IsSeekableStringWidening(targetType, sourceType);
+                return IsSeekableStringWidening(targetType, sourceType) || (!columnIsNotNull && IsIdenticalStringType(targetType, sourceType));
             }
 
             return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
@@ -479,7 +485,7 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType))
+            if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType, IsKnownNotNullColumn(found.Ref, scopeChain, walker)))
             {
                 return;
             }
