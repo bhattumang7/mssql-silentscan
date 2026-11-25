@@ -168,6 +168,12 @@ public static class TypedPredicateExtractor
 
         private readonly HashSet<QuerySpecification> _pendingInsertBranches = new(ReferenceEqualityComparer.Instance);
 
+        private readonly List<QuerySpecification> _pendingInsertBranchOrder = [];
+
+        private readonly Dictionary<QuerySpecification, List<InsertSourceColumn>?> _collectedInsertBranches = new(ReferenceEqualityComparer.Instance);
+
+        private readonly record struct InsertSourceColumn(SqlType? Type, TSqlFragment Source, ScalarExpression? Expression, ScopeChain Scope, ModuleWalker Walker);
+
         private bool _previousProcedureHasWithRecompile;
 
         private TSqlStatement? _currentWriteStatement;
@@ -248,9 +254,12 @@ public static class TypedPredicateExtractor
         {
             if (_pendingInsertTargetColumns is { } pendingColumns && _pendingInsertBranches.Remove(node))
             {
-                AnalyzeSelectListWriteLoss(node.SelectElements, pendingColumns, _pendingInsertTargetTable!, scopeChain, walker);
+                _collectedInsertBranches[node] = CollectSelectListSources(node.SelectElements, scopeChain, walker);
                 if (_pendingInsertBranches.Count == 0)
                 {
+                    AnalyzeInsertBranches(pendingColumns, _pendingInsertTargetTable!);
+                    _pendingInsertBranchOrder.Clear();
+                    _collectedInsertBranches.Clear();
                     _pendingInsertTargetColumns = null;
                     _pendingInsertTargetTable = null;
                 }
@@ -547,7 +556,7 @@ public static class TypedPredicateExtractor
                 case QueryParenthesisExpression parenthesis:
                     return FlattenInsertBranches(parenthesis.QueryExpression);
 
-                case BinaryQueryExpression { BinaryQueryExpressionType: BinaryQueryExpressionType.Union } binary
+                case BinaryQueryExpression binary
                     when FlattenInsertBranches(binary.FirstQueryExpression) is { } first
                          && FlattenInsertBranches(binary.SecondQueryExpression) is { } second:
                     return [.. first, .. second];
@@ -581,6 +590,9 @@ public static class TypedPredicateExtractor
                          && branches.All(b => b.SelectElements.All(e => e is SelectScalarExpression or SelectStarExpression)):
                     _pendingInsertBranches.Clear();
                     _pendingInsertBranches.UnionWith(branches);
+                    _pendingInsertBranchOrder.Clear();
+                    _pendingInsertBranchOrder.AddRange(branches);
+                    _collectedInsertBranches.Clear();
                     _pendingInsertTargetColumns = targetColumns;
                     _pendingInsertTargetTable = table.QualifiedName;
                     return;
@@ -664,59 +676,87 @@ public static class TypedPredicateExtractor
             }
         }
 
-        private void AnalyzeSelectListWriteLoss(
-            IList<SelectElement> selectElements, IReadOnlyList<CatalogColumn?> targetColumns, string targetTableQualifiedName, ScopeChain scopeChain, ModuleWalker walker)
+        private List<InsertSourceColumn>? CollectSelectListSources(IList<SelectElement> selectElements, ScopeChain scopeChain, ModuleWalker walker)
         {
-            var position = 0;
+            var columns = new List<InsertSourceColumn>();
             foreach (var element in selectElements)
             {
-                if (position >= targetColumns.Count)
-                {
-                    return;
-                }
-
                 switch (element)
                 {
                     case SelectScalarExpression scalar:
-                        if (targetColumns[position]?.Type is { } targetType)
-                        {
-                            var sourceType = OperandType(ResolveOperand(scalar.Expression, scopeChain, walker));
-                            EmitAssignment(new AssignmentSite(WriteLossTarget.Column, targetTableQualifiedName, targetColumns[position]!.Name, targetType, sourceType, scalar.Expression, scopeChain, walker));
-                        }
-
-                        position++;
+                        columns.Add(new InsertSourceColumn(OperandType(ResolveOperand(scalar.Expression, scopeChain, walker)), scalar.Expression, scalar.Expression, scopeChain, walker));
                         break;
 
                     case SelectStarExpression star:
                         if (ExpandStarColumns(star, scopeChain) is not { } expanded)
                         {
-                            return;
+                            return null;
                         }
 
-                        foreach (var column in expanded)
-                        {
-                            if (position >= targetColumns.Count)
-                            {
-                                return;
-                            }
-
-                            if (targetColumns[position]?.Type is { } starTargetType)
-                            {
-                                EmitAssignment(new AssignmentSite(
-                                    WriteLossTarget.Column, targetTableQualifiedName, targetColumns[position]!.Name, starTargetType,
-                                    ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance), star));
-                            }
-
-                            position++;
-                        }
-
+                        columns.AddRange(expanded.Select(column => new InsertSourceColumn(
+                            ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance), star, null, scopeChain, walker)));
                         break;
 
                     default:
-                        return;
+                        return null;
+                }
+            }
+
+            return columns;
+        }
+
+        private void AnalyzeInsertBranches(IReadOnlyList<CatalogColumn?> targetColumns, string targetTableQualifiedName)
+        {
+            var branches = _pendingInsertBranchOrder
+                .Select(branch => _collectedInsertBranches.GetValueOrDefault(branch))
+                .ToList();
+            if (branches.Count == 0 || branches.Any(b => b is null))
+            {
+                return;
+            }
+
+            var width = branches.Min(b => b!.Count);
+            for (var position = 0; position < Math.Min(width, targetColumns.Count); position++)
+            {
+                if (targetColumns[position] is not { Type: { } targetType } targetColumn)
+                {
+                    continue;
+                }
+
+                var sources = branches.Select(b => b![position]).ToList();
+                if (sources.Count == 1)
+                {
+                    EmitInsertAssignment(targetTableQualifiedName, targetColumn.Name, targetType, sources[0].Type, sources[0]);
+                    continue;
+                }
+
+                var typed = sources.Where(source => source.Expression is not NullLiteral).ToList();
+                if (typed.Count == 0)
+                {
+                    continue;
+                }
+
+                var combined = ExpressionTypeInferencer.MergeBranchTypes(typed.Select(source => source.Type));
+                if (combined is null)
+                {
+                    continue;
+                }
+
+                if (EmitInsertAssignment(targetTableQualifiedName, targetColumn.Name, targetType, combined, typed[0]))
+                {
+                    continue;
+                }
+
+                foreach (var source in typed)
+                {
+                    EmitInsertAssignment(targetTableQualifiedName, targetColumn.Name, combined, source.Type, source);
                 }
             }
         }
+
+        private bool EmitInsertAssignment(string targetTableQualifiedName, string targetColumnName, SqlType targetType, SqlType? sourceType, InsertSourceColumn source) =>
+            EmitAssignment(new AssignmentSite(
+                WriteLossTarget.Column, targetTableQualifiedName, targetColumnName, targetType, sourceType, source.Source, source.Scope, source.Walker));
 
         private static IReadOnlyList<ResolvedColumn>? ExpandStarColumns(SelectStarExpression star, ScopeChain scopeChain)
         {
@@ -750,7 +790,7 @@ public static class TypedPredicateExtractor
             EmitAssignment(new AssignmentSite(target, tableQualifiedName, name, targetType, sourceType, source, scopeChain, walker));
         }
 
-        private void EmitAssignment(AssignmentSite site)
+        private bool EmitAssignment(AssignmentSite site)
         {
             Func<ScalarExpression, SqlType?>? operandType = site.Scope is null || site.Walker is null
                 ? null
@@ -759,19 +799,20 @@ public static class TypedPredicateExtractor
                 site.TargetType, site.SourceType, site.Source as ScalarExpression, isVariableTarget: site.Target.IsSilentTarget(), operandType);
             if (kind is null || !site.Target.IsOracleVerified(kind.Value))
             {
-                return;
+                return false;
             }
 
             if (kind.Value == WriteLossKind.NumericScaleNarrowing
                 && site.TargetType.Category == SqlTypeCategory.Decimal && site.SourceType!.Category == SqlTypeCategory.Decimal
                 && IsNumericRoundAbortOnForCurrentStatement)
             {
-                return;
+                return false;
             }
 
             WriteLossFindings.Add(new WriteLossFinding(
                 site.TableQualifiedName, site.Name, kind.Value, site.TargetType, site.SourceType!,
                 sourcePath, site.Source.StartLine, site.Source.StartColumn, Site: site.Target));
+            return true;
         }
 
         public void OnBooleanComparisonExpression(BooleanComparisonExpression node, ModuleWalker walker)

@@ -68,4 +68,26 @@ public sealed class InsertSelectUnionWriteLossTests
         Assert.Empty(extraction.WriteLossFindings);
         Assert.DoesNotContain(extraction.SkippedConstructs, s => s.ConstructKind == "write source");
     }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.Dest (Code) SELECT w.Code FROM dbo.Wide AS w EXCEPT SELECT n.Code FROM dbo.Narrow AS n;")]
+    [InlineData("INSERT INTO dbo.Dest (Code) SELECT w.Code FROM dbo.Wide AS w INTERSECT SELECT n.Code FROM dbo.Narrow AS n;")]
+    [InlineData("INSERT INTO dbo.Dest (Code) SELECT n.Code FROM dbo.Narrow AS n EXCEPT SELECT w.Code FROM dbo.Wide AS w;")]
+    [InlineData("INSERT INTO dbo.Dest (Code) SELECT NULL UNION ALL SELECT w.Code FROM dbo.Wide AS w;")]
+    public void InsertFromSetOperator_JudgesTheCombinedTypeOnce(string insert)
+    {
+        var extraction = Extract(insert);
+
+        var finding = Assert.Single(extraction.WriteLossFindings);
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, finding.Kind);
+        Assert.DoesNotContain(extraction.SkippedConstructs, s => s.ConstructKind == "write source");
+    }
+
+    [Fact]
+    public void InsertFromExceptWhereCombinedTypeFits_FlagsNothing()
+    {
+        var extraction = Extract("INSERT INTO dbo.Dest (Code) SELECT n.Code FROM dbo.Narrow AS n EXCEPT SELECT n2.Code FROM dbo.Narrow AS n2;");
+
+        Assert.Empty(extraction.WriteLossFindings);
+    }
 }
