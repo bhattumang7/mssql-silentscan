@@ -13,6 +13,7 @@ public static class VerifyRootCommand
         root.Subcommands.Add(GenerateOperatorMatrixCommand.Create());
         root.Subcommands.Add(GenerateBuiltinMatrixCommand.Create());
         root.Subcommands.Add(GenerateSargShapeMatrixCommand.Create());
+        root.Subcommands.Add(GenerateGuessMatrixCommand.Create());
         root.Subcommands.Add(GenerateScopeCorpusCommand.Create());
         root.Subcommands.Add(GenerateCollationCodePagesCommand.Create());
         return root;
