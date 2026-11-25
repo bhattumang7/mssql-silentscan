@@ -341,7 +341,7 @@ public sealed class WriteLossExtractionTests
     }
 
     [Fact]
-    public void Extract_InsertSelectStar_LedgeredNotAnalyzed()
+    public void Extract_InsertSelectStar_FlagsNarrowedColumn()
     {
         var result = ExtractAll(
             """
@@ -350,19 +350,19 @@ public sealed class WriteLossExtractionTests
             """,
             "INSERT INTO dbo.Dst SELECT * FROM dbo.Src;");
 
-        Assert.Empty(result.WriteLossFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "write source");
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, Assert.Single(result.WriteLossFindings).Kind);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "write source");
     }
 
     [Fact]
-    public void Extract_InsertSelectUnion_LedgeredNotAnalyzed()
+    public void Extract_InsertSelectUnion_FlagsNarrowingBranch()
     {
         var result = ExtractAll(
             "CREATE TABLE dbo.Dst (Amount DECIMAL(10,2) NULL);",
             "INSERT INTO dbo.Dst (Amount) SELECT 123.456 UNION SELECT 1.00;");
 
-        Assert.Empty(result.WriteLossFindings);
-        Assert.Contains(result.SkippedConstructs, s => s.ConstructKind == "write source");
+        Assert.Equal(WriteLossKind.NumericScaleNarrowing, Assert.Single(result.WriteLossFindings).Kind);
+        Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "write source");
     }
 
     [Fact]

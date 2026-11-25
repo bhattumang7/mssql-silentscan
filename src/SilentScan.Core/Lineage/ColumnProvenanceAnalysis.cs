@@ -13,7 +13,7 @@ public static class ColumnProvenanceAnalysis
 
     public static bool IsConstantOnly(ColumnProvenance provenance) => provenance switch
     {
-        ColumnProvenance.Expression expression => expression.Inputs.Count == 0,
+        ColumnProvenance.Expression expression => expression.Inputs.Count == 0 && expression.OriginSourcePath is null,
         ColumnProvenance.Cast cast => IsConstantOnly(cast.Inner),
         ColumnProvenance.Union union => union.Branches.All(b => !IsExpressionDerived(b) || IsConstantOnly(b)),
         _ => false,
