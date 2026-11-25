@@ -275,6 +275,28 @@ public sealed class ProcCallGraphBuilderTests
             e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("dbo.NeverDeclared", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("EXEC dbo.sp_xml_preparedocument @h OUTPUT, @x;")]
+    [InlineData("EXEC sp_xml_removedocument @h;")]
+    [InlineData("EXEC tempdb.sys.sp_rename 'a', 'b';")]
+    [InlineData("EXEC master..xp_cmdshell 'dir';")]
+    [InlineData("EXEC ('EXEC dbo.sp_getapplock @Resource = 1');")]
+    public void Build_ExecOfEngineSuppliedProcedure_IsNotLedgeredAsUndeclared(string call)
+    {
+        var (graph, ledger) = BuildFrom($"CREATE PROCEDURE dbo.Caller AS BEGIN DECLARE @h int, @x nvarchar(10); {call} END");
+
+        Assert.Empty(graph.Edges);
+        Assert.DoesNotContain(ledger.Entries, e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("not a procedure this scan saw declared", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Build_ExecOfUndeclaredUserProcedure_IsLedgered()
+    {
+        var (_, ledger) = BuildFrom("CREATE PROCEDURE dbo.Caller AS EXEC dbo.NeverDeclared;");
+
+        Assert.Contains(ledger.Entries, e => e.ConstructKind == "procedure call graph edge" && e.Reason.Contains("dbo.NeverDeclared", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Build_ExecOfConcatenatedLiteralStrings_FoldsIntoCallGraphEdge()
     {

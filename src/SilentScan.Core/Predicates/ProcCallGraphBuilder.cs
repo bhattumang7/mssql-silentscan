@@ -171,6 +171,11 @@ public static class ProcCallGraphBuilder
             var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(innerProcedureReference.ProcedureReference.ProcedureReference.Name));
             if (!catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
             {
+                if (IsEngineSuppliedProcedure(qualifiedName))
+                {
+                    return;
+                }
+
                 ledger.Record(
                     AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, CallGraphConstructKind,
                     $"EXEC target '{qualifiedName}' folded from a dynamic SQL string is not a procedure this scan saw declared - call graph edge not recorded");
@@ -506,11 +511,35 @@ public static class ProcCallGraphBuilder
             }
         }
 
+        private static readonly HashSet<string> EngineSuppliedProcedureNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "sp_xml_preparedocument", "sp_xml_removedocument", "sp_rename", "sp_getapplock", "sp_releaseapplock",
+            "sp_addumpdevice", "sp_dropdevice", "sp_delete_database_backuphistory", "sp_configure", "sp_recompile",
+            "sp_refreshview", "sp_refreshsqlmodule", "sp_updatestats", "sp_who", "sp_who2", "sp_help", "sp_helptext",
+            "sp_helpindex", "sp_spaceused", "sp_lock", "sp_depends", "sp_tables", "sp_columns", "sp_stored_procedures",
+            "sp_addextendedproperty", "sp_updateextendedproperty", "sp_dropextendedproperty", "sp_bindrule",
+            "sp_cursoropen", "sp_cursorfetch", "sp_cursorclose", "sp_prepare", "sp_execute", "sp_unprepare",
+            "sp_prepexec", "sp_OACreate", "sp_OAMethod", "sp_OAGetProperty", "sp_OASetProperty", "sp_OADestroy",
+            "xp_cmdshell", "xp_regread", "xp_regwrite", "xp_sprintf", "xp_fileexist", "xp_dirtree", "xp_msver",
+            "xp_instance_regread", "xp_sscanf", "xp_loginconfig",
+        };
+
+        private static bool IsEngineSuppliedProcedure(string qualifiedName)
+        {
+            var separator = qualifiedName.LastIndexOf('.');
+            return EngineSuppliedProcedureNames.Contains(separator < 0 ? qualifiedName : qualifiedName[(separator + 1)..]);
+        }
+
         private void VisitProcedureCall(ExecuteStatement node, ExecutableProcedureReference procedureReference, SchemaObjectName calleeName, ModuleWalker walker)
         {
             var qualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(calleeName));
             if (!catalog.TryGetProcedureParameters(qualifiedName, out var formalParameters))
             {
+                if (IsEngineSuppliedProcedure(qualifiedName))
+                {
+                    return;
+                }
+
                 ledger.Record(
                     AnalysisPass.Predicates, sourcePath, node.StartLine, node.StartColumn, CallGraphConstructKind,
                     $"EXEC target '{qualifiedName}' is not a procedure this scan saw declared - call graph edge not recorded");
