@@ -10,11 +10,16 @@ public sealed record BuiltinCell(
     string? Collation,
     bool? Nullable,
     string Deterministic,
-    string Precise);
+    string Precise,
+    string Parallel);
 
 public sealed class BuiltinMatrix
 {
     public const string ErrorPrefix = "Error:";
+
+    public const string ParallelOutcome = "Parallel";
+
+    public const string NoSerialReasonOutcome = "NoSerialReason";
 
     public static BuiltinMatrix Instance { get; } = LoadEmbedded();
 

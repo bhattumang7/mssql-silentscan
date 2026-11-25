@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using SilentScan.Core.Rules;
 using SilentScan.Verify.Deployment;
 
 namespace SilentScan.Verify.Oracle;
 
-public sealed class BuiltinMatrixGenerator
+public sealed partial class BuiltinMatrixGenerator
 {
     private const int MaxConcurrentProbes = 4;
 
@@ -94,7 +95,8 @@ public sealed class BuiltinMatrixGenerator
             await ExecuteAsync(connection, $"CREATE TABLE {table} ({ColumnList(shape.Types)});", cancellationToken);
             var (type, collation, nullable) = await DescribeAsync(connection, $"SELECT {expression} AS r FROM {table}", cancellationToken);
             var (deterministic, precise) = await ComputedPropertiesAsync(connection, table, expression, cancellationToken);
-            return new BuiltinCell(probe.Function, shapeText, type, collation, nullable, deterministic, precise);
+            var parallel = await ParallelAsync(connection, table, expression, cancellationToken);
+            return new BuiltinCell(probe.Function, shapeText, type, collation, nullable, deterministic, precise, parallel);
         }
         finally
         {
@@ -141,6 +143,43 @@ public sealed class BuiltinMatrixGenerator
         await reader.ReadAsync(cancellationToken);
         return (reader.IsDBNull(0) ? "NULL" : reader.GetString(0), reader.IsDBNull(1) ? "NULL" : reader.GetString(1));
     }
+
+    internal static string ParallelQuery(string table, string expression) =>
+        $"SELECT {expression} AS r FROM {table} OPTION (USE HINT('ENABLE_PARALLEL_PLAN_PREFERENCE'))";
+
+    internal static string ClassifyParallel(string planXml)
+    {
+        var reason = NonParallelReasonRegex().Match(planXml);
+        if (reason.Success)
+        {
+            return reason.Groups[1].Value;
+        }
+
+        return planXml.Contains("Parallel=\"true\"", StringComparison.Ordinal) ? BuiltinMatrix.ParallelOutcome : BuiltinMatrix.NoSerialReasonOutcome;
+    }
+
+    private static async Task<string> ParallelAsync(SqlConnection connection, string table, string expression, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ExecuteAsync(connection, $"UPDATE STATISTICS {table} WITH ROWCOUNT = 10000000, PAGECOUNT = 1000000;", cancellationToken);
+            await ExecuteAsync(connection, "SET SHOWPLAN_XML ON;", cancellationToken);
+            await using var query = new SqlCommand(ParallelQuery(table, expression), connection) { CommandTimeout = 60 };
+            var plan = (string?)await query.ExecuteScalarAsync(cancellationToken) ?? string.Empty;
+            return ClassifyParallel(plan);
+        }
+        catch (SqlException ex)
+        {
+            return BuiltinMatrix.ErrorPrefix + ex.Number.ToString(CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            await ExecuteAsync(connection, "SET SHOWPLAN_XML OFF;", cancellationToken);
+        }
+    }
+
+    [GeneratedRegex("NonParallelPlanReason=\"([^\"]+)\"")]
+    private static partial Regex NonParallelReasonRegex();
 
     private static async Task ExecuteAsync(SqlConnection connection, string sql, CancellationToken cancellationToken)
     {
