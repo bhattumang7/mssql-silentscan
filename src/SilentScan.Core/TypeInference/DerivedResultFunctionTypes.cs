@@ -5,6 +5,9 @@ namespace SilentScan.Core.TypeInference;
 
 public static class DerivedResultFunctionTypes
 {
+    private const string DateTime2FromParts = "DATETIME2FROMPARTS";
+    private const string DateTimeOffsetFromParts = "DATETIMEOFFSETFROMPARTS";
+
     private const int NonUnicodeCap = 8000;
     private const int UnicodeCap = 4000;
     private const int Utf8CaseMappingFactor = 8;
@@ -23,8 +26,8 @@ public static class DerivedResultFunctionTypes
 
     private static readonly Dictionary<string, int> FromPartsWithPrecision = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["DATETIME2FROMPARTS"] = 8,
-        ["DATETIMEOFFSETFROMPARTS"] = 10,
+        [DateTime2FromParts] = 8,
+        [DateTimeOffsetFromParts] = 10,
         ["TIMEFROMPARTS"] = 5,
     };
 
@@ -42,7 +45,7 @@ public static class DerivedResultFunctionTypes
     {
         "LAG", "LEAD", "FIRST_VALUE", "LAST_VALUE", "GREATEST", "LEAST", "STR", "REPLICATE", "CONCAT", "CONCAT_WS", "JSON_QUERY", "JSON_MODIFY", "DATETRUNC", "DATE_BUCKET",
         "REGEXP_REPLACE", "REGEXP_SUBSTR", "UNISTR", "TERTIARY_WEIGHTS", "BASE64_ENCODE", "BASE64_DECODE",
-        "DATETIME2FROMPARTS", "DATETIMEOFFSETFROMPARTS", "TIMEFROMPARTS",
+        DateTime2FromParts, DateTimeOffsetFromParts, "TIMEFROMPARTS",
     };
 
     public static bool IsDerived(string functionName) => Names.Contains(functionName);
@@ -87,15 +90,15 @@ public static class DerivedResultFunctionTypes
                 ? BuiltinFunctionTypeResolver.DemoteFixedWidthCategory(value)
                 : null,
             "TERTIARY_WEIGHTS" when parameters.Count == 1 => resolve(parameters[0]) is { IsNonUnicodeString: true, IsLegacyLob: false } weighted
-                ? Binary(weighted, weighted.Length is { } chars ? Math.Min(chars * 2, NonUnicodeCap) : null)
+                ? TertiaryWeightsType(weighted)
                 : null,
             "BASE64_ENCODE" when parameters.Count >= 1 => resolve(parameters[0]) is { IsBinaryFamily: true } encoded
-                ? new SqlType(SqlTypeCategory.VarChar, Length: encoded.IsMax ? null : NonUnicodeCap, IsMax: encoded.IsMax)
+                ? Base64EncodedType(encoded)
                 : null,
             "BASE64_DECODE" when parameters.Count == 1 => resolve(parameters[0]) is { IsNonUnicodeString: true, IsLegacyLob: false } decoded
                 ? Binary(decoded, NonUnicodeCap)
                 : null,
-            "DATETIME2FROMPARTS" or "DATETIMEOFFSETFROMPARTS" or "TIMEFROMPARTS" => ResolveFromParts(functionName, parameters),
+            DateTime2FromParts or DateTimeOffsetFromParts or "TIMEFROMPARTS" => ResolveFromParts(functionName, parameters),
             _ => null,
         };
 
@@ -135,6 +138,18 @@ public static class DerivedResultFunctionTypes
         _ => value with { Length = value.IsUnicodeString ? UnicodeCap : NonUnicodeCap, LengthKnown = true },
     };
 
+    private static SqlType TertiaryWeightsType(SqlType source)
+    {
+        int? length = source.Length is { } chars ? Math.Min(chars * 2, NonUnicodeCap) : null;
+        return Binary(source, length);
+    }
+
+    private static SqlType Base64EncodedType(SqlType source)
+    {
+        int? length = source.IsMax ? null : NonUnicodeCap;
+        return new SqlType(SqlTypeCategory.VarChar, Length: length, IsMax: source.IsMax);
+    }
+
     private static SqlType Binary(SqlType source, int? length) =>
         source.IsMax
             ? new SqlType(SqlTypeCategory.VarBinary, IsMax: true)
@@ -153,8 +168,8 @@ public static class DerivedResultFunctionTypes
 
         var category = functionName.ToUpperInvariant() switch
         {
-            "DATETIME2FROMPARTS" => SqlTypeCategory.DateTime2,
-            "DATETIMEOFFSETFROMPARTS" => SqlTypeCategory.DateTimeOffset,
+            DateTime2FromParts => SqlTypeCategory.DateTime2,
+            DateTimeOffsetFromParts => SqlTypeCategory.DateTimeOffset,
             _ => SqlTypeCategory.Time,
         };
         return new SqlType(category, Scale: scale);

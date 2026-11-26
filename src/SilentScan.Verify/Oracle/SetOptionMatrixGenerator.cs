@@ -106,7 +106,7 @@ public sealed class SetOptionMatrixGenerator
             {
                 while (await reader.ReadAsync(cancellationToken))
                 {
-                    last = reader.IsDBNull(0) ? "NULL" : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture);
+                    last = (await reader.IsDBNullAsync(0, cancellationToken)) ? "NULL" : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture);
                 }
             }
             while (await reader.NextResultAsync(cancellationToken));

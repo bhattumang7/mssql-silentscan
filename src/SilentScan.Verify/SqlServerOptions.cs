@@ -4,17 +4,20 @@ public sealed record SqlServerOptions(string Host, int Port, string UserId, stri
 {
     private static string? ServerOverride { get; } = Environment.GetEnvironmentVariable("SILENTSCAN_SQL_SERVER") is { Length: > 0 } server ? server : null;
 
-    public static SqlServerOptions LocalDocker { get; } = ServerOverride is not null ? WindowsLogin(ServerOverride, 0) : new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL_PORT"), out var port) ? port : 14330,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    public static SqlServerOptions LocalDocker { get; } = LocalInstance("SILENTSCAN_SQL_PORT", 14330);
 
-    public static SqlServerOptions LocalDockerLatest { get; } = ServerOverride is not null ? WindowsLogin(ServerOverride, 0) : new(
-        Host: "localhost",
-        Port: int.TryParse(Environment.GetEnvironmentVariable("SILENTSCAN_SQL2025_PORT"), out var latestPort) ? latestPort : 14331,
-        UserId: "sa",
-        Password: Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    public static SqlServerOptions LocalDockerLatest { get; } = LocalInstance("SILENTSCAN_SQL2025_PORT", 14331);
+
+    private static SqlServerOptions LocalInstance(string portVariable, int defaultPort)
+    {
+        if (ServerOverride is not null)
+        {
+            return WindowsLogin(ServerOverride, 0);
+        }
+
+        var port = int.TryParse(Environment.GetEnvironmentVariable(portVariable), out var parsed) ? parsed : defaultPort;
+        return new SqlServerOptions("localhost", port, "sa", Environment.GetEnvironmentVariable("SILENTSCAN_SA_PASSWORD") ?? "SilentScan!Dev2026");
+    }
 
     public static SqlServerOptions WindowsLogin(string host, int port) => new(host, port, string.Empty, string.Empty);
 

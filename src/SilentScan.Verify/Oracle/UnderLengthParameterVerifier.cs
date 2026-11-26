@@ -16,11 +16,7 @@ public sealed class UnderLengthParameterVerifier : RuleVerifier<UnderLengthParam
             return Perturbation.NotApplicable("The finding does not name the variable.");
         }
 
-        var size = finding.IsImplicitDefault
-            ? @"(?!\s*\()"
-            : finding.OtherOperandLength is { } length
-                ? @"\s*\(\s*" + length.ToString(CultureInfo.InvariantCulture) + @"\s*\)"
-                : null;
+        var size = DeclaredSizePattern(finding);
         if (size is null)
         {
             return Perturbation.NotApplicable("The finding does not say how long the other operand is.");
@@ -45,5 +41,15 @@ public sealed class UnderLengthParameterVerifier : RuleVerifier<UnderLengthParam
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.SourcePath, string.Empty, definition => original ?? definition, cancellationToken),
             static _ => false);
+    }
+
+    private static string? DeclaredSizePattern(UnderLengthParameterFinding finding)
+    {
+        if (finding.IsImplicitDefault)
+        {
+            return @"(?!\s*\()";
+        }
+
+        return finding.OtherOperandLength is { } length ? @"\s*\(\s*" + length.ToString(CultureInfo.InvariantCulture) + @"\s*\)" : null;
     }
 }

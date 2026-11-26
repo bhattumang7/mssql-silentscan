@@ -58,7 +58,7 @@ public static class ModulePlanComparer
 
             void AddNotDecided(ModuleNotDecidedReason reason, string? detail)
             {
-                var key = (reason == ModuleNotDecidedReason.DynamicSql ? -1 : reason == ModuleNotDecidedReason.ConversionNotAttributable ? -3 : -2, table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
+                var key = (NotDecidedOrder(reason), table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
                 if (seen.Add(key))
                 {
                     rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim, detail));
@@ -128,4 +128,11 @@ public static class ModulePlanComparer
         var parts = qualifiedName.Split('.', 2);
         return parts.Length == 2 ? (parts[0], parts[1]) : (null, parts[0]);
     }
+
+    private static int NotDecidedOrder(ModuleNotDecidedReason reason) => reason switch
+    {
+        ModuleNotDecidedReason.DynamicSql => -1,
+        ModuleNotDecidedReason.ConversionNotAttributable => -3,
+        _ => -2,
+    };
 }

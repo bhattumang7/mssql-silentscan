@@ -121,11 +121,15 @@ public static class SecurityPredicateIndexScanner
             return false;
         }
 
-        var (variable, other) = comparison.FirstExpression is VariableReference first && comparer.Equals(first.Name, parameter.VariableName.Value)
-            ? (true, comparison.SecondExpression)
-            : comparison.SecondExpression is VariableReference second && comparer.Equals(second.Name, parameter.VariableName.Value)
-                ? (true, comparison.FirstExpression)
-                : (false, null!);
+        var (variable, other) = (false, (ScalarExpression)null!);
+        if (comparison.FirstExpression is VariableReference first && comparer.Equals(first.Name, parameter.VariableName.Value))
+        {
+            (variable, other) = (true, comparison.SecondExpression);
+        }
+        else if (comparison.SecondExpression is VariableReference second && comparer.Equals(second.Name, parameter.VariableName.Value))
+        {
+            (variable, other) = (true, comparison.FirstExpression);
+        }
 
         return variable && parameter.DataType is SqlDataTypeReference { SqlDataTypeOption: var parameterType } && IsRuntimeConstantOfSameType(other, parameterType);
     }

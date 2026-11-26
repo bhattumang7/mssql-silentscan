@@ -92,7 +92,7 @@ public sealed class ScopeScenarioRunner
             return "NoRows";
         }
 
-        return reader.IsDBNull(0) ? "NULL" : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "NULL";
+        return (await reader.IsDBNullAsync(0, cancellationToken)) ? "NULL" : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture) ?? "NULL";
     }
 
     private static async Task<string> ReadBindingAsync(SqlConnection connection, string createModule, string prefix, CancellationToken cancellationToken)
@@ -135,10 +135,10 @@ public sealed class ScopeScenarioRunner
         var column = reader.GetOrdinal("source_column");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var source = reader.IsDBNull(table) || reader.IsDBNull(column)
+            var source = (await reader.IsDBNullAsync(table, cancellationToken)) || (await reader.IsDBNullAsync(column, cancellationToken))
                 ? "?"
                 : reader.GetString(schema) + "." + reader.GetString(table) + "." + reader.GetString(column);
-            columns.Add((reader.IsDBNull(name) ? string.Empty : reader.GetString(name)) + "=" + source.Replace(prefix, "P_", StringComparison.Ordinal));
+            columns.Add(((await reader.IsDBNullAsync(name, cancellationToken)) ? string.Empty : reader.GetString(name)) + "=" + source.Replace(prefix, "P_", StringComparison.Ordinal));
         }
 
         return string.Join(";", columns);

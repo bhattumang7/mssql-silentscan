@@ -26,7 +26,14 @@ internal static class CorpusVerificationSummary
     }
 
     public static string DescribeTypePair(TypedPredicateFinding finding) =>
-        $"{DescribeType(finding.Column.Type)} -> {(finding.OtherOperand is PredicateOperand.Value { Type: var other } ? DescribeType(other) : finding.OtherOperand is PredicateOperand.Column c ? DescribeType(c.Type) : "?")}";
+        $"{DescribeType(finding.Column.Type)} -> {DescribeOtherOperand(finding.OtherOperand)}";
+
+    private static string DescribeOtherOperand(PredicateOperand operand) => operand switch
+    {
+        PredicateOperand.Value { Type: var other } => DescribeType(other),
+        PredicateOperand.Column c => DescribeType(c.Type),
+        _ => "?",
+    };
 
     public static string Render(IReadOnlyList<CorpusFindingResult> results, int missLimit)
     {
@@ -75,7 +82,12 @@ internal static class CorpusVerificationSummary
         result.Outcome == CorpusFindingOutcome.NotConfirmed && result.ColumnConverted == false;
 
     private static string DescribeType(SqlType? type) =>
-        type is null ? "?"
-        : type.Collation is { } collation ? $"{type.Category}[{(collation.IsSqlFamily ? "sql" : "windows")}]"
-        : type.Category.ToString();
+        type switch
+        {
+            null => "?",
+            { Collation: { } collation } => $"{type.Category}[{CollationFamily(collation)}]",
+            _ => type.Category.ToString(),
+        };
+
+    private static string CollationFamily(Collation collation) => collation.IsSqlFamily ? "sql" : "windows";
 }

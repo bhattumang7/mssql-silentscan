@@ -67,7 +67,8 @@ public sealed partial class SargShapeMatrixGenerator
     {
         var seek = SeekPredicatesRegex().IsMatch(planXml);
         var scan = ScanOperatorRegex().IsMatch(planXml);
-        var outcome = seek ? SargShapeMatrix.SeekOutcome : scan ? SargShapeMatrix.ScanOutcome : "Other";
+        var scanOrOther = scan ? SargShapeMatrix.ScanOutcome : "Other";
+        var outcome = seek ? SargShapeMatrix.SeekOutcome : scanOrOther;
         if (planXml.Contains("PlanAffectingConvert", StringComparison.Ordinal))
         {
             outcome += "+Convert";

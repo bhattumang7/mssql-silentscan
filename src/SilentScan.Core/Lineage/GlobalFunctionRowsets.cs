@@ -35,7 +35,7 @@ internal static class GlobalFunctionRowsets
         return columns is null ? null : new ResolvedRelation(QualifiedName: null, columns);
     }
 
-    private static SqlType SplitValue(SqlType input) => input with { Category = input.Category is SqlTypeCategory.Char ? SqlTypeCategory.VarChar : input.Category is SqlTypeCategory.NChar ? SqlTypeCategory.NVarChar : input.Category };
+    private static SqlType SplitValue(SqlType input) => input with { Category = input.Category switch { SqlTypeCategory.Char => SqlTypeCategory.VarChar, SqlTypeCategory.NChar => SqlTypeCategory.NVarChar, var other => other } };
 
     private static ColumnProvenance ProvenanceOf(SqlType? type, string reason) =>
         type is null ? new ColumnProvenance.Unknown(reason) : new ColumnProvenance.Declared(type);

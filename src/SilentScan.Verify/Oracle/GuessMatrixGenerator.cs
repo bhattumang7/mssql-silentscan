@@ -129,7 +129,8 @@ public sealed partial class GuessMatrixGenerator
     internal static string Query(string table, (string Type, string Literal) type, GuessShape shape, string operand, string hint)
     {
         var value = operand == LiteralOperand ? type.Literal : "@p";
-        var declaration = operand == LiteralOperand ? string.Empty : $"DECLARE @p {(shape.Id == "like-variable" ? "VARCHAR(20)" : type.Type)}; ";
+        var parameterType = shape.Id == "like-variable" ? "VARCHAR(20)" : type.Type;
+        var declaration = operand == LiteralOperand ? string.Empty : $"DECLARE @p {parameterType}; ";
         var predicate = shape.Template.Replace("{v}", value, StringComparison.Ordinal);
         return $"{declaration}SELECT filler FROM {table} WHERE {predicate} OPTION (USE HINT('{hint}'))";
     }

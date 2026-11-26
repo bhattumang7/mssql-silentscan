@@ -111,11 +111,13 @@ public static class FromScopeResolver
                 }
 
                 var targetObject = CatalogObjectName(named, context);
-                return targetObject is null
-                    ? TargetNotInFrom
-                    : leaves.FindIndex(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject)) is var byObject and >= 0
-                        ? byObject
-                        : TargetNotInFrom;
+                if (targetObject is null)
+                {
+                    return TargetNotInFrom;
+                }
+
+                var byObject = leaves.FindIndex(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject));
+                return byObject >= 0 ? byObject : TargetNotInFrom;
 
             case VariableTableReference variable:
                 return leaves.FindIndex(l => l is VariableTableReference leaf && comparer.Equals(leaf.Variable.Name, variable.Variable.Name)) is var byVariable and >= 0

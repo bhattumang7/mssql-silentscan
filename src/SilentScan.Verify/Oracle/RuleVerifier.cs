@@ -326,7 +326,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         }
 
         var allowFailure = observe.Expected == Difference.FailureSuppressed;
-        transaction.Save(StatementSavepoint);
+        await transaction.SaveAsync(StatementSavepoint, cancellationToken);
         try
         {
             await using var command = new SqlCommand(statement, connection, transaction) { CommandTimeout = 120 };
@@ -365,7 +365,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         }
         finally
         {
-            transaction.Rollback(StatementSavepoint);
+            await transaction.RollbackAsync(StatementSavepoint, CancellationToken.None);
         }
     }
 
@@ -417,7 +417,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         SqlConnection connection, SqlTransaction transaction, string statement, CancellationToken cancellationToken)
     {
         const string ProbeName = "#silentscan_plan_probe";
-        transaction.Save(StatementSavepoint);
+        await transaction.SaveAsync(StatementSavepoint, cancellationToken);
         try
         {
             await using (var create = new SqlCommand($"CREATE PROCEDURE {ProbeName} AS BEGIN {statement} END;", connection, transaction))
@@ -458,7 +458,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         }
         finally
         {
-            transaction.Rollback(StatementSavepoint);
+            await transaction.RollbackAsync(StatementSavepoint, CancellationToken.None);
         }
     }
 

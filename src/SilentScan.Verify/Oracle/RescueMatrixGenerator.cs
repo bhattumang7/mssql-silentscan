@@ -56,9 +56,8 @@ public sealed partial class RescueMatrixGenerator
 
     internal static string Classify(string planXml)
     {
-        var access = SeekRegex().IsMatch(planXml) ? RescueMatrix.SeekOutcome
-            : ScanRegex().IsMatch(planXml) ? RescueMatrix.ScanOutcome
-            : RescueMatrix.NoTableAccessOutcome;
+        var scanOrNone = ScanRegex().IsMatch(planXml) ? RescueMatrix.ScanOutcome : RescueMatrix.NoTableAccessOutcome;
+        var access = SeekRegex().IsMatch(planXml) ? RescueMatrix.SeekOutcome : scanOrNone;
         return planXml.Contains("PlanAffectingConvert", StringComparison.Ordinal) ? access + "+Convert" : access;
     }
 

@@ -116,12 +116,12 @@ public sealed partial class BuiltinMatrixGenerator
             return (BuiltinMatrix.ErrorPrefix + "0", null, null);
         }
 
-        if (reader.IsDBNull(0))
+        if ((await reader.IsDBNullAsync(0, cancellationToken)))
         {
-            return (BuiltinMatrix.ErrorPrefix + (reader.IsDBNull(3) ? "0" : reader.GetInt32(3).ToString(CultureInfo.InvariantCulture)), null, null);
+            return (BuiltinMatrix.ErrorPrefix + ((await reader.IsDBNullAsync(3, cancellationToken)) ? "0" : reader.GetInt32(3).ToString(CultureInfo.InvariantCulture)), null, null);
         }
 
-        return (reader.GetString(0), reader.IsDBNull(1) ? null : reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetBoolean(2));
+        return (reader.GetString(0), (await reader.IsDBNullAsync(1, cancellationToken)) ? null : reader.GetString(1), (await reader.IsDBNullAsync(2, cancellationToken)) ? null : reader.GetBoolean(2));
     }
 
     private static async Task<(string Deterministic, string Precise)> ComputedPropertiesAsync(
@@ -141,7 +141,7 @@ public sealed partial class BuiltinMatrixGenerator
             $"SELECT CAST(COLUMNPROPERTY(OBJECT_ID('{table}'), 'cc', 'IsDeterministic') AS VARCHAR(5)), CAST(COLUMNPROPERTY(OBJECT_ID('{table}'), 'cc', 'IsPrecise') AS VARCHAR(5));", connection);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
-        return (reader.IsDBNull(0) ? "NULL" : reader.GetString(0), reader.IsDBNull(1) ? "NULL" : reader.GetString(1));
+        return ((await reader.IsDBNullAsync(0, cancellationToken)) ? "NULL" : reader.GetString(0), (await reader.IsDBNullAsync(1, cancellationToken)) ? "NULL" : reader.GetString(1));
     }
 
     internal static string ParallelQuery(string table, string expression) =>
