@@ -1,14 +1,12 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Data.SqlClient;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
 using SilentScan.Core.Reporting;
 using SilentScan.Core.Reporting.Sarif;
 using SilentScan.Verify;
-using SilentScan.Verify.Deployment;
 using SilentScan.Verify.Oracle;
 
 namespace SilentScan.Tests.Support;
@@ -83,7 +81,7 @@ public static partial class StatementForms
     private static partial Regex FromSchemaQualifiedName();
 }
 
-public abstract class RuleOracle
+public abstract class RuleOracle : IAsyncLifetime, IAsyncDisposable
 {
     private const string UnrelatedStatement = "SELECT 1;";
 
@@ -103,6 +101,18 @@ public abstract class RuleOracle
         ];
 
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ScanReport> _scans = [];
+
+    private readonly OracleDatabasePool _databases = new();
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        await _databases.DisposeAsync();
+        GC.SuppressFinalize(this);
+    }
+
+    Task IAsyncLifetime.DisposeAsync() => DisposeAsync().AsTask();
 
     protected virtual IReadOnlyList<EngineTarget> Targets => AllTargets;
 
@@ -417,24 +427,10 @@ public abstract class RuleOracle
             .Any(result => SarifRuleCatalog.BaseRuleId(result.GetProperty("ruleId").GetString()!) == ruleId);
     }
 
-    private static async Task<List<List<EngineVerification>>> VerifyAgainstEngineAsync(
-        string setup, IRuleVerifier verifier, IReadOnlyList<Probe> probes, EngineTarget target)
-    {
-        var databaseName = $"SilentScanRuleOracle_{Guid.NewGuid():N}";
-        var provisioner = new DatabaseProvisioner(target.Options);
-        await provisioner.CreateFreshAsync(databaseName);
-        try
+    private Task<List<List<EngineVerification>>> VerifyAgainstEngineAsync(
+        string setup, IRuleVerifier verifier, IReadOnlyList<Probe> probes, EngineTarget target) =>
+        _databases.UseAsync(target.Options, target.CompatibilityLevel, setup, async databaseName =>
         {
-            if (target.CompatibilityLevel is { } level)
-            {
-                await provisioner.SetCompatibilityLevelAsync(databaseName, level);
-            }
-
-            if (!string.IsNullOrWhiteSpace(setup))
-            {
-                await new ScriptDeployer(target.Options).DeployAsync(setup, databaseName);
-            }
-
             var results = new List<List<EngineVerification>>();
             foreach (var probe in probes)
             {
@@ -451,12 +447,7 @@ public abstract class RuleOracle
                 results.Count == probes.Count && results.Zip(probes).All(pair => pair.First.Count == pair.Second.Findings.Count),
                 "Some verifications did not execute.");
             return results;
-        }
-        finally
-        {
-            await provisioner.DropIfExistsAsync(databaseName);
-        }
-    }
+        });
 
     private sealed record Probe(string Label, bool IsClaimSwap, string Statement, IReadOnlyList<IFinding> Findings);
 
