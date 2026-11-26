@@ -12,6 +12,10 @@ public sealed class StringConcatNullPairedOracleTests : RuleOracle
         GO
         INSERT INTO dbo.T (Id, A, B, C) VALUES (1, 'x', 'y', 'z'), (2, NULL, 'p', 'q');
         GO
+        CREATE TABLE dbo.J (K VARCHAR(10) NULL);
+        GO
+        INSERT INTO dbo.J (K) VALUES ('x'), (NULL);
+        GO
         """;
 
     private const string TwoOperands = "select-concat-nullable-column";
@@ -42,5 +46,10 @@ public sealed class StringConcatNullPairedOracleTests : RuleOracle
         new(new("null-rejecting-comparison", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A <> 'zzz';"), TwoOperands),
         new(new("null-rejecting-like", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A LIKE '%';"), TwoOperands),
         new(new("null-rejecting-in", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A IN ('', 'x');"), TwoOperands),
+        new(new("null-rejecting-between", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A BETWEEN '' AND 'zzz';"), TwoOperands),
+        new(new("null-rejecting-not-like", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A NOT LIKE 'zzz';"), TwoOperands),
+        new(new("null-rejecting-not-in", Setup, "SELECT B + A AS Joined FROM dbo.T WHERE A NOT IN ('zzz');"), TwoOperands),
+        new(new("null-rejecting-having", Setup, "SELECT B + A AS Joined FROM dbo.T GROUP BY A, B HAVING A > '';"), TwoOperands),
+        new(new("null-rejecting-inner-join", Setup, "SELECT B + A AS Joined FROM dbo.T INNER JOIN dbo.J ON K = A;"), TwoOperands),
     ];
 }

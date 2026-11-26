@@ -26,6 +26,29 @@ public sealed class StringConcatNullScannerTests
         return StringConcatNullScanner.Scan(result, catalog);
     }
 
+    [Theory]
+    [InlineData("SELECT p.FirstName + p.MiddleName FROM dbo.Person p INNER JOIN dbo.Other o ON o.Label = p.MiddleName;")]
+    [InlineData("SELECT p.FirstName + p.MiddleName FROM dbo.Person p INNER JOIN dbo.Other o ON o.Label = p.MiddleName LEFT JOIN dbo.Person2 q ON q.Id = p.Id;")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName BETWEEN 'a' AND 'z';")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName NOT BETWEEN 'a' AND 'z';")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName NOT LIKE 'a%';")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName NOT IN ('a', 'b');")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person GROUP BY FirstName, MiddleName HAVING MiddleName > '';")]
+    public void ColumnWhoseNullsAreRemovedByAFilter_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName IS DISTINCT FROM 'x';")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE 'q' NOT BETWEEN MiddleName AND 'b';")]
+    [InlineData("SELECT FirstName + MiddleName FROM dbo.Person WHERE MiddleName NOT IN (SELECT Label FROM dbo.Other);")]
+    [InlineData("SELECT p.FirstName + p.MiddleName FROM dbo.Person p LEFT JOIN dbo.Other o ON o.Label = p.MiddleName;")]
+    public void FilterThatKeepsNullRows_StillFires(string sql)
+    {
+        Assert.Equal("MiddleName", Assert.Single(Scan(sql)).ColumnName);
+    }
+
     [Fact]
     public void NullableColumnConcatenatedWithLiteral_Fires()
     {

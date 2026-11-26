@@ -92,7 +92,7 @@ public static class NotInNullableSubqueryScanner
                 return;
             }
 
-            if (HasDefensiveNotNullFilter([subquerySpec.WhereClause?.SearchCondition, subquerySpec.HavingClause?.SearchCondition, .. InnerJoinConditions(subquerySpec.FromClause)], innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
+            if (HasDefensiveNotNullFilter([subquerySpec.WhereClause?.SearchCondition, subquerySpec.HavingClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(subquerySpec.FromClause)], innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
             {
                 return;
             }
@@ -108,21 +108,13 @@ public static class NotInNullableSubqueryScanner
                 sourcePath, predicate.StartLine, predicate.StartColumn));
         }
 
-        private static IEnumerable<BooleanExpression?> InnerJoinConditions(FromClause? fromClause) =>
-            fromClause is null ? [] : fromClause.TableReferences.SelectMany(InnerJoinConditions);
-
-        private static IEnumerable<BooleanExpression?> InnerJoinConditions(TableReference reference) =>
-            reference is QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner } join
-                ? [join.SearchCondition, .. InnerJoinConditions(join.FirstTableReference), .. InnerJoinConditions(join.SecondTableReference)]
-                : [];
-
         private bool HasDefensiveNotNullFilter(
             IEnumerable<BooleanExpression?> filters, string tableQualifiedName, string columnName,
             IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> subqueryScopeChain)
         {
             foreach (var clause in filters.SelectMany(PredicateTreeWalker.FlattenAnd))
             {
-                foreach (var filterColumnRef in NullRejectedColumns(clause))
+                foreach (var filterColumnRef in NullRejection.Columns(clause))
                 {
                     var provenance = ScalarExpressionResolver.ResolveColumnReference(filterColumnRef, subqueryScopeChain, sourcePath, ledger: null, catalog);
                     if (provenance is ColumnProvenance.BaseColumn { Depth: 0 } filterColumn
@@ -135,40 +127,6 @@ public static class NotInNullableSubqueryScanner
             }
 
             return false;
-        }
-
-        private static IEnumerable<ColumnReferenceExpression> NullRejectedColumns(BooleanExpression clause)
-        {
-            switch (clause)
-            {
-                case BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression isNotNullColumn }:
-                    yield return isNotNullColumn;
-                    break;
-                case BooleanComparisonExpression comparison when comparison.ComparisonType is not (BooleanComparisonType.IsDistinctFrom or BooleanComparisonType.IsNotDistinctFrom):
-                    if (comparison.FirstExpression is ColumnReferenceExpression left)
-                    {
-                        yield return left;
-                    }
-
-                    if (comparison.SecondExpression is ColumnReferenceExpression right)
-                    {
-                        yield return right;
-                    }
-
-                    break;
-                case BooleanTernaryExpression { FirstExpression: ColumnReferenceExpression betweenColumn }:
-                    yield return betweenColumn;
-                    break;
-                case InPredicate { Subquery: null, Expression: ColumnReferenceExpression listColumn }:
-                    yield return listColumn;
-                    break;
-                case InPredicate { NotDefined: false, Expression: ColumnReferenceExpression inColumn }:
-                    yield return inColumn;
-                    break;
-                case LikePredicate { FirstExpression: ColumnReferenceExpression likeColumn }:
-                    yield return likeColumn;
-                    break;
-            }
         }
     }
 }

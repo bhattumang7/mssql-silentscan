@@ -74,7 +74,8 @@ public static class StringConcatNullScanner
                 return;
             }
 
-            var nullRejected = CollectNullRejectedColumns(node.WhereClause?.SearchCondition);
+            var nullRejected = CollectNullRejectedColumns(
+                [node.WhereClause?.SearchCondition, node.HavingClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(node.FromClause)]);
             foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
             {
                 InspectTopLevel(element.Expression, scopeChain, nullRejected);
@@ -91,7 +92,8 @@ public static class StringConcatNullScanner
             }
 
             var spec = node.UpdateSpecification;
-            var nullRejected = CollectNullRejectedColumns(spec.WhereClause?.SearchCondition);
+            var nullRejected = CollectNullRejectedColumns(
+                [spec.WhereClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(spec.FromClause)]);
             foreach (var setClause in spec.SetClauses.OfType<AssignmentSetClause>())
             {
                 if (setClause.NewValue is ScalarExpression newValue)
@@ -208,50 +210,8 @@ public static class StringConcatNullScanner
                 ? string.Join('.', parts.Identifiers.Select(i => i.Value)).ToUpperInvariant()
                 : string.Empty;
 
-        private static HashSet<string> CollectNullRejectedColumns(BooleanExpression? condition)
-        {
-            var keys = new HashSet<string>();
-            Collect(condition);
-            return keys;
-
-            void Collect(BooleanExpression? expression)
-            {
-                switch (expression)
-                {
-                    case BooleanParenthesisExpression paren:
-                        Collect(paren.Expression);
-                        break;
-                    case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } and:
-                        Collect(and.FirstExpression);
-                        Collect(and.SecondExpression);
-                        break;
-                    case BooleanIsNullExpression { IsNot: true, Expression: ColumnReferenceExpression column }:
-                        keys.Add(ReferenceKeyOf(column));
-                        break;
-                    case BooleanComparisonExpression comparison:
-                        AddIfColumn(comparison.FirstExpression);
-                        AddIfColumn(comparison.SecondExpression);
-                        break;
-                    case LikePredicate { NotDefined: false } like:
-                        AddIfColumn(like.FirstExpression);
-                        AddIfColumn(like.SecondExpression);
-                        break;
-                    case InPredicate { NotDefined: false } inPredicate:
-                        AddIfColumn(inPredicate.Expression);
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            void AddIfColumn(ScalarExpression expression)
-            {
-                if (Unwrap(expression) is ColumnReferenceExpression column)
-                {
-                    keys.Add(ReferenceKeyOf(column));
-                }
-            }
-        }
+        private static HashSet<string> CollectNullRejectedColumns(IEnumerable<BooleanExpression?> filters) =>
+            [.. filters.SelectMany(PredicateTreeWalker.FlattenAnd).SelectMany(NullRejection.Columns).Select(ReferenceKeyOf)];
 
         private static ScalarExpression Unwrap(ScalarExpression expression) =>
             expression is ParenthesisExpression parenthesis ? Unwrap(parenthesis.Expression) : expression;
