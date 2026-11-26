@@ -45,6 +45,8 @@ public sealed class LeadingCharacterClassLikeOracleTests : IAsyncLifetime
             GO
             CREATE PROCEDURE dbo.ProbeNegatedClass AS SELECT COUNT(*) FROM dbo.Names WHERE Narrow LIKE '[^a]0A%';
             GO
+            CREATE PROCEDURE dbo.ProbeEmptyNegatedClass AS SELECT COUNT(*) FROM dbo.Names WHERE Narrow LIKE '[^]0A%';
+            GO
             CREATE PROCEDURE dbo.ProbeUnderscore AS SELECT COUNT(*) FROM dbo.Names WHERE Narrow LIKE '_0A%';
             GO
             CREATE PROCEDURE dbo.ProbePercent AS SELECT COUNT(*) FROM dbo.Names WHERE Narrow LIKE '%0A%';
@@ -77,6 +79,10 @@ public sealed class LeadingCharacterClassLikeOracleTests : IAsyncLifetime
     [Fact]
     public async Task LeadingNegatedClass_DoesNotSeek() =>
         Assert.False(await HasIndexSeek("EXEC dbo.ProbeNegatedClass;", "IX_Names_Narrow"));
+
+    [Fact]
+    public async Task EmptyNegatedLeadingClass_StillSeeks() =>
+        Assert.True(await HasIndexSeek("EXEC dbo.ProbeEmptyNegatedClass;", "IX_Names_Narrow"));
 
     [Fact]
     public async Task LeadingUnderscore_DoesNotSeek() =>

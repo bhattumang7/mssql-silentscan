@@ -369,6 +369,12 @@ public static class NonSargablePredicateScanner
 
         private void InspectLikePredicate(LikePredicate node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            if (node.FirstExpression is FunctionCall or CoalesceExpression or NullIfExpression)
+            {
+                InspectSide(node.FirstExpression, scopeChain, walker);
+                return;
+            }
+
             if (node.FirstExpression is not ColumnReferenceExpression columnRef || ColumnName(columnRef) is not { } columnName)
             {
                 return;
@@ -387,7 +393,8 @@ public static class NonSargablePredicateScanner
         }
 
         private static bool StartsWithUnseekableWildcard(string pattern) =>
-            pattern != "%" && pattern is ['%' or '_', ..] or ['[', '^', ..];
+            pattern != "%" && pattern is ['%' or '_', ..]
+            || pattern is ['[', '^', ..] && pattern is not ['[', '^', ']', ..];
 
         private void InspectRegexpLikePredicate(RegexpLikePredicate node, ScopeChain scopeChain, ModuleWalker walker)
         {
