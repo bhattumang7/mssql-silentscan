@@ -30,6 +30,24 @@ public sealed class NotInNullableSubqueryScannerTests
         Assert.Equal(fires, Scan(sql).Count == 1);
     }
 
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable GROUP BY RefId HAVING RefId > 0);")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable GROUP BY RefId HAVING RefId IS NOT NULL);")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId NOT IN (8, 9));")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId NOT LIKE '9%');")]
+    public void NullRejectingHavingOrNegatedListOrLikeOnTheSubqueryColumn_NeverFires(string sql)
+    {
+        Assert.Empty(Scan(sql));
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable WHERE RefId NOT IN (SELECT RefId FROM dbo.ChildNotNull));")]
+    [InlineData("SELECT Id FROM dbo.Parent WHERE Id NOT IN (SELECT RefId FROM dbo.ChildNullable GROUP BY RefId HAVING COUNT(*) > 0);")]
+    public void NotInSubqueryOrHavingNotRejectingTheColumn_StillFires(string sql)
+    {
+        Assert.Single(Scan(sql));
+    }
+
     [Fact]
     public void NullableSubqueryColumn_Fires()
     {

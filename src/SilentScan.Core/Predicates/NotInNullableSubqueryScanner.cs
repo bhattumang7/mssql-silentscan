@@ -92,7 +92,7 @@ public static class NotInNullableSubqueryScanner
                 return;
             }
 
-            if (HasDefensiveNotNullFilter([subquerySpec.WhereClause?.SearchCondition, .. InnerJoinConditions(subquerySpec.FromClause)], innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
+            if (HasDefensiveNotNullFilter([subquerySpec.WhereClause?.SearchCondition, subquerySpec.HavingClause?.SearchCondition, .. InnerJoinConditions(subquerySpec.FromClause)], innerColumn.TableQualifiedName, innerColumn.ColumnName, subqueryScopeChain))
             {
                 return;
             }
@@ -159,10 +159,13 @@ public static class NotInNullableSubqueryScanner
                 case BooleanTernaryExpression { FirstExpression: ColumnReferenceExpression betweenColumn }:
                     yield return betweenColumn;
                     break;
+                case InPredicate { Subquery: null, Expression: ColumnReferenceExpression listColumn }:
+                    yield return listColumn;
+                    break;
                 case InPredicate { NotDefined: false, Expression: ColumnReferenceExpression inColumn }:
                     yield return inColumn;
                     break;
-                case LikePredicate { NotDefined: false, FirstExpression: ColumnReferenceExpression likeColumn }:
+                case LikePredicate { FirstExpression: ColumnReferenceExpression likeColumn }:
                     yield return likeColumn;
                     break;
             }
