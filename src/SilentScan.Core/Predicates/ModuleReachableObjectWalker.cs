@@ -144,19 +144,58 @@ public static class ModuleReachableObjectWalker
 
         public List<StatementPredicates> Statements { get; } = [];
 
-        public override void Visit(NamedTableReference node) =>
-            QualifiedNames.Add((SchemaObjectNameHelper.Qualify(node.SchemaObject), node.StartOffset));
+        private readonly HashSet<TableReference> _writeTargets = [];
+
+        public override void Visit(NamedTableReference node)
+        {
+            if (!_writeTargets.Contains(node))
+            {
+                QualifiedNames.Add((SchemaObjectNameHelper.Qualify(node.SchemaObject), node.StartOffset));
+            }
+        }
+
+        public override void Visit(InsertSpecification node) => ExcludeWriteTarget(node.Target, fromClause: null);
+
+        public override void Visit(MergeSpecification node) => ExcludeWriteTarget(node.Target, fromClause: null);
 
         public override void Visit(QuerySpecification node) =>
-            Record(node.FromClause, node.WhereClause, target: null, node.StartOffset);
+            Record(node.FromClause, node.WhereClause, node.StartOffset);
 
-        public override void Visit(UpdateSpecification node) =>
-            Record(node.FromClause, node.WhereClause, node.Target, node.StartOffset);
+        public override void Visit(UpdateSpecification node)
+        {
+            ExcludeWriteTarget(node.Target, node.FromClause);
+            Record(node.FromClause, node.WhereClause, node.StartOffset);
+        }
 
-        public override void Visit(DeleteSpecification node) =>
-            Record(node.FromClause, node.WhereClause, node.Target, node.StartOffset);
+        public override void Visit(DeleteSpecification node)
+        {
+            ExcludeWriteTarget(node.Target, node.FromClause);
+            Record(node.FromClause, node.WhereClause, node.StartOffset);
+        }
 
-        private void Record(FromClause? fromClause, WhereClause? whereClause, TableReference? target, int offset)
+        private void ExcludeWriteTarget(TableReference target, FromClause? fromClause)
+        {
+            _writeTargets.Add(target);
+            if (target is not NamedTableReference named || fromClause is null)
+            {
+                return;
+            }
+
+            var name = named.SchemaObject.BaseIdentifier.Value;
+            var qualified = SchemaObjectNameHelper.Qualify(named.SchemaObject);
+            foreach (var source in fromClause.TableReferences.SelectMany(PredicateTreeWalker.FlattenNamedTables))
+            {
+                var isTarget = source.Alias is { Value: var alias }
+                    ? named.SchemaObject.SchemaIdentifier is null && catalog.IdentifierComparer.Equals(alias, name)
+                    : catalog.IdentifierComparer.Equals(SchemaObjectNameHelper.Qualify(source.SchemaObject), qualified);
+                if (isTarget)
+                {
+                    _writeTargets.Add(source);
+                }
+            }
+        }
+
+        private void Record(FromClause? fromClause, WhereClause? whereClause, int offset)
         {
             if (whereClause?.SearchCondition is not { } condition)
             {
@@ -164,15 +203,13 @@ public static class ModuleReachableObjectWalker
             }
 
             var tables = new List<StatementTable>();
-            var references = (fromClause?.TableReferences ?? []).Concat(target is null ? [] : [target]);
-            foreach (var reference in references)
+            foreach (var named in (fromClause?.TableReferences ?? [])
+                .SelectMany(PredicateTreeWalker.FlattenNamedTables)
+                .Where(named => !_writeTargets.Contains(named)))
             {
-                foreach (var named in PredicateTreeWalker.FlattenNamedTables(reference))
-                {
-                    tables.Add(new StatementTable(
-                        catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)),
-                        named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value));
-                }
+                tables.Add(new StatementTable(
+                    catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)),
+                    named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value));
             }
 
             Statements.Add(new StatementPredicates(tables, [.. PredicateTreeWalker.FlattenAnd(condition).Select(Normalize)], offset));

@@ -151,6 +151,11 @@ public sealed class SetOptionScannerTests
     [InlineData("SELECT Id FROM dbo.Orders WHERE Id > 0 OR Id = -5;")]
     [InlineData("SELECT Id FROM dbo.Orders o JOIN dbo.Other x ON x.Id = o.Id WHERE x.Id > 0;")]
     [InlineData("UPDATE dbo.Orders SET Id = Id;")]
+    [InlineData("UPDATE dbo.Orders SET Id = Id WHERE Id > 0;")]
+    [InlineData("DELETE FROM dbo.Orders WHERE Id > 0;")]
+    [InlineData("UPDATE o SET Id = o.Id FROM dbo.Orders AS o WHERE o.Id > 0;")]
+    [InlineData("DELETE o FROM dbo.Orders AS o WHERE o.Id > 0;")]
+    [InlineData("INSERT INTO dbo.Orders (Id) VALUES (1);")]
     public void QuotedIdentifierOff_FilteredIndexWhoseFilterTheModuleNeverRestates_NeverFires(string statement)
     {
         var catalog = new DatabaseCatalog();
@@ -165,8 +170,8 @@ public sealed class SetOptionScannerTests
     [InlineData("SELECT Id FROM dbo.Orders WHERE Id > 0;")]
     [InlineData("SELECT Id FROM dbo.Orders WHERE (Id > 0);")]
     [InlineData("SELECT o.Id FROM dbo.Orders o WHERE o.Id > 0 AND o.Id < 100;")]
-    [InlineData("UPDATE dbo.Orders SET Id = Id WHERE Id > 0;")]
-    [InlineData("DELETE FROM dbo.Orders WHERE Id > 0;")]
+    [InlineData("UPDATE dbo.Other SET Id = o.Id FROM dbo.Other x JOIN dbo.Orders o ON o.Id = x.Id WHERE o.Id > 0;")]
+    [InlineData("DELETE FROM dbo.Other WHERE Id IN (SELECT Id FROM dbo.Orders WHERE Id > 0);")]
     public void QuotedIdentifierOff_ModuleRestatesTheFilteredIndexFilter_Fires(string statement)
     {
         var catalog = new DatabaseCatalog();
