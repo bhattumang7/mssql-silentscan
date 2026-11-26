@@ -533,12 +533,12 @@ public static class QueryAntiPatternScanner
             HashSet<string> writtenVariables,
             HashSet<string> knownTableVariables) : TSqlFragmentVisitor
         {
+            private int _recompileDepth;
+
             public override void ExplicitVisit(WhileStatement node)
             {
                 _ = node;
             }
-
-            private int _recompileDepth;
 
             public override void ExplicitVisit(FromClause node)
             {

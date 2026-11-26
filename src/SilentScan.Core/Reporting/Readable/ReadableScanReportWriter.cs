@@ -1894,13 +1894,10 @@ public static class ReadableScanReportWriter
         foreach (var group in report.Find<TransactionHygieneFinding>(nameof(TransactionHygieneScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
             var ordered = group.ToList();
-            var (title, paragraph, columns) = group.Key switch
-            {
-                _ => (
-                    "Unresolved implicit transaction",
-                    "SET IMPLICIT_TRANSACTIONS ON silently opens a transaction ahead of the next INSERT/UPDATE/DELETE/MERGE/TRUNCATE/SELECT (with a FROM)/CREATE/ALTER/DROP/GRANT/REVOKE/OPEN CURSOR/FETCH CURSOR with no matching BEGIN TRANSACTION - a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK leaves @@TRANCOUNT elevated by one the instant the procedure returns, same as an unresolved explicit BEGIN TRANSACTION.",
-                    new[] { "Implicit transaction opened at", "Unresolved at" }),
-            };
+            var (title, paragraph, columns) = (
+                "Unresolved implicit transaction",
+                "SET IMPLICIT_TRANSACTIONS ON silently opens a transaction ahead of the next INSERT/UPDATE/DELETE/MERGE/TRUNCATE/SELECT (with a FROM)/CREATE/ALTER/DROP/GRANT/REVOKE/OPEN CURSOR/FETCH CURSOR with no matching BEGIN TRANSACTION - a RETURN/THROW, or the natural end of the module body, on some statically reachable path with no intervening COMMIT/ROLLBACK leaves @@TRANCOUNT elevated by one the instant the procedure returns, same as an unresolved explicit BEGIN TRANSACTION.",
+                new[] { "Implicit transaction opened at", "Unresolved at" });
 
             yield return new ReadableBlock.Heading(level + 1, $"{title} ({ordered.Count})");
             yield return new ReadableBlock.Paragraph(paragraph);
