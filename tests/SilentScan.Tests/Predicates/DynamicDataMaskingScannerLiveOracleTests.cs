@@ -251,4 +251,19 @@ public sealed class DynamicDataMaskingScannerLiveOracleTests
             report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner)),
             f => f.TableQualifiedName == "dbo.WideningOrders");
     }
+
+    [Theory]
+    [InlineData("SELECT ROW_NUMBER() OVER (ORDER BY Total) AS R FROM dbo.MaskedOrders", 0)]
+    [InlineData("SELECT RANK() OVER (PARTITION BY Total ORDER BY OrderId) AS R FROM dbo.MaskedOrders", 0)]
+    [InlineData("SELECT (SELECT COUNT(*) FROM dbo.MaskedOrders AS i WHERE i.Total > 0) AS C FROM dbo.MaskedOrders", 0)]
+    [InlineData("SELECT SUM(Total) OVER () AS S FROM dbo.MaskedOrders", 1)]
+    public async Task OnlyAMaskedValueThatReachesTheOutputCollapses(string query, int expected)
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync($"{Ddl}\nGO\nCREATE PROCEDURE dbo.GetOrder AS {query};");
+
+        Assert.Equal(
+            expected,
+            report.Find<DynamicDataMaskingFinding>(nameof(DynamicDataMaskingScanner))
+                .Count(f => f.Kind == DynamicDataMaskingFindingKind.ComputedExpressionCollapse));
+    }
 }

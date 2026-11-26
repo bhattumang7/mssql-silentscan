@@ -402,4 +402,14 @@ public sealed class ControlFlowRiskScannerTests
 
         Assert.Equal(expected, findings.Count(f => f.Kind == ControlFlowRiskFindingKind.ReadCommittedLockRevertsRowVersioning));
     }
+
+    [Fact]
+    public void NonDeterministicCaseInput_MessageDoesNotClaimBranchesAreUnreachable()
+    {
+        var findings = Scan("SELECT CASE ABS(CHECKSUM(NEWID())) % 3 WHEN 0 THEN 'a' WHEN 1 THEN 'b' WHEN 2 THEN 'c' END;");
+
+        var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
+
+        Assert.DoesNotContain("unreachable", finding.DetailText, StringComparison.Ordinal);
+    }
 }

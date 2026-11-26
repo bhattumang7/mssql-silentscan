@@ -659,4 +659,19 @@ public sealed class IndexDesignScannerTests
 
         Assert.Equal(expected, IndexDesignScanner.Scan(catalog).Count(f => f.Kind == IndexDesignFindingKind.FilterColumnNotInIndex));
     }
+
+    [Theory]
+    [InlineData(true, "IX_B")]
+    [InlineData(false, "IX_A")]
+    public void DuplicateUniqueIndexes_NameTheOneThatDoesNotIgnoreDuplicateKeys(bool firstIgnores, string safeToDrop)
+    {
+        var catalog = new DatabaseCatalog();
+        var a = new CatalogIndex("IX_A", CatalogIndexKind.Index, IsUnique: true, ["CustomerId"], [], IgnoreDupKey: firstIgnores);
+        var b = new CatalogIndex("IX_B", CatalogIndexKind.Index, IsUnique: true, ["CustomerId"], [], IgnoreDupKey: !firstIgnores);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType)], [a, b]));
+
+        var finding = Assert.Single(IndexDesignScanner.Scan(catalog), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
+
+        Assert.Equal(safeToDrop, finding.IndexName);
+    }
 }

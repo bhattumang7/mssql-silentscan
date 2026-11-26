@@ -163,6 +163,14 @@ internal static class BaseColumnResolver
             node.ElseExpression?.Accept(this);
         }
 
+        public override void ExplicitVisit(OverClause node)
+        {
+            if (!valuePositionsOnly)
+            {
+                base.ExplicitVisit(node);
+            }
+        }
+
         public override void ExplicitVisit(ColumnReferenceExpression node)
         {
 

@@ -185,8 +185,11 @@ public static class PartialCompositeForeignKeyJoinScanner
                 return;
             }
 
-            var coveredAnywhere = fk.Pairs.Where(p => statementWideEqualities.Any(pred => PredicateCoversPair(pred, scopeChain, fk, p))).ToList();
-            var missingEverywhere = fk.Pairs.Except(coveredAnywhere).ToList();
+            var equated = EquatedColumns(statementWideEqualities, scopeChain);
+            var missingEverywhere = fk.Pairs
+                .Where(p => !equated.AreEqual(
+                    (fk.ParentTableQualifiedName, p.ParentColumnName), (fk.ReferencedTableQualifiedName, p.ReferencedColumnName)))
+                .ToList();
             if (missingEverywhere.Count == 0)
             {
 
@@ -201,6 +204,51 @@ public static class PartialCompositeForeignKeyJoinScanner
             Findings.Add(new PartialCompositeForeignKeyJoinFinding(
                 fk.ConstraintName, fk.ParentTableQualifiedName, fk.ReferencedTableQualifiedName,
                 fk.Pairs, coveredLocally, missingEverywhere, sourcePath, line, column));
+        }
+
+        private ColumnEqualityClasses EquatedColumns(
+            IReadOnlyList<BooleanComparisonExpression> equalities,
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain)
+        {
+            var classes = new ColumnEqualityClasses(TableColumnKeyComparer.For(catalog));
+            foreach (var equality in equalities)
+            {
+                if (BaseColumnResolver.ResolveBaseColumn(equality.FirstExpression, sourcePath, scopeChain, catalog) is { } left
+                    && BaseColumnResolver.ResolveBaseColumn(equality.SecondExpression, sourcePath, scopeChain, catalog) is { } right)
+                {
+                    classes.Equate((left.TableQualifiedName, left.ColumnName), (right.TableQualifiedName, right.ColumnName));
+                }
+            }
+
+            return classes;
+        }
+
+        private sealed class ColumnEqualityClasses(IEqualityComparer<(string Table, string Column)> comparer)
+        {
+            private readonly Dictionary<(string Table, string Column), (string Table, string Column)> _parents = new(comparer);
+
+            public void Equate((string Table, string Column) left, (string Table, string Column) right)
+            {
+                var leftRoot = Root(left);
+                var rightRoot = Root(right);
+                if (!comparer.Equals(leftRoot, rightRoot))
+                {
+                    _parents[leftRoot] = rightRoot;
+                }
+            }
+
+            public bool AreEqual((string Table, string Column) left, (string Table, string Column) right) =>
+                comparer.Equals(Root(left), Root(right));
+
+            private (string Table, string Column) Root((string Table, string Column) column)
+            {
+                while (_parents.TryGetValue(column, out var parent))
+                {
+                    column = parent;
+                }
+
+                return column;
+            }
         }
 
         private bool IsSuppressedByUniqueIndex(

@@ -132,8 +132,8 @@ public static class ControlFlowRiskScanner
                     ControlFlowRiskFindingKind.NonDeterministicCaseInput,
                     CurrentModule(walker), sourcePath, simpleCase.StartLine, simpleCase.StartColumn,
                     $"{functionName}() as a CASE input is re-evaluated separately for each WHEN " +
-                    "comparison, not once - every WHEN branch is effectively unreachable and this " +
-                    "always falls through to ELSE (or NULL, with no ELSE).",
+                    "comparison, not once - each branch is tested against a different value, so this " +
+                    "can fall through to ELSE (or NULL, with no ELSE) even when the WHEN values cover every result.",
                     FindingConfidence.High));
             }
         }

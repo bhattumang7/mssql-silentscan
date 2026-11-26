@@ -261,4 +261,18 @@ public sealed class PartialCompositeForeignKeyJoinScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Fact]
+    public void ColumnPairEquatedThroughAThirdTable_NeverFires()
+    {
+        var catalog = BuildCatalog();
+        catalog.AddOrReplace(Table("dbo", "Revisions", [Col("RevisionId")]));
+
+        var findings = Scan(
+            "SELECT 1 FROM dbo.OrderLines AS l JOIN dbo.Revisions AS r ON r.RevisionId = l.RevisionId "
+            + "JOIN dbo.Orders AS o ON o.OrderId = l.OrderId AND o.RevisionId = r.RevisionId;",
+            catalog);
+
+        Assert.Empty(findings);
+    }
 }

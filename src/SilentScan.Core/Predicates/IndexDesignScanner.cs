@@ -154,11 +154,12 @@ public static class IndexDesignScanner
                 && IncludedColumnsEqual(a.IncludedColumns, b.IncludedColumns, identifierComparer)
                 && SortDirectionsEqual(a, b))
             {
+                var redundant = a.IgnoreDupKey != b.IgnoreDupKey && b.IgnoreDupKey ? a : b;
                 findings.Add(new IndexDesignFinding(
                     IndexDesignFindingKind.DuplicateIndex,
                     table.QualifiedName,
-                    b.Name,
-                    $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}) with the same sort directions, the same included columns, the same uniqueness, and the same index kind - exact duplicates. One is pure write amplification and wasted space with zero query benefit over the other.",
+                    redundant.Name,
+                    $"'{table.QualifiedName}' indexes '{a.Name ?? UnnamedIndexPlaceholder}' and '{b.Name ?? UnnamedIndexPlaceholder}' share the identical key list ({string.Join(", ", a.KeyColumns)}) with the same sort directions, the same included columns, the same uniqueness, and the same index kind - exact duplicates. {DropGuidance(a, b, redundant)}",
                     table.SourcePath,
                     table.SourceLine));
             }
@@ -181,6 +182,11 @@ public static class IndexDesignScanner
                 table.SourceLine));
         }
     }
+
+    private static string DropGuidance(CatalogIndex a, CatalogIndex b, CatalogIndex redundant) =>
+        a.IgnoreDupKey == b.IgnoreDupKey
+            ? "One is pure write amplification and wasted space with zero query benefit over the other."
+            : $"Drop '{redundant.Name ?? UnnamedIndexPlaceholder}', the one without IGNORE_DUP_KEY: dropping the other would turn duplicate-key inserts that are silently skipped today into errors.";
 
     private static bool PrefixSortDirectionsEqual(CatalogIndex shorter, CatalogIndex longer)
     {

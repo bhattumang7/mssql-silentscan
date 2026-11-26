@@ -11,11 +11,10 @@ internal static class MultiRowInsertIgnoreDupKeyDrop
         WhyItMatters: """
             IGNORE_DUP_KEY is an index option (CREATE UNIQUE INDEX ... WITH (IGNORE_DUP_KEY = ON),
             or a later ALTER INDEX ... REBUILD WITH the same option) that changes what happens when
-            a write would violate the index's own uniqueness - but only for INSERT. A single-row
-            INSERT that would duplicate an existing key still fails, so IGNORE_DUP_KEY looks like it
-            has no effect when tested with one row at a time.
+            an INSERT would violate the index's own uniqueness. The offending row is skipped with a
+            warning instead of failing the statement - for a single-row INSERT just as for a batch.
 
-            The real effect only shows up on a multi-row INSERT ... VALUES statement: if any one of
+            The loss is easiest to miss on a multi-row INSERT ... VALUES statement: if any one of
             the rows in the batch collides with an existing key value, or with an earlier row in the
             same batch, that single row is silently skipped - no error, no exception, nothing a
             TRY/CATCH block would ever see. SQL Server reports only an informational message
@@ -39,8 +38,7 @@ internal static class MultiRowInsertIgnoreDupKeyDrop
             supposed to tolerate re-inserting rows that already exist), check @@ROWCOUNT against the
             number of rows the statement named and handle the difference explicitly, rather than
             assuming every row landed. If the silent skip isn't intended, remove IGNORE_DUP_KEY from
-            the index so a duplicate key raises a real, catchable error the same way a single-row
-            INSERT already does.
+            the index so a duplicate key raises a real, catchable error.
             """,
         Examples:
         [

@@ -20,11 +20,15 @@ internal static class NonDeterministicCaseInput
             in a single real executed SELECT list independently returned three different values.
 
             The practical consequence is severe: for a large-domain function like `NEWID()` or
-            `CRYPT_GEN_RANDOM()`, every WHEN branch becomes, in effect, permanently unreachable dead
-            code - the odds of one freshly-generated random value matching a fixed literal are
-            astronomically small - so the whole CASE structure silently always evaluates to its ELSE
-            (or NULL, if it has none, compounding with the sibling missing-ELSE finding when both
-            apply to the same expression). This is a structurally different claim from a separate,
+            `CRYPT_GEN_RANDOM()` used bare, every WHEN branch becomes, in effect, permanently
+            unreachable - the odds of one freshly-generated random value matching a fixed literal
+            are astronomically small - so the CASE silently evaluates to its ELSE (or NULL, if it
+            has none, compounding with the sibling missing-ELSE finding). Wrapped into a small
+            range, such as `ABS(CHECKSUM(NEWID())) % 3`, the branches are reached, but each
+            comparison sees a different number, so `WHEN 0`, `WHEN 1` and `WHEN 2` together still
+            let rows fall through to NULL.
+
+            This is a structurally different claim from a separate,
             already-investigated item about a non-foldable nondeterministic intrinsic in a WHERE
             predicate's seek/scan behavior - that one was checked and found NOT to hold; this one, a
             CASE expression re-evaluating its own input, was independently oracle-confirmed true.

@@ -168,4 +168,22 @@ public sealed class DynamicDataMaskingOracleTests : OracleTestFixture
 
         Assert.Equal(2, groupCount);
     }
+
+    [Theory]
+    [InlineData("SELECT MAX(R) FROM (SELECT RANK() OVER (ORDER BY Amt) AS R FROM dbo.MaskProbe) AS ranked", 2)]
+    [InlineData("SELECT MAX(C) FROM (SELECT COUNT(*) OVER (PARTITION BY Amt) AS C FROM dbo.MaskProbe) AS partitioned", 1)]
+    [InlineData("SELECT (SELECT COUNT(*) FROM dbo.MaskProbe AS i WHERE i.Amt > 150)", 1)]
+    public async Task RanksPartitionsAndSubqueryFiltersUseTheRealMaskedValue(string query, int expected)
+    {
+        await ExecuteAsync("INSERT INTO dbo.MaskProbe (Id, Amt, Dt) VALUES (2, 200, '2024-06-01');");
+        await using var connection = await OpenConnectionAsync();
+
+        var actual = await RunAsLowPrivAsync(connection, query + ";", async reader =>
+        {
+            Assert.True(await reader.ReadAsync());
+            return Convert.ToInt32(reader.GetValue(0), System.Globalization.CultureInfo.InvariantCulture);
+        });
+
+        Assert.Equal(expected, actual);
+    }
 }
