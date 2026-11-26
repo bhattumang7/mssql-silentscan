@@ -299,7 +299,7 @@ public abstract class RuleOracle : IAsyncLifetime, IAsyncDisposable
             var parsed = SqlScriptParser.ParseText("case.sql", oracleCase.Statement);
             var statementCount = parsed.Fragment is TSqlScript script ? script.Batches.Sum(b => b.Statements.Count) : 0;
             Assert.False(
-                parsed.HasErrors && statementCount == 1,
+                parsed.HasErrors || statementCount != 1,
                 $"[{oracleCase.Name}] a case must hold exactly one judged statement; found {statementCount}{(parsed.HasErrors ? " with parse errors" : string.Empty)}.");
         }
     }
