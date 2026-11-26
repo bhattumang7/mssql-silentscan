@@ -22,6 +22,12 @@ internal static class TemporalScaleNarrowing
             measurements, deduplication keys derived from a timestamp - the rounding can silently
             merge originally-distinct values or reorder events that were genuinely sequential at the
             source's own precision.
+
+            DATETIME is covered too. It stores time in 1/300-second ticks, so widening it to
+            DATETIME2 keeps values such as .003 as .0033333. Assigning a DATETIME into a DATETIME2
+            or DATETIMEOFFSET declared with fewer than 7 digits rounds those thirds away, and
+            assigning a DATETIME2 or DATETIMEOFFSET with 3 or more digits into a DATETIME
+            re-rounds the milliseconds onto the tick grid (.001 becomes .000, .005 becomes .007).
             """,
         HowToFixIt: """
             Widen the target's declared fractional-seconds scale to match (or exceed) the scale of
