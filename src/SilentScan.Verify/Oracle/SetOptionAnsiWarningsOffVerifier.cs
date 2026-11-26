@@ -19,5 +19,5 @@ public sealed partial class SetOptionAnsiWarningsOffVerifier : RuleVerifier<SetO
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.ModuleQualifiedName, string.Empty, definition => Setting().Replace(definition, "SET ANSI_WARNINGS ON"), cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
 }

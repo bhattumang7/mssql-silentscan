@@ -5,6 +5,11 @@ using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Lineage;
 
+public sealed record QueryResolutionScope(
+    IReadOnlyDictionary<string, ResolvedRelation>? CteRelations = null,
+    string? ProcScope = null,
+    IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? OuterScopes = null);
+
 public static class QueryExpressionResolver
 {
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyCteRelations = new Dictionary<string, ResolvedRelation>();
@@ -17,14 +22,12 @@ public static class QueryExpressionResolver
         IReadOnlyDictionary<string, ResolvedRelation> resolvedViews,
         string sourcePath,
         SkipLedger? ledger = null,
-        IReadOnlyDictionary<string, ResolvedRelation>? cteRelations = null,
-        string? procScope = null,
-        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes = null) =>
+        QueryResolutionScope? scope = null) =>
         queryExpression switch
         {
-            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
-            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
-            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes),
+            QuerySpecification spec => ResolveQuerySpecification(spec, catalog, resolvedViews, sourcePath, ledger, scope),
+            BinaryQueryExpression binary => ResolveBinary(binary, catalog, resolvedViews, sourcePath, ledger, scope),
+            QueryParenthesisExpression parenthesis => Resolve(parenthesis.QueryExpression, catalog, resolvedViews, sourcePath, ledger, scope),
             _ => ResolveUnsupported(queryExpression, sourcePath, ledger),
         };
 
@@ -42,12 +45,10 @@ public static class QueryExpressionResolver
         IReadOnlyDictionary<string, ResolvedRelation> resolvedViews,
         string sourcePath,
         SkipLedger? ledger,
-        IReadOnlyDictionary<string, ResolvedRelation>? cteRelations,
-        string? procScope,
-        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes)
+        QueryResolutionScope? scope)
     {
-        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes);
-        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, outerScopes);
+        var first = Resolve(binary.FirstQueryExpression, catalog, resolvedViews, sourcePath, ledger, scope);
+        var second = Resolve(binary.SecondQueryExpression, catalog, resolvedViews, sourcePath, ledger, scope);
 
         if (first.Count != second.Count)
         {
@@ -68,13 +69,12 @@ public static class QueryExpressionResolver
         IReadOnlyDictionary<string, ResolvedRelation> resolvedViews,
         string sourcePath,
         SkipLedger? ledger,
-        IReadOnlyDictionary<string, ResolvedRelation>? cteRelations,
-        string? procScope,
-        IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)>? outerScopes)
+        QueryResolutionScope? scope)
     {
+        var outerScopes = scope?.OuterScopes;
         var (byAlias, ordered) = FromScopeResolver.Resolve(
             spec.FromClause,
-            new FromScopeResolver.ResolutionContext(catalog, resolvedViews, sourcePath, ledger, cteRelations ?? EmptyCteRelations, procScope, OuterScopes: outerScopes));
+            new FromScopeResolver.ResolutionContext(catalog, resolvedViews, sourcePath, ledger, scope?.CteRelations ?? EmptyCteRelations, scope?.ProcScope, OuterScopes: outerScopes));
         IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain = [(byAlias, ordered), .. outerScopes ?? []];
         var result = new List<ResolvedColumn>();
 

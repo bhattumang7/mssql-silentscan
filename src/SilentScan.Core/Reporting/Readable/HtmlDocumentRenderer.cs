@@ -336,7 +336,7 @@ internal static partial class HtmlDocumentRenderer
             : (headingText, null);
     }
 
-    private static HashSet<string> Stems(string text) =>
+    private static HashSet<string> StemsOf(string text) =>
         WordPattern().Matches(text.ToLowerInvariant())
             .Select(word => word.Value)
             .Where(word => word.Length >= 3 && !StopWords.Contains(word))
@@ -395,7 +395,7 @@ internal static partial class HtmlDocumentRenderer
 
         public Section? SectionFor(string label, int occurrences)
         {
-            var labelStems = Stems(label);
+            var labelStems = StemsOf(label);
             var ranked = Sections
                 .Where(s => s.Count == occurrences && s.Heading.Text != ReadableScanReportWriter.SummaryHeading)
                 .Select(s => (Section: s, Score: s.Stems.Count(labelStems.Contains)))
@@ -422,7 +422,7 @@ internal static partial class HtmlDocumentRenderer
                 if (heading.Level <= sectionLevel)
                 {
                     var (title, count) = SplitCount(heading.Text);
-                    var section = new Section(id, heading, count, Stems(title), [], []);
+                    var section = new Section(id, heading, count, StemsOf(title), [], []);
                     Sections.Add(section);
                     return section;
                 }

@@ -13,36 +13,10 @@ internal static class RegexpSeekability
         var atoms = 0;
         while (index < pattern.Length)
         {
-            var current = pattern[index];
             var before = atoms;
-            switch (current)
+            if (!TryAdvance(pattern, ref index, ref atoms))
             {
-                case '.' or '(' or ')' or '|' or '$':
-                    return true;
-                case '\\':
-                    if (index + 1 >= pattern.Length || IsUnsupportedEscape(pattern[index + 1]))
-                    {
-                        return true;
-                    }
-
-                    index += 2;
-                    atoms++;
-                    break;
-                case '[':
-                    if (!TrySkipClass(pattern, ref index, atoms))
-                    {
-                        return true;
-                    }
-
-                    atoms++;
-                    break;
-                case '?' or '*' or '+' or '{':
-                    index++;
-                    break;
-                default:
-                    index++;
-                    atoms++;
-                    break;
+                return true;
             }
 
             var atomAdded = atoms > before;
@@ -53,6 +27,39 @@ internal static class RegexpSeekability
         }
 
         return false;
+    }
+
+    private static bool TryAdvance(string pattern, ref int index, ref int atoms)
+    {
+        switch (pattern[index])
+        {
+            case '.' or '(' or ')' or '|' or '$':
+                return false;
+            case '\\':
+                if (index + 1 >= pattern.Length || IsUnsupportedEscape(pattern[index + 1]))
+                {
+                    return false;
+                }
+
+                index += 2;
+                atoms++;
+                return true;
+            case '[':
+                if (!TrySkipClass(pattern, ref index, atoms))
+                {
+                    return false;
+                }
+
+                atoms++;
+                return true;
+            case '?' or '*' or '+' or '{':
+                index++;
+                return true;
+            default:
+                index++;
+                atoms++;
+                return true;
+        }
     }
 
     private const string EscapesWithoutALiteralRange = "abdfnprstvwxzABCDEPQSW";

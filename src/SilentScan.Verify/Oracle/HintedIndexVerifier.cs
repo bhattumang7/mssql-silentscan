@@ -20,6 +20,6 @@ public sealed class HintedIndexVerifier : RuleVerifier<IndexHintFinding>
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.SourcePath, string.Empty, definition => hint.Replace(definition, string.Empty, 1), cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
     }
 }

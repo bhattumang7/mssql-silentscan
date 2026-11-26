@@ -96,33 +96,49 @@ public static class ExpressionTypeInferencer
         _ => null,
     };
 
-    private static SqlType? ResolveBuiltinCall(
-        string name, IList<ScalarExpression> parameters, Func<ScalarExpression, SqlType?> resolveLeaf, IReadOnlyDictionary<string, SqlType>? typeAliases)
+    private static bool TryResolveDerivedShape(
+        string name, IList<ScalarExpression> parameters, Func<ScalarExpression, SqlType?> resolveLeaf, IReadOnlyDictionary<string, SqlType>? typeAliases, out SqlType? result)
     {
         if (string.Equals(name, "STRING_AGG", StringComparison.OrdinalIgnoreCase) && parameters.Count == 2)
         {
-            var valueType = Resolve(parameters[0], resolveLeaf, typeAliases);
-            return BuiltinFunctionTypeResolver.ResolveStringAggResult(valueType);
+            result = BuiltinFunctionTypeResolver.ResolveStringAggResult(Resolve(parameters[0], resolveLeaf, typeAliases));
+            return true;
         }
 
         if (DerivedResultFunctionTypes.IsValueOfFirstArgument(name))
         {
-            return parameters.Count > 0 ? Resolve(parameters[0], resolveLeaf, typeAliases) : null;
+            result = parameters.Count > 0 ? Resolve(parameters[0], resolveLeaf, typeAliases) : null;
+            return true;
         }
 
         if (DerivedResultFunctionTypes.IsBoundedComparison(name))
         {
-            return parameters.Count > 0 ? DerivedResultFunctionTypes.BoundComparisonResult(CombineBranches(parameters, resolveLeaf, typeAliases)) : null;
+            result = parameters.Count > 0 ? DerivedResultFunctionTypes.BoundComparisonResult(CombineBranches(parameters, resolveLeaf, typeAliases)) : null;
+            return true;
         }
 
         if (DerivedResultFunctionTypes.IsChoice(name))
         {
-            return parameters.Count > 1 ? CombineBranches([.. parameters.Skip(1)], resolveLeaf, typeAliases) : null;
+            result = parameters.Count > 1 ? CombineBranches([.. parameters.Skip(1)], resolveLeaf, typeAliases) : null;
+            return true;
         }
 
         if (DerivedResultFunctionTypes.IsDerived(name))
         {
-            return DerivedResultFunctionTypes.Resolve(name, parameters, p => Resolve(p, resolveLeaf, typeAliases));
+            result = DerivedResultFunctionTypes.Resolve(name, parameters, p => Resolve(p, resolveLeaf, typeAliases));
+            return true;
+        }
+
+        result = null;
+        return false;
+    }
+
+    private static SqlType? ResolveBuiltinCall(
+        string name, IList<ScalarExpression> parameters, Func<ScalarExpression, SqlType?> resolveLeaf, IReadOnlyDictionary<string, SqlType>? typeAliases)
+    {
+        if (TryResolveDerivedShape(name, parameters, resolveLeaf, typeAliases, out var derived))
+        {
+            return derived;
         }
 
         if (BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(name) is { } argumentIndex && parameters.Count > argumentIndex)
@@ -439,16 +455,26 @@ public static class ExpressionTypeInferencer
 
         if (!loser.IsStringFamily)
         {
-            if (loser.IsMax)
-            {
-                return winner with { Category = winnerCategory, IsMax = true, Length = null };
-            }
-
-            return loser.IsBinaryFamily && winner.Length is { } winnerLength && loser.Length is { } loserLength
-                ? winner with { Category = winnerCategory, Length = Math.Max(winnerLength, loserLength) }
-                : winner with { Category = winnerCategory };
+            return MergeNonStringLoser(winner, loser, winnerCategory);
         }
 
+        return CombineStrings(winnerCategory, left, right);
+    }
+
+    private static SqlType MergeNonStringLoser(SqlType winner, SqlType loser, SqlTypeCategory winnerCategory)
+    {
+        if (loser.IsMax)
+        {
+            return winner with { Category = winnerCategory, IsMax = true, Length = null };
+        }
+
+        return loser.IsBinaryFamily && winner.Length is { } winnerLength && loser.Length is { } loserLength
+            ? winner with { Category = winnerCategory, Length = Math.Max(winnerLength, loserLength) }
+            : winner with { Category = winnerCategory };
+    }
+
+    private static SqlType? CombineStrings(SqlTypeCategory category, SqlType left, SqlType right)
+    {
         if (IsAmbiguousCollationConflict(left.Collation, right.Collation))
         {
             return null;
@@ -457,11 +483,11 @@ public static class ExpressionTypeInferencer
         var collation = DominantCollation(left.Collation, right.Collation);
         if (left.IsMax || right.IsMax)
         {
-            return new SqlType(winnerCategory, Collation: collation, IsMax: true);
+            return new SqlType(category, Collation: collation, IsMax: true);
         }
 
         var length = left.Length is { } l && right.Length is { } r ? Math.Max(l, r) : left.Length ?? right.Length;
-        return new SqlType(winnerCategory, Length: length, Collation: collation);
+        return new SqlType(category, Length: length, Collation: collation);
     }
 
     private static bool IsFixedLengthStringOrBinary(SqlTypeCategory category) =>
@@ -478,22 +504,8 @@ public static class ExpressionTypeInferencer
         _ => category,
     };
 
-    private static SqlType? CombineSameCategoryStrings(SqlType left, SqlType right)
-    {
-        if (IsAmbiguousCollationConflict(left.Collation, right.Collation))
-        {
-            return null;
-        }
-
-        var collation = DominantCollation(left.Collation, right.Collation);
-        if (left.IsMax || right.IsMax)
-        {
-            return new SqlType(left.Category, Collation: collation, IsMax: true);
-        }
-
-        var length = left.Length is { } l && right.Length is { } r ? Math.Max(l, r) : left.Length ?? right.Length;
-        return new SqlType(left.Category, Length: length, Collation: collation);
-    }
+    private static SqlType? CombineSameCategoryStrings(SqlType left, SqlType right) =>
+        CombineStrings(left.Category, left, right);
 
     private static SqlType MergeBinaryLength(SqlTypeCategory winnerCategory, SqlType left, SqlType right)
     {

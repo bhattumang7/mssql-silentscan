@@ -30,6 +30,6 @@ internal static partial class ComputedColumnProbe
                     connection, transaction, $"CREATE INDEX silentscan_probe_index ON {table.Table} (silentscan_probe_column);", cancellationToken);
             },
             static _ => false,
-            touchesReadAfterCondition: true);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true));
     }
 }

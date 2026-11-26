@@ -33,7 +33,7 @@ public sealed class NotNullPredicateContradictionVerifier : RuleVerifier<CheckCo
                     : await ColumnAddress.ExecuteAsync(connection, transaction, $"ALTER TABLE {address.Table} ALTER COLUMN {address.Column} {type} NULL;", cancellationToken);
             },
             static _ => false,
-            touchesReadAfterCondition: true);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true));
     }
 }
 

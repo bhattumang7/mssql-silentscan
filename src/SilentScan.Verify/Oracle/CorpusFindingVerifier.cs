@@ -19,6 +19,15 @@ public sealed class CorpusFindingVerifier
         _functionParameterReader = new FunctionParameterReader(options);
     }
 
+    private static bool ColumnIsConverted(TypedPredicateFinding finding, IEnumerable<ConvertImplicitFinding> conversions)
+    {
+        var (schema, table) = SplitQualifiedName(finding.Column.TableQualifiedName);
+        return conversions.Any(c =>
+            string.Equals(c.Table, table, StringComparison.OrdinalIgnoreCase)
+            && (schema is null || string.Equals(c.Schema, schema, StringComparison.OrdinalIgnoreCase))
+            && string.Equals(c.Column, finding.Column.ColumnName, StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<CorpusFindingResult> VerifyAsync(
         string database, TypedPredicateFinding finding, CancellationToken cancellationToken = default)
     {
@@ -46,11 +55,7 @@ public sealed class CorpusFindingVerifier
         }
 
         var conversions = ConvertImplicitDetector.FindColumnConversions(planXml);
-        var (schema, table) = SplitQualifiedName(finding.Column.TableQualifiedName);
-        var columnConverts = conversions.Any(c =>
-            string.Equals(c.Table, table, StringComparison.OrdinalIgnoreCase)
-            && (schema is null || string.Equals(c.Schema, schema, StringComparison.OrdinalIgnoreCase))
-            && string.Equals(c.Column, finding.Column.ColumnName, StringComparison.OrdinalIgnoreCase));
+        var columnConverts = ColumnIsConverted(finding, conversions);
 
         if (finding.Verdict == Verdict.SeekPreserved)
         {

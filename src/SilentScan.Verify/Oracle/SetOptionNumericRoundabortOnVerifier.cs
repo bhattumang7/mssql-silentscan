@@ -19,5 +19,5 @@ public sealed partial class SetOptionNumericRoundabortOnVerifier : RuleVerifier<
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.ModuleQualifiedName, string.Empty, definition => Setting().Replace(definition, "SET NUMERIC_ROUNDABORT OFF"), cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
 }

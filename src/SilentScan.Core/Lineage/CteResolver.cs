@@ -30,7 +30,7 @@ public static class CteResolver
             var name = cte.ExpressionName.Value;
             var columns = ReferencesSelf(cte.QueryExpression, name, catalog.IdentifierComparer)
                 ? ResolveRecursiveAnchor(cte, context, ctes, ledger, typeMismatches)
-                : QueryExpressionResolver.Resolve(cte.QueryExpression, catalog, resolvedViews, sourcePath, ledger, ctes, procScope);
+                : QueryExpressionResolver.Resolve(cte.QueryExpression, catalog, resolvedViews, sourcePath, ledger, new QueryResolutionScope(ctes, procScope));
 
             if (cte.Columns.Count > 0)
             {
@@ -75,7 +75,7 @@ public static class CteResolver
         var anchorBranchCount = FlattenUnionBranches(anchorExpression).Count;
         var branches = FlattenUnionBranches(cte.QueryExpression);
         var anchorColumns = QueryExpressionResolver.Resolve(
-            anchorExpression, context.Catalog, context.ResolvedViews, context.SourcePath, ledger, priorCtes, context.ProcScope);
+            anchorExpression, context.Catalog, context.ResolvedViews, context.SourcePath, ledger, new QueryResolutionScope(priorCtes, context.ProcScope));
         var finalColumns = anchorColumns.Select(c => c with
         {
             Provenance = c.Provenance switch
@@ -113,7 +113,7 @@ public static class CteResolver
         foreach (var branch in recursiveBranches)
         {
             var recursiveColumns = QueryExpressionResolver.Resolve(
-                branch, context.Catalog, context.ResolvedViews, context.SourcePath, ledger: null, priorCtesWithSelf, context.ProcScope);
+                branch, context.Catalog, context.ResolvedViews, context.SourcePath, ledger: null, new QueryResolutionScope(priorCtesWithSelf, context.ProcScope));
             if (recursiveColumns.Count != anchorColumns.Count)
             {
                 continue;

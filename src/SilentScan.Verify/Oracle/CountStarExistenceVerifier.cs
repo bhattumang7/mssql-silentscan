@@ -32,6 +32,6 @@ public sealed class CountStarExistenceVerifier : RuleVerifier<QueryAntiPatternFi
                 definition => assignment.Replace(definition, Inline, 1),
                 cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
     }
 }

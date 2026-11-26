@@ -47,25 +47,9 @@ public sealed class DatabaseCatalog
                     continue;
                 }
 
-                foreach (var caller in callers)
+                if (!TryVisitCallers(qualifiedName, callers, visited, next, ref resolved))
                 {
-                    if (!visited.Add(caller))
-                    {
-                        continue;
-                    }
-
-                    if (FindScopedOnly(qualifiedName, caller) is { } candidate)
-                    {
-                        if (resolved is not null && !resolved.HasSameShapeAs(candidate))
-                        {
-                            return null;
-                        }
-
-                        resolved ??= candidate;
-                        continue;
-                    }
-
-                    next.Add(caller);
+                    return null;
                 }
             }
 
@@ -73,6 +57,32 @@ public sealed class DatabaseCatalog
         }
 
         return resolved;
+    }
+
+    private bool TryVisitCallers(string qualifiedName, IEnumerable<string> callers, HashSet<string> visited, List<string> next, ref CatalogTable? resolved)
+    {
+        foreach (var caller in callers)
+        {
+            if (!visited.Add(caller))
+            {
+                continue;
+            }
+
+            if (FindScopedOnly(qualifiedName, caller) is not { } candidate)
+            {
+                next.Add(caller);
+                continue;
+            }
+
+            if (resolved is not null && !resolved.HasSameShapeAs(candidate))
+            {
+                return false;
+            }
+
+            resolved ??= candidate;
+        }
+
+        return true;
     }
 
     private CatalogTable? FindScopedOnly(string qualifiedName, string scope)

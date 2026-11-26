@@ -18,54 +18,68 @@ public static class ModulePlanComparer
 
         foreach (var claim in claims)
         {
-            var (schema, table) = SplitQualifiedName(claim.Column.TableQualifiedName);
-            var column = claim.Column.ColumnName;
-
-            if (claim.DynamicSqlCallSite is not null)
-            {
-                AddNotDecided(ModuleNotDecidedReason.DynamicSql, null);
-                continue;
-            }
-
-            var index = FindStatement(statements, claim.Line);
-            if (index < 0)
-            {
-                AddNotDecided(ModuleNotDecidedReason.StatementNotLocated, string.Create(CultureInfo.InvariantCulture, $"finding line {claim.Line}; {locatedCount} of {statements.Count} plan statements located"));
-                continue;
-            }
-
-            if (!claimsByStatement.TryGetValue(index, out var statementClaims))
-            {
-                statementClaims = [];
-                claimsByStatement[index] = statementClaims;
-            }
-
-            statementClaims.Add((schema, table, column));
-
-            var statement = statements[index];
-            var converted = statement.Conversions.Any(c => Matches(c, schema, table, column));
-            if (!converted && statement.Conversions.Any(c => c.Table is null && string.Equals(c.Column, column, StringComparison.OrdinalIgnoreCase)))
-            {
-                AddNotDecided(ModuleNotDecidedReason.ConversionNotAttributable, "the plan converts a column of this name but does not say which table it belongs to");
-                continue;
-            }
-
-            var outcome = converted ? ModuleComparisonOutcome.Agree : ModuleComparisonOutcome.ToolOnly;
-            if (seen.Add((index, table.ToUpperInvariant(), column.ToUpperInvariant(), outcome)))
-            {
-                rows.Add(new ModuleComparisonRow(outcome, ModuleNotDecidedReason.None, table, column, statement.StartLine, claim));
-            }
-
-            void AddNotDecided(ModuleNotDecidedReason reason, string? detail)
-            {
-                var key = (NotDecidedOrder(reason), table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
-                if (seen.Add(key))
-                {
-                    rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim, detail));
-                }
-            }
+            CompareClaim(claim, statements, locatedCount, claimsByStatement, seen, rows);
         }
 
+        AddEngineOnlyRows(statements, claimsByStatement, otherVerdictFindings, seen, rows);
+
+        return rows;
+    }
+
+    private static void CompareClaim(
+        TypedPredicateFinding claim,
+        IReadOnlyList<PlannedStatement> statements,
+        int locatedCount,
+        Dictionary<int, List<(string? Schema, string Table, string Column)>> claimsByStatement,
+        HashSet<(int Statement, string Table, string Column, ModuleComparisonOutcome Outcome)> seen,
+        List<ModuleComparisonRow> rows)
+    {
+        void AddNotDecided(ModuleNotDecidedReason reason, string? detail) =>
+            AddNotDecidedRow(rows, seen, reason, SplitQualifiedName(claim.Column.TableQualifiedName).Table, claim.Column.ColumnName, claim, detail);
+
+        var (schema, table) = SplitQualifiedName(claim.Column.TableQualifiedName);
+        var column = claim.Column.ColumnName;
+
+        if (claim.DynamicSqlCallSite is not null)
+        {
+            AddNotDecided(ModuleNotDecidedReason.DynamicSql, null);
+            return;
+        }
+
+        var index = FindStatement(statements, claim.Line);
+        if (index < 0)
+        {
+            AddNotDecided(ModuleNotDecidedReason.StatementNotLocated, string.Create(CultureInfo.InvariantCulture, $"finding line {claim.Line}; {locatedCount} of {statements.Count} plan statements located"));
+            return;
+        }
+
+        if (!claimsByStatement.TryAdd(index, [(schema, table, column)]))
+        {
+            claimsByStatement[index].Add((schema, table, column));
+        }
+
+        var statement = statements[index];
+        var converted = statement.Conversions.Any(c => Matches(c, schema, table, column));
+        if (!converted && statement.Conversions.Any(c => c.Table is null && string.Equals(c.Column, column, StringComparison.OrdinalIgnoreCase)))
+        {
+            AddNotDecided(ModuleNotDecidedReason.ConversionNotAttributable, "the plan converts a column of this name but does not say which table it belongs to");
+            return;
+        }
+
+        var outcome = converted ? ModuleComparisonOutcome.Agree : ModuleComparisonOutcome.ToolOnly;
+        if (seen.Add((index, table.ToUpperInvariant(), column.ToUpperInvariant(), outcome)))
+        {
+            rows.Add(new ModuleComparisonRow(outcome, ModuleNotDecidedReason.None, table, column, statement.StartLine, claim));
+        }
+    }
+
+    private static void AddEngineOnlyRows(
+        IReadOnlyList<PlannedStatement> statements,
+        Dictionary<int, List<(string? Schema, string Table, string Column)>> claimsByStatement,
+        List<TypedPredicateFinding> otherVerdictFindings,
+        HashSet<(int Statement, string Table, string Column, ModuleComparisonOutcome Outcome)> seen,
+        List<ModuleComparisonRow> rows)
+    {
         for (var i = 0; i < statements.Count; i++)
         {
             if (statements[i].StartLine is null || statements[i].EndLine is null)
@@ -89,8 +103,18 @@ public static class ModulePlanComparer
                 }
             }
         }
+    }
 
-        return rows;
+    private static void AddNotDecidedRow(
+        List<ModuleComparisonRow> rows,
+        HashSet<(int Statement, string Table, string Column, ModuleComparisonOutcome Outcome)> seen,
+        ModuleNotDecidedReason reason, string table, string column, TypedPredicateFinding claim, string? detail)
+    {
+        var key = (NotDecidedOrder(reason), table.ToUpperInvariant(), column.ToUpperInvariant(), ModuleComparisonOutcome.NotDecided);
+        if (seen.Add(key))
+        {
+            rows.Add(new ModuleComparisonRow(ModuleComparisonOutcome.NotDecided, reason, table, column, null, claim, detail));
+        }
     }
 
     private static TypedPredicateFinding? OtherVerdictFindingFor(

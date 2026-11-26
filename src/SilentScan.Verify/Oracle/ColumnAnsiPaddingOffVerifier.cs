@@ -41,6 +41,6 @@ public sealed partial class ColumnAnsiPaddingOffVerifier : RuleVerifier<AnsiPadd
                     connection, transaction, $"SET ANSI_PADDING ON; ALTER TABLE {table.Table} ALTER COLUMN {column} {type};", cancellationToken);
             },
             static _ => false,
-            afterStatementQuery: $"SELECT DATALENGTH({column}) FROM {table.Table}");
+            options: new PerturbationOptions(AfterStatementQuery: $"SELECT DATALENGTH({column}) FROM {table.Table}"));
     }
 }

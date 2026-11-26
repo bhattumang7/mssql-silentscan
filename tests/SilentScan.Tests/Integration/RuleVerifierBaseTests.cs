@@ -253,7 +253,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     }
 
     private static Perturbation Observing(Difference expected, PerturbationStep apply, string? afterQuery = null) =>
-        new(TouchesT, expected, Nothing, apply, _ => false, afterStatementQuery: afterQuery);
+        new(TouchesT, expected, Nothing, apply, _ => false, options: new PerturbationOptions(AfterStatementQuery: afterQuery));
 
     private const string StoredValues = "SELECT V FROM dbo.T ORDER BY V;";
 
@@ -328,7 +328,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
     private const string FoldedSelect = "SELECT V FROM dbo.Folded WHERE V IS NULL;";
 
     private static Perturbation Unfolding(PerturbationStep apply, bool readsAfter) =>
-        new([new TouchedObject("dbo", "Folded")], Difference.PlanChanged, Nothing, apply, _ => false, touchesReadAfterCondition: readsAfter);
+        new([new TouchedObject("dbo", "Folded")], Difference.PlanChanged, Nothing, apply, _ => false, options: new PerturbationOptions(TouchesReadAfterCondition: readsAfter));
 
     private static readonly PerturbationStep RelaxNotNull = Run("ALTER TABLE dbo.Folded ALTER COLUMN V INT NULL;");
 
@@ -365,8 +365,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
             Nothing,
             Run("ALTER TABLE dbo.Checked DROP CONSTRAINT CK_Checked;"),
             _ => false,
-            touchesReadAfterCondition: true,
-            planCompiledInModule: inModule);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true, PlanCompiledInModule: inModule));
 
     [Fact]
     public async Task ContradictionWithACheckConstraint_FoldsWhenCompiledInsideAModule()

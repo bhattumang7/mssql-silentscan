@@ -19,5 +19,5 @@ public sealed partial class SetOptionConcatNullYieldsNullOffVerifier : RuleVerif
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.ModuleQualifiedName, string.Empty, definition => Setting().Replace(definition, "SET CONCAT_NULL_YIELDS_NULL ON"), cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
 }

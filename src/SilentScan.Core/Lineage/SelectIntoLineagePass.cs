@@ -50,7 +50,7 @@ public static class SelectIntoLineagePass
             }
 
             var resolved = QueryExpressionResolver.Resolve(
-                select.QueryExpression, catalog, resolvedViews, sourcePath, catalog.Skipped, walker.CurrentCteRelations(), walker.CurrentProcScope);
+                select.QueryExpression, catalog, resolvedViews, sourcePath, catalog.Skipped, new QueryResolutionScope(walker.CurrentCteRelations(), walker.CurrentProcScope));
 
             var existingByName = new Dictionary<string, CatalogColumn>(catalog.IdentifierComparer);
             foreach (var column in existing.Columns)

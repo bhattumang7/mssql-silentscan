@@ -73,31 +73,8 @@ public static class QueryAntiPatternScanner
             {
                 foreach (var variableRef in CollectVariableTableReferences(tableReference))
                 {
-                    if (_recompileStatementDepth == 0
-                        && estimateSensitiveFromClauses.Contains(node)
-                        && _tableVariableNames.Contains(variableRef.Variable.Name)
-                        && catalog.CompatibilityLevel is { } level && TableVariableEstimateIsFixed)
-                    {
-                        var reason = level < 150
-                            ? $"connected compatibility level {level}, below 150"
-                            : "deferred compilation of table variables is switched off for the database";
-                        Findings.Add(new QueryAntiPatternFinding(
-                            QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, sourcePath,
-                            variableRef.StartLine, variableRef.StartColumn,
-                            $"{variableRef.Variable.Name} ({reason})",
-                            FindingConfidence.High));
-                    }
-
-                    if (_tableValuedParameterNames.Contains(variableRef.Variable.Name)
-                        && catalog.CompatibilityLevel is >= 170
-                        && !catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
-                    {
-                        Findings.Add(new QueryAntiPatternFinding(
-                            QueryAntiPatternFindingKind.TableVariablePspSkip, sourcePath,
-                            variableRef.StartLine, variableRef.StartColumn,
-                            variableRef.Variable.Name,
-                            FindingConfidence.High));
-                    }
+                    InspectLowCompatEstimate(node, variableRef);
+                    InspectTableValuedParameterPspSkip(variableRef);
                 }
 
                 foreach (var named in CollectNamedTableReferences(tableReference))
@@ -105,6 +82,43 @@ public static class QueryAntiPatternScanner
                     InspectUnqualifiedReference(named);
                 }
             }
+        }
+
+        private void InspectLowCompatEstimate(FromClause node, VariableTableReference variableRef)
+        {
+            if (_recompileStatementDepth != 0
+                || !estimateSensitiveFromClauses.Contains(node)
+                || !_tableVariableNames.Contains(variableRef.Variable.Name)
+                || catalog.CompatibilityLevel is not { } level
+                || !TableVariableEstimateIsFixed)
+            {
+                return;
+            }
+
+            var reason = level < 150
+                ? $"connected compatibility level {level}, below 150"
+                : "deferred compilation of table variables is switched off for the database";
+            Findings.Add(new QueryAntiPatternFinding(
+                QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, sourcePath,
+                variableRef.StartLine, variableRef.StartColumn,
+                $"{variableRef.Variable.Name} ({reason})",
+                FindingConfidence.High));
+        }
+
+        private void InspectTableValuedParameterPspSkip(VariableTableReference variableRef)
+        {
+            if (!_tableValuedParameterNames.Contains(variableRef.Variable.Name)
+                || catalog.CompatibilityLevel is not >= 170
+                || catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
+            {
+                return;
+            }
+
+            Findings.Add(new QueryAntiPatternFinding(
+                QueryAntiPatternFindingKind.TableVariablePspSkip, sourcePath,
+                variableRef.StartLine, variableRef.StartColumn,
+                variableRef.Variable.Name,
+                FindingConfidence.High));
         }
 
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
@@ -881,6 +895,31 @@ public static class QueryAntiPatternScanner
             _ => type,
         };
 
+        private List<string> JoinColumnsQualifiedBy(QualifiedJoin join, string joinedAlias) =>
+            PredicateTreeWalker.FlattenAnd(join.SearchCondition)
+                .OfType<BooleanComparisonExpression>()
+                .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
+                .SelectMany(c => new[] { c.FirstExpression, c.SecondExpression })
+                .Select(e => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(e, joinedAlias, catalog.IdentifierComparer))
+                .OfType<string>()
+                .Distinct(catalog.IdentifierComparer)
+                .ToList();
+
+        private List<string> PinnedColumnsQualifiedBy(QuerySpecification node, string joinedAlias) =>
+            node.WhereClause is { SearchCondition: { } whereCondition }
+                ? PredicateTreeWalker.FlattenAnd(whereCondition)
+                    .OfType<BooleanComparisonExpression>()
+                    .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
+                    .Select(c => (c.FirstExpression, c.SecondExpression) switch
+                    {
+                        (var column, Literal or VariableReference) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
+                        (Literal or VariableReference, var column) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
+                        _ => null,
+                    })
+                    .OfType<string>()
+                    .ToList()
+                : [];
+
         private void InspectDistinctJoinFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias, ScopeChain scopeChain, ModuleWalker walker)
         {
             if (node.UniqueRowFilter != UniqueRowFilter.Distinct || node.FromClause is null)
@@ -908,34 +947,13 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
-                var joinColumns = PredicateTreeWalker.FlattenAnd(join.SearchCondition)
-                    .OfType<BooleanComparisonExpression>()
-                    .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
-                    .SelectMany(c => new[] { c.FirstExpression, c.SecondExpression })
-                    .Select(e => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(e, joinedAlias, catalog.IdentifierComparer))
-                    .Where(c => c is not null)
-                    .Select(c => c!)
-                    .Distinct(catalog.IdentifierComparer)
-                    .ToList();
-
+                var joinColumns = JoinColumnsQualifiedBy(join, joinedAlias);
                 if (joinColumns.Count == 0)
                 {
                     continue;
                 }
 
-                var pinnedColumns = node.WhereClause is { SearchCondition: { } whereCondition }
-                    ? PredicateTreeWalker.FlattenAnd(whereCondition)
-                        .OfType<BooleanComparisonExpression>()
-                        .Where(c => c.ComparisonType == BooleanComparisonType.Equals)
-                        .Select(c => (c.FirstExpression, c.SecondExpression) switch
-                        {
-                            (var column, Literal or VariableReference) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
-                            (Literal or VariableReference, var column) => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(column, joinedAlias, catalog.IdentifierComparer),
-                            _ => null,
-                        })
-                        .OfType<string>()
-                        .ToList()
-                    : [];
+                var pinnedColumns = PinnedColumnsQualifiedBy(node, joinedAlias);
                 var isProvablyUnique = joinedTable.Indexes.Any(ix =>
                     ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled
                     && ix.KeyColumns.Count > 0

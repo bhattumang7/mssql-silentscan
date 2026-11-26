@@ -45,7 +45,7 @@ public sealed partial class KeyLookupProneVerifier : RuleVerifier<IndexCoverageF
                     cancellationToken);
             },
             static _ => false,
-            touchesReadAfterCondition: true);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true));
     }
 
     private static async Task<bool> IsPlainNonclusteredAsync(

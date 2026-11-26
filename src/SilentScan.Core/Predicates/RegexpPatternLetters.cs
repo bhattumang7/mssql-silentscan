@@ -43,21 +43,26 @@ internal static partial class RegexpPatternLetters
     private static bool IsCaseClosed(string body)
     {
         var letters = new HashSet<char>();
-        for (var i = 0; i < body.Length; i++)
+        var index = 0;
+        while (index < body.Length)
         {
-            if (i + 2 < body.Length && body[i + 1] == '-' && char.IsAsciiLetter(body[i]) && char.IsAsciiLetter(body[i + 2]) && body[i] <= body[i + 2])
+            if (index + 2 < body.Length && body[index + 1] == '-' && char.IsAsciiLetter(body[index]) && char.IsAsciiLetter(body[index + 2]) && body[index] <= body[index + 2])
             {
-                for (var c = body[i]; c <= body[i + 2]; c++)
+                for (var c = body[index]; c <= body[index + 2]; c++)
                 {
                     letters.Add(c);
                 }
 
-                i += 2;
+                index += 3;
+                continue;
             }
-            else if (char.IsAsciiLetter(body[i]))
+
+            if (char.IsAsciiLetter(body[index]))
             {
-                letters.Add(body[i]);
+                letters.Add(body[index]);
             }
+
+            index++;
         }
 
         return letters.All(letter => letters.Contains(char.IsAsciiLetterLower(letter) ? char.ToUpperInvariant(letter) : char.ToLowerInvariant(letter)));

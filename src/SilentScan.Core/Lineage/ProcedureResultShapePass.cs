@@ -56,7 +56,7 @@ public static class ProcedureResultShapePass
             }
 
             var columns = QueryExpressionResolver.Resolve(
-                node.QueryExpression, catalog, resolvedViews, sourcePath, catalog.Skipped, walker.CurrentCteRelations(), procedureName);
+                node.QueryExpression, catalog, resolvedViews, sourcePath, catalog.Skipped, new QueryResolutionScope(walker.CurrentCteRelations(), procedureName));
             catalog.SetProcedureResultColumns(
                 procedureName, [.. columns.Select(c => ColumnProvenanceAnalysis.TryGetScalarType(c.Provenance))]);
         }

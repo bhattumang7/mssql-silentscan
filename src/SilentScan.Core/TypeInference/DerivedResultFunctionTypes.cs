@@ -74,30 +74,15 @@ public static class DerivedResultFunctionTypes
             "REPLICATE" when parameters.Count == 2 => ResolveReplicate(resolve(parameters[0]), parameters[1]),
             "CONCAT" when parameters.Count >= 2 => ResolveConcat([.. parameters.Select(p => AsConcatenatedText(resolve(p)))], separator: null),
             "CONCAT_WS" when parameters.Count >= 3 => ResolveConcat([.. parameters.Skip(1).Select(resolve)], resolve(parameters[0])),
-            "JSON_QUERY" when parameters.Count >= 1 => resolve(parameters[0]) switch
-            {
-                { Category: SqlTypeCategory.Json } json => json,
-                { IsStringFamily: true } text => new SqlType(SqlTypeCategory.NVarChar, Length: text.IsMax ? null : UnicodeCap, IsMax: text.IsMax),
-                _ => null,
-            },
-            "JSON_MODIFY" when parameters.Count >= 1 => resolve(parameters[0]) is { Category: SqlTypeCategory.Json } modified
-                ? modified
-                : new SqlType(SqlTypeCategory.NVarChar, IsMax: true),
+            "JSON_QUERY" when parameters.Count >= 1 => JsonQueryType(resolve(parameters[0])),
+            "JSON_MODIFY" when parameters.Count >= 1 => JsonModifyType(resolve(parameters[0])),
             "DATETRUNC" when parameters.Count == 2 => DateTruncated(resolve(parameters[1])),
-            "DATE_BUCKET" when parameters.Count >= 3 => resolve(parameters[2]) is { IsDateTimeFamily: true } bucketed ? bucketed : null,
+            "DATE_BUCKET" when parameters.Count >= 3 => DateBucketType(resolve(parameters[2])),
             "REGEXP_REPLACE" when parameters.Count >= 1 => CappedString(resolve(parameters[0])),
-            "REGEXP_SUBSTR" or "UNISTR" when parameters.Count >= 1 => resolve(parameters[0]) is { IsStringFamily: true, IsLegacyLob: false } value
-                ? BuiltinFunctionTypeResolver.DemoteFixedWidthCategory(value)
-                : null,
-            "TERTIARY_WEIGHTS" when parameters.Count == 1 => resolve(parameters[0]) is { IsNonUnicodeString: true, IsLegacyLob: false } weighted
-                ? TertiaryWeightsType(weighted)
-                : null,
-            "BASE64_ENCODE" when parameters.Count >= 1 => resolve(parameters[0]) is { IsBinaryFamily: true } encoded
-                ? Base64EncodedType(encoded)
-                : null,
-            "BASE64_DECODE" when parameters.Count == 1 => resolve(parameters[0]) is { IsNonUnicodeString: true, IsLegacyLob: false } decoded
-                ? Binary(decoded, NonUnicodeCap)
-                : null,
+            "REGEXP_SUBSTR" or "UNISTR" when parameters.Count >= 1 => DemotedStringType(resolve(parameters[0])),
+            "TERTIARY_WEIGHTS" when parameters.Count == 1 => TertiaryWeightsType(resolve(parameters[0])),
+            "BASE64_ENCODE" when parameters.Count >= 1 => Base64EncodedType(resolve(parameters[0])),
+            "BASE64_DECODE" when parameters.Count == 1 => Base64DecodedType(resolve(parameters[0])),
             DateTime2FromParts or DateTimeOffsetFromParts or "TIMEFROMPARTS" => ResolveFromParts(functionName, parameters),
             _ => null,
         };
@@ -138,17 +123,45 @@ public static class DerivedResultFunctionTypes
         _ => value with { Length = value.IsUnicodeString ? UnicodeCap : NonUnicodeCap, LengthKnown = true },
     };
 
-    private static SqlType TertiaryWeightsType(SqlType source)
+    private static SqlType? JsonQueryType(SqlType? input) => input switch
     {
+        { Category: SqlTypeCategory.Json } json => json,
+        { IsStringFamily: true } text => new SqlType(SqlTypeCategory.NVarChar, Length: text.IsMax ? null : UnicodeCap, IsMax: text.IsMax),
+        _ => null,
+    };
+
+    private static SqlType JsonModifyType(SqlType? input) =>
+        input is { Category: SqlTypeCategory.Json } modified ? modified : new SqlType(SqlTypeCategory.NVarChar, IsMax: true);
+
+    private static SqlType? DateBucketType(SqlType? input) => input is { IsDateTimeFamily: true } bucketed ? bucketed : null;
+
+    private static SqlType? DemotedStringType(SqlType? input) =>
+        input is { IsStringFamily: true, IsLegacyLob: false } value ? BuiltinFunctionTypeResolver.DemoteFixedWidthCategory(value) : null;
+
+    private static SqlType? TertiaryWeightsType(SqlType? input)
+    {
+        if (input is not { IsNonUnicodeString: true, IsLegacyLob: false } source)
+        {
+            return null;
+        }
+
         int? length = source.Length is { } chars ? Math.Min(chars * 2, NonUnicodeCap) : null;
         return Binary(source, length);
     }
 
-    private static SqlType Base64EncodedType(SqlType source)
+    private static SqlType? Base64EncodedType(SqlType? input)
     {
+        if (input is not { IsBinaryFamily: true } source)
+        {
+            return null;
+        }
+
         int? length = source.IsMax ? null : NonUnicodeCap;
         return new SqlType(SqlTypeCategory.VarChar, Length: length, IsMax: source.IsMax);
     }
+
+    private static SqlType? Base64DecodedType(SqlType? input) =>
+        input is { IsNonUnicodeString: true, IsLegacyLob: false } decoded ? Binary(decoded, NonUnicodeCap) : null;
 
     private static SqlType Binary(SqlType source, int? length) =>
         source.IsMax

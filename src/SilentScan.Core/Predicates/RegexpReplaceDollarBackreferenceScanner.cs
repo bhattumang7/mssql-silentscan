@@ -78,18 +78,10 @@ public static class RegexpReplaceDollarBackreferenceScanner
 
                 if (c == '(')
                 {
-                    if (i + 1 < pattern.Length && pattern[i + 1] == '?')
-                    {
-                        if (string.CompareOrdinal(pattern, i + 2, "P<", 0, 2) == 0)
-                        {
-                            groupCount++;
-                        }
-
-                        i += 2;
-                        continue;
-                    }
-
-                    groupCount++;
+                    var isExtension = IsGroupExtension(pattern, i);
+                    groupCount += !isExtension || IsNamedGroupStart(pattern, i) ? 1 : 0;
+                    i += isExtension ? 2 : 1;
+                    continue;
                 }
 
                 i++;
@@ -97,6 +89,12 @@ public static class RegexpReplaceDollarBackreferenceScanner
 
             return groupCount;
         }
+
+        private static bool IsGroupExtension(string pattern, int index) =>
+            index + 1 < pattern.Length && pattern[index + 1] == '?';
+
+        private static bool IsNamedGroupStart(string pattern, int index) =>
+            string.CompareOrdinal(pattern, index + 2, "P<", 0, 2) == 0;
 
         private static int SkipCharacterClass(string pattern, int openIndex)
         {

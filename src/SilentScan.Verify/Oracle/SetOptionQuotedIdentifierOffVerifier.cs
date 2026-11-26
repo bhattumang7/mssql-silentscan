@@ -15,5 +15,5 @@ public sealed class SetOptionQuotedIdentifierOffVerifier : RuleVerifier<SetOptio
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.ModuleQualifiedName, "SET QUOTED_IDENTIFIER ON;", null, cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
 }

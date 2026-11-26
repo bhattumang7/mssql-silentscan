@@ -75,7 +75,7 @@ public static class LineageResolver
     {
 
         var cteRelations = CteResolver.Resolve(view.SelectStatement.WithCtesAndXmlNamespaces, catalog, resolvedViews, view.SourcePath, ledger);
-        var columns = QueryExpressionResolver.Resolve(view.SelectStatement.QueryExpression, catalog, resolvedViews, view.SourcePath, ledger, cteRelations);
+        var columns = QueryExpressionResolver.Resolve(view.SelectStatement.QueryExpression, catalog, resolvedViews, view.SourcePath, ledger, new QueryResolutionScope(cteRelations));
 
         if (view.ExplicitColumnNames is { Count: > 0 } explicitNames)
         {

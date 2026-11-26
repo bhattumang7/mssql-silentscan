@@ -1542,7 +1542,7 @@ public static class TypedPredicateExtractor
             _currentPredicateFragment = node;
             var outerType = OperandType(ResolvePredicateOperand(node.Expression, scopeChain, walker));
             var columns = QueryExpressionResolver.Resolve(
-                node.Subquery.QueryExpression, catalog, resolvedViews, sourcePath, ledger, walker.CurrentCteRelations(), walker.CurrentProcScope);
+                node.Subquery.QueryExpression, catalog, resolvedViews, sourcePath, ledger, new QueryResolutionScope(walker.CurrentCteRelations(), walker.CurrentProcScope));
 
             if (outerType is null || columns.Count != 1 || columns[0].Provenance is not ColumnProvenance.BaseColumn baseColumn)
             {
@@ -1565,7 +1565,7 @@ public static class TypedPredicateExtractor
         private SqlType? ResolveInSubqueryType(ScalarSubquery subquery, ModuleWalker walker)
         {
             var innerCtes = walker.CurrentCteRelations();
-            var columns = QueryExpressionResolver.Resolve(subquery.QueryExpression, catalog, resolvedViews, sourcePath, ledger, innerCtes, walker.CurrentProcScope);
+            var columns = QueryExpressionResolver.Resolve(subquery.QueryExpression, catalog, resolvedViews, sourcePath, ledger, new QueryResolutionScope(innerCtes, walker.CurrentProcScope));
             if (columns.Count != 1)
             {
 

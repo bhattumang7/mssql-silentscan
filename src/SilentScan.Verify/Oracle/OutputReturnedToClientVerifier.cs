@@ -28,6 +28,6 @@ public sealed class OutputReturnedToClientVerifier : RuleVerifier<ForcedSerialFi
                 definition => withoutInto.Replace(definition, string.Empty, 1),
                 cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
     }
 }

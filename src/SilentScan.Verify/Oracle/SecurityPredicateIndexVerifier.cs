@@ -27,6 +27,6 @@ public sealed partial class SecurityPredicateIndexVerifier : RuleVerifier<Securi
             (connection, transaction, cancellationToken) => TableAddress.ExecuteAsync(
                 connection, transaction, $"CREATE INDEX silentscan_probe_index ON {table.Table} ([{finding.FilteredColumns[0]}]);", cancellationToken),
             static _ => false,
-            touchesReadAfterCondition: true);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true));
     }
 }

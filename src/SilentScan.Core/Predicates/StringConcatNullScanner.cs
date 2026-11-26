@@ -186,33 +186,22 @@ public static class StringConcatNullScanner
 
                 case FunctionCall { FunctionName.Value: var name } call
                     when string.Equals(name, "ISNULL", StringComparison.OrdinalIgnoreCase):
-                    foreach (var arg in call.Parameters)
-                    {
-                        var argLeaf = ClassifyLeaf(Unwrap(arg), scopeChain);
-                        if (argLeaf.Kind == LeafKind.Unknown)
-                        {
-                            return new Leaf(LeafKind.Unknown, false, null, null);
-                        }
-                    }
-
-                    return new Leaf(LeafKind.Guarded, false, null, null);
+                    return ClassifyGuarded(call.Parameters, scopeChain);
 
                 case CoalesceExpression coalesce:
-                    foreach (var arg in coalesce.Expressions)
-                    {
-                        var argLeaf = ClassifyLeaf(Unwrap(arg), scopeChain);
-                        if (argLeaf.Kind == LeafKind.Unknown)
-                        {
-                            return new Leaf(LeafKind.Unknown, false, null, null);
-                        }
-                    }
-
-                    return new Leaf(LeafKind.Guarded, false, null, null);
+                    return ClassifyGuarded(coalesce.Expressions, scopeChain);
 
                 default:
                     return new Leaf(LeafKind.Unknown, false, null, null);
             }
         }
+
+        private Leaf ClassifyGuarded(
+            IEnumerable<ScalarExpression> arguments,
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain) =>
+            arguments.Any(arg => ClassifyLeaf(Unwrap(arg), scopeChain).Kind == LeafKind.Unknown)
+                ? new Leaf(LeafKind.Unknown, false, null, null)
+                : new Leaf(LeafKind.Guarded, false, null, null);
 
         private static string ReferenceKeyOf(ColumnReferenceExpression columnRef) =>
             columnRef.MultiPartIdentifier is { } parts

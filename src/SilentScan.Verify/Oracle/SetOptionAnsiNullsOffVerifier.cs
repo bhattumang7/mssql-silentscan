@@ -15,5 +15,5 @@ public sealed class SetOptionAnsiNullsOffVerifier : RuleVerifier<SetOptionFindin
             (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
                 connection, transaction, finding.ModuleQualifiedName, "SET ANSI_NULLS ON;", null, cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
 }

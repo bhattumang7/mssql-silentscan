@@ -32,7 +32,6 @@ public sealed partial class CheckConstraintIntervalVerifier : RuleVerifier<Check
             (connection, transaction, cancellationToken) => TableAddress.ExecuteAsync(
                 connection, transaction, $"ALTER TABLE {table.Table} DROP CONSTRAINT [{constraint}];", cancellationToken),
             static _ => false,
-            touchesReadAfterCondition: true,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(TouchesReadAfterCondition: true, PlanCompiledInModule: true));
     }
 }

@@ -58,6 +58,9 @@ public sealed record TouchedExpression(string Text) : ITouch;
 
 public delegate Task<int> PerturbationStep(SqlConnection connection, SqlTransaction transaction, CancellationToken cancellationToken);
 
+[VerifierSupport]
+public sealed record PerturbationOptions(string? AfterStatementQuery = null, bool TouchesReadAfterCondition = false, bool PlanCompiledInModule = false);
+
 public sealed class Perturbation
 {
     public Perturbation(
@@ -67,13 +70,11 @@ public sealed class Perturbation
         PerturbationStep applyCondition,
         Func<SqlException, bool> engineRefusalRefutes,
         Func<string, string?>? baselineStatement = null,
-        string? afterStatementQuery = null,
-        bool touchesReadAfterCondition = false,
-        bool planCompiledInModule = false)
+        PerturbationOptions? options = null)
     {
-        PlanCompiledInModule = planCompiledInModule;
-        AfterStatementQuery = afterStatementQuery;
-        TouchesReadAfterCondition = touchesReadAfterCondition;
+        PlanCompiledInModule = options?.PlanCompiledInModule ?? false;
+        AfterStatementQuery = options?.AfterStatementQuery;
+        TouchesReadAfterCondition = options?.TouchesReadAfterCondition ?? false;
         BaselineStatement = baselineStatement;
         Touches = touches;
         Expected = expected;
@@ -336,12 +337,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             var rows = new List<string>();
             do
             {
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    var values = new object?[reader.FieldCount];
-                    reader.GetValues(values);
-                    rows.Add(string.Join('|', values.Select(v => v is DBNull ? NullCell : Convert.ToString(v, CultureInfo.InvariantCulture))));
-                }
+                await ReadRowsAsync(reader, string.Empty, rows, cancellationToken);
             }
             while (await reader.NextResultAsync(cancellationToken));
 
@@ -351,12 +347,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             {
                 await using var stored = new SqlCommand(after, connection, transaction) { CommandTimeout = 120 };
                 await using var storedReader = await stored.ExecuteReaderAsync(cancellationToken);
-                while (await storedReader.ReadAsync(cancellationToken))
-                {
-                    var values = new object?[storedReader.FieldCount];
-                    storedReader.GetValues(values);
-                    rows.Add("after:" + string.Join('|', values.Select(v => v is DBNull ? NullCell : Convert.ToString(v, CultureInfo.InvariantCulture))));
-                }
+                await ReadRowsAsync(storedReader, "after:", rows, cancellationToken);
             }
 
             return new Observation(rows, affected);
@@ -368,6 +359,16 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         finally
         {
             await transaction.RollbackAsync(StatementSavepoint, CancellationToken.None);
+        }
+    }
+
+    private static async Task ReadRowsAsync(SqlDataReader reader, string prefix, List<string> rows, CancellationToken cancellationToken)
+    {
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var values = new object?[reader.FieldCount];
+            reader.GetValues(values);
+            rows.Add(prefix + string.Join('|', values.Select(v => v is DBNull ? NullCell : Convert.ToString(v, CultureInfo.InvariantCulture))));
         }
     }
 

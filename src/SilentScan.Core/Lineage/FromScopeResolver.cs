@@ -101,23 +101,7 @@ public static class FromScopeResolver
         switch (target)
         {
             case NamedTableReference named when named.SchemaObject.ServerIdentifier is not { Value.Length: > 0 }:
-                if (named.SchemaObject.SchemaIdentifier is null)
-                {
-                    var byExposedName = leaves.FindIndex(l => ExposedName(l) is { } exposed && comparer.Equals(exposed, named.SchemaObject.BaseIdentifier.Value));
-                    if (byExposedName >= 0)
-                    {
-                        return byExposedName;
-                    }
-                }
-
-                var targetObject = CatalogObjectName(named, context);
-                if (targetObject is null)
-                {
-                    return TargetNotInFrom;
-                }
-
-                var byObject = leaves.FindIndex(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject));
-                return byObject >= 0 ? byObject : TargetNotInFrom;
+                return BoundNamedLeafIndex(named, leaves, context);
 
             case VariableTableReference variable:
                 return leaves.FindIndex(l => l is VariableTableReference leaf && comparer.Equals(leaf.Variable.Name, variable.Variable.Name)) is var byVariable and >= 0
@@ -127,6 +111,28 @@ public static class FromScopeResolver
             default:
                 return TargetKindUnmodeled;
         }
+    }
+
+    private static int BoundNamedLeafIndex(NamedTableReference named, List<TableReference> leaves, ResolutionContext context)
+    {
+        var comparer = context.Catalog.IdentifierComparer;
+        if (named.SchemaObject.SchemaIdentifier is null)
+        {
+            var byExposedName = leaves.FindIndex(l => ExposedName(l) is { } exposed && comparer.Equals(exposed, named.SchemaObject.BaseIdentifier.Value));
+            if (byExposedName >= 0)
+            {
+                return byExposedName;
+            }
+        }
+
+        var targetObject = CatalogObjectName(named, context);
+        if (targetObject is null)
+        {
+            return TargetNotInFrom;
+        }
+
+        var byObject = leaves.FindIndex(l => l is NamedTableReference leaf && CatalogObjectName(leaf, context) is { } leafObject && comparer.Equals(leafObject, targetObject));
+        return byObject >= 0 ? byObject : TargetNotInFrom;
     }
 
     private static string? ExposedName(TableReference leaf) => leaf switch
@@ -406,7 +412,7 @@ public static class FromScopeResolver
     {
         var (catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, _, _) = context;
 
-        var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews, sourcePath, ledger, cteRelations, procScope, context.OuterScopes);
+        var innerColumns = QueryExpressionResolver.Resolve(derived.QueryExpression, catalog, resolvedViews, sourcePath, ledger, new QueryResolutionScope(cteRelations, procScope, context.OuterScopes));
         if (derived.Columns.Count > 0)
         {
             if (innerColumns.Count == derived.Columns.Count)

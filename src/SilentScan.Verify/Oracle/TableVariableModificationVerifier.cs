@@ -30,6 +30,6 @@ public sealed class TableVariableModificationVerifier : RuleVerifier<ForcedSeria
                 definition => reference.Replace(declaration.Replace(definition, "CREATE TABLE " + replacement + " (", 1), replacement),
                 cancellationToken),
             static _ => false,
-            planCompiledInModule: true);
+            options: new PerturbationOptions(PlanCompiledInModule: true));
     }
 }
