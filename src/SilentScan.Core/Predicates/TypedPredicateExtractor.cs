@@ -1634,9 +1634,14 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            if (provenance is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } }
-                && (NonSargablePredicateScanner.IsSeekableThroughConvert(castType, sourceType)
-                    || NonSargablePredicateScanner.IsSeekableStringWidening(castType, sourceType)))
+            if (provenance is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } source } cast
+                && NonSargablePredicateScanner.CastKeepsSeek(
+                    castType,
+                    sourceType,
+                    new NonSargablePredicateScanner.CastSite(
+                        catalog.Find(source.TableQualifiedName, walker.CurrentProcScope)?.FindColumn(source.ColumnName, catalog.IdentifierComparer) is not { IsNullable: true },
+                        cast.HasStyle,
+                        cast.ExplicitCollation)))
             {
                 return;
             }

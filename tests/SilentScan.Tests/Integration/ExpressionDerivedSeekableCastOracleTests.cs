@@ -1,3 +1,4 @@
+using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 using SilentScan.Verify.Oracle;
 
@@ -36,6 +37,16 @@ public sealed class ExpressionDerivedSeekableCastOracleTests : OracleTestFixture
         CREATE INDEX IX_EdW_Win ON dbo.EdW (WinCol);
         CREATE INDEX IX_EdW_Sql ON dbo.EdW (SqlCol);
         GO
+        CREATE TABLE dbo.EdN (Id INT NOT NULL PRIMARY KEY, N VARCHAR(20) NULL, Pad CHAR(100) NOT NULL DEFAULT 'x');
+        INSERT INTO dbo.EdN (Id, N) SELECT Id, S FROM dbo.Ed;
+        CREATE INDEX IX_EdN_N ON dbo.EdN (N);
+        GO
+        CREATE VIEW dbo.VNullSame AS SELECT Id, CAST(N AS VARCHAR(20)) AS X FROM dbo.EdN;
+        GO
+        CREATE VIEW dbo.VNullStyled AS SELECT Id, CONVERT(VARCHAR(20), N, 0) AS X FROM dbo.EdN;
+        GO
+        CREATE VIEW dbo.VWinMax AS SELECT Id, CAST(WinCol AS NVARCHAR(MAX)) AS X FROM dbo.EdW;
+        GO
         CREATE VIEW dbo.VWinWide AS SELECT CAST(WinCol AS NVARCHAR(20)) AS X, Pad FROM dbo.EdW;
         GO
         CREATE VIEW dbo.VWinNarrow AS SELECT CAST(WinCol AS NVARCHAR(3)) AS X, Pad FROM dbo.EdW;
@@ -56,6 +67,43 @@ public sealed class ExpressionDerivedSeekableCastOracleTests : OracleTestFixture
 
         Assert.Contains(expectedIndex, plan, StringComparison.Ordinal);
         Assert.Contains("<SeekPredicates>", plan, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SameTypeCastOfANullableColumnExposedByAView_SeeksTheBaseColumnIndex()
+    {
+        var plan = await PlanAsync("SELECT Id FROM dbo.VNullSame WHERE X = 'v5';");
+
+        Assert.True(IndexAccessDetector.HasIndexSeek(plan, "IX_EdN_N"), plan);
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.VNullStyled WHERE X = 'v5';", "IX_EdN_N")]
+    [InlineData("SELECT Id FROM dbo.VWinMax WHERE X = N'v5';", "IX_EdW_Win")]
+    public async Task CastTheEngineCannotRemoveExposedByAView_NeverSeeksTheBaseColumnIndex(string statement, string index)
+    {
+        var plan = await PlanAsync(statement);
+
+        Assert.False(IndexAccessDetector.HasIndexSeek(plan, index), plan);
+    }
+
+    [Theory]
+    [InlineData("VARCHAR(20) NULL", "CAST(N AS VARCHAR(20))", false)]
+    [InlineData("VARCHAR(20) NOT NULL", "CAST(N AS VARCHAR(20))", true)]
+    [InlineData("VARCHAR(20) NULL", "CONVERT(VARCHAR(20), N, 0)", true)]
+    [InlineData("VARCHAR(20) NULL", "CAST(N AS NVARCHAR(MAX))", true)]
+    [InlineData("VARCHAR(20) NULL", "CAST(N AS VARCHAR(20)) COLLATE Latin1_General_CS_AS", true)]
+    public async Task ScannerReportsAViewCastOnlyWhenTheEngineKeepsTheConversion(string columnType, string viewExpression, bool reported)
+    {
+        var sql = string.Join(
+            "\nGO\n",
+            $"CREATE TABLE dbo.EdScan (N {columnType}, INDEX IX_EdScan (N));",
+            $"CREATE VIEW dbo.VEdScan AS SELECT {viewExpression} AS X FROM dbo.EdScan;",
+            "SELECT 1 FROM dbo.VEdScan WHERE X = 'v5';");
+
+        var report = await EngineAuthoritativeScan.ScanAsync(sql, "SQL_Latin1_General_CP1_CI_AS");
+
+        Assert.Equal(reported, report.Find<ExpressionDerivedFinding>("TypedPredicateExtractor").Count != 0);
     }
 
     [Theory]

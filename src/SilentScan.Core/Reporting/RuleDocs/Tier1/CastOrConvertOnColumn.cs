@@ -27,10 +27,13 @@ internal static class CastOrConvertOnColumn
             The fix is almost always to correct the type mismatch at its source instead of paying
             for it on every execution.
 
-            Oracle-confirmed exceptions are not reported: a cast inside the numeric family, inside
-            the date/time family, and of a VARCHAR column with a Windows collation to an NVARCHAR at
-            least as wide still seek the column's index, because the engine converts the constant or
-            derives a range instead. A SQL collation, a narrower target and a VARCHAR target do not.
+            Oracle-confirmed exceptions are not reported, because the column's index is still
+            seeked: a cast inside the numeric family or inside the date/time family; a cast of a
+            VARCHAR or CHAR column with a Windows collation to an NVARCHAR or NCHAR that is at least
+            as wide and not MAX; and a cast of a nullable string or binary column to its own type
+            and length, written without a CONVERT style. A SQL collation, a narrower or MAX target,
+            a NOT NULL column cast to its own type, or a COLLATE clause that changes the collation
+            all lose the seek.
             """,
         HowToFixIt: """
             Match the comparison value's type to the column's own declared type, so no conversion

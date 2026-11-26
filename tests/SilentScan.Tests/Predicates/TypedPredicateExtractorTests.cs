@@ -459,7 +459,6 @@ public sealed class TypedPredicateExtractorTests
     [Theory]
     [InlineData("Latin1_General_CI_AS", "NVARCHAR(20)")]
     [InlineData("Latin1_General_CI_AS", "NVARCHAR(100)")]
-    [InlineData("Latin1_General_CI_AS", "NVARCHAR(MAX)")]
     public void Extract_WindowsCollationVarcharCastToAnAtLeastAsWideNvarcharThroughAView_NeverFiresExpressionDerived(string collation, string castTarget)
     {
         Assert.Empty(ExpressionDerivedThroughStringCast(collation, castTarget));
@@ -470,6 +469,7 @@ public sealed class TypedPredicateExtractorTests
     [InlineData("Latin1_General_CI_AS", "NVARCHAR(3)")]
     [InlineData("Latin1_General_CI_AS", "VARCHAR(100)")]
     [InlineData("SQL_Latin1_General_CP1_CI_AS", "VARCHAR(100)")]
+    [InlineData("Latin1_General_CI_AS", "NVARCHAR(MAX)")]
     public void Extract_OtherStringCastsThroughAView_StillFireExpressionDerived(string collation, string castTarget)
     {
         Assert.Single(ExpressionDerivedThroughStringCast(collation, castTarget));

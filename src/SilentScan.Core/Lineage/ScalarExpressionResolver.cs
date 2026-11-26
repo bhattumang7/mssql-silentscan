@@ -64,8 +64,8 @@ public static class ScalarExpressionResolver
             new ColumnProvenance.Expression(parameterlessType, Inputs: [], context.SourcePath, parameterless.StartLine),
         NextValueForExpression nextValue => ResolveNextValueFor(nextValue, context),
         ScalarSubquery scalarSubquery => ResolveScalarSubquery(scalarSubquery, context),
-        CastCall castCall => ResolveCastOrConvert(castCall.DataType, castCall.Parameter, context, castCall.StartLine),
-        ConvertCall convertCall => ResolveCastOrConvert(convertCall.DataType, convertCall.Parameter, context, convertCall.StartLine),
+        CastCall castCall => ResolveCastOrConvert(castCall, castCall.DataType, castCall.Parameter, context),
+        ConvertCall convertCall => ResolveCastOrConvert(convertCall, convertCall.DataType, convertCall.Parameter, context),
         Literal literal => new ColumnProvenance.Expression(LiteralTypeResolver.Resolve(literal), Inputs: []),
 
         ParenthesisExpression or UnaryExpression or BinaryExpression
@@ -214,8 +214,9 @@ public static class ScalarExpressionResolver
         return new ColumnProvenance.Expression(inferredType, inputs, context.SourcePath, expression.StartLine);
     }
 
-    private static ColumnProvenance ResolveCastOrConvert(DataTypeReference dataType, ScalarExpression parameter, ExpressionContext context, int line)
+    private static ColumnProvenance ResolveCastOrConvert(PrimaryExpression cast, DataTypeReference dataType, ScalarExpression parameter, ExpressionContext context)
     {
+        var line = cast.StartLine;
         var resolved = SqlTypeReferenceResolver.Resolve(dataType, columnCollation: null, context.TypeAliases);
         if (resolved is not { } type)
         {
@@ -230,7 +231,7 @@ public static class ScalarExpressionResolver
             type = type with { Collation = innerCollation };
         }
 
-        return new ColumnProvenance.Cast(type, inner, context.SourcePath, line);
+        return new ColumnProvenance.Cast(type, inner, context.SourcePath, line, HasStyle: cast is ConvertCall { Style: not null }, ExplicitCollation: cast.Collation?.Value);
     }
 
     private static ColumnProvenance.Expression ResolveGenericExpression(ScalarExpression expression, ExpressionContext context) =>

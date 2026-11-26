@@ -53,16 +53,34 @@ public static class NonSargablePredicateScanner
             && targetType.Category is not SqlTypeCategory.Time
             && sourceType.Category != SqlTypeCategory.Time);
 
-    private static bool IsIdenticalStringType(SqlType targetType, SqlType sourceType) =>
+    private static bool IsRemovableSameTypeCast(SqlType targetType, SqlType sourceType) =>
         targetType.Category == sourceType.Category
-        && sourceType.Collation is null
-        && targetType.IsMax == sourceType.IsMax
+        && !targetType.IsMax
+        && !sourceType.IsMax
         && targetType.Length == sourceType.Length;
 
-    internal static bool IsSeekableStringWidening(SqlType targetType, SqlType sourceType) =>
-        targetType is { Category: SqlTypeCategory.NVarChar or SqlTypeCategory.NChar }
-        && sourceType is { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char, IsMax: false, Collation: { IsSqlFamily: false } }
-        && (targetType.IsMax || (targetType.Length is { } targetLength && sourceType.Length is { } sourceLength && targetLength >= sourceLength));
+    private static bool IsSeekableStringWidening(SqlType targetType, SqlType sourceType) =>
+        targetType is { Category: SqlTypeCategory.NVarChar or SqlTypeCategory.NChar, IsMax: false, Length: { } targetLength }
+        && sourceType is { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char, IsMax: false, Length: { } sourceLength, Collation: { IsSqlFamily: false } }
+        && targetLength >= sourceLength;
+
+    internal static bool CastKeepsSeek(SqlType targetType, SqlType sourceType, CastSite site)
+    {
+        if (!sourceType.IsStringFamily && !sourceType.IsBinaryFamily)
+        {
+            return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
+        }
+
+        if (site.ExplicitCollation is { } collation && !string.Equals(collation, sourceType.Collation?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return IsSeekableStringWidening(targetType, sourceType)
+            || (!site.ColumnIsNotNull && !site.HasStyle && IsRemovableSameTypeCast(targetType, sourceType));
+    }
+
+    internal readonly record struct CastSite(bool ColumnIsNotNull, bool HasStyle, string? ExplicitCollation);
 
     private sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
@@ -415,26 +433,10 @@ public static class NonSargablePredicateScanner
         private static ColumnReferenceExpression? AsDirectColumn(ScalarExpression expression) =>
             UnwrapParentheses(expression) as ColumnReferenceExpression;
 
-        private bool PreservesSeekability(DataTypeReference targetDataType, SqlType? sourceType, bool columnIsNotNull)
-        {
-            if (sourceType is null || sourceType.IsBinaryFamily)
-            {
-                return false;
-            }
-
-            var targetType = SqlTypeReferenceResolver.Resolve(targetDataType, columnCollation: null, catalog.TypeAliases);
-            if (targetType is null)
-            {
-                return false;
-            }
-
-            if (sourceType.IsStringFamily)
-            {
-                return IsSeekableStringWidening(targetType, sourceType) || (!columnIsNotNull && IsIdenticalStringType(targetType, sourceType));
-            }
-
-            return !targetType.NeedsConversionFrom(sourceType) || IsSeekableThroughConvert(targetType, sourceType);
-        }
+        private bool PreservesSeekability(DataTypeReference targetDataType, SqlType? sourceType, CastSite site) =>
+            sourceType is not null
+            && SqlTypeReferenceResolver.Resolve(targetDataType, columnCollation: null, catalog.TypeAliases) is { } targetType
+            && CastKeepsSeek(targetType, sourceType, site);
 
         internal static bool CoversSide(ScalarExpression expression) => UnwrapParentheses(expression) switch
         {
@@ -485,7 +487,11 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType, IsKnownNotNullColumn(found.Ref, scopeChain, walker)))
+            var site = new CastSite(
+                IsKnownNotNullColumn(found.Ref, scopeChain, walker),
+                castOrConvert is ConvertCall { Style: not null },
+                (castOrConvert as PrimaryExpression)?.Collation?.Value);
+            if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType, site))
             {
                 return;
             }
