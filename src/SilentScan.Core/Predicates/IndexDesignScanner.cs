@@ -318,6 +318,10 @@ public static class IndexDesignScanner
 
             var carriedColumns = new HashSet<string>(index.KeyColumns, identifierComparer);
             carriedColumns.UnionWith(index.IncludedColumns);
+            if (!index.IsClustered && !index.IsColumnstore)
+            {
+                carriedColumns.UnionWith(table.Indexes.Where(i => i.IsClustered && !i.IsColumnstore).SelectMany(i => i.KeyColumns));
+            }
 
             var missing = filterColumns.Where(c => !carriedColumns.Contains(c)).ToList();
             if (missing.Count == 0)

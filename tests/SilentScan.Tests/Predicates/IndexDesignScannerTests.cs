@@ -646,4 +646,17 @@ public sealed class IndexDesignScannerTests
 
         Assert.DoesNotContain(IndexDesignScanner.Scan(catalog), f => f.Kind == IndexDesignFindingKind.HeapWithNonclusteredIndexes);
     }
+
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public void FilterColumnThatIsAClusteringKey_IsCarriedByTheNonclusteredIndex(bool clusteredOnFilterColumn, int expected)
+    {
+        var catalog = new DatabaseCatalog();
+        var clustered = new CatalogIndex("CX", CatalogIndexKind.Index, IsUnique: false, [clusteredOnFilterColumn ? "Region" : "Id"], [], IsClustered: true);
+        var filtered = new CatalogIndex("IX", CatalogIndexKind.Index, IsUnique: false, ["Amount"], [], IsClustered: false, IsFiltered: true, FilterDefinition: "([Region]=(7))");
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("Region", IntType), Column("Amount", IntType)], [clustered, filtered]));
+
+        Assert.Equal(expected, IndexDesignScanner.Scan(catalog).Count(f => f.Kind == IndexDesignFindingKind.FilterColumnNotInIndex));
+    }
 }

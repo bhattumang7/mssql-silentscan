@@ -33,13 +33,13 @@ public sealed class TriggerCorrectnessScannerTests
     }
 
     [Fact]
-    public void ScalarSubqueryOverDeleted_NoWhereNoTopNoAggregate_Fires()
+    public void ScalarSubqueryOverDeleted_RaisesAtRunTime_NeverFires()
     {
         var findings = Scan(
             "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER DELETE AS "
             + "BEGIN DECLARE @v INT = (SELECT Val FROM deleted); PRINT @v; END;");
 
-        Assert.Single(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
+        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
     }
 
     [Theory]
@@ -393,5 +393,28 @@ public sealed class TriggerCorrectnessScannerTests
             + "END;");
 
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison);
+    }
+
+    [Theory]
+    [InlineData("SET @v = (SELECT Val FROM inserted);")]
+    [InlineData("SET @v = (SELECT Val FROM inserted); UPDATE dbo.Other SET Val = 1 WHERE Id = @v;")]
+    public void SetFromAScalarSubqueryOverInserted_NeverFires(string body)
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN DECLARE @v INT; {body} PRINT @v; END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind is TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment or TriggerCorrectnessFindingKind.MultiRowUnsafeKeyedDml);
+    }
+
+    [Fact]
+    public void InsteadOfInsertTrigger_RollingBackRejectedRows_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T INSTEAD OF INSERT AS "
+            + "BEGIN IF EXISTS (SELECT 1 FROM inserted WHERE Val <= 0) BEGIN ROLLBACK TRANSACTION; RETURN; END; "
+            + "INSERT INTO dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Val > 0; END;");
+
+        Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath);
     }
 }

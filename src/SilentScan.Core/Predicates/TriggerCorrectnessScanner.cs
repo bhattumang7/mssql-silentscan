@@ -188,37 +188,11 @@ public static class TriggerCorrectnessScanner
             public override void Visit(RollbackTransactionStatement node) => Found = true;
         }
 
-        private static string? TryGetUnsafeAssignedVariable(TSqlStatement statement) => statement switch
-        {
-            SelectStatement { QueryExpression: QuerySpecification { SelectElements: [SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar] } spec }
-                when IsUnsafeSourceQuery(spec) && !(spec.GroupByClause is null && IsAggregateExpression(setVar.Expression))
-                => setVar.Variable.Name,
-
-            SetVariableStatement { AssignmentKind: AssignmentKind.Equals, Expression: ScalarSubquery { QueryExpression: QuerySpecification spec } } set
-                when IsUnsafeSourceQuery(spec) && !SelectListIsAggregateOnly(spec)
-                => set.Variable.Name,
-
-            DeclareVariableStatement declare => TryGetUnsafeDeclareInitializer(declare),
-
-            _ => null,
-        };
-
-        private static string? TryGetUnsafeDeclareInitializer(DeclareVariableStatement declare)
-        {
-            foreach (var element in declare.Declarations)
-            {
-                if (element.Value is ScalarSubquery { QueryExpression: QuerySpecification spec }
-                    && IsUnsafeSourceQuery(spec) && !SelectListIsAggregateOnly(spec))
-                {
-                    return element.VariableName.Value;
-                }
-            }
-
-            return null;
-        }
-
-        private static bool SelectListIsAggregateOnly(QuerySpecification spec) =>
-            spec.GroupByClause is null && spec.SelectElements is [SelectScalarExpression { Expression: { } expr }] && IsAggregateExpression(expr);
+        private static string? TryGetUnsafeAssignedVariable(TSqlStatement statement) =>
+            statement is SelectStatement { QueryExpression: QuerySpecification { SelectElements: [SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar] } spec }
+                && IsUnsafeSourceQuery(spec) && !(spec.GroupByClause is null && IsAggregateExpression(setVar.Expression))
+                ? setVar.Variable.Name
+                : null;
 
         private static bool IsAggregateExpression(ScalarExpression expression)
         {
@@ -311,10 +285,10 @@ public static class TriggerCorrectnessScanner
             }
 
             var hasCompanionInsert = topLevelStatements.OfType<InsertStatement>().Count() > filteredInserts.Count;
-            var hasRaiseErrorOrThrow = ContainsRaiseErrorOrThrow(topLevelStatements);
+            var hasRejectPath = ContainsRejectPath(topLevelStatements);
             var hasProvenExhaustiveCoverage = HasProvenExhaustiveCoverage(filteredInserts, triggerObject);
 
-            if (hasCompanionInsert || hasRaiseErrorOrThrow || hasProvenExhaustiveCoverage)
+            if (hasCompanionInsert || hasRejectPath || hasProvenExhaustiveCoverage)
             {
                 return;
             }
@@ -444,9 +418,9 @@ public static class TriggerCorrectnessScanner
             return PredicateSurvivalAnalyzer.IsTautology(searchConditions, ResolveInsertedColumnFacts);
         }
 
-        private static bool ContainsRaiseErrorOrThrow(IList<TSqlStatement> statements)
+        private static bool ContainsRejectPath(IList<TSqlStatement> statements)
         {
-            var collector = new RaiseErrorOrThrowCollector();
+            var collector = new RejectPathCollector();
             foreach (var statement in statements)
             {
                 statement.Accept(collector);
@@ -455,13 +429,15 @@ public static class TriggerCorrectnessScanner
             return collector.Found;
         }
 
-        private sealed class RaiseErrorOrThrowCollector : TSqlFragmentVisitor
+        private sealed class RejectPathCollector : TSqlFragmentVisitor
         {
             public bool Found { get; private set; }
 
             public override void ExplicitVisit(RaiseErrorStatement node) => Found = true;
 
             public override void ExplicitVisit(ThrowStatement node) => Found = true;
+
+            public override void ExplicitVisit(RollbackTransactionStatement node) => Found = true;
         }
 
         private void InspectUpdateFunctionWithoutValueComparison(string triggerQualifiedName, StatementList statementList)

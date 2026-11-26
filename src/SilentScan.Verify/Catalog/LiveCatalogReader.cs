@@ -372,7 +372,8 @@ public sealed class LiveCatalogReader
             JOIN sys.tables t ON t.object_id = ck.parent_object_id
             JOIN sys.schemas s ON s.schema_id = t.schema_id
             LEFT JOIN sys.columns c ON c.object_id = ck.parent_object_id AND c.column_id = ck.parent_column_id
-            WHERE t.is_ms_shipped = 0;
+            WHERE t.is_ms_shipped = 0
+              AND ck.is_disabled = 0;
             """;
 
         await using var command = connection.CreateReadOnlyCommand(sql);
