@@ -61,9 +61,8 @@ public static class BoundedStringBuiltinTruncationScanner
                 return;
             }
 
-            if (LiteralComparisonFolder.TryFoldToNumeric(node.Parameters[1]) is not { } countValue
-                || countValue <= 0
-                || countValue != decimal.Truncate(countValue))
+            if (LiteralComparisonFolder.TryFoldToNumeric(node.Parameters[1]) is not { } rawCount
+                || decimal.Truncate(rawCount) is not (> 0 and var countValue))
             {
                 return;
             }
@@ -114,9 +113,8 @@ public static class BoundedStringBuiltinTruncationScanner
 
         private void CheckSpace(FunctionCall node)
         {
-            if (LiteralComparisonFolder.TryFoldToNumeric(node.Parameters[0]) is not { } countValue
-                || countValue <= NonUnicodeCapBytes
-                || countValue != decimal.Truncate(countValue))
+            if (LiteralComparisonFolder.TryFoldToNumeric(node.Parameters[0]) is not { } rawCount
+                || decimal.Truncate(rawCount) is not (> NonUnicodeCapBytes and var countValue))
             {
                 return;
             }
