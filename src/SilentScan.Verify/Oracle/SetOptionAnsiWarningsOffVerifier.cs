@@ -12,12 +12,5 @@ public sealed partial class SetOptionAnsiWarningsOffVerifier : RuleVerifier<SetO
     private static partial Regex Setting();
 
     protected override Perturbation Describe(SetOptionFinding finding) =>
-        new(
-            [],
-            Difference.PlanChanged,
-            static (_, _, _) => Task.FromResult(0),
-            (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
-                connection, transaction, finding.ModuleQualifiedName, string.Empty, definition => Setting().Replace(definition, "SET ANSI_WARNINGS ON"), cancellationToken),
-            static _ => false,
-            options: new PerturbationOptions(PlanCompiledInModule: true));
+        SetOptionRestoreProbe.Describe(finding.ModuleQualifiedName, Setting(), "SET ANSI_WARNINGS ON");
 }

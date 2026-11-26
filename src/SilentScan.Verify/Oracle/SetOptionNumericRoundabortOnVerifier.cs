@@ -12,12 +12,5 @@ public sealed partial class SetOptionNumericRoundabortOnVerifier : RuleVerifier<
     private static partial Regex Setting();
 
     protected override Perturbation Describe(SetOptionFinding finding) =>
-        new(
-            [],
-            Difference.PlanChanged,
-            static (_, _, _) => Task.FromResult(0),
-            (connection, transaction, cancellationToken) => ModuleRecompiler.RecompileAsync(
-                connection, transaction, finding.ModuleQualifiedName, string.Empty, definition => Setting().Replace(definition, "SET NUMERIC_ROUNDABORT OFF"), cancellationToken),
-            static _ => false,
-            options: new PerturbationOptions(PlanCompiledInModule: true));
+        SetOptionRestoreProbe.Describe(finding.ModuleQualifiedName, Setting(), "SET NUMERIC_ROUNDABORT OFF");
 }

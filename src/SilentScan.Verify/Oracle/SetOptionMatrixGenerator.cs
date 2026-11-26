@@ -11,51 +11,60 @@ public sealed class SetOptionMatrixGenerator
 {
     public static readonly IReadOnlyList<SetOptionProbe> Probes =
     [
-        new("concat-null", "CONCAT_NULL_YIELDS_NULL", "string concatenation with NULL", "SET CONCAT_NULL_YIELDS_NULL ON", "SET CONCAT_NULL_YIELDS_NULL OFF",
+        Flag("concat-null", "CONCAT_NULL_YIELDS_NULL", "string concatenation with NULL",
             "SELECT COALESCE('[' + NULL + ']', 'NULL-RESULT')"),
-        new("equals-null", "ANSI_NULLS", "= NULL comparison", "SET ANSI_NULLS ON", "SET ANSI_NULLS OFF",
+        Flag("equals-null", "ANSI_NULLS", "= NULL comparison",
             "DECLARE @n INT = NULL; SELECT CASE WHEN @n = NULL THEN 'match' ELSE 'nomatch' END"),
-        new("not-equals-null", "ANSI_NULLS", "<> NULL comparison", "SET ANSI_NULLS ON", "SET ANSI_NULLS OFF",
+        Flag("not-equals-null", "ANSI_NULLS", "<> NULL comparison",
             "DECLARE @n INT = 1; SELECT CASE WHEN @n <> NULL THEN 'match' ELSE 'nomatch' END"),
-        new("padding-trailing-space", "ANSI_PADDING", "trailing space kept in varchar column", "SET ANSI_PADDING ON", "SET ANSI_PADDING OFF",
+        Flag("padding-trailing-space", "ANSI_PADDING", "trailing space kept in varchar column",
             "CREATE TABLE #t (v VARCHAR(10)); INSERT #t VALUES ('ab   '); SELECT CAST(DATALENGTH(v) AS VARCHAR(5)) FROM #t"),
-        new("padding-binary", "ANSI_PADDING", "trailing zeros kept in varbinary column", "SET ANSI_PADDING ON", "SET ANSI_PADDING OFF",
+        Flag("padding-binary", "ANSI_PADDING", "trailing zeros kept in varbinary column",
             "CREATE TABLE #t (v VARBINARY(10)); INSERT #t VALUES (0x010200); SELECT CAST(DATALENGTH(v) AS VARCHAR(5)) FROM #t"),
-        new("warnings-truncation", "ANSI_WARNINGS", "string truncation on insert", "SET ANSI_WARNINGS ON", "SET ANSI_WARNINGS OFF",
+        Flag("warnings-truncation", "ANSI_WARNINGS", "string truncation on insert",
             "CREATE TABLE #t (v VARCHAR(3)); INSERT #t VALUES ('abcdef'); SELECT v FROM #t"),
-        new("warnings-overflow-null", "ANSI_WARNINGS", "aggregate over NULL", "SET ANSI_WARNINGS ON", "SET ANSI_WARNINGS OFF",
+        Flag("warnings-overflow-null", "ANSI_WARNINGS", "aggregate over NULL",
             "CREATE TABLE #t (v INT); INSERT #t VALUES (NULL); SELECT COALESCE(CAST(SUM(v) AS VARCHAR(10)), 'NULL-RESULT') FROM #t"),
-        new("warnings-divide-by-zero", "ANSI_WARNINGS", "divide by zero", "SET ANSI_WARNINGS ON", "SET ANSI_WARNINGS OFF",
+        Flag("warnings-divide-by-zero", "ANSI_WARNINGS", "divide by zero",
             "SELECT COALESCE(CAST(1 / 0 AS VARCHAR(10)), 'NULL-RESULT')"),
         new("arithabort-divide-by-zero", "ARITHABORT", "divide by zero with ANSI_WARNINGS off", "SET ANSI_WARNINGS OFF; SET ARITHABORT ON", "SET ANSI_WARNINGS OFF; SET ARITHABORT OFF",
             "SELECT COALESCE(CAST(1 / 0 AS VARCHAR(10)), 'NULL-RESULT')"),
         new("arithignore-divide-by-zero", "ARITHIGNORE", "divide by zero with arithmetic aborts off", "SET ANSI_WARNINGS OFF; SET ARITHABORT OFF; SET ARITHIGNORE ON", "SET ANSI_WARNINGS OFF; SET ARITHABORT OFF; SET ARITHIGNORE OFF",
             "SELECT COALESCE(CAST(1 / 0 AS VARCHAR(10)), 'NULL-RESULT')"),
-        new("numeric-roundabort", "NUMERIC_ROUNDABORT", "decimal rounding on assignment", "SET NUMERIC_ROUNDABORT ON", "SET NUMERIC_ROUNDABORT OFF",
+        Flag("numeric-roundabort", "NUMERIC_ROUNDABORT", "decimal rounding on assignment",
             "DECLARE @d DECIMAL(5,1) = 1.234; SELECT CAST(@d AS VARCHAR(10))"),
-        new("quoted-identifier-literal", "QUOTED_IDENTIFIER", "double-quoted token", "SET QUOTED_IDENTIFIER ON", "SET QUOTED_IDENTIFIER OFF",
+        Flag("quoted-identifier-literal", "QUOTED_IDENTIFIER", "double-quoted token",
             "SELECT \"abc\""),
-        new("dateformat-dmy", "DATEFORMAT", "ambiguous date literal day and month", "SET DATEFORMAT mdy", "SET DATEFORMAT dmy",
+        DateFormat("dateformat-dmy", "ambiguous date literal day and month",
             "SELECT CONVERT(VARCHAR(10), CAST('02/03/2024' AS DATETIME), 120)"),
-        new("dateformat-iso-datetime", "DATEFORMAT", "yyyy-mm-dd datetime literal", "SET DATEFORMAT mdy", "SET DATEFORMAT dmy",
+        DateFormat("dateformat-iso-datetime", "yyyy-mm-dd datetime literal",
             "SELECT CONVERT(VARCHAR(10), CAST('2024-02-03' AS DATETIME), 120)"),
-        new("dateformat-iso-date", "DATEFORMAT", "yyyy-mm-dd date literal", "SET DATEFORMAT mdy", "SET DATEFORMAT dmy",
+        DateFormat("dateformat-iso-date", "yyyy-mm-dd date literal",
             "SELECT CONVERT(VARCHAR(10), CAST('2024-02-03' AS DATE), 120)"),
         new("datefirst-weekday", "DATEFIRST", "DATEPART weekday", "SET DATEFIRST 7", "SET DATEFIRST 1",
             "SELECT CAST(DATEPART(weekday, '2024-01-07') AS VARCHAR(5))"),
         new("language-month-name", "LANGUAGE", "DATENAME month", "SET LANGUAGE us_english", "SET LANGUAGE german",
             "SELECT DATENAME(month, '2024-05-01')"),
-        new("rowcount-limit", "ROWCOUNT", "row limit on SELECT", "SET ROWCOUNT 0", "SET ROWCOUNT 1",
+        RowCount("rowcount-limit", "row limit on SELECT",
             "SELECT CAST(COUNT(*) AS VARCHAR(5)) FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3) AS q; "),
-        new("rowcount-limit-rows", "ROWCOUNT", "row limit on SELECT returning rows", "SET ROWCOUNT 0", "SET ROWCOUNT 1",
+        RowCount("rowcount-limit-rows", "row limit on SELECT returning rows",
             "DECLARE @n INT; SELECT x INTO #r FROM (SELECT 1 AS x UNION ALL SELECT 2 UNION ALL SELECT 3) AS q; SELECT @n = COUNT(*) FROM #r; SELECT CAST(@n AS VARCHAR(5))"),
         new("textsize-truncation", "TEXTSIZE", "large value read size", "SET TEXTSIZE 2147483647", "SET TEXTSIZE 4",
             "SELECT CAST(DATALENGTH(CAST(REPLICATE(CAST('a' AS VARCHAR(MAX)), 100) AS VARCHAR(MAX))) AS VARCHAR(10))"),
-        new("implicit-transactions-trancount", "IMPLICIT_TRANSACTIONS", "transaction opened by a statement", "SET IMPLICIT_TRANSACTIONS ON", "SET IMPLICIT_TRANSACTIONS OFF",
+        Flag("implicit-transactions-trancount", "IMPLICIT_TRANSACTIONS", "transaction opened by a statement",
             "CREATE TABLE #t (v INT); INSERT #t VALUES (1); SELECT CAST(@@TRANCOUNT AS VARCHAR(5))"),
-        new("nocount-rowcount-global", "NOCOUNT", "row count after statement", "SET NOCOUNT ON", "SET NOCOUNT OFF",
+        Flag("nocount-rowcount-global", "NOCOUNT", "row count after statement",
             "CREATE TABLE #t (v INT); INSERT #t VALUES (1); SELECT CAST(@@ROWCOUNT AS VARCHAR(5))"),
     ];
+
+    private static SetOptionProbe Flag(string id, string option, string construct, string batch) =>
+        new(id, option, construct, $"SET {option} ON", $"SET {option} OFF", batch);
+
+    private static SetOptionProbe DateFormat(string id, string construct, string batch) =>
+        new(id, "DATEFORMAT", construct, "SET DATEFORMAT mdy", "SET DATEFORMAT dmy", batch);
+
+    private static SetOptionProbe RowCount(string id, string construct, string batch) =>
+        new(id, "ROWCOUNT", construct, "SET ROWCOUNT 0", "SET ROWCOUNT 1", batch);
 
     private readonly DatabaseProvisioner _provisioner;
     private readonly SqlServerOptions _options;

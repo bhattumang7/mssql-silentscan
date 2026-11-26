@@ -155,28 +155,9 @@ public sealed class AssignMatrixGenerator
         sql.AppendLine(CultureInfo.InvariantCulture, $"ELSE INSERT @o VALUES ({i}, {e});");
     }
 
-    private async Task<IReadOnlyList<string>> ProbeAsync(
-        string database, AssignProbeType source, AssignProbeType target, AssignContext context, CancellationToken cancellationToken)
-    {
-        var outcomes = new string[source.Values.Count];
-        try
-        {
-            await using var connection = new SqlConnection(_options.BuildConnectionString(database));
-            await connection.OpenAsync(cancellationToken);
-            await using var command = new SqlCommand(BuildBatch(source, target, context), connection) { CommandTimeout = 120 };
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                outcomes[reader.GetInt32(0)] = reader.GetString(1);
-            }
-        }
-        catch (SqlException ex)
-        {
-            return Enumerable.Repeat(AssignCellOutcome.ErrorPrefix + ex.Number.ToString(CultureInfo.InvariantCulture), source.Values.Count).ToList();
-        }
-
-        return outcomes.Select(o => o ?? "Unknown").ToList();
-    }
+    private Task<IReadOnlyList<string>> ProbeAsync(
+        string database, AssignProbeType source, AssignProbeType target, AssignContext context, CancellationToken cancellationToken) =>
+        MatrixProbeRunner.RunOutcomesAsync(_options, database, BuildBatch(source, target, context), source.Values.Count, AssignCellOutcome.ErrorPrefix, cancellationToken);
 
     private async Task<string> ReadServerVersionAsync(string database, CancellationToken cancellationToken)
     {

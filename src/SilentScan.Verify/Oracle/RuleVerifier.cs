@@ -437,19 +437,7 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             try
             {
                 await using var run = new SqlCommand($"EXEC {ProbeName};", connection, transaction) { CommandTimeout = 120 };
-                await using var reader = await run.ExecuteReaderAsync(cancellationToken);
-                do
-                {
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string) && reader.GetString(0) is { } value
-                            && value.Contains("ShowPlanXML", StringComparison.Ordinal))
-                        {
-                            planXml = value;
-                        }
-                    }
-                }
-                while (await reader.NextResultAsync(cancellationToken));
+                planXml = await ReadShowPlanAsync(run, cancellationToken);
             }
             finally
             {
@@ -477,25 +465,33 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
         try
         {
             await using var command = new SqlCommand(statement, connection, transaction) { CommandTimeout = 120 };
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            do
-            {
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string) && reader.GetString(0) is { } value
-                        && value.Contains("ShowPlanXML", StringComparison.Ordinal))
-                    {
-                        planXml = value;
-                    }
-                }
-            }
-            while (await reader.NextResultAsync(cancellationToken));
+            planXml = await ReadShowPlanAsync(command, cancellationToken);
         }
         finally
         {
             await using var off = new SqlCommand("SET SHOWPLAN_XML OFF;", connection, transaction);
             await off.ExecuteNonQueryAsync(CancellationToken.None);
         }
+
+        return planXml;
+    }
+
+    private static async Task<string?> ReadShowPlanAsync(SqlCommand command, CancellationToken cancellationToken)
+    {
+        string? planXml = null;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        do
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (reader.FieldCount == 1 && reader.GetFieldType(0) == typeof(string) && reader.GetString(0) is { } value
+                    && value.Contains("ShowPlanXML", StringComparison.Ordinal))
+                {
+                    planXml = value;
+                }
+            }
+        }
+        while (await reader.NextResultAsync(cancellationToken));
 
         return planXml;
     }

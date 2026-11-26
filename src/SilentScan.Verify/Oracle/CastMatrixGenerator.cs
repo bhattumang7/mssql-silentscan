@@ -107,28 +107,9 @@ public sealed class CastMatrixGenerator
         return sql.ToString();
     }
 
-    private async Task<IReadOnlyList<string>> ProbeAsync(
-        string database, AssignProbeType source, AssignProbeType target, CastContext context, CancellationToken cancellationToken)
-    {
-        var outcomes = new string[source.Values.Count];
-        try
-        {
-            await using var connection = new SqlConnection(_options.BuildConnectionString(database));
-            await connection.OpenAsync(cancellationToken);
-            await using var command = new SqlCommand(BuildBatch(source, target, context), connection) { CommandTimeout = 120 };
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                outcomes[reader.GetInt32(0)] = reader.GetString(1);
-            }
-        }
-        catch (SqlException ex)
-        {
-            return Enumerable.Repeat(CastCellOutcome.ErrorPrefix + ex.Number.ToString(CultureInfo.InvariantCulture), source.Values.Count).ToList();
-        }
-
-        return outcomes.Select(o => o ?? "Unknown").ToList();
-    }
+    private Task<IReadOnlyList<string>> ProbeAsync(
+        string database, AssignProbeType source, AssignProbeType target, CastContext context, CancellationToken cancellationToken) =>
+        MatrixProbeRunner.RunOutcomesAsync(_options, database, BuildBatch(source, target, context), source.Values.Count, CastCellOutcome.ErrorPrefix, cancellationToken);
 
     private async Task<string> DescribeAsync(string database, string batch, CancellationToken cancellationToken)
     {
