@@ -32,6 +32,9 @@ public static class ModuleSchemaNameBinding
         }
     }
 
+    public static void Bind(SqlParseResult result, Func<string, bool> objectExists, StringComparer comparer) =>
+        result.Fragment.Accept(new ModuleVisitor(objectExists, comparer));
+
     public const string CallerDependentSchema = "?caller-dependent";
 
     public static void BindDynamicSqlTables(SqlParseResult result, DatabaseCatalog catalog, IReadOnlyCollection<string> defaultSchemas) =>
@@ -53,9 +56,6 @@ public static class ModuleSchemaNameBinding
 
         return names;
     }
-
-    public static void Bind(SqlParseResult result, Func<string, bool> objectExists, StringComparer comparer) =>
-        result.Fragment.Accept(new ModuleVisitor(objectExists, comparer));
 
     public static bool ObjectExists(DatabaseCatalog catalog, IReadOnlySet<string> moduleNames, string qualifiedName) =>
         moduleNames.Contains(qualifiedName)

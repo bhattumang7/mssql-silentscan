@@ -14,12 +14,11 @@ public sealed class RecursiveCteAnchorTypingOracleTests : OracleTestFixture
 
     protected override string Ddl => "CREATE TABLE dbo.Unused (Id INT NOT NULL);";
 
-    public static TheoryData<string> Bodies => new()
-    {
+    public static TheoryData<string> Bodies => [
         "SELECT CAST(1 AS INT) AS a, CAST('x' AS VARCHAR(3)) AS b UNION ALL SELECT CAST(2 AS BIGINT), CAST('yy' AS VARCHAR(5)) UNION ALL SELECT c.a + 1, CAST(c.b AS VARCHAR(5)) FROM c WHERE c.a < 3",
         "SELECT CAST(1 AS INT) AS a, CAST('x' AS VARCHAR(3)) AS b UNION ALL SELECT CAST(c.a + 1 AS INT), CAST(c.b AS VARCHAR(3)) FROM c WHERE c.a < 3 UNION ALL SELECT CAST(c.a + 2 AS INT), CAST(c.b AS VARCHAR(3)) FROM c WHERE c.a < 3",
         "(SELECT CAST(1 AS SMALLINT) AS a, CAST(1.5 AS DECIMAL(5,1)) AS b UNION ALL SELECT CAST(2 AS INT), CAST(2.25 AS DECIMAL(6,2))) UNION ALL SELECT c.a + 1, CAST(c.b AS DECIMAL(6,2)) FROM c WHERE c.a < 3",
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(Bodies))]

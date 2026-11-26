@@ -108,6 +108,7 @@ internal static class BaseColumnResolver
 
         public override void ExplicitVisit(ScalarSubquery node)
         {
+            _ = node;
         }
     }
 

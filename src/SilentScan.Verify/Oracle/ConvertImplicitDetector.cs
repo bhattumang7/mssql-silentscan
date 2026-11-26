@@ -4,6 +4,8 @@ namespace SilentScan.Verify.Oracle;
 
 public static class ConvertImplicitDetector
 {
+    private const string ColumnLiteral = "Column";
+
     private static readonly XNamespace ShowPlanNs = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
 
     private const string TableAttributeName = "Table";
@@ -35,7 +37,7 @@ public static class ConvertImplicitDetector
                 Database: TrimBrackets((string?)x.ColumnRef!.Attribute("Database")),
                 Schema: TrimBrackets((string?)x.ColumnRef.Attribute("Schema")),
                 Table: TrimBrackets((string?)x.ColumnRef.Attribute(TableAttributeName)),
-                Column: (string?)x.ColumnRef.Attribute("Column"),
+                Column: (string?)x.ColumnRef.Attribute(ColumnLiteral),
                 ConvertedToDataType: (string?)x.Convert.Attribute("DataType") ?? "unknown",
                 RangeSeekBound: IsRangeSeekBound(x.Convert, x.ColumnRef),
                 Context: ContextOf(x.Convert)))
@@ -52,7 +54,7 @@ public static class ConvertImplicitDetector
 
     private static bool IsNamedColumn(XElement columnRef)
     {
-        var name = (string?)columnRef.Attribute("Column");
+        var name = (string?)columnRef.Attribute(ColumnLiteral);
         return !string.IsNullOrEmpty(name) && name[0] != '@' && !name.StartsWith("Expr", StringComparison.Ordinal);
     }
 
@@ -70,7 +72,7 @@ public static class ConvertImplicitDetector
         var database = (string?)columnRef.Attribute("Database");
         var schema = (string?)columnRef.Attribute("Schema");
         var table = (string?)columnRef.Attribute(TableAttributeName);
-        var column = (string?)columnRef.Attribute("Column");
+        var column = (string?)columnRef.Attribute(ColumnLiteral);
 
         return owningRelOp.Descendants(ShowPlanNs + "SeekPredicates")
             .Concat(owningRelOp.Descendants(ShowPlanNs + "SeekPredicate"))
@@ -80,7 +82,7 @@ public static class ConvertImplicitDetector
                 string.Equals((string?)rangeColumnRef.Attribute("Database"), database, StringComparison.Ordinal)
                 && string.Equals((string?)rangeColumnRef.Attribute("Schema"), schema, StringComparison.Ordinal)
                 && string.Equals((string?)rangeColumnRef.Attribute(TableAttributeName), table, StringComparison.Ordinal)
-                && string.Equals((string?)rangeColumnRef.Attribute("Column"), column, StringComparison.Ordinal));
+                && string.Equals((string?)rangeColumnRef.Attribute(ColumnLiteral), column, StringComparison.Ordinal));
     }
 
     private static bool IsImplicit(string? value) => value is "1" or "true";

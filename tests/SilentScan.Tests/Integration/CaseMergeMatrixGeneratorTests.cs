@@ -62,15 +62,14 @@ public sealed class CaseMergeMatrixGeneratorTests
         Assert.True(mismatches.Count == 0, DescribeMismatches(mismatches));
     }
 
-    public static TheoryData<string> SpecGroups => new()
-    {
+    public static TheoryData<string> SpecGroups => [
         nameof(CaseMergeSpecs.DecimalSpecs),
         nameof(CaseMergeSpecs.StringSpecs),
         nameof(CaseMergeSpecs.ExactNumericSpecs),
         nameof(CaseMergeSpecs.DateTimeSpecs),
         nameof(CaseMergeSpecs.BinarySpecs),
         nameof(CaseMergeSpecs.AllTypeSpecs),
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(SpecGroups))]

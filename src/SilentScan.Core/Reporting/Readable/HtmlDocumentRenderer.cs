@@ -7,6 +7,8 @@ namespace SilentScan.Core.Reporting.Readable;
 
 internal static partial class HtmlDocumentRenderer
 {
+    private const string CloseSpan = "</span>";
+
     private const int RowCap = 500;
 
     private const int OpenSectionRowLimit = 300;
@@ -113,11 +115,11 @@ internal static partial class HtmlDocumentRenderer
     private static void AppendTocLink(StringBuilder html, string id, string text)
     {
         var (title, count) = SplitCount(text);
-        html.Append("<a href=\"#").Append(id).Append("\"><span>").Append(Encode(title)).Append("</span>");
+        html.Append("<a href=\"#").Append(id).Append("\"><span>").Append(Encode(title)).Append(CloseSpan);
 
         if (count is { } n)
         {
-            html.Append("<span class=\"pill\">").Append(FormatCount(n)).Append("</span>");
+            html.Append("<span class=\"pill\">").Append(FormatCount(n)).Append(CloseSpan);
         }
 
         html.Append("</a>");
@@ -126,7 +128,7 @@ internal static partial class HtmlDocumentRenderer
     private static void AppendSection(StringBuilder html, Section section, Outline outline)
     {
         var isSummary = section.Heading.Text == ReadableScanReportWriter.SummaryHeading;
-        var open = isSummary || section.Rows <= OpenSectionRowLimit;
+        var open = isSummary || section.RowCount <= OpenSectionRowLimit;
 
         html.Append("<section class=\"sec\" id=\"").Append(section.Id).Append('"');
         if (isSummary)
@@ -137,9 +139,9 @@ internal static partial class HtmlDocumentRenderer
         html.Append(">\n<details").Append(open ? " open" : string.Empty).Append("><summary>")
             .Append("<h2>").Append(Encode(section.Heading.Text)).Append("</h2>");
 
-        if (section.Rows > 0 && !isSummary)
+        if (section.RowCount > 0 && !isSummary)
         {
-            html.Append("<span class=\"rows\">").Append(RowsLabel(section.Rows)).Append("</span>");
+            html.Append("<span class=\"rows\">").Append(RowsLabel(section.RowCount)).Append(CloseSpan);
         }
 
         html.Append("</summary>\n<div class=\"body\">\n");
@@ -258,7 +260,7 @@ internal static partial class HtmlDocumentRenderer
                 .Append("\" aria-label=\"Filter the rows of this table\" autocomplete=\"off\" spellcheck=\"false\">");
         }
 
-        html.Append("<span class=\"cnt\">").Append(RowsLabel(rows)).Append("</span>");
+        html.Append("<span class=\"cnt\">").Append(RowsLabel(rows)).Append(CloseSpan);
         if (capped)
         {
             html.Append("<span class=\"capnote\">first ").Append(FormatCount(RowCap)).Append(" shown</span>")
@@ -353,7 +355,7 @@ internal static partial class HtmlDocumentRenderer
 
     private sealed record Section(string Id, ReadableBlock.Heading Heading, int? Count, HashSet<string> Stems, List<ReadableBlock> Body, List<ReadableBlock.Heading> SubHeadings)
     {
-        public int Rows { get; set; }
+        public int RowCount { get; set; }
     }
 
     private sealed class Outline
@@ -433,7 +435,7 @@ internal static partial class HtmlDocumentRenderer
                 TotalRows += table.Rows.Count;
                 if (current is not null)
                 {
-                    current.Rows += table.Rows.Count;
+                    current.RowCount += table.Rows.Count;
                 }
             }
 

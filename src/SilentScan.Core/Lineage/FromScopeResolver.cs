@@ -301,7 +301,7 @@ public static class FromScopeResolver
         UnpivotedTableReference unpivot => ResolveUnpivotedTableReference(unpivot, context),
         FullTextTableReference fullText => ResolveFullTextTableReference(fullText, context),
         OpenXmlTableReference openXml => ResolveOpenXmlTableReference(openXml, context),
-        InlineDerivedTable inline => ResolveInlineDerivedTable(inline, context),
+        InlineDerivedTable inline => ResolveInlineDerivedTable(inline),
         OpenJsonTableReference openJson => ResolveOpenJsonTableReference(openJson, context),
         GlobalFunctionTableReference globalFunction when GlobalFunctionRowsets.TryResolve(globalFunction, argument => ScalarExpressionResolver.ResolveScalarType(argument, context.OuterScopes ?? [], context.SourcePath, new ScalarExpressionResolver.ScalarTypeContext(null, context.Catalog.TypeAliases, context.Catalog))) is { } rowset =>
             (globalFunction.Alias?.Value ?? globalFunction.Name.Value, new ScopeEntry(rowset, IsViewLayer: false)),
@@ -659,7 +659,7 @@ public static class FromScopeResolver
         return (openJson.Alias?.Value, new ScopeEntry(new ResolvedRelation(QualifiedName: null, columns), IsViewLayer: false));
     }
 
-    private static (string? Alias, ScopeEntry Entry) ResolveInlineDerivedTable(InlineDerivedTable inline, ResolutionContext context)
+    private static (string? Alias, ScopeEntry Entry) ResolveInlineDerivedTable(InlineDerivedTable inline)
     {
         var columns = new List<ResolvedColumn>(inline.Columns.Count);
         for (var index = 0; index < inline.Columns.Count; index++)

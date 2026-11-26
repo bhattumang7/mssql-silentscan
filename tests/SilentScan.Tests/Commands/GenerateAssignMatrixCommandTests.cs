@@ -3,7 +3,7 @@ using SilentScan.Verify.Oracle;
 
 namespace SilentScan.Tests.Commands;
 
-public sealed class GenerateAssignMatrixCommandTests
+public sealed partial class GenerateAssignMatrixCommandTests
 {
     [Fact]
     public void Create_HasNameAndOutputOptionWithCheckedInDefault()
@@ -32,7 +32,7 @@ public sealed class GenerateAssignMatrixCommandTests
 
         var batch = AssignMatrixGenerator.BuildBatch(source, target, SilentScan.Core.Rules.AssignContext.Variable);
 
-        Assert.Equal(source.Values.Count, System.Text.RegularExpressions.Regex.Count(batch, @"SET @t\d+ = @s\d+;"));
+        Assert.Equal(source.Values.Count, VariableAssignments().Count(batch));
         Assert.DoesNotContain("ANSI_WARNINGS", batch, StringComparison.Ordinal);
     }
 
@@ -44,7 +44,16 @@ public sealed class GenerateAssignMatrixCommandTests
 
         var batch = AssignMatrixGenerator.BuildBatch(source, target, SilentScan.Core.Rules.AssignContext.ColumnAnsiWarningsOff);
 
-        Assert.Equal(source.Values.Count, System.Text.RegularExpressions.Regex.Count(batch, "SET ANSI_WARNINGS OFF;"));
-        Assert.True(System.Text.RegularExpressions.Regex.Count(batch, "SET ANSI_WARNINGS ON;") >= source.Values.Count);
+        Assert.Equal(source.Values.Count, AnsiWarningsOff().Count(batch));
+        Assert.True(AnsiWarningsOn().Count(batch) >= source.Values.Count);
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"SET @t\d+ = @s\d+;")]
+    private static partial System.Text.RegularExpressions.Regex VariableAssignments();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"SET ANSI_WARNINGS OFF;")]
+    private static partial System.Text.RegularExpressions.Regex AnsiWarningsOff();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"SET ANSI_WARNINGS ON;")]
+    private static partial System.Text.RegularExpressions.Regex AnsiWarningsOn();
 }

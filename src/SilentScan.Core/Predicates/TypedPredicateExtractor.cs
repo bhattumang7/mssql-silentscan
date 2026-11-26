@@ -526,7 +526,6 @@ public static class TypedPredicateExtractor
         {
             _currentWriteStatement = node;
 
-            var scopeChain = walker.CurrentScopeChain();
             foreach (var declaration in node.Declarations)
             {
                 var targetType = SqlTypeReferenceResolver.Resolve(declaration.DataType, columnCollation: null, catalog.TypeAliases);

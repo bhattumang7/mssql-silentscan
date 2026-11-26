@@ -48,18 +48,20 @@ public enum Difference
     PlanTextChanged,
 }
 
-public abstract record Touch;
+public interface ITouch
+{
+}
 
-public sealed record TouchedObject(string? Schema, string Name) : Touch;
+public sealed record TouchedObject(string? Schema, string Name) : ITouch;
 
-public sealed record TouchedExpression(string Text) : Touch;
+public sealed record TouchedExpression(string Text) : ITouch;
 
 public delegate Task<int> PerturbationStep(SqlConnection connection, SqlTransaction transaction, CancellationToken cancellationToken);
 
 public sealed class Perturbation
 {
     public Perturbation(
-        IReadOnlyList<Touch> touches,
+        IReadOnlyList<ITouch> touches,
         Difference expected,
         PerturbationStep removeCondition,
         PerturbationStep applyCondition,
@@ -89,7 +91,7 @@ public sealed class Perturbation
         NotApplicableReason = notApplicableReason;
     }
 
-    public IReadOnlyList<Touch> Touches { get; }
+    public IReadOnlyList<ITouch> Touches { get; }
 
     public Difference Expected { get; }
 
@@ -499,14 +501,14 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
 
     private static string? Unbracket(string? name) => name?.Trim('[', ']');
 
-    private static string? UnreadTouch(string statement, IReadOnlyList<Touch> touches)
+    private static string? UnreadTouch(string statement, IReadOnlyList<ITouch> touches)
     {
-        foreach (var expression in touches.OfType<TouchedExpression>())
+        foreach (var text in touches.OfType<TouchedExpression>().Select(expression => expression.Text))
         {
-            var first = statement.IndexOf(expression.Text, StringComparison.OrdinalIgnoreCase);
-            if (first < 0 || statement.IndexOf(expression.Text, first + 1, StringComparison.OrdinalIgnoreCase) >= 0)
+            var first = statement.IndexOf(text, StringComparison.OrdinalIgnoreCase);
+            if (first < 0 || statement.IndexOf(text, first + 1, StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                return $"expression '{expression.Text}'";
+                return $"expression '{text}'";
             }
         }
 

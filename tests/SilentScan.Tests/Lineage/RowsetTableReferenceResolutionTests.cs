@@ -16,8 +16,8 @@ public sealed class RowsetTableReferenceResolutionTests
     }
 
     private static void AssertNothingSkipped(ScanReport report) =>
-        Assert.True(
-            !report.SkippedConstructs.Any(s => s.ConstructKind is "FROM table reference" or "column reference" or "unresolved column comparison" or "FROM table-valued function"),
+        Assert.False(
+            report.SkippedConstructs.Any(s => s.ConstructKind is "FROM table reference" or "column reference" or "unresolved column comparison" or "FROM table-valued function"),
             string.Join("; ", report.SkippedConstructs.Select(s => $"{s.ConstructKind}: {s.Reason}")));
 
     [Fact]

@@ -20,8 +20,8 @@ public sealed class ApplyCorrelationTests
     }
 
     private static void AssertNoLineageSkips(ScanReport report) =>
-        Assert.True(
-            !report.SkippedConstructs.Any(s => s.ConstructKind is "column reference" or "unresolved column comparison" or "FROM table reference"),
+        Assert.False(
+            report.SkippedConstructs.Any(s => s.ConstructKind is "column reference" or "unresolved column comparison" or "FROM table reference"),
             string.Join("; ", report.SkippedConstructs.Select(s => $"{s.ConstructKind}: {s.Reason}")));
 
     [Theory]

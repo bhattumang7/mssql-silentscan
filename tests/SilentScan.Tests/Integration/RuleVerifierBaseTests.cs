@@ -56,7 +56,7 @@ public sealed class RuleVerifierBaseTests : OracleTestFixture
 
     private static readonly PerturbationStep NoOpWrite = Run("UPDATE dbo.T SET V = V;");
 
-    private static Perturbation Of(Difference expected, PerturbationStep apply, Func<SqlException, bool>? refusalRefutes = null, IReadOnlyList<Touch>? touches = null) =>
+    private static Perturbation Of(Difference expected, PerturbationStep apply, Func<SqlException, bool>? refusalRefutes = null, IReadOnlyList<ITouch>? touches = null) =>
         new(touches ?? TouchesT, expected, Nothing, apply, refusalRefutes ?? (_ => false));
 
     private Task<EngineVerification> VerifyAsync(Perturbation perturbation, string statement) =>

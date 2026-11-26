@@ -32,7 +32,6 @@ public static class ForXmlPathMissingOrderScanner
 
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
     {
-        private readonly Stack<QuerySpecification> _specifications = new();
 
         public List<ForXmlPathMissingOrderFinding> Findings { get; } = [];
 

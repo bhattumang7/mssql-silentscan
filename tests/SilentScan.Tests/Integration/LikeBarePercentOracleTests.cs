@@ -5,7 +5,7 @@ namespace SilentScan.Tests.Integration;
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", FindingRuleIds.Tier1LeadingWildcardLikeRuleId)]
-public sealed class LikeBarePercentOracleTests : OracleTestFixture
+public sealed partial class LikeBarePercentOracleTests : OracleTestFixture
 {
     protected override string DatabaseNameSeed => nameof(LikeBarePercentOracleTests);
 
@@ -26,7 +26,7 @@ public sealed class LikeBarePercentOracleTests : OracleTestFixture
         long reads = 0;
         connection.InfoMessage += (_, e) =>
         {
-            var match = Regex.Match(e.Message, @"Table 'Lk'\. Scan count \d+, logical reads (\d+)");
+            var match = LogicalReads().Match(e.Message);
             if (match.Success)
             {
                 reads += long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
@@ -56,4 +56,7 @@ public sealed class LikeBarePercentOracleTests : OracleTestFixture
 
         Assert.True(prefix.Reads * 10 < leading.Reads, $"prefix read {prefix.Reads}, leading wildcard read {leading.Reads}");
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"Table 'Lk'\. Scan count \d+, logical reads (\d+)")]
+    private static partial System.Text.RegularExpressions.Regex LogicalReads();
 }

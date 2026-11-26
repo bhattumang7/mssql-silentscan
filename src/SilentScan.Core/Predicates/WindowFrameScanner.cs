@@ -99,6 +99,7 @@ public static class WindowFrameScanner
 
             public override void ExplicitVisit(QuerySpecification node)
             {
+                _ = node;
             }
 
             public override void ExplicitVisit(FunctionCall node)

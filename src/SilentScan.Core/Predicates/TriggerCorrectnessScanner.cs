@@ -244,6 +244,7 @@ public static class TriggerCorrectnessScanner
 
             public override void ExplicitVisit(ScalarSubquery node)
             {
+                _ = node;
             }
         }
 

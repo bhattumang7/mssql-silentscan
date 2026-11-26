@@ -70,6 +70,7 @@ public static class ProcedureResultShapePass
 
         public override void ExplicitVisit(DeclareCursorStatement node)
         {
+            _ = node;
         }
 
         public override void ExplicitVisit(SelectStatement node)

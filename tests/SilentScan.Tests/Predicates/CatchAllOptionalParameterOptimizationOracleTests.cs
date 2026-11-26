@@ -6,7 +6,7 @@ namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
 [Trait("Rule", FindingRuleIds.CatchAllPredicateRuleId)]
-public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLifetime
+public sealed partial class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLifetime
 {
     private static readonly SqlServerOptions Options = SqlServerOptions.LocalDockerLatest;
 
@@ -56,7 +56,7 @@ public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLif
         long reads = 0;
         connection.InfoMessage += (_, e) =>
         {
-            var match = System.Text.RegularExpressions.Regex.Match(e.Message, @"Table 'Wide'\. Scan count \d+, logical reads (\d+)");
+            var match = LogicalReads().Match(e.Message);
             if (match.Success)
             {
                 reads += long.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
@@ -144,4 +144,7 @@ public sealed class CatchAllOptionalParameterOptimizationOracleTests : IAsyncLif
 
         Assert.True(variableReads > parameterReads * 5, $"local variable read {variableReads} pages, parameter read {parameterReads}");
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"Table 'Wide'\. Scan count \d+, logical reads (\d+)")]
+    private static partial System.Text.RegularExpressions.Regex LogicalReads();
 }

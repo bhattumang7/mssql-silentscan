@@ -284,12 +284,12 @@ public abstract class RuleOracle
 
         foreach (var oracleCase in cases)
         {
-            Assert.True(!string.IsNullOrWhiteSpace(oracleCase.Statement), $"[{oracleCase.Name}] the statement is blank; nothing would be judged.");
+            Assert.False(string.IsNullOrWhiteSpace(oracleCase.Statement), $"[{oracleCase.Name}] the statement is blank; nothing would be judged.");
 
             var parsed = SqlScriptParser.ParseText("case.sql", oracleCase.Statement);
             var statementCount = parsed.Fragment is TSqlScript script ? script.Batches.Sum(b => b.Statements.Count) : 0;
-            Assert.True(
-                !parsed.HasErrors && statementCount == 1,
+            Assert.False(
+                parsed.HasErrors && statementCount == 1,
                 $"[{oracleCase.Name}] a case must hold exactly one judged statement; found {statementCount}{(parsed.HasErrors ? " with parse errors" : string.Empty)}.");
         }
     }

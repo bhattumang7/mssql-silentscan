@@ -4,7 +4,7 @@ using SilentScan.Verify.Oracle;
 
 namespace SilentScan.Tests.Commands;
 
-public sealed class GenerateCastMatrixCommandTests
+public sealed partial class GenerateCastMatrixCommandTests
 {
     [Fact]
     public void Create_HasNameAndCheckedInDefault()
@@ -25,8 +25,14 @@ public sealed class GenerateCastMatrixCommandTests
         var cast = CastMatrixGenerator.BuildBatch(source, target, CastContext.Cast);
         var tryCast = CastMatrixGenerator.BuildBatch(source, target, CastContext.TryCast);
 
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Count(cast, @"SET @t\d = CAST\("));
+        Assert.Equal(2, CastAssignments().Count(cast));
         Assert.DoesNotContain("TRY_CAST", cast, StringComparison.Ordinal);
-        Assert.Equal(2, System.Text.RegularExpressions.Regex.Count(tryCast, @"SET @t\d = TRY_CAST\("));
+        Assert.Equal(2, TryCastAssignments().Count(tryCast));
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"SET @t\d = CAST\(")]
+    private static partial System.Text.RegularExpressions.Regex CastAssignments();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"SET @t\d = TRY_CAST\(")]
+    private static partial System.Text.RegularExpressions.Regex TryCastAssignments();
 }

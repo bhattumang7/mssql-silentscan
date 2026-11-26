@@ -339,16 +339,9 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         }
 
         var display = type.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-        foreach (var allowed in AllowedVerifierNamespaces)
-        {
-            if (string.Equals(display, allowed, StringComparison.Ordinal)
-                || display.StartsWith(allowed + ".", StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return AllowedVerifierNamespaces.Any(allowed =>
+            string.Equals(display, allowed, StringComparison.Ordinal)
+            || display.StartsWith(allowed + ".", StringComparison.Ordinal));
     }
 
     private static void ReportCoverage(
@@ -360,15 +353,12 @@ public sealed class OraclePairingAnalyzer : DiagnosticAnalyzer
         var known = new HashSet<string>(constantNames, StringComparer.Ordinal);
         var paired = new HashSet<string>(pairedNames, StringComparer.Ordinal);
 
-        foreach (var name in known.OrderBy(n => n, StringComparer.Ordinal))
+        foreach (var name in known.Where(n => !paired.Contains(n) && !baseline.Contains(n)).OrderBy(n => n, StringComparer.Ordinal))
         {
-            if (!paired.Contains(name) && !baseline.Contains(name))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    UnpairedRule,
-                    Location.None,
-                    name + " has no RuleOracle test that checks the scanner and SQL Server on the same case, and is not in " + BaselineFileName + "."));
-            }
+            context.ReportDiagnostic(Diagnostic.Create(
+                UnpairedRule,
+                Location.None,
+                name + " has no RuleOracle test that checks the scanner and SQL Server on the same case, and is not in " + BaselineFileName + "."));
         }
 
         foreach (var entry in baseline.OrderBy(n => n, StringComparer.Ordinal))
