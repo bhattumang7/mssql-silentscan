@@ -15,8 +15,8 @@ public sealed class TableVariableModificationVerifier : RuleVerifier<ForcedSeria
             return Perturbation.NotApplicable("The finding does not name the table variable.");
         }
 
-        var declaration = new Regex(@"\bDECLARE\s+" + Regex.Escape(variable) + @"\s+TABLE\s*\(", RegexOptions.IgnoreCase);
-        var reference = new Regex(Regex.Escape(variable) + @"\b", RegexOptions.IgnoreCase);
+        var declaration = VerifierRegex.Create(@"\bDECLARE\s+" + Regex.Escape(variable) + @"\s+TABLE\s*\(", RegexOptions.IgnoreCase);
+        var reference = VerifierRegex.Create(Regex.Escape(variable) + @"\b", RegexOptions.IgnoreCase);
         var replacement = "#" + variable[1..];
         return new Perturbation(
             [],

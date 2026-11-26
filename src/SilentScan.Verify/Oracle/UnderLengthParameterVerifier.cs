@@ -26,7 +26,7 @@ public sealed class UnderLengthParameterVerifier : RuleVerifier<UnderLengthParam
             return Perturbation.NotApplicable("The finding does not say how long the other operand is.");
         }
 
-        var declaration = new Regex(@"(" + Regex.Escape(variable) + @"\s+(?:AS\s+)?)(n?varchar|n?char)" + size, RegexOptions.IgnoreCase);
+        var declaration = VerifierRegex.Create(@"(" + Regex.Escape(variable) + @"\s+(?:AS\s+)?)(n?varchar|n?char)" + size, RegexOptions.IgnoreCase);
         string? original = null;
         return new Perturbation(
             [],

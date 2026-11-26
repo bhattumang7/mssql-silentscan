@@ -10,7 +10,7 @@ public sealed class LocalVariablePredicateVerifier : RuleVerifier<LocalVariableP
 
     protected override Perturbation Describe(LocalVariablePredicateFinding finding)
     {
-        var statement = new Regex(
+        var statement = VerifierRegex.Create(
             @"(\bWHERE\b(?:(?!OPTION)[^;])*" + Regex.Escape(finding.VariableName) + @"\b(?:(?!OPTION)[^;])*)(;)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

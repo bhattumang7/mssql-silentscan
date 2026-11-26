@@ -10,7 +10,7 @@ public sealed class HintedIndexVerifier : RuleVerifier<IndexHintFinding>
 
     protected override Perturbation Describe(IndexHintFinding finding)
     {
-        var hint = new Regex(
+        var hint = VerifierRegex.Create(
             @"\bWITH\s*\(\s*INDEX\s*(?:\(\s*|=\s*)\[?" + Regex.Escape(finding.HintedIndexName) + @"\]?\s*\)?\s*\)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

@@ -17,7 +17,7 @@ public sealed class CountStarExistenceVerifier : RuleVerifier<QueryAntiPatternFi
     {
         var variable = finding.DetailText.Split(' ', 2)[0];
         var name = Regex.Escape(variable);
-        var assignment = new Regex(
+        var assignment = VerifierRegex.Create(
             @"SELECT\s+" + name + @"\s*=\s*COUNT\s*\(\s*\*\s*\)\s+(FROM\s+[^;]+?)\s*;\s*IF\s+(?:" + name + @"\s*(>=|>|=|<>|!=)\s*([01])\b|([01])\s*(<=|<|=|<>|!=)\s*" + name + @"(?![\w@]))",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

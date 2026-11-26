@@ -14,8 +14,8 @@ internal static class DeclaredColumnTypeProbe
 
         var bareType = Bare(declaredType);
         var bareDescribed = Bare(describedType);
-        var tokens = Regex.Matches(bareType, @"\w+|[^\w\s]").Select(match => Regex.Escape(match.Value));
-        var declaration = new Regex(
+        var tokens = VerifierRegex.Matches(bareType, @"\w+|[^\w\s]").Select(match => Regex.Escape(match.Value));
+        var declaration = VerifierRegex.Create(
             @"(\[?" + Regex.Escape(column) + @"\]?\s+)" + string.Join(@"\s*", tokens),
             RegexOptions.IgnoreCase);
         string? original = null;
@@ -39,5 +39,5 @@ internal static class DeclaredColumnTypeProbe
     }
 
     private static string Bare(string typeText) =>
-        Regex.Replace(typeText, @"\s+COLLATE\s+\S+|\s+(?:NOT\s+)?NULL\s*$", string.Empty, RegexOptions.IgnoreCase);
+        VerifierRegex.Replace(typeText, @"\s+COLLATE\s+\S+|\s+(?:NOT\s+)?NULL\s*$", string.Empty, RegexOptions.IgnoreCase);
 }

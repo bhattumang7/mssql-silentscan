@@ -11,7 +11,7 @@ public sealed class TableVariableStaleEstimateInLoopVerifier : RuleVerifier<Quer
     protected override Perturbation Describe(QueryAntiPatternFinding finding)
     {
         var variable = finding.DetailText.Split(' ', 2)[0];
-        var statement = new Regex(
+        var statement = VerifierRegex.Create(
             @"(\bSELECT\b(?:(?!OPTION)[^;])*" + Regex.Escape(variable) + @"\b(?:(?!OPTION)[^;])*)(;)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

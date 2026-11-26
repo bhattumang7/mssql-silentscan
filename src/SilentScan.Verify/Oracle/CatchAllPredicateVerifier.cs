@@ -10,7 +10,7 @@ public sealed class CatchAllPredicateVerifier : RuleVerifier<CatchAllPredicateFi
 
     protected override Perturbation Describe(CatchAllPredicateFinding finding)
     {
-        var statement = new Regex(
+        var statement = VerifierRegex.Create(
             @"(\bWHERE\b(?:(?!OPTION)[^;])*" + Regex.Escape(finding.ParameterName) + @"\b(?:(?!OPTION)[^;])*)(;)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

@@ -15,7 +15,7 @@ public sealed class OutputReturnedToClientVerifier : RuleVerifier<ForcedSerialFi
             return Perturbation.NotApplicable("The finding does not carry the OUTPUT clause text.");
         }
 
-        var withoutInto = new Regex(Regex.Escape(clause) + @"(?!\s+INTO\b)", RegexOptions.IgnoreCase);
+        var withoutInto = VerifierRegex.Create(Regex.Escape(clause) + @"(?!\s+INTO\b)", RegexOptions.IgnoreCase);
         return new Perturbation(
             [],
             Difference.PlanChanged,

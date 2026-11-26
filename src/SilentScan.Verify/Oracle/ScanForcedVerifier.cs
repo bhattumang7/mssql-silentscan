@@ -15,8 +15,8 @@ public sealed class ScanForcedVerifier : RuleVerifier<TypedPredicateFinding>
             return Perturbation.NotApplicable("The finding does not carry the column type and the other operand's text.");
         }
 
-        var bareType = Regex.Replace(columnType, @"\s+COLLATE\s+\S+|\s+(?:NOT\s+)?NULL\s*$", string.Empty, RegexOptions.IgnoreCase);
-        var occurrence = new Regex(Regex.Escape(operand));
+        var bareType = VerifierRegex.Replace(columnType, @"\s+COLLATE\s+\S+|\s+(?:NOT\s+)?NULL\s*$", string.Empty, RegexOptions.IgnoreCase);
+        var occurrence = VerifierRegex.Create(Regex.Escape(operand));
         return new Perturbation(
             [],
             Difference.PlanChanged,

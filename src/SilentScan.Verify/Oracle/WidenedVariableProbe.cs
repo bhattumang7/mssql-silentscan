@@ -13,7 +13,7 @@ internal static class WidenedVariableProbe
             return Perturbation.NotApplicable("The finding does not name a variable, parameter or return target.");
         }
 
-        var declaration = new Regex("(" + head + ")(" + typePattern + ")" + (target == "ParameterDefault" ? @"(?=\s*=)" : string.Empty), RegexOptions.IgnoreCase);
+        var declaration = VerifierRegex.Create("(" + head + ")(" + typePattern + ")" + (target == "ParameterDefault" ? @"(?=\s*=)" : string.Empty), RegexOptions.IgnoreCase);
         string? original = null;
         return new Perturbation(
             [],

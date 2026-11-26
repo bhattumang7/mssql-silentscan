@@ -10,7 +10,7 @@ public sealed class IsNullReplacementTruncationVerifier : RuleVerifier<IsNullRep
 
     protected override Perturbation Describe(IsNullReplacementValueTruncationFinding finding)
     {
-        var call = new Regex(
+        var call = VerifierRegex.Create(
             @"\bISNULL\s*\(\s*" + Regex.Escape(finding.CheckExpressionDisplay) + @"\s*,\s*" + Regex.Escape(finding.ReplacementValueDisplay) + @"\s*\)",
             RegexOptions.IgnoreCase);
         return new Perturbation(

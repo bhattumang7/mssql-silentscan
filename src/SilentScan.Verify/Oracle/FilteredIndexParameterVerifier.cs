@@ -10,7 +10,7 @@ public sealed class FilteredIndexParameterVerifier : RuleVerifier<FilteredIndexP
 
     protected override Perturbation Describe(FilteredIndexParameterMismatchFinding finding)
     {
-        var statement = new Regex(
+        var statement = VerifierRegex.Create(
             @"(\bWHERE\b(?:(?!OPTION)[^;])*" + Regex.Escape(finding.VariableName) + @"\b(?:(?!OPTION)[^;])*)(;)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

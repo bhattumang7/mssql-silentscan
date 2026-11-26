@@ -11,12 +11,12 @@ public sealed class ProcCallArgumentMismatchVerifier : RuleVerifier<ProcCallArgu
     protected override Perturbation Describe(ProcCallArgumentMismatchFinding finding)
     {
         if (finding.IsOutputWriteback
-            || !Regex.IsMatch(finding.FormalParameterTypeDisplay, @"^(?:n?var)?char\s*\(|^n?char\s*\(|^(?:var)?binary\s*\(", RegexOptions.IgnoreCase))
+            || !VerifierRegex.IsMatch(finding.FormalParameterTypeDisplay, @"^(?:n?var)?char\s*\(|^n?char\s*\(|^(?:var)?binary\s*\(", RegexOptions.IgnoreCase))
         {
             return Perturbation.NotApplicable("The probe handles input string and binary parameters only.");
         }
 
-        var declaration = new Regex(
+        var declaration = VerifierRegex.Create(
             @"(" + Regex.Escape(finding.FormalParameterName) + @"\s+(?:AS\s+)?)(n?varchar|n?char|varbinary|binary)\s*\(\s*\d+\s*\)",
             RegexOptions.IgnoreCase);
         string? original = null;

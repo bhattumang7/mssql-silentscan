@@ -10,7 +10,7 @@ public sealed class ParameterReassignmentVerifier : RuleVerifier<ParameterReassi
 
     protected override Perturbation Describe(ParameterReassignmentPredicateFinding finding)
     {
-        var statement = new Regex(
+        var statement = VerifierRegex.Create(
             @"(\bWHERE\b(?:(?!OPTION)[^;])*" + Regex.Escape(finding.ParameterName) + @"\b(?:(?!OPTION)[^;])*)(;)",
             RegexOptions.IgnoreCase | RegexOptions.Singleline);
         return new Perturbation(

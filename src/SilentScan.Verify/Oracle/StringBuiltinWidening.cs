@@ -10,7 +10,7 @@ internal static class StringBuiltinWidening
 
     public static string? Rewrite(string statement, string functionName)
     {
-        var call = new Regex(@"\b" + Regex.Escape(functionName) + @"\s*\(", RegexOptions.IgnoreCase);
+        var call = VerifierRegex.Create(@"\b" + Regex.Escape(functionName) + @"\s*\(", RegexOptions.IgnoreCase);
         var matches = call.Matches(statement);
         if (matches.Count != 1)
         {

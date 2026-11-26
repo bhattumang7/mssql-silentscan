@@ -12,12 +12,12 @@ public sealed class SpExecuteSqlParameterMismatchVerifier : RuleVerifier<SpExecu
     {
         if (finding.CallerScopeQualifiedName is not { } module
             || finding.IsOutputWriteback
-            || !Regex.IsMatch(finding.DeclaredParameterTypeDisplay, @"^(?:n?var)?char\s*\(|^n?char\s*\(|^(?:var)?binary\s*\(", RegexOptions.IgnoreCase))
+            || !VerifierRegex.IsMatch(finding.DeclaredParameterTypeDisplay, @"^(?:n?var)?char\s*\(|^n?char\s*\(|^(?:var)?binary\s*\(", RegexOptions.IgnoreCase))
         {
             return Perturbation.NotApplicable("The probe handles input string and binary parameters declared in a named module only.");
         }
 
-        var declaration = new Regex(
+        var declaration = VerifierRegex.Create(
             @"(" + Regex.Escape(finding.ParameterName) + @"\s+(?:AS\s+)?)(n?varchar|n?char|varbinary|binary)\s*\(\s*\d+\s*\)",
             RegexOptions.IgnoreCase);
         string? original = null;
