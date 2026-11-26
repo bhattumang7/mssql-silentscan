@@ -29,6 +29,25 @@ public sealed class CatchAllPredicateScannerTests
     }
 
     [Fact]
+    public void InsertSelectWithOptionRecompile_NeverFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN INSERT INTO dbo.Orders (CustomerId, Code) SELECT Id, Code FROM dbo.Customers WHERE (Code = @p OR @p IS NULL) OPTION (RECOMPILE); END");
+
+        Assert.Empty(findings);
+    }
+
+    [Fact]
+    public void InsertSelectWithoutAHint_AfterARecompiledInsert_StillFires()
+    {
+        var findings = Scan(
+            "CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN INSERT INTO dbo.Orders (CustomerId, Code) SELECT Id, Code FROM dbo.Customers WHERE Id = 1 OPTION (RECOMPILE); "
+            + "INSERT INTO dbo.Orders (CustomerId, Code) SELECT Id, Code FROM dbo.Customers WHERE (Code = @p OR @p IS NULL); END");
+
+        Assert.Single(findings);
+    }
+
+    [Fact]
     public void CatchAllPair_InsideUnsatisfiableAndBranch_EliminatedByNormalization()
     {
         var findings = Scan(

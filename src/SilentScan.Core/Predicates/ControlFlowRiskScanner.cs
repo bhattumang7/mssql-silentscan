@@ -74,7 +74,8 @@ public static class ControlFlowRiskScanner
                     "NOLOCK/READUNCOMMITTED allows dirty reads of uncommitted, possibly-rolled-back data, and can miss or double-count rows during a concurrent page split.",
                     FindingConfidence.Low));
             }
-            else if (node.HintKind == TableHintKind.ReadCommittedLock && catalog.IsReadCommittedSnapshotOn == true)
+            else if (node.HintKind == TableHintKind.ReadCommittedLock && catalog.IsReadCommittedSnapshotOn == true
+                && !HintIsOnSessionLocalTemporaryTable(node))
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.ReadCommittedLockRevertsRowVersioning,

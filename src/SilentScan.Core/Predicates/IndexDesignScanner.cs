@@ -68,7 +68,7 @@ public static class IndexDesignScanner
             return;
         }
 
-        var activeNonclustered = table.Indexes.Where(i => !i.IsDisabled).ToList();
+        var activeNonclustered = table.Indexes.Where(i => !i.IsDisabled && !i.IsHypothetical).ToList();
         if (activeNonclustered.Count == 0)
         {
 

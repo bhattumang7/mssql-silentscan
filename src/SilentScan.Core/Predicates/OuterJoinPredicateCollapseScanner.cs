@@ -102,7 +102,7 @@ public static class OuterJoinPredicateCollapseScanner
                     InspectOperand(between.FirstExpression, nullSupplyingAliases);
                     break;
 
-                case InPredicate inPredicate:
+                case InPredicate inPredicate when !KeepsNullAgainstEmptySubquery(inPredicate, negated: false):
                     InspectOperand(inPredicate.Expression, nullSupplyingAliases);
                     break;
 
@@ -129,7 +129,7 @@ public static class OuterJoinPredicateCollapseScanner
                     InspectOperand(cmp.FirstExpression, nullSupplyingAliases);
                     InspectOperand(cmp.SecondExpression, nullSupplyingAliases);
                     break;
-                case InPredicate inPredicate:
+                case InPredicate inPredicate when !KeepsNullAgainstEmptySubquery(inPredicate, negated: true):
                     InspectOperand(inPredicate.Expression, nullSupplyingAliases);
                     break;
                 case LikePredicate like:
@@ -140,6 +140,9 @@ public static class OuterJoinPredicateCollapseScanner
                     break;
             }
         }
+
+        private static bool KeepsNullAgainstEmptySubquery(InPredicate predicate, bool negated) =>
+            predicate.Subquery is not null && predicate.NotDefined != negated;
 
         private void InspectOperand(ScalarExpression operand, Dictionary<string, AliasNullSide> nullSupplyingAliases)
         {

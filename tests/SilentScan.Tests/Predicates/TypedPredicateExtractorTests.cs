@@ -2588,6 +2588,18 @@ public sealed class TypedPredicateExtractorTests
         Assert.DoesNotContain(result.TypedFindings, f => f.Column.ColumnName == "Col");
         Assert.DoesNotContain(result.SkippedConstructs, s => s.ConstructKind == "no column operand");
     }
+
+    [Theory]
+    [InlineData(" OPTION (RECOMPILE)", 0)]
+    [InlineData("", 1)]
+    public void Extract_LocalVariableInInsertSelect_FollowsTheStatementRecompileHint(string hint, int expected)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, INDEX IX_Code (Code)); CREATE TABLE dbo.Sink (Id INT NOT NULL);",
+            "CREATE PROCEDURE dbo.usp_Copy AS BEGIN DECLARE @code VARCHAR(20) = 'a'; INSERT INTO dbo.Sink (Id) SELECT Id FROM dbo.Customers WHERE Code = @code" + hint + "; END");
+
+        Assert.Equal(expected, result.LocalVariablePredicateFindings.Count);
+    }
 }
 
 [Trait("Category", "Oracle")]

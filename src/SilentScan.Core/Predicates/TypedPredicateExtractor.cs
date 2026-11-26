@@ -385,8 +385,11 @@ public static class TypedPredicateExtractor
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {
             _currentWriteStatement = node;
+            _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
             AnalyzeInsertWriteLoss(node.InsertSpecification, walker);
         }
+
+        public void OnLeaveInsertStatementScope(InsertStatement node, ModuleWalker walker) => EndStatementOptimizerHints();
 
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));

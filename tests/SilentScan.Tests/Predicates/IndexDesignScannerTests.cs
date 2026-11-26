@@ -636,4 +636,14 @@ public sealed class IndexDesignScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.NoRecomputeStatistics);
     }
+
+    [Fact]
+    public void HeapWithOnlyAHypotheticalIndex_NeverFires()
+    {
+        var catalog = new DatabaseCatalog();
+        var index = new CatalogIndex("IX_Orders_CustomerId", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsClustered: false, IsHypothetical: true);
+        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType)], [index]));
+
+        Assert.DoesNotContain(IndexDesignScanner.Scan(catalog), f => f.Kind == IndexDesignFindingKind.HeapWithNonclusteredIndexes);
+    }
 }

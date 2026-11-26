@@ -389,4 +389,17 @@ public sealed class ControlFlowRiskScannerTests
 
         Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.CaseExpressionMissingElse);
     }
+
+    [Theory]
+    [InlineData("#Work", 0)]
+    [InlineData("##Work", 1)]
+    [InlineData("dbo.Work", 1)]
+    public void ReadCommittedLockHint_IsReportedOnlyWhereAnotherSessionCanWrite(string table, int expected)
+    {
+        var catalog = new DatabaseCatalog { IsReadCommittedSnapshotOn = true };
+
+        var findings = Scan($"SELECT Id FROM {table} WITH (READCOMMITTEDLOCK);", catalog);
+
+        Assert.Equal(expected, findings.Count(f => f.Kind == ControlFlowRiskFindingKind.ReadCommittedLockRevertsRowVersioning));
+    }
 }

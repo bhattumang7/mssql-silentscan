@@ -33,6 +33,8 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS DISTINCT FROM 7;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y IS NOT DISTINCT FROM 7);")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IS NOT DISTINCT FROM NULL;")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y NOT IN (SELECT X FROM dbo.A);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y IN (SELECT X FROM dbo.A));")]
     public void PredicateThatKeepsNullSuppliedRows_NeverFires(string sql)
     {
         Assert.Empty(Scan(sql));
@@ -43,6 +45,9 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE CAST(b.Y AS VARCHAR(5)) = '1';")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE (b.Y) = 1;")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IN (1, 2);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y IN (SELECT X FROM dbo.A);")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y NOT IN (SELECT X FROM dbo.A));")]
+    [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE NOT (b.Y IN (1, 2));")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y NOT IN (1, 2);")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y LIKE '1%';")]
     [InlineData("SELECT * FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE b.Y + 1 = 2;")]

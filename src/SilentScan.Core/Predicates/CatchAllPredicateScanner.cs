@@ -98,6 +98,12 @@ public static class CatchAllPredicateScanner
             }
         }
 
+        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
+
+        public void OnLeaveInsertStatementScope(InsertStatement node, ModuleWalker walker) =>
+            _statementHasOptionRecompile = _statementRecompileStack.Pop();
+
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
