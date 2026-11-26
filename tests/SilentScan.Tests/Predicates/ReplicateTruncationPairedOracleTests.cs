@@ -24,12 +24,12 @@ public sealed class ReplicateTruncationPairedOracleTests : RuleOracle
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
         new(Truncating, Setup, "SELECT LEN(REPLICATE('abcdefghij', 900)) AS L;"),
-        new("fractional-count-past-cap", Setup, "SELECT LEN(REPLICATE('abcdefghij', 900.5)) AS L;"),
+        new("fractional-count-past-cap", Setup, "SELECT LEN(REPLICATE('abcdefghij', 900.5)) AS L;", "literal-repeated-past-cap"),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
         new(new("repeated-within-cap", Setup, "SELECT LEN(REPLICATE('abcdefghij', 100)) AS L;"), Truncating),
-        new(new("fractional-count-truncating-to-cap", Setup, "SELECT LEN(REPLICATE('abcdefghij', 800.9)) AS L;"), "fractional-count-past-cap"),
+        new(new("fractional-count-truncating-to-cap", Setup, "SELECT LEN(REPLICATE('abcdefghij', 800.9)) AS L;", "repeated-within-cap"), "fractional-count-past-cap"),
     ];
 }

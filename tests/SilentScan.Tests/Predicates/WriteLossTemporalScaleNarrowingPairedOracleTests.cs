@@ -30,14 +30,14 @@ public sealed class WriteLossTemporalScaleNarrowingPairedOracleTests : RuleOracl
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
         new(Narrowed, Lossy, "EXEC dbo.P;"),
-        new("datetime2-milliseconds-assigned-to-datetime", MillisecondLossy, "EXEC dbo.P;"),
-        new("datetime-assigned-to-whole-seconds", DateTimeIntoSeconds, "EXEC dbo.P;"),
+        new("datetime2-milliseconds-assigned-to-datetime", MillisecondLossy, "EXEC dbo.P;", Narrowed),
+        new("datetime-assigned-to-whole-seconds", DateTimeIntoSeconds, "EXEC dbo.P;", Narrowed),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
         new(new("value-fits-the-variable", Lossless, "EXEC dbo.P;"), Narrowed, OwnSetup: true),
-        new(new("centiseconds-fit-datetime", MillisecondLossless, "EXEC dbo.P;"), "datetime2-milliseconds-assigned-to-datetime", OwnSetup: true),
-        new(new("datetime-fits-datetime2-full-scale", DateTimeIntoFullScale, "EXEC dbo.P;"), "datetime-assigned-to-whole-seconds", OwnSetup: true),
+        new(new("centiseconds-fit-datetime", MillisecondLossless, "EXEC dbo.P;", "value-fits-the-variable"), "datetime2-milliseconds-assigned-to-datetime", OwnSetup: true),
+        new(new("datetime-fits-datetime2-full-scale", DateTimeIntoFullScale, "EXEC dbo.P;", "value-fits-the-variable"), "datetime-assigned-to-whole-seconds", OwnSetup: true),
     ];
 }

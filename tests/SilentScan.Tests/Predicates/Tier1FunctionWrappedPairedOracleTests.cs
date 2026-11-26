@@ -29,12 +29,12 @@ public sealed class Tier1FunctionWrappedPairedOracleTests : RuleOracle
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
         new(Wrapped, Setup, "SELECT Id FROM dbo.T WHERE LTRIM(X) = 'k5';"),
-        new("wrapped-column-like", Setup, "SELECT Id FROM dbo.T WHERE RTRIM(X) LIKE 'k5%';"),
+        new("wrapped-column-like", Setup, "SELECT Id FROM dbo.T WHERE RTRIM(X) LIKE 'k5%';", Wrapped),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
         new(new("residual-beside-a-key-seek", Setup, "SELECT Id FROM dbo.T WHERE Id = 5 AND LTRIM(X) = 'k5';"), Wrapped),
-        new(new("bare-column-like-prefix", Setup, "SELECT Id FROM dbo.T WHERE X LIKE 'k5%';"), "wrapped-column-like"),
+        new(new("bare-column-like-prefix", Setup, "SELECT Id FROM dbo.T WHERE X LIKE 'k5%';", "bare-column-like-prefix"), "wrapped-column-like"),
     ];
 }

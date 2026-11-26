@@ -568,6 +568,13 @@
       "status": "Ledgered",
       "verifiedBy": "Catalog.CatalogBuilderTests",
       "rationale": "Roadmap Phase A2: genuine cross-database switching mid-scan is deliberately not modeled - checked against the real pinned 5-repo corpus for evidence first, and none exercises actual cross-database referencing (mojoportal's two distinct USE targets are each a standalone script naming its own single dev database, never referencing the other). Building unverified resolution logic for a pattern nothing in the corpus exercises would be speculative complexity this project's oracle-verified-only discipline exists to avoid. USE is now ledgered rather than silently swallowed (it previously left zero trace anywhere); every scanned object still resolves against the single implicit target database, unchanged from before."
+    },
+    {
+      "construct": "AlterSequenceStatement",
+      "group": "CatalogLifecycle",
+      "status": "Gap",
+      "verifiedBy": null,
+      "rationale": "CatalogBuilder records a sequence's data type from CreateSequenceStatement. ALTER SEQUENCE can restart the counter, change the increment, bounds, cycle and cache options, but cannot change the AS data type, so nothing the catalog keeps (the sequence's type) can differ after an ALTER. Accepted as a permanent scope decision because no code path would read the altered options."
     }
   ]
 }

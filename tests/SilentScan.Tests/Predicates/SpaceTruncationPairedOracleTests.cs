@@ -24,12 +24,12 @@ public sealed class SpaceTruncationPairedOracleTests : RuleOracle
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
         new(Truncating, Setup, "SELECT LEN(SPACE(9000) + 'x') AS L;"),
-        new("fractional-count-past-cap", Setup, "SELECT LEN(SPACE(9000.5) + 'x') AS L;"),
+        new("fractional-count-past-cap", Setup, "SELECT LEN(SPACE(9000.5) + 'x') AS L;", "count-past-cap"),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
         new(new("count-within-cap", Setup, "SELECT LEN(SPACE(100) + 'x') AS L;"), Truncating),
-        new(new("fractional-count-within-cap", Setup, "SELECT LEN(SPACE(7000.9) + 'x') AS L;"), "fractional-count-past-cap"),
+        new(new("fractional-count-within-cap", Setup, "SELECT LEN(SPACE(7000.9) + 'x') AS L;", "count-within-cap"), "fractional-count-past-cap"),
     ];
 }
