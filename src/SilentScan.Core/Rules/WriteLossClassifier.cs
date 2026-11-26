@@ -98,7 +98,16 @@ public static partial class WriteLossClassifier
 
     public static bool IsTemporalScaleNarrowingRisk(SqlType target, SqlType source) =>
         target.IsFractionalSecondsFamily && source.IsFractionalSecondsFamily
-        && target.Scale is { } targetScale && source.Scale is { } sourceScale && targetScale < sourceScale;
+        && target.Scale is { } targetScale && source.Scale is { } sourceScale && targetScale < sourceScale
+        || IsDateTimeGridLoss(target, source);
+
+    private static bool IsDateTimeGridLoss(SqlType target, SqlType source) =>
+        target.Category == SqlTypeCategory.DateTime
+            && source.Category is SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset
+            && source.Scale is >= 3
+        || source.Category == SqlTypeCategory.DateTime
+            && target.Category is SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset
+            && target.Scale is < 7;
 
     private static bool IsSmallDateTimeRoundingRisk(SqlType target, SqlType source, Literal? literal) =>
         target.Category == SqlTypeCategory.SmallDateTime

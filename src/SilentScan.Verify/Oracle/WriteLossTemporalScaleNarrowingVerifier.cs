@@ -12,6 +12,6 @@ public sealed class WriteLossTemporalScaleNarrowingVerifier : RuleVerifier<Write
             finding.Target.ToString(),
             finding.ColumnName,
             finding.SourcePath,
-            @"(?:datetime2|time|datetimeoffset)\s*\(\s*\d+\s*\)",
-            static type => type.Split('(')[0].Trim() + "(7)");
+            @"(?:datetime2|time|datetimeoffset)\s*\(\s*\d+\s*\)|datetime\b(?!\s*\()",
+            static type => type.Equals("datetime", StringComparison.OrdinalIgnoreCase) ? "DATETIME2(7)" : type.Split('(')[0].Trim() + "(7)");
 }
