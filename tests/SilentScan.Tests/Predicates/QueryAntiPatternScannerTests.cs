@@ -60,7 +60,7 @@ public sealed class QueryAntiPatternScannerTests
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
             + "CREATE PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
-            compatibilityLevel: 160);
+            compatibilityLevel: 150);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
@@ -339,7 +339,7 @@ public sealed class QueryAntiPatternScannerTests
         var findings = Scan(
             "DECLARE @i INT = 0; "
             + "WHILE @i < 100 BEGIN "
-            + "UPDATE dbo.Big SET Col = 'x' WHERE Id = @i AND Col = 'y'; "
+            + "UPDATE dbo.Big SET Col = 'x' WHERE Id = @i AND Col > 'y'; "
             + "SET @i = @i + 1; END;");
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.RbarSingleRowLoopDml);
@@ -1333,5 +1333,37 @@ public sealed class QueryAntiPatternScannerTests
             compatibilityLevel: 170);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
+    }
+
+    [Theory]
+    [InlineData("WHERE A = @i AND B = @i", true)]
+    [InlineData("WHERE (B = 1) AND (A = @i)", true)]
+    [InlineData("WHERE A = @i", false)]
+    [InlineData("WHERE A = @i AND V = @i", false)]
+    [InlineData("WHERE A = @i AND B > @i", false)]
+    [InlineData("WHERE A = 1 AND B = 2", false)]
+    public void WhileLoopDmlOnACompositeKey_FiresOnlyWhenEveryKeyColumnIsEquated(string where, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TABLE dbo.K (A INT NOT NULL, B INT NOT NULL, V INT NOT NULL, PRIMARY KEY (A, B));\nGO\n"
+            + $"DECLARE @i INT = 0; WHILE @i < 100 BEGIN UPDATE dbo.K SET V = 0 {where}; SET @i = @i + 1; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.RbarSingleRowLoopDml));
+    }
+
+    [Theory]
+    [InlineData(160, "SELECT Id FROM @ids WHERE Id = @id;", true)]
+    [InlineData(160, "DELETE FROM dbo.Big WHERE Id = @id AND Id IN (SELECT Id FROM @ids);", false)]
+    [InlineData(160, "INSERT INTO dbo.Big (Id) SELECT Id FROM @ids WHERE Id = @id;", false)]
+    [InlineData(170, "DELETE FROM dbo.Big WHERE Id = @id AND Id IN (SELECT Id FROM @ids);", true)]
+    [InlineData(150, "SELECT Id FROM @ids WHERE Id = @id;", false)]
+    public void TableValuedParameterPspSkip_StartsAtCompat160ForSelectAndAt170ForDml(int level, string statement, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
+            + $"CREATE PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS {statement}",
+            compatibilityLevel: level);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip));
     }
 }

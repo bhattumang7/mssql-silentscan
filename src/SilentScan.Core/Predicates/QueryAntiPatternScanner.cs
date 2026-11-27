@@ -54,7 +54,7 @@ public static class QueryAntiPatternScanner
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _scalarParameterNames = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Stack<bool> _statementsComparingAColumnToAParameter = new();
+        private readonly Stack<(bool ComparesAColumnToAParameter, bool IsSelect)> _hintedStatements = new();
 
         private static string? AliasOf(TableReference reference) =>
             reference is NamedTableReference named ? named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value : null;
@@ -122,11 +122,15 @@ public static class QueryAntiPatternScanner
                 FindingConfidence.High));
         }
 
+        private const int SelectPspCompatibilityLevel = 160;
+        private const int DataModificationPspCompatibilityLevel = 170;
+
         private void InspectTableValuedParameterPspSkip(VariableTableReference variableRef)
         {
             if (!_tableValuedParameterNames.Contains(variableRef.Variable.Name)
-                || !_statementsComparingAColumnToAParameter.TryPeek(out var parameterSensitive) || !parameterSensitive
-                || catalog.CompatibilityLevel is not >= 170
+                || !_hintedStatements.TryPeek(out var statement) || !statement.ComparesAColumnToAParameter
+                || catalog.CompatibilityLevel is not { } level
+                || level < (statement.IsSelect ? SelectPspCompatibilityLevel : DataModificationPspCompatibilityLevel)
                 || catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
             {
                 return;
@@ -167,7 +171,7 @@ public static class QueryAntiPatternScanner
             _hintedCompatibilityLevels.Push(HintedCompatibilityLevel(statement));
             var finder = new ColumnToParameterEqualityFinder(_scalarParameterNames);
             statement.Accept(finder);
-            _statementsComparingAColumnToAParameter.Push(finder.Found);
+            _hintedStatements.Push((finder.Found, statement is SelectStatement));
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth++;
@@ -177,7 +181,7 @@ public static class QueryAntiPatternScanner
         private void LeaveStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
             _hintedCompatibilityLevels.Pop();
-            _statementsComparingAColumnToAParameter.Pop();
+            _hintedStatements.Pop();
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth--;
@@ -683,66 +687,49 @@ public static class QueryAntiPatternScanner
 
             foreach (var (where, line, column, target) in dmlSites)
             {
-                if (SingleVariableEqualityColumn(where, assignedVariables) is { } detail
-                    && ComparedColumnIdentifiesOneRow(target, where))
+                if (VariableKeyedEqualities(where, assignedVariables) is { } equalities
+                    && ComparedColumnsIdentifyOneRow(target, equalities.Columns))
                 {
                     Findings.Add(new QueryAntiPatternFinding(
                         QueryAntiPatternFindingKind.RbarSingleRowLoopDml, sourcePath, line, column,
-                        detail, FindingConfidence.Medium));
+                        equalities.Detail, FindingConfidence.Medium));
                 }
             }
         }
 
-        private bool ComparedColumnIdentifiesOneRow(TableReference? target, WhereClause? where)
+        private bool ComparedColumnsIdentifyOneRow(TableReference? target, HashSet<string> columns) =>
+            target is NamedTableReference named
+            && catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject))) is { } table
+            && table.Indexes.Any(index => index.IsUnique && !index.IsFiltered && !index.IsDisabled
+                && index.KeyColumns.Count > 0 && index.KeyColumns.All(columns.Contains));
+
+        private (HashSet<string> Columns, string Detail)? VariableKeyedEqualities(WhereClause? where, HashSet<string> loopVariables)
         {
-            var condition = where?.SearchCondition;
-            while (condition is BooleanParenthesisExpression paren)
+            var columns = new HashSet<string>(catalog.IdentifierComparer);
+            var keyed = new List<string>();
+            foreach (var conjunct in PredicateTreeWalker.FlattenAnd(where?.SearchCondition))
             {
-                condition = paren.Expression;
+                if (conjunct is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison
+                    || (comparison.FirstExpression as ColumnReferenceExpression ?? comparison.SecondExpression as ColumnReferenceExpression)
+                        is not { MultiPartIdentifier.Identifiers: [.., { Value: { } column }] } reference)
+                {
+                    return null;
+                }
+
+                var value = ReferenceEquals(reference, comparison.FirstExpression) ? comparison.SecondExpression : comparison.FirstExpression;
+                if (value is not (VariableReference or Literal))
+                {
+                    return null;
+                }
+
+                columns.Add(column);
+                if (value is VariableReference variable && loopVariables.Contains(variable.Name))
+                {
+                    keyed.Add($"{column} = {variable.Name}");
+                }
             }
 
-            if (target is not NamedTableReference named
-                || condition is not BooleanComparisonExpression cmp
-                || (cmp.FirstExpression as ColumnReferenceExpression ?? cmp.SecondExpression as ColumnReferenceExpression)
-                    is not { MultiPartIdentifier.Identifiers: [.., { } column] }
-                || catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject))) is not { } table)
-            {
-                return false;
-            }
-
-            return table.Indexes.Any(index => index.IsUnique && !index.IsFiltered && !index.IsDisabled
-                && index.KeyColumns.Count == 1 && catalog.IdentifierComparer.Equals(index.KeyColumns[0], column.Value));
-        }
-
-        private static string? SingleVariableEqualityColumn(WhereClause? where, HashSet<string> loopVariables)
-        {
-            var condition = where?.SearchCondition;
-            while (condition is BooleanParenthesisExpression paren)
-            {
-                condition = paren.Expression;
-            }
-
-            if (condition is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } cmp)
-            {
-                return null;
-            }
-
-            var (columnExpr, variableExpr) = cmp.FirstExpression switch
-            {
-                ColumnReferenceExpression col when cmp.SecondExpression is VariableReference v => (col, v),
-                VariableReference v when cmp.SecondExpression is ColumnReferenceExpression col => (col, v),
-                _ => (null, null),
-            };
-
-            if (columnExpr is null || variableExpr is null || !loopVariables.Contains(variableExpr.Name))
-            {
-                return null;
-            }
-
-            var columnName = columnExpr.MultiPartIdentifier.Identifiers is { Count: > 0 } identifiers
-                ? identifiers[^1].Value
-                : "?";
-            return $"{columnName} = {variableExpr.Name}";
+            return keyed.Count == 0 ? null : (columns, string.Join(" AND ", keyed));
         }
 
         private sealed class LoopDmlAndAssignmentCollector(
