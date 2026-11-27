@@ -20,6 +20,12 @@ internal static class ReplaceResultTruncated
             When the input, the text being replaced, and its replacement are all compile-time
             constants, the exact resulting length - and how many times the replacement occurs - is
             knowable from the source text alone.
+
+            The 8000 limit counts bytes, so in a database with a UTF-8 collation a literal made of
+            multi-byte characters reaches it with fewer characters.
+
+            The search text is matched under the collation, so a case-insensitive collation also
+            replaces occurrences that differ only in case.
             """,
         HowToFixIt: """
             Cast the input literal to VARCHAR(MAX)/NVARCHAR(MAX) before replacing

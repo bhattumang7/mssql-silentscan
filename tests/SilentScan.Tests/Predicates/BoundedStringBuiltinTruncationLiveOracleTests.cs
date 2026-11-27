@@ -179,4 +179,28 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
 
         Assert.Empty(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner"));
     }
+
+    [Theory]
+    [InlineData("SELECT REPLACE('{0}', 'a', 'bb');", true)]
+    [InlineData("SELECT REPLACE('{0}' COLLATE Latin1_General_CS_AS, 'a', 'bb');", false)]
+    public async Task LiveDeployment_ReplaceMatchesUnderTheLiteralCollation(string statement, bool truncates)
+    {
+        var sql = string.Format(System.Globalization.CultureInfo.InvariantCulture, statement, new string('A', 4001));
+        await AssertEngineAndScannerAgreeAsync(sql, truncates, expectedBytes: truncates ? 8000 : 4001);
+    }
+
+    private static async Task AssertEngineAndScannerAgreeAsync(string select, bool truncates, int expectedBytes)
+    {
+        var options = SilentScan.Verify.SqlServerOptions.LocalDocker;
+        await using var connection = new Microsoft.Data.SqlClient.SqlConnection(options.BuildConnectionString());
+        await connection.OpenAsync();
+        await using var command = new Microsoft.Data.SqlClient.SqlCommand(
+            "SELECT DATALENGTH(v.x) FROM (" + select.TrimEnd(';') + " AS x) AS v;", connection);
+
+        Assert.Equal(expectedBytes, Convert.ToInt32(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture));
+
+        var report = await EngineAuthoritativeScan.ScanAsync($"CREATE PROCEDURE dbo.usp_Probe AS BEGIN {select} END");
+
+        Assert.Equal(truncates, report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Count > 0);
+    }
 }

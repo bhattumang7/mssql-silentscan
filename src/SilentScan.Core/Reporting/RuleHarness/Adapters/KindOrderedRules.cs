@@ -40,9 +40,9 @@ internal sealed class BoundedStringBuiltinTruncationRule : IPerFileRule
 {
     public string Id => "BoundedStringBuiltinTruncationScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.Scan(parseResult);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.Scan(parseResult, context.Catalog);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<BoundedStringBuiltinTruncationFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.CreateRule(parseResult.SourcePath);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => BoundedStringBuiltinTruncationScanner.CreateRule(parseResult.SourcePath, context.Catalog);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => BoundedStringBuiltinTruncationScanner.Harvest((BoundedStringBuiltinTruncationScanner.Rule)moduleRule);
 }
 

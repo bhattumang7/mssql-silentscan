@@ -23,6 +23,9 @@ internal static class ReplicateResultTruncated
             When both the source literal and the repeat count are compile-time constants, the exact
             repeated length is knowable from the source text alone - no catalog access or runtime
             data is needed to prove the overflow.
+
+            The 8000 limit counts bytes, so in a database with a UTF-8 collation a literal made of
+            multi-byte characters reaches it with fewer characters.
             """,
         HowToFixIt: """
             Cast the source literal to VARCHAR(MAX)/NVARCHAR(MAX) before repeating it

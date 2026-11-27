@@ -1,8 +1,10 @@
+using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -11,15 +13,16 @@ public static class BoundedStringBuiltinTruncationScanner
     private const int NonUnicodeCapBytes = 8000;
     private const int UnicodeCapBytes = 4000;
 
-    public static IReadOnlyList<BoundedStringBuiltinTruncationFinding> Scan(SqlParseResult parseResult)
+    public static IReadOnlyList<BoundedStringBuiltinTruncationFinding> Scan(SqlParseResult parseResult, DatabaseCatalog? catalog = null)
     {
-        var rule = CreateRule(parseResult.SourcePath);
-        var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
+        var scanned = catalog ?? new DatabaseCatalog();
+        var rule = CreateRule(parseResult.SourcePath, scanned);
+        var walker = new ModuleWalker(parseResult.SourcePath, scanned, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return Harvest(rule);
     }
 
-    internal static Rule CreateRule(string sourcePath) => new(sourcePath);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog catalog) => new(sourcePath, catalog.DefaultCollation);
 
     internal static IReadOnlyList<BoundedStringBuiltinTruncationFinding> Harvest(Rule rule) =>
         [
@@ -32,7 +35,7 @@ public static class BoundedStringBuiltinTruncationScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath) : IModuleRule
+    internal sealed class Rule(string sourcePath, Collation? databaseCollation) : IModuleRule
     {
         public List<BoundedStringBuiltinTruncationFinding> Findings { get; } = [];
 
@@ -68,12 +71,13 @@ public static class BoundedStringBuiltinTruncationScanner
             }
 
             var cap = source.IsNational ? UnicodeCapBytes : NonUnicodeCapBytes;
-            if (source.Value.Length > cap)
+            var length = LengthInCapUnits(source.Value, source.IsNational);
+            if (length > cap)
             {
                 return;
             }
 
-            var computed = (long)source.Value.Length * (long)countValue;
+            var computed = length * (long)countValue;
             if (computed <= cap)
             {
                 return;
@@ -90,25 +94,34 @@ public static class BoundedStringBuiltinTruncationScanner
             }
 
             var cap = input.IsNational ? UnicodeCapBytes : NonUnicodeCapBytes;
-            if (input.Value.Length > cap)
+            if (LengthInCapUnits(input.Value, input.IsNational) > cap)
             {
                 return;
             }
 
             if (LiteralComparisonFolder.TryFoldToString(node.Parameters[1]) is not { Length: > 0 } from
                 || LiteralComparisonFolder.TryFoldToString(node.Parameters[2]) is not { } to
-                || to.Length <= from.Length)
+                || LengthInCapUnits(to, input.IsNational) <= LengthInCapUnits(from, input.IsNational))
             {
                 return;
             }
 
-            var replaced = input.Value.Replace(from, to, StringComparison.Ordinal);
-            if (replaced.Length <= cap)
+            var replaced = LengthInCapUnits(input.Value.Replace(from, to, MatchingComparison(input)), input.IsNational);
+            if (replaced <= cap)
             {
                 return;
             }
 
-            Add(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated, "REPLACE", replaced.Length, cap, node);
+            Add(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated, "REPLACE", replaced, cap, node);
+        }
+
+        private long LengthInCapUnits(string value, bool isNational) =>
+            !isNational && databaseCollation is { IsUtf8: true } ? Encoding.UTF8.GetByteCount(value) : value.Length;
+
+        private StringComparison MatchingComparison(StringLiteral input)
+        {
+            var collation = input.Collation is { } explicitCollation ? new Collation(explicitCollation.Value) : databaseCollation;
+            return collation is { IsCaseSensitive: false } ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         }
 
         private void CheckSpace(FunctionCall node)
