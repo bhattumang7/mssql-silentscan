@@ -335,4 +335,13 @@ public sealed class CartesianJoinScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("SELECT 1 FROM dbo.Config c, dbo.Orders o WHERE c.Val = 1 AND c.Val = 2;", false)]
+    [InlineData("SELECT 1 FROM dbo.Config c CROSS JOIN dbo.Orders o WHERE c.Val > 5 AND c.Val < 3;", false)]
+    [InlineData("SELECT 1 FROM dbo.Config c, dbo.Orders o WHERE c.Val = 1 AND o.Amount = 2;", true)]
+    public void ContradictoryWhereClause_ProducesNoCartesianProduct(string statement, bool fires)
+    {
+        Assert.Equal(fires, ScanWithCatalog(statement).Count > 0);
+    }
 }

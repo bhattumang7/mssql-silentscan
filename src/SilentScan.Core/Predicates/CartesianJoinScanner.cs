@@ -53,7 +53,9 @@ public static class CartesianJoinScanner
             ReportAlwaysFalseInnerJoinPredicates(topLevel, scopeChain, walker, sourcePath);
             ReportJoinPredicateEmptyWithWhereClause(topLevel, whereClause, scopeChain, walker, sourcePath);
             var allNamed = topLevel.SelectMany(PredicateTreeWalker.FlattenNamedTables).ToList();
-            if (allNamed.Count < 2)
+            if (allNamed.Count < 2
+                || PredicateSurvivalAnalyzer.IsUnsatisfiable(
+                    whereClause?.SearchCondition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain)))
             {
                 return;
             }
