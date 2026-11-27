@@ -491,7 +491,8 @@ public static class NonSargablePredicateScanner
         internal static bool CoversSide(ScalarExpression expression) => UnwrapParentheses(expression) switch
         {
             FunctionCall { Parameters.Count: > 0 } functionCall =>
-                !AggregateFunctionNames.Contains(functionCall.FunctionName.Value) && FirstNamedColumn(functionCall.Parameters) is not null,
+                !AggregateFunctionNames.Contains(functionCall.FunctionName.Value)
+                && (FirstNamedColumn(functionCall.Parameters) ?? NestedColumn(functionCall)) is not null,
             CastCall castCall => FindAnyColumn(castCall.Parameter) is not null,
             ConvertCall convertCall => FindAnyColumn(convertCall.Parameter) is not null,
             TryCastCall tryCast => FindAnyColumn(tryCast.Parameter) is not null,
@@ -508,7 +509,8 @@ public static class NonSargablePredicateScanner
             switch (expression)
             {
                 case FunctionCall { Parameters.Count: > 0 } functionCall
-                    when !AggregateFunctionNames.Contains(functionCall.FunctionName.Value) && FirstNamedColumn(functionCall.Parameters) is { } named:
+                    when !AggregateFunctionNames.Contains(functionCall.FunctionName.Value)
+                        && (FirstNamedColumn(functionCall.Parameters) ?? NestedColumn(functionCall)) is { } named:
                     InspectFunctionCall(functionCall, named, scopeChain, walker);
                     break;
 
@@ -586,6 +588,11 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
+            if (RemovesToABareColumn(functionCall, scopeChain, walker))
+            {
+                return;
+            }
+
             if (string.Equals(functionCall.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase)
                 && Rules.SargabilityClassifier.ShouldSuppressIsNullOnKnownNotNullColumn(functionCall.FunctionName.Value, IsKnownNotNullColumn(named.Ref, scopeChain, walker)))
             {
@@ -621,6 +628,16 @@ public static class NonSargablePredicateScanner
             CaseExpression => "CASE",
             _ => expression.GetType().Name,
         };
+
+        private bool RemovesToABareColumn(ScalarExpression expression, ScopeChain scopeChain, ModuleWalker walker) =>
+            UnwrapParentheses(expression) switch
+            {
+                ColumnReferenceExpression column => IsKnownNotNullColumn(column, scopeChain, walker),
+                FunctionCall { Parameters: [var first, _] } call
+                    when string.Equals(call.FunctionName.Value, "ISNULL", StringComparison.OrdinalIgnoreCase) =>
+                    RemovesToABareColumn(first, scopeChain, walker),
+                _ => false,
+            };
 
         private void InspectArithmetic(BinaryExpression binary, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -671,6 +688,28 @@ public static class NonSargablePredicateScanner
             BooleanIsNullExpression isNull => FindAnyColumn(isNull.Expression),
             _ => null,
         };
+
+        private static readonly HashSet<string> DatePartFirstFunctions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "DATEADD", "DATEDIFF", "DATEDIFF_BIG", "DATEPART", "DATENAME", "DATETRUNC", "DATE_BUCKET",
+        };
+
+        private static (ColumnReferenceExpression Ref, string Name)? NestedColumn(FunctionCall call) =>
+            call.Parameters
+                .Skip(DatePartFirstFunctions.Contains(call.FunctionName.Value) ? 1 : 0)
+                .Select(NestedColumnOf)
+                .FirstOrDefault(column => column is not null);
+
+        private static (ColumnReferenceExpression Ref, string Name)? NestedColumnOf(ScalarExpression expression) =>
+            UnwrapParentheses(expression) switch
+            {
+                FunctionCall inner when AggregateFunctionNames.Contains(inner.FunctionName.Value) => null,
+                FunctionCall inner => FirstNamedColumn(inner.Parameters) is { } direct
+                    && !DatePartFirstFunctions.Contains(inner.FunctionName.Value)
+                        ? direct
+                        : NestedColumn(inner),
+                var other => FindAnyColumn(other),
+            };
 
         private static (ColumnReferenceExpression Ref, string Name)? FirstNamedColumn(IList<ScalarExpression> parameters)
         {
