@@ -562,14 +562,9 @@ public static class FromScopeResolver
             return fixedType;
         }
 
-        if (valueType is null || BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(aggregateFunctionName) is null)
-        {
-            return null;
-        }
-
-        return BuiltinFunctionTypeResolver.WidensIntegerAggregateArgument(aggregateFunctionName)
-            ? BuiltinFunctionTypeResolver.WidenIntegerAggregateResult(valueType)
-            : valueType;
+        return BuiltinFunctionTypeResolver.TryGetArgumentTypeIndex(aggregateFunctionName) is null
+            ? null
+            : BuiltinFunctionTypeResolver.AdjustArgumentTypeFunctionResult(aggregateFunctionName, valueType);
     }
 
     private static (string? Alias, ScopeEntry Entry) ResolveVariableTableReference(VariableTableReference variableTable, ResolutionContext context)

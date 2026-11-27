@@ -52,6 +52,32 @@ public sealed class TypeAndValueDivergenceOracleTests : EngineDivergenceOracleTe
     }
 
     [Theory]
+    [InlineData("AVG", "DECIMAL(10,2)")]
+    [InlineData("SUM", "DECIMAL(10,2)")]
+    [InlineData("SUM", "SMALLMONEY")]
+    [InlineData("AVG", "SMALLINT")]
+    [InlineData("MAX", "DECIMAL(10,2)")]
+    public async Task PivotAggregates_WidenTheValueColumnLikeAPlainAggregate(string aggregate, string type)
+    {
+        var table = $"CREATE TABLE dbo.P (k INT NOT NULL, v {type} NOT NULL);";
+        var query = $"SELECT [1] AS c FROM (SELECT k, v FROM dbo.P) s PIVOT ({aggregate}(v) FOR k IN ([1])) p";
+        await ExecuteAsync(table);
+
+        var engine = await ScalarAsync<string>(
+            $"SELECT system_type_name FROM sys.dm_exec_describe_first_result_set(N'{query}', NULL, 0);");
+
+        var (result, catalog) = Parse($"{table}\nGO\n{query};");
+        var select = (SelectStatement)((TSqlScript)result.Fragment).Batches[1].Statements[0];
+        var column = QueryExpressionResolver.Resolve(select.QueryExpression, catalog, new Dictionary<string, ResolvedRelation>(), "test.sql").Single();
+        var ours = ColumnProvenanceAnalysis.TryGetScalarType(column.Provenance)!;
+        Assert.Equal(
+            engine,
+            ours.Category == SqlTypeCategory.Decimal
+                ? $"decimal({ours.Precision},{ours.Scale})"
+                : ours.Category.ToString().ToLowerInvariant());
+    }
+
+    [Theory]
     [InlineData("0.05")]
     [InlineData("0.5")]
     [InlineData("0.0")]
