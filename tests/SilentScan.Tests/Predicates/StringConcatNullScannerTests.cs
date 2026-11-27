@@ -338,4 +338,16 @@ public sealed class StringConcatNullScannerTests
     {
         Assert.Equal(fires, Scan(sql).Count > 0);
     }
+
+    [Theory]
+    [InlineData("'x' + ISNULL(MiddleName, MiddleName)", true)]
+    [InlineData("'x' + COALESCE(MiddleName, MiddleName)", true)]
+    [InlineData("'x' + ISNULL(MiddleName, '')", false)]
+    [InlineData("'x' + COALESCE(MiddleName, LastName)", false)]
+    public void AFallbackThatIsAlsoNullableStillPropagatesNull(string expression, bool fires)
+    {
+        var findings = Scan($"SELECT {expression} FROM dbo.Person;");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
 }

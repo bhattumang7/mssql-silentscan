@@ -45,7 +45,7 @@ public static class StringConcatNullScanner
         Guarded,
     }
 
-    private readonly record struct Leaf(LeafKind Kind, bool IsNullableColumn, string? TableQualifiedName, string? ColumnName, string? ReferenceKey = null);
+    private readonly record struct Leaf(LeafKind Kind, bool IsNullableColumn, string? TableQualifiedName, string? ColumnName, string? ReferenceKey = null, IReadOnlyList<string>? FallbackKeys = null);
 
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<TSqlStatement, bool> concatNullYieldsNullOffByStatement) : IModuleRule
     {
@@ -185,7 +185,7 @@ public static class StringConcatNullScanner
             }
 
             var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn
-                && !(l.ReferenceKey is { } key && (nullRejected.Contains(key) || IsRejectedByAnEnclosingQuery(key))));
+                && !KeysOf(l).Any(key => nullRejected.Contains(key) || IsRejectedByAnEnclosingQuery(key)));
             if (nullableLeaf.TableQualifiedName is null)
             {
                 return;
@@ -246,10 +246,21 @@ public static class StringConcatNullScanner
 
         private Leaf ClassifyGuarded(
             IEnumerable<ScalarExpression> arguments,
-            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain) =>
-            arguments.Any(arg => ClassifyLeaf(Unwrap(arg), scopeChain).Kind == LeafKind.Unknown)
-                ? new Leaf(LeafKind.Unknown, false, null, null)
+            IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain)
+        {
+            var leaves = arguments.Select(argument => ClassifyLeaf(Unwrap(argument), scopeChain)).ToList();
+            if (leaves.Count == 0 || leaves.Any(leaf => leaf.Kind == LeafKind.Unknown))
+            {
+                return new Leaf(LeafKind.Unknown, false, null, null);
+            }
+
+            return leaves.All(leaf => leaf is { Kind: LeafKind.String, IsNullableColumn: true })
+                ? leaves[0] with { FallbackKeys = [.. leaves.Skip(1).SelectMany(KeysOf)] }
                 : new Leaf(LeafKind.Guarded, false, null, null);
+        }
+
+        private static IEnumerable<string> KeysOf(Leaf leaf) =>
+            (leaf.FallbackKeys ?? []).Concat(leaf.ReferenceKey is { } key ? [key] : []);
 
         private static string ReferenceKeyOf(ColumnReferenceExpression columnRef) =>
             columnRef.MultiPartIdentifier is { } parts
