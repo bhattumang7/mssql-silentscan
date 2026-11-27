@@ -191,8 +191,42 @@ public static class TriggerCorrectnessScanner
         private static string? TryGetUnsafeAssignedVariable(TSqlStatement statement) =>
             statement is SelectStatement { QueryExpression: QuerySpecification { SelectElements: [SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar] } spec }
                 && IsUnsafeSourceQuery(spec) && !(spec.GroupByClause is null && IsAggregateExpression(setVar.Expression))
+                && VariesByRow(setVar.Expression, (NamedTableReference)spec.FromClause.TableReferences[0])
                 ? setVar.Variable.Name
                 : null;
+
+        private static bool VariesByRow(ScalarExpression expression, NamedTableReference source)
+        {
+            var finder = new RowColumnFinder(source.Alias?.Value ?? source.SchemaObject.BaseIdentifier.Value);
+            expression.Accept(finder);
+            return finder.Found;
+        }
+
+        private sealed class RowColumnFinder(string sourceName) : TSqlFragmentVisitor
+        {
+            private int _subqueryDepth;
+
+            public bool Found { get; private set; }
+
+            public override void ExplicitVisit(ScalarSubquery node)
+            {
+                _subqueryDepth++;
+                base.ExplicitVisit(node);
+                _subqueryDepth--;
+            }
+
+            public override void ExplicitVisit(ColumnReferenceExpression node)
+            {
+                var identifiers = node.MultiPartIdentifier?.Identifiers;
+                if (identifiers is null)
+                {
+                    return;
+                }
+
+                Found |= _subqueryDepth == 0
+                    || identifiers.Count > 1 && string.Equals(identifiers[^2].Value, sourceName, StringComparison.OrdinalIgnoreCase);
+            }
+        }
 
         private static bool IsAggregateExpression(ScalarExpression expression)
         {

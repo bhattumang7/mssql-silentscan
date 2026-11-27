@@ -417,4 +417,25 @@ public sealed class TriggerCorrectnessScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath);
     }
+
+    [Theory]
+    [InlineData("SELECT @v = (SELECT MAX(Val) FROM dbo.Other) FROM inserted;")]
+    [InlineData("SELECT @v = 1 FROM inserted;")]
+    [InlineData("SELECT @v = @seed + 1 FROM inserted;")]
+    public void AssignmentOfAValueThatIsTheSameForEveryRow_NeverFires(string assignment)
+    {
+        Assert.Empty(Scan(
+            "CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS "
+            + $"BEGIN DECLARE @v INT; DECLARE @seed INT = 1; {assignment} PRINT @v; END;"));
+    }
+
+    [Theory]
+    [InlineData("SELECT @v = (SELECT MAX(o.Val) FROM dbo.Other AS o WHERE o.Id = inserted.Id) FROM inserted;")]
+    [InlineData("SELECT @v = i.Val + 1 FROM inserted AS i;")]
+    public void AssignmentOfAValueThatDependsOnTheRow_StillFires(string assignment)
+    {
+        Assert.Single(
+            Scan("CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS " + $"BEGIN DECLARE @v INT; {assignment} PRINT @v; END;"),
+            f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
+    }
 }

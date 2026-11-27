@@ -27,6 +27,9 @@ internal static class MultiRowUnsafeSingleRowAssignment
             row from one execution to the next - it depends on plan shape, which can itself change
             with statistics or an index rebuild.
 
+            An assigned value that does not depend on a column of the pseudo-table, such as a
+            constant or an uncorrelated subquery, is the same for every row and is not reported.
+
             This is one of the most common production bugs in T-SQL specifically because it is
             invisible in testing: single-row INSERT/UPDATE statements (the shape most manual
             testing and most ORM default behavior uses) never expose the bug, since there's only
