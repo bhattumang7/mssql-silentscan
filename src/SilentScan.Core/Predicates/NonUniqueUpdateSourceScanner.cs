@@ -99,6 +99,7 @@ public static class NonUniqueUpdateSourceScanner
             }
             else
             {
+                InspectSecondHop(join, targetAlias, targetQualifiedName, spec, byAlias, scopeChain, walker);
                 return;
             }
 
@@ -145,6 +146,102 @@ public static class NonUniqueUpdateSourceScanner
             Findings.Add(new NonUniqueUpdateSourceFinding(
                 targetQualifiedName, sourceQualifiedName, joinColumns, setColumnNames,
                 sourcePath, join.StartLine, join.StartColumn));
+        }
+
+        private void InspectSecondHop(
+            QualifiedJoin join, string targetAlias, string targetQualifiedName,
+            UpdateSpecification spec, Dictionary<string, ScopeEntry> byAlias,
+            List<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> scopeChain,
+            ModuleWalker walker)
+        {
+            var tree = spec.FromClause!.TableReferences.FirstOrDefault(
+                reference => PredicateTreeWalker.FlattenJoinNodes(reference).Contains(join));
+            var nodes = tree is null ? [] : PredicateTreeWalker.FlattenJoinNodes(tree).ToList();
+            if (nodes.Count < 2 || nodes.Exists(node => node.QualifiedJoinType != QualifiedJoinType.Inner))
+            {
+                return;
+            }
+
+            var conjuncts = nodes.SelectMany(node => PredicateTreeWalker.FlattenAnd(node.SearchCondition)).ToList();
+            foreach (var sourceAlias in new[] { AliasOf(join.FirstTableReference), AliasOf(join.SecondTableReference) })
+            {
+                if (sourceAlias is null || catalog.IdentifierComparer.Equals(sourceAlias, targetAlias)
+                    || !byAlias.TryGetValue(sourceAlias, out var entry) || entry.IsViewLayer
+                    || entry.Relation.QualifiedName is not { } sourceQualifiedName
+                    || catalog.Find(sourceQualifiedName) is not { } sourceTable
+                    || !JoinsToAnAliasLinkedToTarget(join, sourceAlias, targetAlias, conjuncts))
+                {
+                    continue;
+                }
+
+                var conditions = nodes.Select(node => node.SearchCondition)
+                    .Append(spec.WhereClause?.SearchCondition)
+                    .OfType<BooleanExpression>();
+                var equated = conditions
+                    .SelectMany(condition => JoinKeyUniqueness.EqualityColumnsQualifiedBy(condition, sourceAlias, catalog.IdentifierComparer))
+                    .Distinct(catalog.IdentifierComparer)
+                    .ToList();
+                if (JoinKeyUniqueness.IsProvenUniqueOver(sourceTable, equated, catalog.IdentifierComparer)
+                    || PredicateSurvivalAnalyzer.IsUnsatisfiable(join.SearchCondition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain)))
+                {
+                    continue;
+                }
+
+                var setColumnNames = SetColumnsReading(spec, sourceAlias, equated);
+                if (setColumnNames.Count > 0)
+                {
+                    Findings.Add(new NonUniqueUpdateSourceFinding(
+                        targetQualifiedName, sourceQualifiedName, equated, setColumnNames,
+                        sourcePath, join.StartLine, join.StartColumn));
+                }
+            }
+        }
+
+        private bool JoinsToAnAliasLinkedToTarget(
+            QualifiedJoin join, string sourceAlias, string targetAlias, List<BooleanExpression> conjuncts)
+        {
+            var edges = conjuncts.Select(EquatedAliases).OfType<(string First, string Second)>().ToList();
+            var comparer = catalog.IdentifierComparer;
+            var linked = new HashSet<string>(comparer) { targetAlias };
+            while (edges.Exists(edge =>
+                !comparer.Equals(edge.First, sourceAlias) && !comparer.Equals(edge.Second, sourceAlias)
+                && linked.Contains(edge.First) != linked.Contains(edge.Second)
+                && linked.Add(edge.First) | linked.Add(edge.Second)))
+            {
+            }
+
+            return PredicateTreeWalker.FlattenAnd(join.SearchCondition)
+                .Select(EquatedAliases)
+                .OfType<(string First, string Second)>()
+                .Any(edge => comparer.Equals(edge.First, sourceAlias) && linked.Contains(edge.Second)
+                    || comparer.Equals(edge.Second, sourceAlias) && linked.Contains(edge.First));
+        }
+
+        private static (string First, string Second)? EquatedAliases(BooleanExpression conjunct) =>
+            conjunct is BooleanComparisonExpression
+            {
+                ComparisonType: BooleanComparisonType.Equals,
+                FirstExpression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { Value: { } first }, _] },
+                SecondExpression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { Value: { } second }, _] },
+            }
+                ? (first, second)
+                : null;
+
+        private List<string> SetColumnsReading(UpdateSpecification spec, string sourceAlias, List<string> equated) =>
+            spec.SetClauses
+                .OfType<AssignmentSetClause>()
+                .Where(clause => ColumnsReadThrough(clause.NewValue, sourceAlias).Any(column => !equated.Contains(column, catalog.IdentifierComparer)))
+                .Select(clause => clause.Column.MultiPartIdentifier.Identifiers[^1].Value)
+                .Distinct(catalog.IdentifierComparer)
+                .ToList();
+
+        private IEnumerable<string> ColumnsReadThrough(ScalarExpression expression, string alias)
+        {
+            var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+            expression.Accept(collector);
+            return collector.References
+                .Select(columnRef => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(columnRef, alias, catalog.IdentifierComparer))
+                .OfType<string>();
         }
 
         private bool ReferencesAlias(ScalarExpression expression, string alias)

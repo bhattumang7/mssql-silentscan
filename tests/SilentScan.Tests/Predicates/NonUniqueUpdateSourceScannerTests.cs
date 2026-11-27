@@ -170,13 +170,31 @@ public sealed class NonUniqueUpdateSourceScannerTests
     }
 
     [Fact]
-    public void IndirectJoinNotTouchingTarget_NeverFires()
+    public void IndirectInnerJoinToANonUniqueSource_Fires()
     {
 
         var findings = Scan(
             "UPDATE t SET t.Val = b.Val FROM dbo.TargetT t JOIN dbo.SourceUnique a ON t.Id = a.TargetId JOIN dbo.SourceNonUnique b ON a.TargetId = b.TargetId;",
             extraDdl: "");
 
-        Assert.Empty(findings);
+        Assert.Equal("dbo.SourceNonUnique", Assert.Single(findings).SourceTableQualifiedName);
+    }
+
+    private const string HopTables =
+        "CREATE TABLE dbo.Hop (Id INT NOT NULL PRIMARY KEY, X INT NOT NULL);"
+        + "CREATE TABLE dbo.Leaf (X INT NOT NULL, V INT NOT NULL);"
+        + "CREATE TABLE dbo.LeafUnique (X INT NOT NULL UNIQUE, V INT NOT NULL);";
+
+    [Theory]
+    [InlineData("JOIN dbo.Hop AS h ON h.Id = t.Id JOIN dbo.Leaf AS s ON s.X = h.X", true)]
+    [InlineData("JOIN dbo.Hop AS h ON h.Id = t.Id JOIN dbo.LeafUnique AS s ON s.X = h.X", false)]
+    [InlineData("LEFT JOIN dbo.Hop AS h ON h.Id = t.Id JOIN dbo.Leaf AS s ON s.X = h.X", false)]
+    [InlineData("JOIN dbo.Hop AS h ON h.Id = t.Id JOIN dbo.Leaf AS s ON s.X > h.X", false)]
+    [InlineData("CROSS JOIN dbo.Hop AS h JOIN dbo.Leaf AS s ON s.X = h.X", false)]
+    public void SecondHopInnerJoinToANonUniqueSource_Fires(string joins, bool fires)
+    {
+        var findings = Scan($"UPDATE t SET Val = s.V FROM dbo.TargetT AS t {joins};", HopTables);
+
+        Assert.Equal(fires, findings.Any(f => f.SourceTableQualifiedName == "dbo.Leaf"));
     }
 }
