@@ -1000,6 +1000,12 @@ public static class TypedPredicateExtractor
                 return;
             }
 
+            if (!isNotIn && node.Values is [VariableReference only]
+                && ResolvePredicateOperand(only, scopeChain, walker) is { } single)
+            {
+                TryAddFilteredIndexParameterMismatchFinding(column, single, "IN", node);
+            }
+
             var inOperator = isNotIn ? "NOT IN" : "IN";
             var verdict = VerdictClassifier.Classify(column.Type, otherType, operatorText: inOperator);
             Findings.Add(new TypedPredicateFinding(verdict, column, new PredicateOperand.Value(otherType), inOperator, sourcePath, node.StartLine, node.StartColumn));
@@ -1284,15 +1290,23 @@ public static class TypedPredicateExtractor
                 && index.KeyColumns.Count == 1
                 && catalog.IdentifierComparer.Equals(index.KeyColumns[0], column.ColumnName));
 
-        private bool IsPinnedToFilterLiteral(TSqlFragment parameterComparison, string literalText) =>
-            parameterComparison is BooleanComparisonExpression comparison
-            && ColumnPath(comparison.FirstExpression, comparison.SecondExpression) is { } columnPath
-            && _whereEqualityScopes.TryPeek(out var scope)
-            && scope.TopLevelConjuncts.OfType<BooleanComparisonExpression>().Any(conjunct =>
-                conjunct.ComparisonType == BooleanComparisonType.Equals
-                && string.Equals(ColumnPath(conjunct.FirstExpression, conjunct.SecondExpression), columnPath, StringComparison.OrdinalIgnoreCase)
-                && (conjunct.FirstExpression as Literal ?? conjunct.SecondExpression as Literal) is { } literal
-                && Rules.LiteralTextRenderer.Render(literal) == literalText);
+        private bool IsPinnedToFilterLiteral(TSqlFragment parameterPredicate, string literalText)
+        {
+            var columnPath = parameterPredicate switch
+            {
+                BooleanComparisonExpression comparison => ColumnPath(comparison.FirstExpression, comparison.SecondExpression),
+                InPredicate inList => ColumnPath(inList.Expression, inList.Expression),
+                _ => null,
+            };
+
+            return columnPath is not null
+                && _whereEqualityScopes.TryPeek(out var scope)
+                && scope.TopLevelConjuncts.OfType<BooleanComparisonExpression>().Any(conjunct =>
+                    conjunct.ComparisonType == BooleanComparisonType.Equals
+                    && string.Equals(ColumnPath(conjunct.FirstExpression, conjunct.SecondExpression), columnPath, StringComparison.OrdinalIgnoreCase)
+                    && (conjunct.FirstExpression as Literal ?? conjunct.SecondExpression as Literal) is { } literal
+                    && Rules.LiteralTextRenderer.Render(literal) == literalText);
+        }
 
         private static string? ColumnPath(ScalarExpression first, ScalarExpression second) =>
             (first as ColumnReferenceExpression ?? second as ColumnReferenceExpression)?.MultiPartIdentifier is { } name
@@ -1354,7 +1368,7 @@ public static class TypedPredicateExtractor
         private void TryAddAnsiPaddingMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node, ModuleWalker walker)
         {
             if (operatorText != "LIKE"
-                || column.Type is not { Category: SqlTypeCategory.VarChar or SqlTypeCategory.VarBinary }
+                || column.Type is not { Category: SqlTypeCategory.VarChar or SqlTypeCategory.Char }
                 || other is not PredicateOperand.Value { IsLiteral: true, LiteralText: { } literalText }
                 || !LiteralEndsWithSignificantWhitespace(literalText))
             {
@@ -1362,7 +1376,8 @@ public static class TypedPredicateExtractor
             }
 
             var catalogColumn = catalog.Find(column.TableQualifiedName, walker.CurrentProcScope)?.FindColumn(column.ColumnName, catalog.IdentifierComparer);
-            if (catalogColumn is not { IsAnsiPadded: false })
+            if (catalogColumn is not { IsAnsiPadded: false }
+                || column.Type.Category == SqlTypeCategory.Char && !catalogColumn.IsNullable)
             {
                 return;
             }

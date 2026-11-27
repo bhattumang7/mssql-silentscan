@@ -2227,6 +2227,42 @@ public sealed class TypedPredicateExtractorTests
         Assert.Equal(fires, result.FilteredIndexParameterMismatchFindings.Count > 0);
     }
 
+    [Theory]
+    [InlineData("WHERE Status IN (@p)", true)]
+    [InlineData("WHERE Status IN (@p) AND Status = 1", false)]
+    [InlineData("WHERE Status NOT IN (@p)", false)]
+    [InlineData("WHERE Status IN (@p, @p)", false)]
+    [InlineData("WHERE Status IN (1)", false)]
+    [InlineData("WHERE Status IN (@p) OPTION (RECOMPILE)", false)]
+    public void Extract_SingleValueInListWithAParameter_FiresFilteredIndexParameterMismatch(string where, bool fires)
+    {
+        var result = ExtractWithFilteredIndex(
+            "CREATE TABLE dbo.Customers (Status INT NOT NULL);",
+            "([Status]=(1))",
+            $"CREATE PROCEDURE dbo.usp_Find @p INT AS BEGIN SELECT 1 FROM dbo.Customers {where}; END");
+
+        Assert.Equal(fires, result.FilteredIndexParameterMismatchFindings.Count > 0);
+    }
+
+    [Theory]
+    [InlineData(SqlTypeCategory.Char, true, true)]
+    [InlineData(SqlTypeCategory.Char, false, false)]
+    [InlineData(SqlTypeCategory.NChar, true, false)]
+    [InlineData(SqlTypeCategory.VarBinary, true, false)]
+    public void Extract_NonPaddedColumnLike_FiresOnlyForTypesTheEngineTrims(SqlTypeCategory category, bool isNullable, bool fires)
+    {
+        var result = SqlScriptParser.ParseText("test.sql", "SELECT 1 FROM dbo.Customers WHERE Code LIKE 'abc ';");
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(new CatalogTable(
+            "dbo", "Customers", CatalogTableKind.Table,
+            [new CatalogColumn("Code", new SqlType(category, Length: 20), isNullable, IsIdentity: false, IsComputed: false, IsPersisted: false, IsAnsiPadded: false)],
+            [], SourcePath: "test.sql", SourceLine: 1));
+
+        var findings = TypedPredicateExtractor.Extract(result, catalog, LineageResolver.Resolve(catalog, [result])).AnsiPaddingMismatchFindings;
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
+
     private static PredicateExtractionResult ExtractWithFilteredIndex(string ddl, string filteredIndex, string query)
     {
         var ddlResult = SqlScriptParser.ParseText("ddl.sql", ddl);
