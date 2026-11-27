@@ -426,4 +426,45 @@ public sealed class ControlFlowRiskScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
     }
+
+    [Theory]
+    [InlineData("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;", "dbo.Work", 0)]
+    [InlineData("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;", "dbo.Work", 0)]
+    [InlineData("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; SET TRANSACTION ISOLATION LEVEL READ COMMITTED;", "dbo.Work", 1)]
+    [InlineData("SET TRANSACTION ISOLATION LEVEL SNAPSHOT;", "dbo.Work", 1)]
+    [InlineData("", "OtherDb.dbo.Work", 0)]
+    [InlineData("", "Linked.OtherDb.dbo.Work", 0)]
+    [InlineData("", "Here.dbo.Work", 1)]
+    public void ReadCommittedLockHint_NeedsAVersionedReadInThisDatabase(string setting, string table, int expected)
+    {
+        var catalog = new DatabaseCatalog { IsReadCommittedSnapshotOn = true, CurrentDatabaseName = "Here" };
+
+        var findings = Scan($"{setting} SELECT Id FROM {table} WITH (READCOMMITTEDLOCK);", catalog);
+
+        Assert.Equal(expected, findings.Count(f => f.Kind == ControlFlowRiskFindingKind.ReadCommittedLockRevertsRowVersioning));
+    }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.Plain (V) VALUES (1); SELECT @@IDENTITY;", 0)]
+    [InlineData("INSERT INTO dbo.Plain (V) VALUES (1); DECLARE @i INT; SET @i = @@IDENTITY;", 0)]
+    [InlineData("INSERT INTO dbo.Audited (V) VALUES (1); SELECT @@IDENTITY;", 1)]
+    [InlineData("INSERT INTO dbo.Plain (V) SELECT 1; SELECT @@IDENTITY;", 1)]
+    [InlineData("INSERT INTO dbo.Plain (V) VALUES (1); EXEC dbo.Other; SELECT @@IDENTITY;", 1)]
+    [InlineData("INSERT INTO dbo.NoIdentity (V) VALUES (1); SELECT @@IDENTITY;", 1)]
+    [InlineData("SELECT @@IDENTITY;", 1)]
+    public void IdentityIntrinsic_IsSilentOnlyRightAfterAnInsertThatCannotDiverge(string sql, int expected)
+    {
+        var ddl = SqlScriptParser.ParseText(
+            "ddl.sql",
+            "CREATE TABLE dbo.Plain (Id INT IDENTITY PRIMARY KEY, V INT);\n"
+            + "CREATE TABLE dbo.Audited (Id INT IDENTITY PRIMARY KEY, V INT);\n"
+            + "CREATE TABLE dbo.NoIdentity (V INT);");
+        var catalog = SilentScan.Core.Catalog.CatalogBuilder.Build([ddl]);
+        catalog.AddTriggerEvent(new SilentScan.Core.Catalog.CatalogTriggerEvent(
+            "dbo.tr", "dbo.Audited", "INSERT", IsInsteadOf: false, IsDisabled: false, IsFirst: false, IsLast: false, "ddl.sql", 1));
+
+        var findings = Scan(sql, catalog);
+
+        Assert.Equal(expected, findings.Count(f => f.Kind == ControlFlowRiskFindingKind.LegacyIdentityIntrinsic));
+    }
 }

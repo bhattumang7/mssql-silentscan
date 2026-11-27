@@ -22,7 +22,9 @@ internal static class LegacyIdentityIntrinsic
             inserted into and whether any of them insert into another identity-bearing table. The
             finding is worded as "prefer `SCOPE_IDENTITY()` unless that broader session-wide
             semantics is specifically wanted," never as a claim that a bug is definitely present at
-            this exact reference.
+            this exact reference. The one exception is a read straight after an INSERT ... VALUES
+            into a table with an identity column and no insert trigger: both functions then return
+            the same value, so nothing is reported.
             """,
         HowToFixIt: """
             Use SCOPE_IDENTITY() instead, unless the broader session-wide (rather than

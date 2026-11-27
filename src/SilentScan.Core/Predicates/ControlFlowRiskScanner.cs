@@ -75,7 +75,9 @@ public static class ControlFlowRiskScanner
                     FindingConfidence.Low));
             }
             else if (node.HintKind == TableHintKind.ReadCommittedLock && catalog.IsReadCommittedSnapshotOn == true
-                && !HintIsOnSessionLocalTemporaryTable(node))
+                && !HintIsOnSessionLocalTemporaryTable(node)
+                && !_modulesUnderALockingIsolationLevel.Contains(CurrentModule(walker))
+                && !HintIsOnAnotherDatabase())
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.ReadCommittedLockRevertsRowVersioning,
@@ -85,8 +87,36 @@ public static class ControlFlowRiskScanner
             }
         }
 
+        private readonly HashSet<string> _modulesUnderALockingIsolationLevel = new(StringComparer.OrdinalIgnoreCase);
+
+        private bool HintIsOnAnotherDatabase()
+        {
+            if (_currentTable is not { SchemaObject: var name })
+            {
+                return false;
+            }
+
+            if (name.ServerIdentifier is not null
+                || name.DatabaseIdentifier is { } database && !catalog.IdentifierComparer.Equals(database.Value, catalog.CurrentDatabaseName))
+            {
+                return true;
+            }
+
+            var resolved = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(name));
+            return catalog.StripSelfReferencingDatabasePrefix(resolved).Count(character => character == '.') > 1;
+        }
+
         public void OnEnterSetTransactionIsolationLevelStatement(SetTransactionIsolationLevelStatement node, ModuleWalker walker)
         {
+            if (node.Level is IsolationLevel.RepeatableRead or IsolationLevel.Serializable)
+            {
+                _modulesUnderALockingIsolationLevel.Add(CurrentModule(walker));
+            }
+            else
+            {
+                _modulesUnderALockingIsolationLevel.Remove(CurrentModule(walker));
+            }
+
             if (node.Level == IsolationLevel.ReadUncommitted)
             {
                 Findings.Add(new ControlFlowRiskFinding(
@@ -97,9 +127,15 @@ public static class ControlFlowRiskScanner
             }
         }
 
+        private readonly HashSet<GlobalVariableExpression> _identityReadsThatCannotDiverge = [];
+
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+            node.Accept(new IdentityReadCollector(catalog, _identityReadsThatCannotDiverge));
+
         public void OnEnterGlobalVariableExpression(GlobalVariableExpression node, ModuleWalker walker)
         {
-            if (string.Equals(node.Name, "@@IDENTITY", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(node.Name, "@@IDENTITY", StringComparison.OrdinalIgnoreCase)
+                && !_identityReadsThatCannotDiverge.Contains(node))
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.LegacyIdentityIntrinsic,
