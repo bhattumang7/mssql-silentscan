@@ -270,9 +270,16 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     public async Task UnqualifiedTableReference_InsideProcedureBody_SharesOnePlanAcrossDefaultSchemas()
     {
         await using var connection = await OpenConnectionAsync();
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC dbo.UnqualifiedInModule; REVERT;");
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC dbo.UnqualifiedInModule; REVERT;");
 
-        Assert.Equal(1, await CachedPlanCountAsync("%FROM Q /*tagmod*/%"));
+        var plans = await ObserveUntilCachedAsync(
+            async () =>
+            {
+                await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC dbo.UnqualifiedInModule; REVERT;");
+                await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC dbo.UnqualifiedInModule; REVERT;");
+            },
+            () => CachedPlanCountAsync("%FROM Q /*tagmod*/%"),
+            found => found > 0);
+
+        Assert.Equal(1, plans);
     }
 }

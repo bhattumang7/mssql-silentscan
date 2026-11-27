@@ -35,7 +35,8 @@ public static class TemplateRenderer
                         placeholders.Add(new PlaceholderOccurrence(
                             innerStart, token.Length, hole.Type, hole.Origin,
                             hole.Kind is not (HoleKind.WidenedChoice or HoleKind.UninitializedDeclare
-                                or HoleKind.EnvironmentDependent or HoleKind.TryOnlyDeclaration)));
+                                or HoleKind.EnvironmentDependent or HoleKind.TryOnlyDeclaration),
+                            hole.IsConvertedFromNonText));
                     }
 
                     break;

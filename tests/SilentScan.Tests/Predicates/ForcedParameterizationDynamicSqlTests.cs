@@ -43,6 +43,9 @@ public sealed class ForcedParameterizationDynamicSqlTests
     [InlineData("N'UPDATE dbo.T SET Val = 1 OUTPUT ''' + @s + N''' AS Tag'", ForcedParameterizationFindingKind.DmlOutputListLiteral)]
     [InlineData("N'SELECT CONVERT(VARCHAR(30), D, ' + CAST(@n AS NVARCHAR(10)) + N') FROM dbo.T'", ForcedParameterizationFindingKind.ConvertStyleCodeLiteral)]
     [InlineData("N'SELECT Id FROM dbo.T TABLESAMPLE (' + CAST(@n AS NVARCHAR(10)) + N' ROWS)'", ForcedParameterizationFindingKind.TableSampleSizeLiteral)]
+    [InlineData("N'SELECT Val FROM dbo.T GROUP BY Val HAVING COUNT(*) > ' + CAST(@n AS NVARCHAR(10))", ForcedParameterizationFindingKind.HavingLiteral)]
+    [InlineData("N'SELECT ' + CONVERT(NVARCHAR(10), @n) + N' AS Tag, Id FROM dbo.T'", ForcedParameterizationFindingKind.SelectListLiteral)]
+    [InlineData("N'UPDATE dbo.T SET Val = 1 OUTPUT ' + CAST(@n AS NVARCHAR(10)) + N' AS Tag'", ForcedParameterizationFindingKind.DmlOutputListLiteral)]
     public async Task ChangingValueInASkippedPosition_FiresThatKind(string inner, ForcedParameterizationFindingKind expected)
     {
         var report = await ScanAsync(Forced, inner);
@@ -57,6 +60,9 @@ public sealed class ForcedParameterizationDynamicSqlTests
     [InlineData(Forced, "N'SELECT Id FROM dbo.T WHERE Name LIKE ''abc%'''")]
     [InlineData(Forced, "N'SELECT Id FROM dbo.T WHERE Name LIKE ''x' + @s + N'%'' OPTION (RECOMPILE)'")]
     [InlineData(Forced, "N'SELECT ' + @s + N' FROM dbo.T'")]
+    [InlineData(Forced, "N'SELECT ' + CAST(@s AS NVARCHAR(10)) + N' FROM dbo.T'")]
+    [InlineData(Forced, "N'SELECT Id FROM dbo.T WHERE Val = ' + CAST(@n AS NVARCHAR(10))")]
+    [InlineData(Forced, "N'SELECT Id FROM dbo.T_' + CAST(@n AS NVARCHAR(10))")]
     [InlineData("", "N'SELECT Id FROM dbo.T WHERE Name LIKE ''x' + @s + N'%'''")]
     public async Task NothingThatAddsAPlanPerValue_FiresNoForcedFinding(string setting, string inner) =>
         Assert.Empty(Forcing(await ScanAsync(setting, inner)));

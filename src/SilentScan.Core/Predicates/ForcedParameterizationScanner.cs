@@ -38,7 +38,7 @@ public static class ForcedParameterizationScanner
 
         public bool IsBareNonStringValue(TSqlFragment fragment) =>
             BareToken(fragment) is { } name
-            && tokens.Any(t => string.Equals(t.Value, name, StringComparison.OrdinalIgnoreCase) && !t.Key.Type.IsStringFamily);
+            && tokens.Any(t => string.Equals(t.Value, name, StringComparison.OrdinalIgnoreCase) && t.Key.IsNonTextValue);
 
         public bool IsValue(TSqlFragment fragment) => IsInLiteral(fragment) || IsBareNonStringValue(fragment);
 

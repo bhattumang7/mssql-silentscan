@@ -27,16 +27,16 @@ internal static class HavingLiteral
             new RuleDocExample(
                 Title: "A changing value spliced into a HAVING comparison",
                 NoncompliantSql: """
-                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    CREATE PROCEDURE dbo.RunDynamic @Value INT AS
                     BEGIN
-                        DECLARE @sql NVARCHAR(MAX) = N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING MAX(Name) > ''' + @Value + N'''';
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING COUNT(*) > ' + CAST(@Value AS NVARCHAR(10));
                         EXEC (@sql);
                     END;
                     """,
                 NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
-                    EXEC sys.sp_executesql N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING MAX(Name) > @p', N'@p NVARCHAR(100)', @p = @Value;
+                    CREATE PROCEDURE dbo.RunParameterized @Value INT AS
+                    EXEC sys.sp_executesql N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING COUNT(*) > @p', N'@p INT', @p = @Value;
                     """,
                 CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);

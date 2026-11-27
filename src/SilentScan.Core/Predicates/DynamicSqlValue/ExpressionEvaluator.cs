@@ -287,10 +287,21 @@ public static class ExpressionEvaluator
             return new SqlTextValue.Tainted("non-literal-expression:cast-target-not-pinned", Span(sourcePath, site));
         }
 
-        var argument = ToBuiltinArgument(Fold(source, state, sourcePath, cap, catalog));
-        var result = BuiltinRegistry.FoldCastOrConvert(targetType, argument, Span(sourcePath, site));
-        return ToSqlTextValue(result, Span(sourcePath, site));
+        var folded = Fold(source, state, sourcePath, cap, catalog);
+        var result = BuiltinRegistry.FoldCastOrConvert(targetType, ToBuiltinArgument(folded), Span(sourcePath, site));
+        var converted = ToSqlTextValue(result, Span(sourcePath, site));
+        return IsNonTextValue(folded) ? MarkConvertedFromNonText(converted) : converted;
     }
+
+    private static bool IsNonTextValue(SqlTextValue value) =>
+        value is SqlTextValue.Template template
+        && (template.DeclaredType is { IsStringFamily: false }
+            || template.Pieces is [TemplatePiece.Hole { Type.IsStringFamily: false } or TemplatePiece.Hole { IsConvertedFromNonText: true }]);
+
+    private static SqlTextValue MarkConvertedFromNonText(SqlTextValue value) =>
+        value is SqlTextValue.Template template
+            ? template with { Pieces = [.. template.Pieces.Select(p => p is TemplatePiece.Hole hole ? hole with { IsConvertedFromNonText = true } : p)] }
+            : value;
 
     private sealed record FunctionCallFoldContext(
         string FunctionName, IList<ScalarExpression> Parameters, SourceSpan Site, Dictionary<string, SqlTextValue> State, string SourcePath, int Cap, DatabaseCatalog? Catalog);
