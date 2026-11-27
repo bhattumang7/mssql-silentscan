@@ -13,7 +13,8 @@ internal static class TemporalScaleNarrowing
             fractional-seconds scale is assigned into a target declared with a narrower one - for
             example a DATETIME2(7) computation written into a DATETIME2(2) column or variable - SQL
             Server does not reject the assignment. It silently rounds the sub-second digits to the
-            target's own scale and keeps the rest.
+            target's own scale. The rounding carries upward: DATETIME2(7)
+            '2024-12-31 23:59:59.9999999' stored with scale 0 becomes 2025-01-01 00:00:00.
 
             This is the temporal sibling of the numeric scale-narrowing case: both sides are exact,
             well-defined temporal types, so there's no obvious representational mismatch to raise

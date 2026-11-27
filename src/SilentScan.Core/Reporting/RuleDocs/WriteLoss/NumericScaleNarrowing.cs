@@ -31,8 +31,9 @@ internal static class NumericScaleNarrowing
             precision the instant it's persisted into a narrower column, and every digit past the
             target's scale is gone with no error and no log of what was rounded away.
 
-            The engine's rounding here is a genuine round-half-away-from-zero, not a truncation -
-            which means the loss can be small per row, but it compounds across aggregations:
+            Between DECIMAL, NUMERIC, and MONEY types the engine rounds half away from zero. A
+            DECIMAL/NUMERIC value assigned into an integer type is truncated instead (7.89 becomes
+            7), while a MONEY/SMALLMONEY value is rounded (7.89 becomes 8). Either way the loss can be small per row, but it compounds across aggregations:
             summing a column of rounded values after the fact does not reproduce what summing the
             unrounded values would have given, and reconciliation against an external system that
             kept the extra scale can drift by fractions of a cent per row, invisible until totals

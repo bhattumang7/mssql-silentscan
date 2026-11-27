@@ -683,7 +683,7 @@ public sealed class ReadableScanReportWriterTests
 
         Assert.Equal("Unicode characters outside the target's codepage become '?'", byColumn["dbo.T.A"][4]);
         Assert.Equal("fractional part silently dropped", byColumn["dbo.T.B"][4]);
-        Assert.Equal("digits past the target's scale silently rounded away", byColumn["dbo.T.C"][4]);
+        Assert.Equal("digits past the target's scale silently lost", byColumn["dbo.T.C"][4]);
         Assert.Equal("time-of-day silently dropped", byColumn["dbo.T.D"][4]);
     }
 

@@ -437,7 +437,7 @@ public sealed class SarifReportWriterCoverageTests
         var result = FirstResult(report);
         Assert.Equal("warning", result.GetProperty("level").GetString());
         Assert.Contains("position 2 ('Amount', int) receives decimal(10,2)", result.GetProperty("message").GetProperty("text").GetString());
-        Assert.Contains("digits past the target's scale are silently rounded away", result.GetProperty("message").GetProperty("text").GetString());
+        Assert.Contains("digits past the target's scale are silently lost", result.GetProperty("message").GetProperty("text").GetString());
     }
 
     [Theory]

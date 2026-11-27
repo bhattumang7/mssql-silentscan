@@ -1202,8 +1202,8 @@ public static class SarifReportWriter
     private static string DescribeWriteLossKind(WriteLossKind kind) => kind switch
     {
         WriteLossKind.UnicodeToNonUnicodeReplacement => "characters outside the target collation's codepage are silently replaced with '?'",
-        WriteLossKind.ApproximateToExactTruncation => "the fractional part is silently dropped",
-        WriteLossKind.NumericScaleNarrowing => "digits past the target's scale are silently rounded away",
+        WriteLossKind.ApproximateToExactTruncation => "the fractional part is silently lost",
+        WriteLossKind.NumericScaleNarrowing => "digits past the target's scale are silently lost",
         WriteLossKind.TemporalPrecisionLoss => "the time-of-day component is silently dropped",
         WriteLossKind.LengthTruncation => "characters/bytes past the target's declared length are silently dropped",
         WriteLossKind.TemporalScaleNarrowing => "fractional-second digits past the target's declared scale are silently rounded away",

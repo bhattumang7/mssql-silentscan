@@ -10,13 +10,13 @@ internal static class ApproximateTruncation
         WhyItMatters: """
             REAL and FLOAT store values in IEEE-754 binary floating point - an approximate
             representation with no fixed number of digits after the point, chosen for range rather
-            than exactness. INT, BIGINT, SMALLINT, and TINYINT store exact whole numbers with no
-            fractional component at all. When an INSERT or UPDATE assigns a REAL/FLOAT value into
-            one of these exact integer targets, SQL Server has to reconcile the two representations,
-            and it does so by implicit conversion rules that truncate toward zero - not round - and
-            it does this without raising an error or a truncation warning under default session
-            settings. 19.99 assigned into an INT column silently becomes 19, not 20; -4.7 becomes
-            -4, not -5.
+            than exactness. Integer, DECIMAL/NUMERIC, and MONEY/SMALLMONEY types store exact
+            values with a fixed number of digits after the point. When a REAL/FLOAT value is
+            assigned into one of these exact targets, SQL Server converts it without raising an
+            error or a warning, and drops what the target cannot hold. An integer target truncates
+            toward zero: 19.99 silently becomes 19, not 20, and -4.7 becomes -4. A DECIMAL/NUMERIC
+            or MONEY/SMALLMONEY target rounds to its own scale: 1.29 into DECIMAL(5,1) is stored
+            as 1.3.
 
             A scalar function's RETURN is subject to the same truncation: the returned value is
             converted to the declared RETURNS type, so a REAL/FLOAT result returned from a
@@ -24,11 +24,9 @@ internal static class ApproximateTruncation
             parameter's default value is truncated the same way when the procedure runs without
             that argument.
 
-            The truncation-not-rounding behavior is the part that catches people off guard even
-            when they know narrowing is happening: many developers reasonably assume SQL Server
-            "rounds" numeric conversions the way CAST/ROUND-aware code paths do elsewhere, but the
-            plain implicit conversion from an approximate to an exact type simply discards
-            everything past the decimal point. Because this happens silently and the row commits
+            The difference between the two target families is what catches people off guard even
+            when they know narrowing is happening: the same value is rounded into a DECIMAL column
+            and cut into an integer one. Because this happens silently and the row commits
             successfully, the loss is invisible until someone compares a computed total against
             what the integer column actually holds and the numbers don't reconcile - and by then,
             the discarded fractional data was never persisted anywhere to recover.
