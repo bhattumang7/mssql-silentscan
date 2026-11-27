@@ -29,7 +29,8 @@ public sealed record SetOptionFinding(
     string? TouchedIndexName = null,
     bool TouchedIsIndexedView = false,
     FindingConfidence Confidence = FindingConfidence.High,
-    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<SetOptionFinding>, IFinding
+    SourceSpan? DynamicSqlCallSite = null,
+    bool TouchedIsComputedColumnIndex = false) : IRelocatableFinding<SetOptionFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.SetOptionRuleId(Kind);
 

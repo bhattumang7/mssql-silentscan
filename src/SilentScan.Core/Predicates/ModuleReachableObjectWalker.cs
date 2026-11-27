@@ -7,7 +7,9 @@ namespace SilentScan.Core.Predicates;
 
 public static class ModuleReachableObjectWalker
 {
-    public readonly record struct Touch(string ObjectQualifiedName, string? IndexName, bool IsIndexedView, IReadOnlyList<int> Offsets);
+    public readonly record struct Touch(
+        string ObjectQualifiedName, string? IndexName, bool IsIndexedView, IReadOnlyList<int> Offsets,
+        bool IsComputedColumnIndex = false);
 
     public static bool TryFindTouch(TSqlFragment moduleBody, DatabaseCatalog catalog, out Touch touch)
     {
@@ -48,10 +50,57 @@ public static class ModuleReachableObjectWalker
                     ModuleRestatesFilter(restated.FilterDefinition!, restated.Name, table.QualifiedName, catalog, collector.Statements));
                 return true;
             }
+
+            foreach (var index in table.Indexes.Where(i => !i.IsDisabled && !i.IsColumnstore && !i.IsFiltered && i.KeyColumns.Count > 0))
+            {
+                var leading = index.KeyColumns[0];
+                if (table.FindColumn(leading, catalog.IdentifierComparer) is not { IsComputed: true })
+                {
+                    continue;
+                }
+
+                var offsets = StatementsComparing(leading, table.QualifiedName, catalog, collector.Statements);
+                if (offsets.Count > 0)
+                {
+                    touch = new Touch(qualifiedName, index.Name, IsIndexedView: false, offsets, IsComputedColumnIndex: true);
+                    return true;
+                }
+            }
         }
 
         touch = default;
         return false;
+    }
+
+    private static List<int> StatementsComparing(
+        string columnName, string tableQualifiedName, DatabaseCatalog catalog, IReadOnlyList<StatementPredicates> statements) =>
+        [.. statements
+            .Where(statement => statement.IsQuery && statement.Compared.Any(compared =>
+                catalog.IdentifierComparer.Equals(compared.Column, columnName)
+                && statement.Tables.Any(table => catalog.IdentifierComparer.Equals(table.QualifiedName, tableQualifiedName)
+                    && (compared.Qualifier is null
+                        ? statement.Tables.Count == 1
+                        : catalog.IdentifierComparer.Equals(table.AliasKey, compared.Qualifier)))))
+            .Select(statement => statement.Offset)];
+
+    private static IEnumerable<ComparedColumn> ComparedColumns(BooleanExpression conjunct)
+    {
+        IEnumerable<ScalarExpression> operands = conjunct switch
+        {
+            BooleanComparisonExpression
+            {
+                ComparisonType: BooleanComparisonType.Equals or BooleanComparisonType.LessThan or BooleanComparisonType.GreaterThan
+                    or BooleanComparisonType.LessThanOrEqualTo or BooleanComparisonType.GreaterThanOrEqualTo,
+            } comparison => [comparison.FirstExpression, comparison.SecondExpression],
+            BooleanTernaryExpression { TernaryExpressionType: BooleanTernaryExpressionType.Between } between => [between.FirstExpression],
+            InPredicate { NotDefined: false } membership => [membership.Expression],
+            _ => [],
+        };
+
+        return operands.OfType<ColumnReferenceExpression>()
+            .Where(column => column.MultiPartIdentifier is not null)
+            .Select(column => column.MultiPartIdentifier.Identifiers)
+            .Select(parts => new ComparedColumn(parts.Count > 1 ? parts[^2].Value : null, parts[^1].Value));
     }
 
     private static List<int> ModuleRestatesFilter(
@@ -139,7 +188,10 @@ public static class ModuleReachableObjectWalker
 
     private readonly record struct StatementTable(string QualifiedName, string AliasKey, IReadOnlyList<string> HintedIndexes);
 
-    private sealed record StatementPredicates(List<StatementTable> Tables, List<NormalizedPredicate> Conjuncts, int Offset);
+    private readonly record struct ComparedColumn(string? Qualifier, string Column);
+
+    private sealed record StatementPredicates(
+        List<StatementTable> Tables, List<NormalizedPredicate> Conjuncts, int Offset, List<ComparedColumn> Compared, bool IsQuery);
 
     private sealed class StatementCollector(DatabaseCatalog catalog) : TSqlFragmentVisitor
     {
@@ -162,7 +214,7 @@ public static class ModuleReachableObjectWalker
         public override void Visit(MergeSpecification node) => ExcludeWriteTarget(node.Target, fromClause: null);
 
         public override void Visit(QuerySpecification node) =>
-            Record(node.FromClause, node.WhereClause, node.StartOffset);
+            Record(node.FromClause, node.WhereClause, node.StartOffset, isQuery: true);
 
         public override void Visit(UpdateSpecification node)
         {
@@ -198,7 +250,7 @@ public static class ModuleReachableObjectWalker
             }
         }
 
-        private void Record(FromClause? fromClause, WhereClause? whereClause, int offset)
+        private void Record(FromClause? fromClause, WhereClause? whereClause, int offset, bool isQuery = false)
         {
             if (whereClause?.SearchCondition is not { } condition)
             {
@@ -217,7 +269,9 @@ public static class ModuleReachableObjectWalker
                         .Select(value => value.Identifier?.Value).OfType<string>()]));
             }
 
-            Statements.Add(new StatementPredicates(tables, [.. PredicateTreeWalker.FlattenAnd(condition).Select(Normalize)], offset));
+            var conjuncts = PredicateTreeWalker.FlattenAnd(condition).ToList();
+            Statements.Add(new StatementPredicates(
+                tables, [.. conjuncts.Select(Normalize)], offset, [.. conjuncts.SelectMany(ComparedColumns)], isQuery));
         }
     }
 }

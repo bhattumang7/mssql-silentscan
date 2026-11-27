@@ -57,7 +57,8 @@ public static class SetOptionScanner
             findings.Add(new SetOptionFinding(
                 SetOptionFindingKind.QuotedIdentifierOffBlocksIndexedFeature, moduleQualifiedName, parseResult.SourcePath,
                 parseResult.Fragment.StartLine, parseResult.Fragment.StartColumn,
-                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView));
+                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView,
+                TouchedIsComputedColumnIndex: touch.IsComputedColumnIndex));
         }
 
         if (ansiNullsOff)
@@ -65,7 +66,8 @@ public static class SetOptionScanner
             findings.Add(new SetOptionFinding(
                 SetOptionFindingKind.AnsiNullsOffBlocksIndexedFeature, moduleQualifiedName, parseResult.SourcePath,
                 parseResult.Fragment.StartLine, parseResult.Fragment.StartColumn,
-                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView));
+                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView,
+                TouchedIsComputedColumnIndex: touch.IsComputedColumnIndex));
         }
 
         foreach (var (statement, kind) in rule.MatchedStatements)
@@ -78,7 +80,8 @@ public static class SetOptionScanner
             findings.Add(new SetOptionFinding(
                 kind, moduleQualifiedName, parseResult.SourcePath,
                 statement.StartLine, statement.StartColumn,
-                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView));
+                touch.ObjectQualifiedName, touch.IndexName, touch.IsIndexedView,
+                TouchedIsComputedColumnIndex: touch.IsComputedColumnIndex));
         }
 
         return findings;
