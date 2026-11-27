@@ -63,9 +63,24 @@ public static class QueryAntiPatternScanner
         public void OnEnterDeclareTableVariableStatement(DeclareTableVariableStatement node, ModuleWalker walker) =>
             _tableVariableNames.Add(node.Body.VariableName.Value);
 
-        private bool TableVariableEstimateIsFixed =>
-            catalog.CompatibilityLevel is { } level
-            && (level < 150 || catalog.IsScopedConfigurationDisabled("DEFERRED_COMPILATION_TV"));
+        private readonly Stack<int?> _hintedCompatibilityLevels = new();
+
+        private int? StatementCompatibilityLevel =>
+            (_hintedCompatibilityLevels.TryPeek(out var hinted) ? hinted : null) ?? catalog.CompatibilityLevel;
+
+        private bool TableVariableEstimateIsFixed(int? level) =>
+            level is < 150 || level is not null && catalog.IsScopedConfigurationDisabled("DEFERRED_COMPILATION_TV");
+
+        private static int? HintedCompatibilityLevel(StatementWithCtesAndXmlNamespaces statement)
+        {
+            const string Prefix = "QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_";
+            return statement.OptimizerHints.OfType<UseHintList>()
+                .SelectMany(list => list.Hints)
+                .Select(hint => hint.Value)
+                .Where(value => value.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+                .Select(value => int.TryParse(value.AsSpan(Prefix.Length), out var level) ? level : (int?)null)
+                .FirstOrDefault(level => level is not null);
+        }
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
@@ -89,8 +104,8 @@ public static class QueryAntiPatternScanner
             if (_recompileStatementDepth != 0
                 || !estimateSensitiveFromClauses.Contains(node)
                 || !_tableVariableNames.Contains(variableRef.Variable.Name)
-                || catalog.CompatibilityLevel is not { } level
-                || !TableVariableEstimateIsFixed)
+                || StatementCompatibilityLevel is not { } level
+                || !TableVariableEstimateIsFixed(level))
             {
                 return;
             }
@@ -146,6 +161,7 @@ public static class QueryAntiPatternScanner
 
         private void EnterStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
+            _hintedCompatibilityLevels.Push(HintedCompatibilityLevel(statement));
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth++;
@@ -154,6 +170,7 @@ public static class QueryAntiPatternScanner
 
         private void LeaveStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
+            _hintedCompatibilityLevels.Pop();
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth--;
@@ -188,10 +205,7 @@ public static class QueryAntiPatternScanner
 
         public void OnEnterWhileStatement(WhileStatement node, ModuleWalker walker)
         {
-            if (!TableVariableEstimateIsFixed)
-            {
-                InspectStaleTableVariableInLoop(node);
-            }
+            InspectStaleTableVariableInLoop(node);
 
             InspectRbarSingleRowLoopDml(node);
         }
@@ -483,12 +497,15 @@ public static class QueryAntiPatternScanner
         private void InspectStaleTableVariableInLoop(WhileStatement node)
         {
             var writtenVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var readSites = new List<VariableTableReference>();
+            var readSites = new List<(VariableTableReference Reference, int? HintedLevel)>();
 
             var collector = new LoopWriteAndReadCollector(readSites, writtenVariables, _tableVariableNames);
             node.Statement.Accept(collector);
 
-            foreach (var read in readSites.Where(read => writtenVariables.Contains(read.Variable.Name)))
+            foreach (var read in readSites
+                .Where(site => writtenVariables.Contains(site.Reference.Variable.Name)
+                    && !TableVariableEstimateIsFixed(site.HintedLevel ?? catalog.CompatibilityLevel))
+                .Select(site => site.Reference))
             {
                 Findings.Add(new QueryAntiPatternFinding(
                     QueryAntiPatternFindingKind.TableVariableStaleEstimateInLoop, sourcePath,
@@ -543,11 +560,12 @@ public static class QueryAntiPatternScanner
         }
 
         private sealed class LoopWriteAndReadCollector(
-            List<VariableTableReference> readSites,
+            List<(VariableTableReference Reference, int? HintedLevel)> readSites,
             HashSet<string> writtenVariables,
             HashSet<string> knownTableVariables) : TSqlFragmentVisitor
         {
             private int _recompileDepth;
+            private int? _hintedLevel;
 
             public override void ExplicitVisit(WhileStatement node)
             {
@@ -563,7 +581,7 @@ public static class QueryAntiPatternScanner
                         foreach (var variableRef in CollectVariableTableReferences(tableReference)
                             .Where(v => knownTableVariables.Contains(v.Variable.Name)))
                         {
-                            readSites.Add(variableRef);
+                            readSites.Add((variableRef, _hintedLevel));
                         }
                     }
                 }
@@ -605,7 +623,10 @@ public static class QueryAntiPatternScanner
                     _recompileDepth++;
                 }
 
+                var enclosingLevel = _hintedLevel;
+                _hintedLevel = HintedCompatibilityLevel(statement) ?? enclosingLevel;
                 visit();
+                _hintedLevel = enclosingLevel;
                 if (recompiles)
                 {
                     _recompileDepth--;

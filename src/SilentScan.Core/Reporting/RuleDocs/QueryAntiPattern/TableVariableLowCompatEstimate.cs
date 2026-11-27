@@ -37,6 +37,9 @@ internal static class TableVariableLowCompatEstimate
             where the database has switched the DEFERRED_COMPILATION_TV database scoped
             configuration off, which brings the fixed estimate back at any level.
 
+            A statement's `USE HINT('QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_n')` replaces the database
+            level for that statement, in both directions.
+
             It fires only where the estimate can change the plan: a table variable joined to
             another row source, or read under GROUP BY, DISTINCT, or an IN / EXISTS semi-join.
             A table variable that is the only row source of a plain select, an ORDER BY, TOP,

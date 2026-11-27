@@ -1293,4 +1293,31 @@ public sealed class QueryAntiPatternScannerTests
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.DistinctMaskingJoinFanout);
     }
+
+    [Theory]
+    [InlineData(160, 140, true)]
+    [InlineData(140, 160, false)]
+    public void TableVariableJoin_IsJudgedAtTheStatementsHintedCompatibilityLevel(int databaseLevel, int hintedLevel, bool fires)
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Big; "
+            + $"SELECT b.Id FROM dbo.Big b JOIN @t t ON b.Id = t.Id OPTION (USE HINT('QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_{hintedLevel}'));",
+            databaseLevel);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate));
+    }
+
+    [Theory]
+    [InlineData(160, 140, false)]
+    [InlineData(140, 160, true)]
+    public void StaleLoopEstimate_IsJudgedAtTheReadingStatementsHintedCompatibilityLevel(int databaseLevel, int hintedLevel, bool fires)
+    {
+        var findings = Scan(
+            "DECLARE @t TABLE (Id INT); DECLARE @i INT = 0; DECLARE @c INT; WHILE @i < 5 BEGIN "
+            + "INSERT INTO @t SELECT Id FROM dbo.Big WHERE Id = @i; "
+            + $"SELECT @c = COUNT(Id) FROM @t OPTION (USE HINT('QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_{hintedLevel}')); SET @i = @i + 1; END;",
+            databaseLevel);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.TableVariableStaleEstimateInLoop));
+    }
 }
