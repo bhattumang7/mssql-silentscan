@@ -535,13 +535,15 @@ public sealed class WriteLossExtractionTests
     }
 
     [Fact]
-    public void Extract_SetVariableFromStringAggWithMaxOperand_NoFinding()
+    public void Extract_SetVariableFromStringAggWithMaxOperand_ReportsTheMaxResultCut()
     {
         var findings = Extract(
             "CREATE TABLE dbo.T (Col VARCHAR(MAX) NULL);",
             "DECLARE @v VARCHAR(20); SET @v = (SELECT STRING_AGG(Col, ',') FROM dbo.T);");
 
-        Assert.Empty(findings);
+        var finding = Assert.Single(findings);
+        Assert.Equal(WriteLossKind.LengthTruncation, finding.Kind);
+        Assert.True(finding.SourceType.IsMax);
     }
 
     [Fact]

@@ -11,7 +11,9 @@ internal static class LengthTruncation
             VARCHAR/NVARCHAR/CHAR/NCHAR and BINARY/VARBINARY are all bounded by a declared length.
             When a value from a longer variable is assigned into a shorter one with a plain SET or
             SELECT, SQL Server does not raise an error. It silently keeps only the leading
-            characters/bytes that fit and discards the rest.
+            characters/bytes that fit and discards the rest. The same happens to a MAX value, to a
+            binary value assigned into a string variable, and to a date or time value assigned into
+            a string variable shorter than its text form.
 
             Inserting or updating a table column with a value longer than its declared length
             normally raises an error ("String or binary data would be truncated"), which this rule

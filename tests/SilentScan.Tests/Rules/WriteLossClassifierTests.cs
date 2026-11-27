@@ -254,4 +254,28 @@ public sealed class WriteLossClassifierTests
 
         Assert.Equal(WriteLossKind.UnicodeToNonUnicodeReplacement, kind);
     }
+
+    [Theory]
+    [InlineData(SqlTypeCategory.VarChar, null, true, SqlTypeCategory.VarChar, 5, null, true)]
+    [InlineData(SqlTypeCategory.VarBinary, null, true, SqlTypeCategory.VarBinary, 5, null, true)]
+    [InlineData(SqlTypeCategory.VarBinary, 10, false, SqlTypeCategory.VarChar, 5, null, true)]
+    [InlineData(SqlTypeCategory.VarBinary, 10, false, SqlTypeCategory.NVarChar, 5, null, false)]
+    [InlineData(SqlTypeCategory.VarBinary, 11, false, SqlTypeCategory.NVarChar, 5, null, true)]
+    [InlineData(SqlTypeCategory.DateTime2, null, false, SqlTypeCategory.VarChar, 10, 7, true)]
+    [InlineData(SqlTypeCategory.DateTime2, null, false, SqlTypeCategory.VarChar, 27, 7, false)]
+    [InlineData(SqlTypeCategory.Date, null, false, SqlTypeCategory.VarChar, 10, null, false)]
+    [InlineData(SqlTypeCategory.Date, null, false, SqlTypeCategory.VarChar, 7, null, true)]
+    [InlineData(SqlTypeCategory.Time, null, false, SqlTypeCategory.VarChar, 5, 0, true)]
+    [InlineData(SqlTypeCategory.DateTime, null, false, SqlTypeCategory.VarChar, 10, null, true)]
+    [InlineData(SqlTypeCategory.DateTimeOffset, null, false, SqlTypeCategory.VarChar, 27, 7, true)]
+    public void LengthTruncation_CoversMaxAndCrossFamilySourcesIntoVariables(
+        SqlTypeCategory sourceCategory, int? sourceLength, bool sourceIsMax, SqlTypeCategory targetCategory, int targetLength, int? sourceScale, bool fires)
+    {
+        var source = new SqlType(sourceCategory, Length: sourceLength, IsMax: sourceIsMax, Scale: sourceScale);
+        var target = new SqlType(targetCategory, Length: targetLength);
+
+        var kind = WriteLossClassifier.Classify(target, source, sourceExpression: null, isVariableTarget: true);
+
+        Assert.Equal(fires, kind == WriteLossKind.LengthTruncation);
+    }
 }

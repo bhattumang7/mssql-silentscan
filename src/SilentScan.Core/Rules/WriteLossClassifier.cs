@@ -150,10 +150,53 @@ public static partial class WriteLossClassifier
         && (source.Category is SqlTypeCategory.DateTime or SqlTypeCategory.DateTime2
             || source.IsStringFamily && literal is StringLiteral stringLiteral && SecondsComponentRegex().IsMatch(stringLiteral.Value));
 
-    private static bool IsLengthTruncationRisk(SqlType target, SqlType source) =>
-        (target.IsStringFamily && source.IsStringFamily || target.IsBinaryFamily && source.IsBinaryFamily)
-        && !target.IsMax && !source.IsMax
-        && target.Length is { } targetLength && source.Length is { } sourceLength && targetLength < sourceLength;
+    private static bool IsLengthTruncationRisk(SqlType target, SqlType source)
+    {
+        if (target.IsMax || target.Length is not { } targetLength)
+        {
+            return false;
+        }
+
+        if (target.IsStringFamily && source.IsStringFamily || target.IsBinaryFamily && source.IsBinaryFamily)
+        {
+            return source.IsMax || source.Length > targetLength;
+        }
+
+        if (!target.IsStringFamily)
+        {
+            return false;
+        }
+
+        if (source.IsBinaryFamily)
+        {
+            return source.IsMax || source.Length > (target.IsUnicodeString ? targetLength * 2 : targetLength);
+        }
+
+        return TemporalTextLength(source) > targetLength;
+    }
+
+    private static int? TemporalTextLength(SqlType source) => source.Category switch
+    {
+        SqlTypeCategory.Date => DateTextLength,
+        SqlTypeCategory.Time => TimeTextLength + FractionTextLength(source),
+        SqlTypeCategory.DateTime or SqlTypeCategory.SmallDateTime => DateTimeTextLength,
+        SqlTypeCategory.DateTime2 => DateTimeTextLength + FractionTextLength(source),
+        SqlTypeCategory.DateTimeOffset => DateTimeTextLength + FractionTextLength(source) + OffsetTextLength,
+        _ => null,
+    };
+
+    private static int FractionTextLength(SqlType source) =>
+        (source.Scale ?? DefaultFractionalScale) is var scale && scale > 0 ? scale + 1 : 0;
+
+    private const int DateTextLength = 10;
+
+    private const int TimeTextLength = 8;
+
+    private const int DateTimeTextLength = 19;
+
+    private const int OffsetTextLength = 7;
+
+    private const int DefaultFractionalScale = 7;
 
     private static ScalarExpression? Unwrap(ScalarExpression? expression) => expression switch
     {
