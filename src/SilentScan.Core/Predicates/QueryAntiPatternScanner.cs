@@ -53,6 +53,8 @@ public static class QueryAntiPatternScanner
         private TSqlBatch? _currentBatch;
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _scalarParameterNames = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Stack<bool> _statementsComparingAColumnToAParameter = new();
 
         private static string? AliasOf(TableReference reference) =>
             reference is NamedTableReference named ? named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value : null;
@@ -123,6 +125,7 @@ public static class QueryAntiPatternScanner
         private void InspectTableValuedParameterPspSkip(VariableTableReference variableRef)
         {
             if (!_tableValuedParameterNames.Contains(variableRef.Variable.Name)
+                || !_statementsComparingAColumnToAParameter.TryPeek(out var parameterSensitive) || !parameterSensitive
                 || catalog.CompatibilityLevel is not >= 170
                 || catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
             {
@@ -162,6 +165,9 @@ public static class QueryAntiPatternScanner
         private void EnterStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
             _hintedCompatibilityLevels.Push(HintedCompatibilityLevel(statement));
+            var finder = new ColumnToParameterEqualityFinder(_scalarParameterNames);
+            statement.Accept(finder);
+            _statementsComparingAColumnToAParameter.Push(finder.Found);
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth++;
@@ -171,6 +177,7 @@ public static class QueryAntiPatternScanner
         private void LeaveStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
             _hintedCompatibilityLevels.Pop();
+            _statementsComparingAColumnToAParameter.Pop();
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth--;
@@ -223,6 +230,7 @@ public static class QueryAntiPatternScanner
             InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
             _tableVariableNames.Clear();
             _tableValuedParameterNames.Clear();
+            _scalarParameterNames.Clear();
         }
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
@@ -239,11 +247,30 @@ public static class QueryAntiPatternScanner
                 if (parameter.DataType is not UserDataTypeReference userType
                     || catalog.Find(SchemaObjectNameHelper.Qualify(userType.Name)) is not { Kind: CatalogTableKind.TableType })
                 {
+                    _scalarParameterNames.Add(parameter.VariableName.Value);
                     continue;
                 }
 
                 _tableValuedParameterNames.Add(parameter.VariableName.Value);
             }
+        }
+
+        private sealed class ColumnToParameterEqualityFinder(HashSet<string> parameterNames) : TSqlFragmentVisitor
+        {
+            public bool Found { get; private set; }
+
+            public override void Visit(BooleanComparisonExpression node)
+            {
+                if (node.ComparisonType == BooleanComparisonType.Equals)
+                {
+                    Found |= Compares(node.FirstExpression, node.SecondExpression) || Compares(node.SecondExpression, node.FirstExpression);
+                }
+            }
+
+            private bool Compares(ScalarExpression column, ScalarExpression parameter) =>
+                column is ColumnReferenceExpression
+                && parameter is VariableReference variable
+                && parameterNames.Contains(variable.Name);
         }
 
         internal sealed class ModuleBodyDetector : TSqlFragmentVisitor

@@ -34,7 +34,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "CREATE PROCEDURE dbo.P @CustomerId INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE EXISTS (SELECT 1 FROM dbo.Big WHERE Id = @CustomerId);",
             compatibilityLevel: 170);
 
         var finding = Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -47,7 +47,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);" + (char)10 + "GO" + (char)10
-            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "CREATE PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
             170,
             "PARAMETER_SENSITIVE_PLAN_OPTIMIZATION");
 
@@ -59,7 +59,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "CREATE PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 160);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -82,7 +82,7 @@ public sealed class QueryAntiPatternScannerTests
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
             + "CREATE PROCEDURE dbo.P @CustomerId INT, @ids dbo.IdList READONLY AS "
-            + "DECLARE @c INT = (SELECT COUNT(*) FROM @ids); "
+            + "DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @CustomerId; "
             + "SELECT Id FROM dbo.Big WHERE Id = @CustomerId;",
             compatibilityLevel: 170);
 
@@ -1001,7 +1001,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "ALTER PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1012,7 +1012,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE OR ALTER PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "CREATE OR ALTER PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1023,7 +1023,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
+            + "ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1034,7 +1034,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE OR ALTER FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
+            + "CREATE OR ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1055,7 +1055,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE PROCEDURE dbo.P @ids dbo.IdList READONLY AS SELECT Id FROM @ids;",
+            + "CREATE PROCEDURE dbo.P @id INT, @ids dbo.IdList READONLY AS SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 130);
 
         Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariableLowCompatEstimate);
@@ -1094,7 +1094,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE FUNCTION dbo.F (@ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT = (SELECT COUNT(*) FROM @ids); RETURN @c; END;",
+            + "CREATE FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1319,5 +1319,19 @@ public sealed class QueryAntiPatternScannerTests
             databaseLevel);
 
         Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.TableVariableStaleEstimateInLoop));
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM @ids;")]
+    [InlineData("SELECT b.Id FROM dbo.Big b JOIN @ids i ON i.Id = b.Id;")]
+    [InlineData("SELECT b.Id FROM dbo.Big b JOIN @ids i ON i.Id = b.Id WHERE b.Id > @CustomerId;")]
+    public void TableValuedParameterInAStatementWithNoParameterEquality_NeverFiresTableVariablePspSkip(string statement)
+    {
+        var findings = Scan(
+            "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
+            + $"CREATE PROCEDURE dbo.P @CustomerId INT, @ids dbo.IdList READONLY AS {statement}",
+            compatibilityLevel: 170);
+
+        Assert.DoesNotContain(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
     }
 }
