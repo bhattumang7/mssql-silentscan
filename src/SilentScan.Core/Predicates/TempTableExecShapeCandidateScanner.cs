@@ -10,7 +10,8 @@ public static class TempTableExecShapeCandidateScanner
 {
     public static IReadOnlyList<TempTableExecShapeCandidate> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
-        var rule = new Rule(parseResult.SourcePath, catalog);
+        var rule = new Rule(
+            parseResult.SourcePath, catalog, SetOptionByStatementResolver.Resolve(parseResult.Fragment, SetOptions.AnsiWarnings, setting: false));
         var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return rule.Candidates;
@@ -18,7 +19,8 @@ public static class TempTableExecShapeCandidateScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    private sealed class Rule(string sourcePath, DatabaseCatalog catalog) : IModuleRule
+    private sealed class Rule(
+        string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<TSqlStatement, bool> ansiWarningsOff) : IModuleRule
     {
         public List<TempTableExecShapeCandidate> Candidates { get; } = [];
 
@@ -53,7 +55,8 @@ public static class TempTableExecShapeCandidateScanner
                     CallerScopeQualifiedName: walker.CurrentProcScope,
                     SourcePath: sourcePath,
                     Line: node.StartLine,
-                    Column: node.StartColumn));
+                    Column: node.StartColumn,
+                    AnsiWarningsOff: ansiWarningsOff.GetValueOrDefault(node)));
             }
         }
     }
@@ -67,4 +70,5 @@ public readonly record struct TempTableExecShapeCandidate(
     string? CallerScopeQualifiedName,
     string SourcePath,
     int Line,
-    int Column);
+    int Column,
+    bool AnsiWarningsOff = false);

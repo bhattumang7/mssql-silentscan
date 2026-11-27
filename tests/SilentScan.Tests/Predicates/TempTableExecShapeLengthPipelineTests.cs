@@ -29,4 +29,15 @@ public sealed class TempTableExecShapeLengthPipelineTests
 
         Assert.Equal(expected, report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner").Count);
     }
+
+    [Fact]
+    public async Task WithAnsiWarningsOffAStringOverflowIntoTheTempTableIsSilent()
+    {
+        var sql = Sql("VARCHAR(10)", "VARCHAR(3)").Replace(
+            "INSERT INTO #t EXEC", "SET ANSI_WARNINGS OFF; INSERT INTO #t EXEC", StringComparison.Ordinal);
+
+        var report = await EngineAuthoritativeScan.ScanAsync(sql);
+
+        Assert.Single(report.Find<TempTableExecShapeFinding>("TempTableExecShapeScanner"));
+    }
 }

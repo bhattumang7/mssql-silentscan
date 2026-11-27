@@ -16,14 +16,15 @@ public static class ProcCallTableValuedArgumentMismatchScanner
     public static IReadOnlyList<ProcCallTableValuedArgumentMismatchFinding> Scan(
         SqlParseResult parseResult, ProcCallGraph graph, DatabaseCatalog catalog, SkipLedger ledger)
     {
-        var rule = CreateRule(parseResult.SourcePath, graph, catalog, ledger);
+        var rule = CreateRule(parseResult, graph, catalog, ledger);
         var walker = new ModuleWalker(parseResult.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return Harvest(rule);
     }
 
-    internal static Rule CreateRule(string sourcePath, ProcCallGraph graph, DatabaseCatalog catalog, SkipLedger ledger) =>
-        new(sourcePath, graph, catalog, ledger);
+    internal static Rule CreateRule(SqlParseResult parseResult, ProcCallGraph graph, DatabaseCatalog catalog, SkipLedger ledger) =>
+        new(parseResult.SourcePath, graph, catalog, ledger,
+            SetOptionByStatementResolver.Resolve(parseResult.Fragment, SetOptions.AnsiWarnings, setting: false));
 
     internal static IReadOnlyList<ProcCallTableValuedArgumentMismatchFinding> Harvest(Rule rule) =>
         [
@@ -40,8 +41,12 @@ public static class ProcCallTableValuedArgumentMismatchScanner
         string ColumnName, string ColumnTypeDisplay, string CallerExpressionDisplay, string CallerTypeDisplay,
         WriteLossKind Kind, int Line, int Column);
 
-    internal sealed class Rule(string sourcePath, ProcCallGraph graph, DatabaseCatalog catalog, SkipLedger ledger) : IModuleRule
+    internal sealed class Rule(
+        string sourcePath, ProcCallGraph graph, DatabaseCatalog catalog, SkipLedger ledger,
+        IReadOnlyDictionary<TSqlStatement, bool> ansiWarningsOff) : IModuleRule
     {
+        private bool _currentInsertTruncatesSilently;
+
         public List<ProcCallTableValuedArgumentMismatchFinding> Findings { get; } = [];
 
         private readonly Dictionary<string, SqlType?> _scalarVariableTypes = new(StringComparer.OrdinalIgnoreCase);
@@ -113,6 +118,8 @@ public static class ProcCallTableValuedArgumentMismatchScanner
 
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {
+            _currentInsertTruncatesSilently = ansiWarningsOff.GetValueOrDefault(node);
+
             if (node.InsertSpecification is not
                 {
                     Target: VariableTableReference { Variable.Name: var targetName },
@@ -211,7 +218,7 @@ public static class ProcCallTableValuedArgumentMismatchScanner
                     valueExpression, scopeChain ?? [], sourcePath,
                     new ScalarExpressionResolver.ScalarTypeContext(null, catalog.TypeAliases, catalog, _scalarVariableTypes));
 
-                if (WriteLossClassifier.Classify(column.Type, sourceType, valueExpression, isVariableTarget: false) is { } kind)
+                if (WriteLossClassifier.Classify(column.Type, sourceType, valueExpression, isVariableTarget: _currentInsertTruncatesSilently) is { } kind)
                 {
                     writes.Add(new NarrowingWrite(
                         column.Name, column.Type.ToString(), FragmentTextRenderer.Render(valueExpression), sourceType!.ToString(),

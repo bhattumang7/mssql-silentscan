@@ -35,4 +35,15 @@ public sealed class ProcCallTableValuedArgumentMismatchLengthPipelineTests
 
         Assert.Equal(expected, report.Find<ProcCallTableValuedArgumentMismatchFinding>("ProcCallTableValuedArgumentMismatchScanner").Count);
     }
+
+    [Fact]
+    public async Task WithAnsiWarningsOffAStringOverflowIntoTheTableTypeIsSilent()
+    {
+        var sql = CallerSql("VARCHAR(3)", "'abcdef'").Replace(
+            "INSERT INTO @rows", "SET ANSI_WARNINGS OFF; INSERT INTO @rows", StringComparison.Ordinal);
+
+        var report = await EngineAuthoritativeScan.ScanAsync(sql);
+
+        Assert.Single(report.Find<ProcCallTableValuedArgumentMismatchFinding>("ProcCallTableValuedArgumentMismatchScanner"));
+    }
 }

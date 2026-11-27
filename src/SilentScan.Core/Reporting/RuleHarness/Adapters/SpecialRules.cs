@@ -34,7 +34,7 @@ internal sealed class ProcCallTableValuedArgumentMismatchRule : IPerFileRule
         ProcCallTableValuedArgumentMismatchScanner.Scan(parseResult, context.ProcCallGraph, context.Catalog, context.Ledger);
 
     public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) =>
-        ProcCallTableValuedArgumentMismatchScanner.CreateRule(parseResult.SourcePath, context.ProcCallGraph, context.Catalog, context.Ledger);
+        ProcCallTableValuedArgumentMismatchScanner.CreateRule(parseResult, context.ProcCallGraph, context.Catalog, context.Ledger);
 
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) =>
         ProcCallTableValuedArgumentMismatchScanner.Harvest((ProcCallTableValuedArgumentMismatchScanner.Rule)moduleRule);
