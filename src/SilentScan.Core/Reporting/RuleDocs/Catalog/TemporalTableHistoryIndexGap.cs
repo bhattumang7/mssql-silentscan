@@ -14,8 +14,9 @@ internal static class TemporalTableHistoryIndexGap
             engine (5,000 current-table rows, 2,500 history-table rows, statistics updated with
             `FULLSCAN` on both). When a nonclustered index exists on the current side but no
             index led by the same key columns exists on the history side, a sargable predicate that
-            correctly seeks the current-table branch via its own index still degrades to a full
-            Clustered Index Scan on the history-table branch of the same query - the other half of
+            correctly seeks the current-table branch via its own index cannot seek the
+            history-table branch on those columns (a full scan for ALL, a period-range seek with a
+            residual filter for AS OF) - the other half of
             the same oracle probe confirmed both branches seek cleanly once a matching index is
             added to the history side.
 

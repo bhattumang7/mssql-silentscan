@@ -1324,7 +1324,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Untrusted CHECK constraints ({report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A CHECK constraint the engine itself does not trust - almost always the result of a WITH NOCHECK re-enabling ALTER TABLE statement. The constraint may not actually hold over existing rows, so the optimizer cannot use its predicate for constraint-based rewrites. A disabled constraint is not reported - it's openly off, not silently weaker than it looks.");
+            "A CHECK constraint the engine itself does not trust - left behind by ALTER TABLE ... WITH NOCHECK, or by a bulk load run without CHECK_CONSTRAINTS. The constraint may not actually hold over existing rows, so the optimizer cannot use its predicate for constraint-based rewrites. A disabled constraint is not reported - it's openly off, not silently weaker than it looks.");
 
         foreach (var group in report.Find<UntrustedConstraintFinding>(nameof(UntrustedConstraintScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {
@@ -1484,7 +1484,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"JSON_OBJECT with a repeated literal key ({report.Find<JsonObjectDuplicateKeyFinding>(nameof(JsonObjectDuplicateKeyScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A JSON_OBJECT call with the same literal key string written twice. Oracle-confirmed the engine accepts this with no error and emits both keys into the JSON text unchanged, but JSON_VALUE and equivalent single-value readers always resolve to the first occurrence - every later value written under that same key is silently discarded.");
+            "A JSON_OBJECT call with the same literal key string written twice. Oracle-confirmed the engine accepts this with no error and emits both keys into the JSON text (with RETURNING json only the first is kept), and JSON_VALUE and equivalent single-value readers always resolve to the first occurrence - every later value written under that same key is silently discarded.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.JsonObjectDuplicateKeyRuleId));
         yield return new ReadableBlock.Table(
@@ -1617,7 +1617,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.SecurityPredicateIndexRuleId));
         yield return new ReadableBlock.Table(
-            [WhereHeader, TableHeader, "Policy", "Predicate function", "Filtered column(s)"],
+            [WhereHeader, TableHeader, "Policy", "Predicate function", "Filtered column(s)", "Index"],
             [.. report.Find<SecurityPredicateIndexFinding>(nameof(SecurityPredicateIndexScanner)).Select(f => new List<string>
             {
                 Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
@@ -1625,6 +1625,7 @@ public static class ReadableScanReportWriter
                 f.PolicyQualifiedName,
                 f.PredicateFunctionQualifiedName,
                 string.Join(", ", f.FilteredColumns),
+                f.ConvertedIndexName is { } index ? $"{index} (column converted to the parameter type)" : "none",
             })]);
     }
 
@@ -1764,7 +1765,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Temporal table history-side index gaps ({report.Find<TemporalTableHistoryIndexGapFinding>(nameof(TemporalTableHistoryIndexGapScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "A system-versioned temporal table's CURRENT side carries a nonclustered index with no index on its HISTORY side led by the same key columns in the same order. FOR SYSTEM_TIME AS OF/BETWEEN rewrites to a UNION ALL of the two tables - oracle-confirmed directly (real seeded data, UPDATE STATISTICS ... WITH FULLSCAN on both sides): a predicate that seeks the current-table branch via this index degrades to a full Clustered Index Scan of the whole history table when the gap exists, and seeks both branches once a matching index is added. PRIMARY KEY/UNIQUE-constraint indexes on the current side are never compared - the engine itself refuses either constraint on a temporal history table (Msg 13558/13583), so flagging them would be a guaranteed-always-fire signal with no possible fix.");
+            "A system-versioned temporal table's CURRENT side carries a nonclustered index with no index on its HISTORY side led by the same key columns in the same order. FOR SYSTEM_TIME AS OF/BETWEEN rewrites to a UNION ALL of the two tables - oracle-confirmed directly (real seeded data, UPDATE STATISTICS ... WITH FULLSCAN on both sides): a predicate that seeks the current-table branch via this index cannot seek the history table on those columns when the gap exists (a full scan for ALL, a period-range seek for AS OF), and seeks both branches once a matching index is added. PRIMARY KEY/UNIQUE-constraint indexes on the current side are never compared - the engine itself refuses either constraint on a temporal history table (Msg 13558/13583), so flagging them would be a guaranteed-always-fire signal with no possible fix.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.TemporalTableHistoryIndexGapRuleId));
         yield return new ReadableBlock.Table(

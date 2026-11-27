@@ -177,7 +177,7 @@ public static class IndexDesignScanner
                 IndexDesignFindingKind.SubsumedIndex,
                 table.QualifiedName,
                 shorter.Name,
-                $"'{table.QualifiedName}' index '{shorter.Name ?? UnnamedIndexPlaceholder}' ({string.Join(", ", shorter.KeyColumns)}) is a leading-column prefix of '{longer.Name ?? UnnamedIndexPlaceholder}' ({string.Join(", ", longer.KeyColumns)}), with its own INCLUDE columns already covered by '{longer.Name ?? UnnamedIndexPlaceholder}' - '{shorter.Name ?? UnnamedIndexPlaceholder}' is redundant, since '{longer.Name ?? UnnamedIndexPlaceholder}' can serve every seek it could.",
+                $"'{table.QualifiedName}' index '{shorter.Name ?? UnnamedIndexPlaceholder}' ({string.Join(", ", shorter.KeyColumns)}) is a leading-column prefix of '{longer.Name ?? UnnamedIndexPlaceholder}' ({string.Join(", ", longer.KeyColumns)}), with its own INCLUDE columns already covered by '{longer.Name ?? UnnamedIndexPlaceholder}' - '{shorter.Name ?? UnnamedIndexPlaceholder}' is redundant, since '{longer.Name ?? UnnamedIndexPlaceholder}' serves every seek on its key columns.",
                 table.SourcePath,
                 table.SourceLine));
         }

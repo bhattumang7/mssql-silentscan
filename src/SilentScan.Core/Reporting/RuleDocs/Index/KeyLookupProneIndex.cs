@@ -18,7 +18,7 @@ internal static class KeyLookupProneIndex
             already-fetched index pages.
 
             This rule fires when a table has exactly one nonclustered index whose leading column(s)
-            could serve a query's own equality predicate, and that index does not cover every other
+            could serve a query's own equality or IN-list predicate, and that index does not cover every other
             column the same statement references on that table - the seek is real, but every matched
             row pays for a lookup to retrieve the columns the index itself doesn't carry. It's
             oracle-confirmed directly: the exact shape this rule flags was run against a real engine

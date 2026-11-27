@@ -639,7 +639,7 @@ public static class SarifReportWriter
     {
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.JsonObjectDuplicateKeyRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = $"JSON_OBJECT call repeats the literal key '{finding.DuplicateKey}' - the engine accepts this with no error and emits both keys, but JSON_VALUE and similar readers silently resolve to the first occurrence, discarding every later value written under the same key.";
+        var message = $"JSON_OBJECT call repeats the literal key '{finding.DuplicateKey}' - the engine accepts this with no error and emits both keys (with RETURNING json only the first is kept); JSON_VALUE and similar readers silently resolve to the first occurrence, discarding every later value written under the same key.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
@@ -696,6 +696,10 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var columns = string.Join(", ", finding.FilteredColumns);
         var message = $"'{finding.TableQualifiedName}' is secured by RLS policy '{finding.PolicyQualifiedName}''s FILTER predicate '{finding.PredicateFunctionQualifiedName}', bound to column(s) {columns} - none of them leads an active index on this table, so this predicate is silently applied to every SELECT/UPDATE/DELETE against this table as a residual, per-row filter over a full scan rather than a seek.";
+        if (finding.ConvertedIndexName is { } converted)
+        {
+            message = $"'{finding.TableQualifiedName}' is secured by RLS policy '{finding.PolicyQualifiedName}''s FILTER predicate '{finding.PredicateFunctionQualifiedName}', bound to column(s) {columns} - index '{converted}' cannot be seeked because the predicate converts the column to the parameter's type, so every statement on this table filters row by row. Match the parameter type to the column.";
+        }
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }
@@ -707,7 +711,7 @@ public static class SarifReportWriter
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
         var indexDisplay = finding.CurrentIndexName is null ? "an unnamed index" : $"'{finding.CurrentIndexName}'";
         var keyColumns = string.Join(", ", finding.KeyColumns);
-        var message = $"{indexDisplay} on '{finding.CurrentTableQualifiedName}' ({keyColumns}) has no structurally matching index on its history table '{finding.HistoryTableQualifiedName}' - a FOR SYSTEM_TIME query that seeks the current side via this index degrades to a scan of the whole history table.";
+        var message = $"{indexDisplay} on '{finding.CurrentTableQualifiedName}' ({keyColumns}) has no structurally matching index on its history table '{finding.HistoryTableQualifiedName}' - a FOR SYSTEM_TIME query that seeks the current side via this index cannot seek the history side on those columns, so it reads history rows through another access path and filters them afterwards.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
     }

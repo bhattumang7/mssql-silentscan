@@ -34,6 +34,10 @@ internal static class SecurityPredicateIndex
             shape, but this tool doesn't assert what it couldn't confirm - only the index-vs-scan
             mechanism, which it did.
 
+            An index on the column does not help when the predicate converts the column to the
+            parameter's type: a varchar column compared with an nvarchar parameter, or a string
+            column longer than the parameter, is scanned. Match the parameter type to the column.
+
             Scoped to only an ENABLED FILTER predicate (a BLOCK predicate doesn't filter the read
             path the same way, and a disabled policy is provably inert), invoked with at least one
             bare column-reference argument this pass can actually resolve. It fires when NONE of the

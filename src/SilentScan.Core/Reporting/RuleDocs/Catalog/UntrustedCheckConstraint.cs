@@ -13,8 +13,8 @@ internal static class UntrustedCheckConstraint
             The overwhelmingly common way a CHECK ends up untrusted is an ALTER TABLE ... WITH
             NOCHECK ADD CONSTRAINT, or an existing constraint disabled and re-enabled with NOCHECK -
             most often done to add a new business rule to a table that already has rows violating
-            it, without having to clean up or reject that data immediately. The constraint still
-            enforces the rule going forward for every new INSERT/UPDATE, so the table looks fully
+            it, without having to clean up or reject that data immediately. A bulk load run without CHECK_CONSTRAINTS leaves it untrusted too, and loads rows without checking them. The
+            constraint is enforced for ordinary INSERT/UPDATE, so the table looks fully
             protected in day-to-day use; only sys.check_constraints reveals that some existing rows
             were never actually verified against it.
 

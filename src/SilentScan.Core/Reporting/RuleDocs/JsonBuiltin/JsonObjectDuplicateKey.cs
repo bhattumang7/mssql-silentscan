@@ -12,7 +12,8 @@ internal static class JsonObjectDuplicateKey
             never checks whether two of those keys are the same string. Oracle-confirmed (SQL
             Server 2025): JSON_OBJECT('a':1, 'a':2) is accepted with no error and produces
             {"a":1,"a":2} - both keys survive in the JSON text unchanged, which itself already
-            looks wrong to anyone who assumes JSON objects have unique keys.
+            looks wrong to anyone who assumes JSON objects have unique keys. With RETURNING json only
+            the first occurrence is kept at all.
 
             The real trap is what happens next: JSON_VALUE and every other single-value JSON
             reader always resolve a repeated key to its first occurrence. Oracle-confirmed that

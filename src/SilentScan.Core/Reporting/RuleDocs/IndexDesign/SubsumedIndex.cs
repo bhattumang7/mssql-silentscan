@@ -28,7 +28,10 @@ internal static class SubsumedIndex
             every seek the first one could.
             """,
         HowToFixIt: """
-            Drop the narrower, redundant index - the wider index already covers it.
+            Drop the narrower index once no query depends on what only it offers. On a table with a
+            clustered index it is ordered by its key and then the clustering key, so a seek or ORDER
+            BY that continues into the clustering key can lose the seek range or need a Sort on the
+            wider index, and key-only scans read more pages there.
             """,
         Examples:
         [

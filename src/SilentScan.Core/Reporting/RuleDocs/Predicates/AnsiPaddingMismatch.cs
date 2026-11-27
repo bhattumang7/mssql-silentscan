@@ -9,11 +9,11 @@ internal static class AnsiPaddingMismatch
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
             ANSI_PADDING is a session/database setting that controls whether trailing spaces on a
-            varchar or varbinary value are preserved when the value is stored. With ANSI_PADDING
+            varchar or nullable char value are preserved when the value is stored. With ANSI_PADDING
             ON - the modern default, and the only setting new connections generally use - trailing
             whitespace in a varchar value is preserved exactly as supplied. With ANSI_PADDING OFF, a
             legacy setting that predates the ANSI SQL-92 standard becoming the default and is now
-            deprecated, trailing spaces are stripped from a varchar/varbinary value at INSERT or
+            deprecated, trailing spaces are stripped from a varchar or nullable char value at INSERT or
             UPDATE time, before the value is ever stored. This is a storage-time transformation, not
             a comparison-time one - once a column was populated under ANSI_PADDING OFF, the trailing
             whitespace is simply gone from what's on disk; there is no way for any later query to

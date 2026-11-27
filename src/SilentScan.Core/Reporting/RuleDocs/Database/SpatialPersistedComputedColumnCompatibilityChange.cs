@@ -9,7 +9,7 @@ internal static class SpatialPersistedComputedColumnCompatibilityChange
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            SQL Server reports this exact index from `sys.dm_db_objects_disabled_on_compatibility_level_change` for the connected instance's own current default compatibility level. The DMV identifies indexes that depend on a persisted computed column using a `geography` or `geometry` method and which the engine will disable during that compatibility-level change.
+            SQL Server reports this exact index from `sys.dm_db_objects_disabled_on_compatibility_level_change` for the compatibility level of the instance's model database (the level new databases get). The DMV identifies indexes that depend on a persisted computed column using a `geography` or `geometry` method and which the engine will disable during that compatibility-level change.
 
             The finding is live-only because the DMV is the authoritative implementation of the compatibility rule. SilentScan does not attempt to reconstruct or generalize the engine's eligibility logic from computed-column text.
             """,
