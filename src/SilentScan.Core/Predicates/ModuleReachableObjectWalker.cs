@@ -83,26 +83,6 @@ public static class ModuleReachableObjectWalker
                         : catalog.IdentifierComparer.Equals(table.AliasKey, compared.Qualifier)))))
             .Select(statement => statement.Offset)];
 
-    private static IEnumerable<ComparedColumn> ComparedColumns(BooleanExpression conjunct)
-    {
-        IEnumerable<ScalarExpression> operands = conjunct switch
-        {
-            BooleanComparisonExpression
-            {
-                ComparisonType: BooleanComparisonType.Equals or BooleanComparisonType.LessThan or BooleanComparisonType.GreaterThan
-                    or BooleanComparisonType.LessThanOrEqualTo or BooleanComparisonType.GreaterThanOrEqualTo,
-            } comparison => [comparison.FirstExpression, comparison.SecondExpression],
-            BooleanTernaryExpression { TernaryExpressionType: BooleanTernaryExpressionType.Between } between => [between.FirstExpression],
-            InPredicate { NotDefined: false } membership => [membership.Expression],
-            _ => [],
-        };
-
-        return operands.OfType<ColumnReferenceExpression>()
-            .Where(column => column.MultiPartIdentifier is not null)
-            .Select(column => column.MultiPartIdentifier.Identifiers)
-            .Select(parts => new ComparedColumn(parts.Count > 1 ? parts[^2].Value : null, parts[^1].Value));
-    }
-
     private static List<int> ModuleRestatesFilter(
         string filterDefinition, string? indexName, string tableQualifiedName, DatabaseCatalog catalog,
         IReadOnlyList<StatementPredicates> statements)
@@ -248,6 +228,26 @@ public static class ModuleReachableObjectWalker
                     _writeTargets.Add(source);
                 }
             }
+        }
+
+        private static IEnumerable<ComparedColumn> ComparedColumns(BooleanExpression conjunct)
+        {
+            IEnumerable<ScalarExpression> operands = conjunct switch
+            {
+                BooleanComparisonExpression
+                {
+                    ComparisonType: BooleanComparisonType.Equals or BooleanComparisonType.LessThan or BooleanComparisonType.GreaterThan
+                        or BooleanComparisonType.LessThanOrEqualTo or BooleanComparisonType.GreaterThanOrEqualTo,
+                } comparison => [comparison.FirstExpression, comparison.SecondExpression],
+                BooleanTernaryExpression { TernaryExpressionType: BooleanTernaryExpressionType.Between } between => [between.FirstExpression],
+                InPredicate { NotDefined: false } membership => [membership.Expression],
+                _ => [],
+            };
+
+            return operands.OfType<ColumnReferenceExpression>()
+                .Where(column => column.MultiPartIdentifier is not null)
+                .Select(column => column.MultiPartIdentifier.Identifiers)
+                .Select(parts => new ComparedColumn(parts.Count > 1 ? parts[^2].Value : null, parts[^1].Value));
         }
 
         private void Record(FromClause? fromClause, WhereClause? whereClause, int offset, bool isQuery = false)

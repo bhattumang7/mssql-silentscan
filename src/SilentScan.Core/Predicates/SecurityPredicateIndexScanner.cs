@@ -96,10 +96,17 @@ public static class SecurityPredicateIndexScanner
             return true;
         }
 
-        var parameterLength = declared.Parameters is [var length]
-            ? int.TryParse(length.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : int.MaxValue
-            : 1;
-        return column.Length > parameterLength;
+        return column.Length > DeclaredLength(declared);
+    }
+
+    private static int DeclaredLength(SqlDataTypeReference declared)
+    {
+        if (declared.Parameters is not [var length])
+        {
+            return 1;
+        }
+
+        return int.TryParse(length.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : int.MaxValue;
     }
 
     private static readonly HashSet<string> NationalCharacterSessionFunctions = new(StringComparer.OrdinalIgnoreCase)

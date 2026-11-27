@@ -202,11 +202,11 @@ public static class NonUniqueUpdateSourceScanner
             var edges = conjuncts.Select(EquatedAliases).OfType<(string First, string Second)>().ToList();
             var comparer = catalog.IdentifierComparer;
             var linked = new HashSet<string>(comparer) { targetAlias };
-            while (edges.Exists(edge =>
+            while (edges.Find(edge =>
                 !comparer.Equals(edge.First, sourceAlias) && !comparer.Equals(edge.Second, sourceAlias)
-                && linked.Contains(edge.First) != linked.Contains(edge.Second)
-                && linked.Add(edge.First) | linked.Add(edge.Second)))
+                && linked.Contains(edge.First) != linked.Contains(edge.Second)) is { First: { } first, Second: { } second })
             {
+                linked.UnionWith([first, second]);
             }
 
             return PredicateTreeWalker.FlattenAnd(join.SearchCondition)

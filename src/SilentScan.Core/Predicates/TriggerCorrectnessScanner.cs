@@ -10,7 +10,9 @@ namespace SilentScan.Core.Predicates;
 
 public static class TriggerCorrectnessScanner
 {
-    private static readonly HashSet<string> PseudoTableNames = new(StringComparer.OrdinalIgnoreCase) { "inserted", "deleted" };
+    private const string InsertedTableName = "inserted";
+
+    private static readonly HashSet<string> PseudoTableNames = new(StringComparer.OrdinalIgnoreCase) { InsertedTableName, "deleted" };
 
     private static readonly HashSet<string> AggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -405,7 +407,7 @@ public static class TriggerCorrectnessScanner
         {
             var reader = new SourceNameCollector();
             fragment.Accept(reader);
-            return reader.Names.Contains("inserted") || reader.Names.Overlaps(derivedFromInserted);
+            return reader.Names.Contains(InsertedTableName) || reader.Names.Overlaps(derivedFromInserted);
         }
 
         private sealed class SourceNameCollector : TSqlFragmentVisitor
@@ -459,7 +461,7 @@ public static class TriggerCorrectnessScanner
         private static bool ReferencesInsertedTable(TableReference reference) => reference switch
         {
             NamedTableReference { SchemaObject.SchemaIdentifier: null } named
-                => string.Equals(named.SchemaObject.BaseIdentifier.Value, "inserted", StringComparison.OrdinalIgnoreCase),
+                => string.Equals(named.SchemaObject.BaseIdentifier.Value, InsertedTableName, StringComparison.OrdinalIgnoreCase),
             QualifiedJoin join => ReferencesInsertedTable(join.FirstTableReference) || ReferencesInsertedTable(join.SecondTableReference),
             UnqualifiedJoin join => ReferencesInsertedTable(join.FirstTableReference) || ReferencesInsertedTable(join.SecondTableReference),
             JoinParenthesisTableReference parenthesis => ReferencesInsertedTable(parenthesis.Join),
@@ -492,7 +494,7 @@ public static class TriggerCorrectnessScanner
                             WhereClause: { SearchCondition: { } condition },
                         },
                     }
-                    || !string.Equals(named.SchemaObject.BaseIdentifier.Value, "inserted", StringComparison.OrdinalIgnoreCase))
+                    || !string.Equals(named.SchemaObject.BaseIdentifier.Value, InsertedTableName, StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
@@ -617,6 +619,17 @@ public static class TriggerCorrectnessScanner
             public override void ExplicitVisit(DeleteSpecification node) =>
                 VisitWithin(node.FromClause, () => base.ExplicitVisit(node));
 
+            public override void ExplicitVisit(BooleanComparisonExpression node)
+            {
+                if (IsColumnNamed(node.FirstExpression, columnName) && IsColumnNamed(node.SecondExpression, columnName)
+                    && !(IsBaseTableColumn(node.FirstExpression) && IsBaseTableColumn(node.SecondExpression)))
+                {
+                    Found = true;
+                }
+
+                base.ExplicitVisit(node);
+            }
+
             private void VisitWithin(FromClause? fromClause, Action visit)
             {
                 var aliases = (fromClause?.TableReferences ?? [])
@@ -633,17 +646,6 @@ public static class TriggerCorrectnessScanner
             private bool IsBaseTableColumn(ScalarExpression expression) =>
                 expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., var qualifier, _] }
                 && _baseTableAliases.Any(aliases => aliases.Contains(qualifier.Value));
-
-            public override void ExplicitVisit(BooleanComparisonExpression node)
-            {
-                if (IsColumnNamed(node.FirstExpression, columnName) && IsColumnNamed(node.SecondExpression, columnName)
-                    && !(IsBaseTableColumn(node.FirstExpression) && IsBaseTableColumn(node.SecondExpression)))
-                {
-                    Found = true;
-                }
-
-                base.ExplicitVisit(node);
-            }
 
             private bool IsColumnNamed(ScalarExpression expression, string columnName) =>
                 expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } last] }

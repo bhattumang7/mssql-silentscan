@@ -760,6 +760,8 @@ public static class QueryAntiPatternScanner
             List<(WhereClause? Where, int Line, int Column, TableReference? Target)> dmlSites,
             HashSet<string> assignedVariables) : TSqlFragmentVisitor
         {
+            private int _queriesOverTables;
+
             public override void ExplicitVisit(WhileStatement node)
             {
                 _ = node;
@@ -777,32 +779,12 @@ public static class QueryAntiPatternScanner
                 base.ExplicitVisit(node);
             }
 
-            private int _queriesOverTables;
-
             public override void ExplicitVisit(QuerySpecification node)
             {
                 var readsRows = node.FromClause is not null ? 1 : 0;
                 _queriesOverTables += readsRows;
                 base.ExplicitVisit(node);
                 _queriesOverTables -= readsRows;
-            }
-
-            private static bool CanVary(ScalarExpression value, AssignmentKind kind)
-            {
-                var finder = new VaryingTermFinder();
-                value.Accept(finder);
-                return kind != AssignmentKind.Equals || finder.Found;
-            }
-
-            private sealed class VaryingTermFinder : TSqlFragmentVisitor
-            {
-                public bool Found { get; private set; }
-
-                public override void Visit(VariableReference node) => Found = true;
-
-                public override void Visit(ScalarSubquery node) => Found = true;
-
-                public override void Visit(FunctionCall node) => Found = true;
             }
 
             public override void ExplicitVisit(SetVariableStatement node)
@@ -833,6 +815,24 @@ public static class QueryAntiPatternScanner
                 }
 
                 base.ExplicitVisit(node);
+            }
+
+            private static bool CanVary(ScalarExpression value, AssignmentKind kind)
+            {
+                var finder = new VaryingTermFinder();
+                value.Accept(finder);
+                return kind != AssignmentKind.Equals || finder.Found;
+            }
+
+            private sealed class VaryingTermFinder : TSqlFragmentVisitor
+            {
+                public bool Found { get; private set; }
+
+                public override void Visit(VariableReference node) => Found = true;
+
+                public override void Visit(ScalarSubquery node) => Found = true;
+
+                public override void Visit(FunctionCall node) => Found = true;
             }
         }
 
@@ -1079,6 +1079,35 @@ public static class QueryAntiPatternScanner
                 $"SELECT DISTINCT joins {qualifiedName} on columns not backed by a unique index ({string.Join(", ", joinColumns)})",
                 FindingConfidence.Medium));
 
+        private void InspectJoinedTableFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias, QualifiedJoin join)
+        {
+            var joinedAlias = AliasOf(join.SecondTableReference);
+            if (joinedAlias is null || !byAlias.TryGetValue(joinedAlias, out var joinedEntry)
+                || joinedEntry.IsViewLayer || joinedEntry.Relation.QualifiedName is not { } joinedQualifiedName
+                || catalog.Find(joinedQualifiedName) is not { } joinedTable)
+            {
+                return;
+            }
+
+            var joinColumns = JoinColumnsQualifiedBy(join, joinedAlias);
+            if (joinColumns.Count == 0)
+            {
+                return;
+            }
+
+            var pinnedColumns = PinnedColumnsQualifiedBy(node, joinedAlias);
+            var isProvablyUnique = joinedTable.Indexes.Any(ix =>
+                ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled
+                && ix.KeyColumns.Count > 0
+                && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer)
+                    || pinnedColumns.Contains(kc, catalog.IdentifierComparer)
+                    || Projects(node, joinedAlias, kc)));
+            if (!isProvablyUnique)
+            {
+                AddDistinctFanout(join, joinedQualifiedName, joinColumns);
+            }
+        }
+
         private void InspectDistinctJoinFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias, ScopeChain scopeChain, ModuleWalker walker)
         {
             if (node.UniqueRowFilter != UniqueRowFilter.Distinct || node.FromClause is null)
@@ -1094,38 +1123,7 @@ public static class QueryAntiPatternScanner
             var findingsBefore = Findings.Count;
             foreach (var join in node.FromClause.TableReferences.SelectMany(PredicateTreeWalker.FlattenJoinNodes))
             {
-                var joinedAlias = AliasOf(join.SecondTableReference);
-                if (joinedAlias is null || !byAlias.TryGetValue(joinedAlias, out var joinedEntry)
-                    || joinedEntry.IsViewLayer || joinedEntry.Relation.QualifiedName is not { } joinedQualifiedName)
-                {
-                    continue;
-                }
-
-                var joinedTable = catalog.Find(joinedQualifiedName);
-                if (joinedTable is null)
-                {
-                    continue;
-                }
-
-                var joinColumns = JoinColumnsQualifiedBy(join, joinedAlias);
-                if (joinColumns.Count == 0)
-                {
-                    continue;
-                }
-
-                var pinnedColumns = PinnedColumnsQualifiedBy(node, joinedAlias);
-                var isProvablyUnique = joinedTable.Indexes.Any(ix =>
-                    ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled
-                    && ix.KeyColumns.Count > 0
-                    && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer)
-                        || pinnedColumns.Contains(kc, catalog.IdentifierComparer)
-                        || Projects(node, joinedAlias, kc)));
-                if (isProvablyUnique)
-                {
-                    continue;
-                }
-
-                AddDistinctFanout(join, joinedQualifiedName, joinColumns);
+                InspectJoinedTableFanout(node, byAlias, join);
             }
 
             if (Findings.Count == findingsBefore)

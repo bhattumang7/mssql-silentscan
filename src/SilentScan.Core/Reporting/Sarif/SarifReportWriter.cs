@@ -507,10 +507,6 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
-    private static string NotInConsequence(bool underDisjunction) => underDisjunction
-        ? "so this branch of the condition is never TRUE"
-        : "so the whole predicate evaluates to UNKNOWN and silently returns zero rows";
-
     private static SarifResult ToResult(NotInNullableSubqueryFinding finding)
     {
 
@@ -1146,6 +1142,10 @@ public static class SarifReportWriter
         var indexSuffix = finding.TouchedIndexName is { } idx ? $".{idx}" : string.Empty;
         return $" - touches {featureKind} '{touched}'{indexSuffix}";
     }
+
+    private static string NotInConsequence(bool underDisjunction) => underDisjunction
+        ? "so this branch of the condition is never TRUE"
+        : "so the whole predicate evaluates to UNKNOWN and silently returns zero rows";
 
     private static string FloorLevelForConfidence(string level, FindingConfidence confidence) =>
         confidence == FindingConfidence.High ? level : LevelNote;

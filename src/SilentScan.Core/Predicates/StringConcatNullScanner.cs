@@ -108,15 +108,8 @@ public static class StringConcatNullScanner
             }
 
             var qualifier = parts[^2];
-            foreach (var scope in _enclosingQueries)
-            {
-                if (scope.Aliases.Contains(qualifier))
-                {
-                    return scope.NullRejected.Contains(referenceKey);
-                }
-            }
-
-            return false;
+            var declaring = _enclosingQueries.FirstOrDefault(scope => scope.Aliases.Contains(qualifier));
+            return declaring is not null && declaring.NullRejected.Contains(referenceKey);
         }
 
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
