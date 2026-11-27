@@ -318,7 +318,7 @@ public static class TriggerCorrectnessScanner
                 return;
             }
 
-            var hasCompanionInsert = topLevelStatements.OfType<InsertStatement>().Count() > filteredInserts.Count;
+            var hasCompanionInsert = HasCompanionInsert(topLevelStatements, filteredInserts);
             var hasRejectPath = ContainsRejectPath(topLevelStatements);
             var hasProvenExhaustiveCoverage = HasProvenExhaustiveCoverage(filteredInserts, triggerObject);
 
@@ -379,8 +379,81 @@ public static class TriggerCorrectnessScanner
             }
 
             var referencesInserted = tableReferences.Any(ReferencesInsertedTable);
-            var isFiltered = spec.WhereClause is not null || tableReferences.Any(ContainsQualifiedJoin);
+            var isFiltered = spec.WhereClause is not null || tableReferences.Any(ContainsQualifiedJoin)
+                || spec.TopRowFilter is { } top && !KeepsAllRows(top);
             return referencesInserted && isFiltered;
+        }
+
+        private static bool KeepsAllRows(TopRowFilter top) =>
+            top is { Percent: true, Expression: var expression }
+            && (expression is ParenthesisExpression parenthesis ? parenthesis.Expression : expression) is IntegerLiteral { Value: "100" };
+
+        private static bool HasCompanionInsert(IList<TSqlStatement> statements, List<InsertStatement> filteredInserts)
+        {
+            var collector = new InsertedDerivedCollector();
+            foreach (var statement in statements)
+            {
+                statement.Accept(collector);
+            }
+
+            return statements.OfType<InsertStatement>()
+                .Except(filteredInserts)
+                .Any(insert => ReadsAnyOf(insert, collector.Names));
+        }
+
+        private static bool ReadsAnyOf(TSqlFragment fragment, HashSet<string> derivedFromInserted)
+        {
+            var reader = new SourceNameCollector();
+            fragment.Accept(reader);
+            return reader.Names.Contains("inserted") || reader.Names.Overlaps(derivedFromInserted);
+        }
+
+        private sealed class SourceNameCollector : TSqlFragmentVisitor
+        {
+            public HashSet<string> Names { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            public override void ExplicitVisit(NamedTableReference node)
+            {
+                Names.Add(node.SchemaObject.BaseIdentifier.Value);
+                base.ExplicitVisit(node);
+            }
+
+            public override void ExplicitVisit(VariableTableReference node) => Names.Add(node.Variable.Name);
+
+            public override void ExplicitVisit(VariableReference node) => Names.Add(node.Name);
+        }
+
+        private sealed class InsertedDerivedCollector : TSqlFragmentVisitor
+        {
+            public HashSet<string> Names { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+            public override void ExplicitVisit(InsertStatement node)
+            {
+                var target = node.InsertSpecification.Target switch
+                {
+                    NamedTableReference named => named.SchemaObject.BaseIdentifier.Value,
+                    VariableTableReference variable => variable.Variable.Name,
+                    _ => null,
+                };
+
+                if (target is not null && ReadsAnyOf(node.InsertSpecification.InsertSource, Names))
+                {
+                    Names.Add(target);
+                }
+            }
+
+            public override void ExplicitVisit(SelectStatement node)
+            {
+                if (node.Into is { } into && ReadsAnyOf(node.QueryExpression, Names))
+                {
+                    Names.Add(into.BaseIdentifier.Value);
+                }
+
+                if (node.QueryExpression is QuerySpecification specification && ReadsAnyOf(specification, Names))
+                {
+                    Names.UnionWith(specification.SelectElements.OfType<SelectSetVariable>().Select(set => set.Variable.Name));
+                }
+            }
         }
 
         private static bool ReferencesInsertedTable(TableReference reference) => reference switch
@@ -467,7 +540,9 @@ public static class TriggerCorrectnessScanner
         {
             public bool Found { get; private set; }
 
-            public override void ExplicitVisit(RaiseErrorStatement node) => Found = true;
+            public override void ExplicitVisit(RaiseErrorStatement node) =>
+                Found |= node.SecondParameter is not IntegerLiteral { Value: var severity }
+                    || !int.TryParse(severity, out var level) || level > 10;
 
             public override void ExplicitVisit(ThrowStatement node) => Found = true;
 
@@ -487,8 +562,8 @@ public static class TriggerCorrectnessScanner
                 foreach (var updateCall in updateCalls.Calls)
                 {
                     var columnName = updateCall.Identifier.Value;
-                    if (HasSameColumnValueComparison(ifStatement.Predicate, columnName, catalog.IdentifierComparer)
-                        || HasSameColumnValueComparison(ifStatement.ThenStatement, columnName, catalog.IdentifierComparer))
+                    if (HasSameColumnValueComparison(ifStatement.Predicate, columnName, catalog)
+                        || HasSameColumnValueComparison(ifStatement.ThenStatement, columnName, catalog))
                     {
                         continue;
                     }
@@ -502,9 +577,9 @@ public static class TriggerCorrectnessScanner
             }
         }
 
-        private static bool HasSameColumnValueComparison(TSqlFragment fragment, string columnName, StringComparer identifierComparer)
+        private static bool HasSameColumnValueComparison(TSqlFragment fragment, string columnName, DatabaseCatalog catalog)
         {
-            var collector = new SameColumnComparisonCollector(columnName, identifierComparer);
+            var collector = new SameColumnComparisonCollector(columnName, catalog);
             fragment.Accept(collector);
             return collector.Found;
         }
@@ -527,13 +602,42 @@ public static class TriggerCorrectnessScanner
             public override void ExplicitVisit(UpdateCall node) => Calls.Add(node);
         }
 
-        private sealed class SameColumnComparisonCollector(string columnName, StringComparer identifierComparer) : TSqlFragmentVisitor
+        private sealed class SameColumnComparisonCollector(string columnName, DatabaseCatalog catalog) : TSqlFragmentVisitor
         {
             public bool Found { get; private set; }
 
+            private readonly Stack<HashSet<string>> _baseTableAliases = new();
+
+            public override void ExplicitVisit(QuerySpecification node) =>
+                VisitWithin(node.FromClause, () => base.ExplicitVisit(node));
+
+            public override void ExplicitVisit(UpdateSpecification node) =>
+                VisitWithin(node.FromClause, () => base.ExplicitVisit(node));
+
+            public override void ExplicitVisit(DeleteSpecification node) =>
+                VisitWithin(node.FromClause, () => base.ExplicitVisit(node));
+
+            private void VisitWithin(FromClause? fromClause, Action visit)
+            {
+                var aliases = (fromClause?.TableReferences ?? [])
+                    .SelectMany(PredicateTreeWalker.FlattenNamedTables)
+                    .Where(named => catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)))
+                        is { Kind: CatalogTableKind.Table })
+                    .Select(named => named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value)
+                    .ToHashSet(catalog.IdentifierComparer);
+                _baseTableAliases.Push(aliases);
+                visit();
+                _baseTableAliases.Pop();
+            }
+
+            private bool IsBaseTableColumn(ScalarExpression expression) =>
+                expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., var qualifier, _] }
+                && _baseTableAliases.Any(aliases => aliases.Contains(qualifier.Value));
+
             public override void ExplicitVisit(BooleanComparisonExpression node)
             {
-                if (IsColumnNamed(node.FirstExpression, columnName) && IsColumnNamed(node.SecondExpression, columnName))
+                if (IsColumnNamed(node.FirstExpression, columnName) && IsColumnNamed(node.SecondExpression, columnName)
+                    && !(IsBaseTableColumn(node.FirstExpression) && IsBaseTableColumn(node.SecondExpression)))
                 {
                     Found = true;
                 }
@@ -543,7 +647,7 @@ public static class TriggerCorrectnessScanner
 
             private bool IsColumnNamed(ScalarExpression expression, string columnName) =>
                 expression is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { } last] }
-                && identifierComparer.Equals(last.Value, columnName);
+                && catalog.IdentifierComparer.Equals(last.Value, columnName);
         }
     }
 }

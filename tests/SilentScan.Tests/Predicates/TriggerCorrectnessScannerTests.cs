@@ -207,7 +207,7 @@ public sealed class TriggerCorrectnessScannerTests
             "CREATE TRIGGER dbo.trg_T ON dbo.T INSTEAD OF INSERT AS "
             + "BEGIN "
             + "INSERT INTO dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Val > 0; "
-            + "INSERT INTO dbo.Other (Id, Val) VALUES (-1, -1); "
+            + "INSERT INTO dbo.Other (Id, Val) SELECT Id, Val FROM inserted WHERE Val <= 0; "
             + "END;");
 
         Assert.DoesNotContain(findings, f => f.Kind == TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath);
@@ -437,5 +437,30 @@ public sealed class TriggerCorrectnessScannerTests
         Assert.Single(
             Scan("CREATE TRIGGER dbo.trg_T ON dbo.T AFTER INSERT AS " + $"BEGIN DECLARE @v INT; {assignment} PRINT @v; END;"),
             f => f.Kind == TriggerCorrectnessFindingKind.MultiRowUnsafeSingleRowAssignment);
+    }
+
+    [Theory]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT TOP (1) Id, Val FROM inserted;", true)]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT TOP (100) PERCENT Id, Val FROM inserted;", false)]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Id > 1; RAISERROR('x', 10, 1);", true)]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Id > 1; RAISERROR('x', 16, 1);", false)]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Id > 1; INSERT dbo.Log (Id) VALUES (1);", true)]
+    [InlineData("INSERT dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Id > 1; INSERT dbo.Log (Id) SELECT Id FROM inserted WHERE Id <= 1;", false)]
+    [InlineData("SELECT Id INTO #rejected FROM inserted WHERE Id <= 1; INSERT dbo.T (Id, Val) SELECT Id, Val FROM inserted WHERE Id > 1; INSERT dbo.Log (Id) SELECT Id FROM #rejected;", false)]
+    public void AFilteredReinsertNeedsAPathThatHandlesTheExcludedRows(string body, bool fires)
+    {
+        var findings = Scan($"CREATE TRIGGER dbo.trg_T ON dbo.T INSTEAD OF INSERT AS BEGIN {body} END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.InsteadOfInsertFilteredNoRejectPath));
+    }
+
+    [Theory]
+    [InlineData("SELECT i.Id FROM inserted i JOIN dbo.T a ON a.Id = i.Id JOIN dbo.T b ON a.Val = b.Val;", true)]
+    [InlineData("SELECT i.Id FROM inserted i JOIN deleted d ON d.Id = i.Id WHERE d.Val <> i.Val;", false)]
+    public void ABaseTableToBaseTableComparisonIsNotAValueComparison(string body, bool fires)
+    {
+        var findings = Scan($"CREATE TRIGGER dbo.trg_T ON dbo.T AFTER UPDATE AS BEGIN IF UPDATE(Val) BEGIN {body} END END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TriggerCorrectnessFindingKind.UpdateFunctionWithoutValueComparison));
     }
 }
