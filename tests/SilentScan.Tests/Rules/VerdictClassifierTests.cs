@@ -758,4 +758,16 @@ public sealed class VerdictClassifierTests
 
         Assert.Equal(Verdict.RangeSeek, VerdictClassifier.ClassifyWithReason(column, other, otherIsColumn: false).Verdict);
     }
+
+    [Theory]
+    [InlineData(4001, 10, Verdict.ScanForced)]
+    [InlineData(5000, 4000, Verdict.ScanForced)]
+    [InlineData(4000, 10, Verdict.RangeSeek)]
+    public void Classify_OverlongVarcharColumnVsAnyNVarcharValue_ForcesAScan(int columnLength, int valueLength, Verdict expected)
+    {
+        var column = new SqlType(SqlTypeCategory.VarChar, Length: columnLength, Collation: WindowsCollation);
+        var value = new SqlType(SqlTypeCategory.NVarChar, Length: valueLength);
+
+        Assert.Equal(expected, VerdictClassifier.Classify(column, value));
+    }
 }

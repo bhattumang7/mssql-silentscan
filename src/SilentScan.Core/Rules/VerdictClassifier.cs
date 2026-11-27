@@ -93,7 +93,7 @@ public static class VerdictClassifier
 
     private static bool IsLengthTriggeredUnicodePromotion(SqlType columnType, SqlType otherType) =>
         columnType.IsNonUnicodeString && !columnType.IsMax && columnType.Length is > 4000
-        && otherType.IsUnicodeString && otherType.IsMax;
+        && otherType.IsUnicodeString;
 
     private static bool IsOutOfModelCategory(SqlTypeCategory category) =>
         category is SqlTypeCategory.SqlVariant or SqlTypeCategory.Xml or SqlTypeCategory.UserDefined
