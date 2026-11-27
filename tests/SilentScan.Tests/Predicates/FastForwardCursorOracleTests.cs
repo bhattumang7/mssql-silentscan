@@ -193,4 +193,23 @@ public sealed class FastForwardCursorOracleTests : OracleTestFixture
         Assert.DoesNotContain("<Parallelism", plans[1], StringComparison.Ordinal);
         Assert.Contains("<Parallelism", plans[2], StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("LOCAL READ_ONLY", "SELECT Id FROM dbo.BigTable", true)]
+    [InlineData("", "SELECT Id FROM dbo.BigTable FOR READ ONLY", true)]
+    [InlineData("LOCAL SCROLL READ_ONLY", "SELECT Id FROM dbo.BigTable", false)]
+    [InlineData("INSENSITIVE", "SELECT Id FROM dbo.BigTable FOR READ ONLY", false)]
+    public async Task ReadOnlyAloneIsAFastForwardCursor(string options, string definingQuery, bool fastForward)
+    {
+        var cursor = options == "INSENSITIVE" ? "c INSENSITIVE CURSOR" : $"c CURSOR {options}";
+        await using var connection = new SqlConnection(Options.BuildConnectionString(DatabaseName));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            $"DECLARE {cursor} FOR {definingQuery}; OPEN c; SELECT properties FROM sys.dm_exec_cursors(@@SPID); CLOSE c; DEALLOCATE c;",
+            connection);
+
+        var properties = (string)(await command.ExecuteScalarAsync())!;
+
+        Assert.Equal(fastForward, properties.Contains("Fast_Forward", StringComparison.Ordinal));
+    }
 }

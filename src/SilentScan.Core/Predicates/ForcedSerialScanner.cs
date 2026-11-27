@@ -223,6 +223,15 @@ public static class ForcedSerialScanner
             } spec
             && spec.SelectElements.All(e => e is SelectStarExpression || e is SelectScalarExpression { Expression: ColumnReferenceExpression });
 
+        private static readonly CursorOptionKind[] OptionsThatKeepAReadOnlyCursorFromFastForward =
+        [
+            CursorOptionKind.Static,
+            CursorOptionKind.Keyset,
+            CursorOptionKind.Dynamic,
+            CursorOptionKind.Scroll,
+            CursorOptionKind.Insensitive,
+        ];
+
         private void InspectCursorDefinition(CursorDefinition definition, string cursorName)
         {
             if (ReadsSystemCatalogView(definition.Select) || IsBareTableVariableScan(definition.Select.QueryExpression))
@@ -232,9 +241,9 @@ public static class ForcedSerialScanner
 
             var kinds = definition.Options.Select(o => o.OptionKind).ToHashSet();
 
-            var hasExplicitType = kinds.Contains(CursorOptionKind.Static) || kinds.Contains(CursorOptionKind.Keyset) || kinds.Contains(CursorOptionKind.Dynamic);
+            var readOnly = kinds.Contains(CursorOptionKind.ReadOnly) || definition.Select.QueryExpression.ForClause is ReadOnlyForClause;
             var fires = kinds.Contains(CursorOptionKind.FastForward)
-                || (kinds.Contains(CursorOptionKind.ForwardOnly) && kinds.Contains(CursorOptionKind.ReadOnly) && !hasExplicitType);
+                || (readOnly && !kinds.Overlaps(OptionsThatKeepAReadOnlyCursorFromFastForward));
 
             if (!fires)
             {

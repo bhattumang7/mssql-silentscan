@@ -8,9 +8,9 @@ internal static class FastForwardCursor
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            A cursor declared FAST_FORWARD - or, equivalently, one declared FORWARD_ONLY READ_ONLY
-            without an explicit STATIC/KEYSET/DYNAMIC (which SQL Server also optimizes as a
-            fast-forward cursor) - asks the engine for a forward-only, read-only cursor optimized
+            A cursor declared FAST_FORWARD - or, equivalently, one declared READ_ONLY (or with
+            FOR READ ONLY) without STATIC, KEYSET, DYNAMIC, SCROLL or INSENSITIVE, which SQL
+            Server also compiles as a fast-forward cursor - asks the engine for a forward-only, read-only cursor optimized
             for the cheapest possible per-row FETCH. To deliver that guarantee, the engine forces
             the cursor's own defining SELECT to run with a serial plan; a real executed plan for
             such a query shows NonParallelPlanReason = "NoParallelFastForwardCursor" on the plan

@@ -352,4 +352,16 @@ public sealed class ForcedSerialScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("DECLARE c CURSOR LOCAL READ_ONLY FOR SELECT Id FROM dbo.T;", true)]
+    [InlineData("DECLARE c CURSOR FOR SELECT Id FROM dbo.T FOR READ ONLY;", true)]
+    [InlineData("DECLARE c CURSOR LOCAL SCROLL READ_ONLY FOR SELECT Id FROM dbo.T;", false)]
+    [InlineData("DECLARE c INSENSITIVE CURSOR FOR SELECT Id FROM dbo.T FOR READ ONLY;", false)]
+    [InlineData("DECLARE c SCROLL CURSOR FOR SELECT Id FROM dbo.T FOR READ ONLY;", false)]
+    [InlineData("DECLARE c CURSOR LOCAL STATIC READ_ONLY FOR SELECT Id FROM dbo.T;", false)]
+    public void ReadOnlyCursorWithoutAnotherType_IsFastForward(string declaration, bool fires)
+    {
+        Assert.Equal(fires, Scan(declaration).Any(f => f.Kind == ForcedSerialFindingKind.FastForwardCursor));
+    }
 }
