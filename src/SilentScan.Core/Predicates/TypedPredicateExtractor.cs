@@ -1691,16 +1691,45 @@ public static class TypedPredicateExtractor
             return new PredicateOperand.Value(Type: null);
         }
 
+        private ColumnProvenance WithoutRedundantCasts(ColumnProvenance provenance, ModuleWalker walker)
+        {
+            if (provenance is not ColumnProvenance.Cast { Inner: var inner } cast)
+            {
+                return provenance;
+            }
+
+            var collapsed = WithoutRedundantCasts(inner, walker);
+            if (collapsed is ColumnProvenance.Cast repeated && repeated.ExplicitType == cast.ExplicitType
+                && !repeated.HasStyle && !cast.HasStyle && repeated.ExplicitCollation is null && cast.ExplicitCollation is null)
+            {
+                return repeated;
+            }
+
+            if (collapsed is ColumnProvenance.Cast
+                {
+                    HasStyle: false, ExplicitCollation: null, Inner: ColumnProvenance.BaseColumn { Type: { } columnType } column,
+                } identity
+                && identity.ExplicitType == columnType
+                && catalog.Find(column.TableQualifiedName, walker.CurrentProcScope)?.FindColumn(column.ColumnName, catalog.IdentifierComparer)
+                    is { IsNullable: true })
+            {
+                return cast with { Inner = column };
+            }
+
+            return cast with { Inner = collapsed };
+        }
+
         private void RecordExpressionDerivedFinding(
             string columnName, ColumnReferenceExpression columnRef, ColumnProvenance provenance, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (provenance is ColumnProvenance.Cast { ExplicitType: { } explicitType, Inner: ColumnProvenance.BaseColumn baseColumn }
+            var collapsed = WithoutRedundantCasts(provenance, walker);
+            if (collapsed is ColumnProvenance.Cast { ExplicitType: { } explicitType, Inner: ColumnProvenance.BaseColumn baseColumn }
                 && ComputedColumnMatcher.HasIndexedMatchingCastComputedColumn(catalog, baseColumn.TableQualifiedName, baseColumn.ColumnName, explicitType))
             {
                 return;
             }
 
-            if (provenance is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } source } cast
+            if (collapsed is ColumnProvenance.Cast { ExplicitType: { } castType, Inner: ColumnProvenance.BaseColumn { Type: { } sourceType } source } cast
                 && NonSargablePredicateScanner.CastKeepsSeek(
                     castType,
                     sourceType,
