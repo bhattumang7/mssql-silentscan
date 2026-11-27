@@ -1396,4 +1396,25 @@ public sealed class QueryAntiPatternScannerTests
 
         Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.DistinctMaskingJoinFanout));
     }
+
+    [Theory]
+    [InlineData("SELECT DISTINCT p.Id, p.Name FROM dbo.Child AS c JOIN dbo.Parent AS p ON p.Id = c.ParentId;", QueryAntiPatternFindingKind.DistinctMaskingJoinFanout, true)]
+    [InlineData("SELECT DISTINCT c.Id, p.Name FROM dbo.Child AS c JOIN dbo.Parent AS p ON p.Id = c.ParentId;", QueryAntiPatternFindingKind.DistinctMaskingJoinFanout, false)]
+    [InlineData("DECLARE @n INT; SET @n = (SELECT COUNT(*) FROM dbo.Child WHERE ParentId = 1); IF @n > 0 SELECT 1;", QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, true)]
+    [InlineData("DECLARE @n INT; SELECT @n = COUNT(*) FROM dbo.Child WHERE ParentId = 1; IF @n < 1 SELECT 1;", QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, true)]
+    [InlineData("DECLARE @n INT; SELECT @n = COUNT(*) FROM dbo.Child WHERE ParentId = 1; IF @n <= 0 SELECT 1;", QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, true)]
+    [InlineData("DECLARE @n INT; SET @n = (SELECT COUNT(*) FROM dbo.Child GROUP BY ParentId); IF @n > 0 SELECT 1;", QueryAntiPatternFindingKind.CountStarVariableExistenceCheck, false)]
+    [InlineData("DECLARE @t TABLE (Id INT); SELECT Id FROM @t OPTION (USE HINT('DISABLE_DEFERRED_COMPILATION_TV'));", QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, false)]
+    public void DistinctCountAndHintShapes(string sql, QueryAntiPatternFindingKind kind, bool fires)
+    {
+        var result = SqlScriptParser.ParseText(
+            "shapes.sql",
+            "CREATE TABLE dbo.Parent (Id INT NOT NULL PRIMARY KEY, Name VARCHAR(10) NULL);\n"
+            + "CREATE TABLE dbo.Child (Id INT NOT NULL PRIMARY KEY, ParentId INT NOT NULL);\nGO\n" + sql);
+        var catalog = SilentScan.Core.Catalog.CatalogBuilder.Build([result]);
+
+        var findings = QueryAntiPatternScanner.Scan(result, catalog);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == kind));
+    }
 }

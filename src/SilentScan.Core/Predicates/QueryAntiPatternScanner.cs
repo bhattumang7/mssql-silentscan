@@ -70,8 +70,16 @@ public static class QueryAntiPatternScanner
         private int? StatementCompatibilityLevel =>
             (_hintedCompatibilityLevels.TryPeek(out var hinted) ? hinted : null) ?? catalog.CompatibilityLevel;
 
-        private bool TableVariableEstimateIsFixed(int? level) =>
-            level is < 150 || level is not null && catalog.IsScopedConfigurationDisabled("DEFERRED_COMPILATION_TV");
+        private bool TableVariableEstimateIsFixed(int? level, bool deferredCompilationHintedOff) =>
+            level is < 150 || level is not null
+                && (deferredCompilationHintedOff || catalog.IsScopedConfigurationDisabled("DEFERRED_COMPILATION_TV"));
+
+        private int _deferredCompilationHintedOffDepth;
+
+        private static bool HintsDeferredCompilationOff(StatementWithCtesAndXmlNamespaces statement) =>
+            statement.OptimizerHints.OfType<UseHintList>()
+                .SelectMany(list => list.Hints)
+                .Any(hint => string.Equals(hint.Value, "DISABLE_DEFERRED_COMPILATION_TV", StringComparison.OrdinalIgnoreCase));
 
         private static int? HintedCompatibilityLevel(StatementWithCtesAndXmlNamespaces statement)
         {
@@ -107,14 +115,15 @@ public static class QueryAntiPatternScanner
                 || !estimateSensitiveFromClauses.Contains(node)
                 || !_tableVariableNames.Contains(variableRef.Variable.Name)
                 || StatementCompatibilityLevel is not { } level
-                || !TableVariableEstimateIsFixed(level))
+                || !TableVariableEstimateIsFixed(level, _deferredCompilationHintedOffDepth > 0))
             {
                 return;
             }
 
-            var reason = level < 150
-                ? $"connected compatibility level {level}, below 150"
+            var switchedOff = _deferredCompilationHintedOffDepth > 0
+                ? "the statement's hint switches deferred compilation of table variables off"
                 : "deferred compilation of table variables is switched off for the database";
+            var reason = level < 150 ? $"connected compatibility level {level}, below 150" : switchedOff;
             Findings.Add(new QueryAntiPatternFinding(
                 QueryAntiPatternFindingKind.TableVariableLowCompatEstimate, sourcePath,
                 variableRef.StartLine, variableRef.StartColumn,
@@ -176,6 +185,11 @@ public static class QueryAntiPatternScanner
             {
                 _recompileStatementDepth++;
             }
+
+            if (HintsDeferredCompilationOff(statement))
+            {
+                _deferredCompilationHintedOffDepth++;
+            }
         }
 
         private void LeaveStatementHints(StatementWithCtesAndXmlNamespaces statement)
@@ -185,6 +199,11 @@ public static class QueryAntiPatternScanner
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth--;
+            }
+
+            if (HintsDeferredCompilationOff(statement))
+            {
+                _deferredCompilationHintedOffDepth--;
             }
         }
 
@@ -470,7 +489,7 @@ public static class QueryAntiPatternScanner
             Findings.Add(new QueryAntiPatternFinding(
                 QueryAntiPatternFindingKind.MergeMissingHoldlock, sourcePath,
                 spec.StartLine, spec.StartColumn,
-                "MERGE target carries no WITH (HOLDLOCK)/SERIALIZABLE hint - two concurrent sessions can both take the WHEN NOT MATCHED branch under READ COMMITTED and both insert the same key, because no unique index on the matched columns rejects the second row.",
+                "MERGE target carries no HOLDLOCK, SERIALIZABLE, TABLOCK or TABLOCKX hint (UPDLOCK or XLOCK alone does not close the race) - two concurrent sessions can both take the WHEN NOT MATCHED branch under READ COMMITTED and both insert the same key, because no unique index on the matched columns rejects the second row.",
                 FindingConfidence.Medium));
         }
 
@@ -528,14 +547,14 @@ public static class QueryAntiPatternScanner
         private void InspectStaleTableVariableInLoop(WhileStatement node)
         {
             var writtenVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var readSites = new List<(VariableTableReference Reference, int? HintedLevel)>();
+            var readSites = new List<(VariableTableReference Reference, int? HintedLevel, bool HintedOff)>();
 
             var collector = new LoopWriteAndReadCollector(readSites, writtenVariables, _tableVariableNames);
             node.Statement.Accept(collector);
 
             foreach (var read in readSites
                 .Where(site => writtenVariables.Contains(site.Reference.Variable.Name)
-                    && !TableVariableEstimateIsFixed(site.HintedLevel ?? catalog.CompatibilityLevel))
+                    && !TableVariableEstimateIsFixed(site.HintedLevel ?? catalog.CompatibilityLevel, site.HintedOff))
                 .Select(site => site.Reference))
             {
                 Findings.Add(new QueryAntiPatternFinding(
@@ -591,12 +610,14 @@ public static class QueryAntiPatternScanner
         }
 
         private sealed class LoopWriteAndReadCollector(
-            List<(VariableTableReference Reference, int? HintedLevel)> readSites,
+            List<(VariableTableReference Reference, int? HintedLevel, bool HintedOff)> readSites,
             HashSet<string> writtenVariables,
             HashSet<string> knownTableVariables) : TSqlFragmentVisitor
         {
             private int _recompileDepth;
             private int? _hintedLevel;
+
+            private bool _hintedOff;
 
             public override void ExplicitVisit(WhileStatement node)
             {
@@ -612,7 +633,7 @@ public static class QueryAntiPatternScanner
                         foreach (var variableRef in CollectVariableTableReferences(tableReference)
                             .Where(v => knownTableVariables.Contains(v.Variable.Name)))
                         {
-                            readSites.Add((variableRef, _hintedLevel));
+                            readSites.Add((variableRef, _hintedLevel, _hintedOff));
                         }
                     }
                 }
@@ -655,9 +676,12 @@ public static class QueryAntiPatternScanner
                 }
 
                 var enclosingLevel = _hintedLevel;
+                var enclosingOff = _hintedOff;
                 _hintedLevel = HintedCompatibilityLevel(statement) ?? enclosingLevel;
+                _hintedOff = enclosingOff || HintsDeferredCompilationOff(statement);
                 visit();
                 _hintedLevel = enclosingLevel;
+                _hintedOff = enclosingOff;
                 if (recompiles)
                 {
                     _recompileDepth--;
@@ -893,25 +917,43 @@ public static class QueryAntiPatternScanner
             }
         }
 
-        private bool ReadsAtMostOneRow(TSqlStatement statement) =>
-            statement is SelectStatement { QueryExpression: QuerySpecification { FromClause: not null } spec }
-            && SingleRowKeyPinning.QueryReadsAtMostOneRow(spec, catalog);
-
-        private static string? CountStarAssignedVariable(TSqlStatement statement)
+        private bool ReadsAtMostOneRow(TSqlStatement statement)
         {
-            if (statement is not SelectStatement { QueryExpression: QuerySpecification { SelectElements.Count: 1 } spec }
-                || spec.SelectElements[0] is not SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar
-                || setVar.Expression is not FunctionCall call
-                || !CountStarFunctionNames.Contains(call.FunctionName.Value)
-                || call.Parameters.Count != 1)
+            var specification = statement switch
             {
-                return null;
-            }
+                SelectStatement { QueryExpression: QuerySpecification select } => select,
+                SetVariableStatement set => CountingSubquery(set.Expression),
+                _ => null,
+            };
 
-            var isStar = call.Parameters[0] is ColumnReferenceExpression { ColumnType: ColumnType.Wildcard };
-            var isOne = call.Parameters[0] is IntegerLiteral { Value: "1" };
-            return isStar || isOne ? setVar.Variable.Name : null;
+            return specification is { FromClause: not null } && SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog);
         }
+
+        private static string? CountStarAssignedVariable(TSqlStatement statement) => statement switch
+        {
+            SelectStatement { QueryExpression: QuerySpecification { SelectElements: [SelectSetVariable { AssignmentKind: AssignmentKind.Equals } setVar] } }
+                when IsCountOfRows(setVar.Expression) => setVar.Variable.Name,
+            SetVariableStatement { AssignmentKind: AssignmentKind.Equals } set
+                when CountingSubquery(set.Expression) is not null => set.Variable.Name,
+            _ => null,
+        };
+
+        private static QuerySpecification? CountingSubquery(ScalarExpression? expression) =>
+            expression is ScalarSubquery
+            {
+                QueryExpression: QuerySpecification
+                {
+                    SelectElements: [SelectScalarExpression element], GroupByClause: null, HavingClause: null,
+                } specification,
+            }
+            && IsCountOfRows(element.Expression)
+                ? specification
+                : null;
+
+        private static bool IsCountOfRows(ScalarExpression? expression) =>
+            expression is FunctionCall { Parameters: [var argument], OverClause: null } call
+            && CountStarFunctionNames.Contains(call.FunctionName.Value)
+            && argument is ColumnReferenceExpression { ColumnType: ColumnType.Wildcard } or IntegerLiteral { Value: "1" };
 
         private static BooleanExpression? NextStatementPredicate(TSqlStatement statement) => statement switch
         {
@@ -948,6 +990,8 @@ public static class QueryAntiPatternScanner
                 (BooleanComparisonType.GreaterThan, "0") => true,
                 (BooleanComparisonType.GreaterThanOrEqualTo, "1") => true,
                 (BooleanComparisonType.Equals, "0") => true,
+                (BooleanComparisonType.LessThan, "1") => true,
+                (BooleanComparisonType.LessThanOrEqualTo, "0") => true,
                 (BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation, "0") => true,
                 _ => false,
             };
@@ -997,6 +1041,44 @@ public static class QueryAntiPatternScanner
                     .ToList()
                 : [];
 
+        private void InspectFirstTableFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias)
+        {
+            if (node.FromClause?.TableReferences is not
+                    [QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner, FirstTableReference: NamedTableReference first } join]
+                || AliasOf(first) is not { } firstAlias
+                || AliasOf(join.SecondTableReference) is not { } otherAlias
+                || !byAlias.TryGetValue(firstAlias, out var entry)
+                || entry.IsViewLayer || entry.Relation.QualifiedName is not { } qualifiedName
+                || catalog.Find(qualifiedName) is not { Kind: CatalogTableKind.Table } table
+                || !node.SelectElements.All(element => IsColumnQualifiedBy(element, otherAlias)))
+            {
+                return;
+            }
+
+            var joinColumns = JoinColumnsQualifiedBy(join, firstAlias);
+            var pinnedColumns = PinnedColumnsQualifiedBy(node, firstAlias);
+            if (joinColumns.Count == 0 || table.Indexes.Any(index =>
+                    index.IsUnique && !index.IsFiltered && !index.IsDisabled && index.KeyColumns.Count > 0
+                    && index.KeyColumns.All(key => joinColumns.Contains(key, catalog.IdentifierComparer)
+                        || pinnedColumns.Contains(key, catalog.IdentifierComparer))))
+            {
+                return;
+            }
+
+            AddDistinctFanout(join, qualifiedName, joinColumns);
+        }
+
+        private bool IsColumnQualifiedBy(SelectElement element, string alias) =>
+            element is SelectScalarExpression { Expression: ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., var qualifier, _] } }
+            && catalog.IdentifierComparer.Equals(qualifier.Value, alias);
+
+        private void AddDistinctFanout(QualifiedJoin join, string qualifiedName, List<string> joinColumns) =>
+            Findings.Add(new QueryAntiPatternFinding(
+                QueryAntiPatternFindingKind.DistinctMaskingJoinFanout, sourcePath,
+                join.StartLine, join.StartColumn,
+                $"SELECT DISTINCT joins {qualifiedName} on columns not backed by a unique index ({string.Join(", ", joinColumns)})",
+                FindingConfidence.Medium));
+
         private void InspectDistinctJoinFanout(QuerySpecification node, IReadOnlyDictionary<string, ScopeEntry> byAlias, ScopeChain scopeChain, ModuleWalker walker)
         {
             if (node.UniqueRowFilter != UniqueRowFilter.Distinct || node.FromClause is null)
@@ -1009,6 +1091,7 @@ public static class QueryAntiPatternScanner
                 return;
             }
 
+            var findingsBefore = Findings.Count;
             foreach (var join in node.FromClause.TableReferences.SelectMany(PredicateTreeWalker.FlattenJoinNodes))
             {
                 var joinedAlias = AliasOf(join.SecondTableReference);
@@ -1042,11 +1125,12 @@ public static class QueryAntiPatternScanner
                     continue;
                 }
 
-                Findings.Add(new QueryAntiPatternFinding(
-                    QueryAntiPatternFindingKind.DistinctMaskingJoinFanout, sourcePath,
-                    join.StartLine, join.StartColumn,
-                    $"SELECT DISTINCT joins {joinedQualifiedName} on columns not backed by a unique index ({string.Join(", ", joinColumns)})",
-                    FindingConfidence.Medium));
+                AddDistinctFanout(join, joinedQualifiedName, joinColumns);
+            }
+
+            if (Findings.Count == findingsBefore)
+            {
+                InspectFirstTableFanout(node, byAlias);
             }
         }
     }
