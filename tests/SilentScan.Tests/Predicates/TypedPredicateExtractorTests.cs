@@ -2212,6 +2212,21 @@ public sealed class TypedPredicateExtractorTests
         Assert.Empty(result.LocalVariablePredicateFindings);
     }
 
+    [Theory]
+    [InlineData("WHERE Status = @p AND Status = 1", false)]
+    [InlineData("WHERE 1 = Status AND Status = @p", false)]
+    [InlineData("WHERE Status = @p AND Status = 2", true)]
+    [InlineData("WHERE Status = @p OR Status = 1", true)]
+    public void Extract_FilterLiteralPinnedByTheSameConjunction_NeverFiresFilteredIndexParameterMismatch(string where, bool fires)
+    {
+        var result = ExtractWithFilteredIndex(
+            "CREATE TABLE dbo.Customers (Status INT NOT NULL);",
+            "([Status]=(1))",
+            $"CREATE PROCEDURE dbo.usp_Find @p INT AS BEGIN SELECT 1 FROM dbo.Customers {where}; END");
+
+        Assert.Equal(fires, result.FilteredIndexParameterMismatchFindings.Count > 0);
+    }
+
     private static PredicateExtractionResult ExtractWithFilteredIndex(string ddl, string filteredIndex, string query)
     {
         var ddlResult = SqlScriptParser.ParseText("ddl.sql", ddl);

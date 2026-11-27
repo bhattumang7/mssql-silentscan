@@ -1284,6 +1284,21 @@ public static class TypedPredicateExtractor
                 && index.KeyColumns.Count == 1
                 && catalog.IdentifierComparer.Equals(index.KeyColumns[0], column.ColumnName));
 
+        private bool IsPinnedToFilterLiteral(TSqlFragment parameterComparison, string literalText) =>
+            parameterComparison is BooleanComparisonExpression comparison
+            && ColumnPath(comparison.FirstExpression, comparison.SecondExpression) is { } columnPath
+            && _whereEqualityScopes.TryPeek(out var scope)
+            && scope.TopLevelConjuncts.OfType<BooleanComparisonExpression>().Any(conjunct =>
+                conjunct.ComparisonType == BooleanComparisonType.Equals
+                && string.Equals(ColumnPath(conjunct.FirstExpression, conjunct.SecondExpression), columnPath, StringComparison.OrdinalIgnoreCase)
+                && (conjunct.FirstExpression as Literal ?? conjunct.SecondExpression as Literal) is { } literal
+                && Rules.LiteralTextRenderer.Render(literal) == literalText);
+
+        private static string? ColumnPath(ScalarExpression first, ScalarExpression second) =>
+            (first as ColumnReferenceExpression ?? second as ColumnReferenceExpression)?.MultiPartIdentifier is { } name
+                ? string.Join('.', name.Identifiers.Select(identifier => identifier.Value))
+                : null;
+
         private void TryAddFilteredIndexParameterMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node)
         {
             if (HasActiveRecompileGuard
@@ -1293,7 +1308,7 @@ public static class TypedPredicateExtractor
                 return;
             }
 
-            foreach (var (indexName, literalText) in candidates)
+            foreach (var (indexName, literalText) in candidates.Where(c => !IsPinnedToFilterLiteral(node, c.LiteralText)))
             {
                 FilteredIndexParameterMismatchFindings.Add(new FilteredIndexParameterMismatchFinding(
                     column.TableQualifiedName, column.ColumnName, indexName, literalText,
