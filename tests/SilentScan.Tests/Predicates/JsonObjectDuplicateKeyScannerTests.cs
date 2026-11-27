@@ -79,4 +79,13 @@ public sealed class JsonObjectDuplicateKeyScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("(NULL)")]
+    [InlineData("CAST(NULL AS INT)")]
+    [InlineData("CONVERT(INT, (NULL))")]
+    public void WrappedNullValueDroppedByAbsentOnNull_NeverFires(string value)
+    {
+        Assert.Empty(Scan($"SELECT JSON_OBJECT('a':{value}, 'a':2 ABSENT ON NULL);"));
+    }
 }

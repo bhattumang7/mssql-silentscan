@@ -33,6 +33,15 @@ public static class JsonObjectDuplicateKeyScanner
     {
         public List<JsonObjectDuplicateKeyFinding> Findings { get; } = [];
 
+        private static bool IsNullValue(ScalarExpression value) => value switch
+        {
+            NullLiteral => true,
+            ParenthesisExpression parenthesis => IsNullValue(parenthesis.Expression),
+            CastCall cast => IsNullValue(cast.Parameter),
+            ConvertCall convert => IsNullValue(convert.Parameter),
+            _ => false,
+        };
+
         public void OnEnterFunctionCall(FunctionCall node, ModuleWalker walker)
         {
             if (!string.Equals(node.FunctionName?.Value, "JSON_OBJECT", StringComparison.OrdinalIgnoreCase))
@@ -42,7 +51,7 @@ public static class JsonObjectDuplicateKeyScanner
 
             var dropsNulls = node.AbsentOrNullOnNull.Any(word => string.Equals(word.Value, "ABSENT", StringComparison.OrdinalIgnoreCase));
             var duplicateKeys = node.JsonParameters
-                .Where(p => !(dropsNulls && p.JsonValue is NullLiteral))
+                .Where(p => !(dropsNulls && IsNullValue(p.JsonValue)))
                 .Select(p => p.JsonKeyName as StringLiteral)
                 .Where(literal => literal is not null)
                 .GroupBy(literal => literal!.Value, StringComparer.Ordinal)
