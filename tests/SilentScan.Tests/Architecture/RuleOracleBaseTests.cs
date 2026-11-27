@@ -260,6 +260,18 @@ public sealed class RuleOracleBaseTests
     }
 
     [Fact]
+    public async Task RunningTheCasesDirectly_LeavesNoPooledDatabaseBehind()
+    {
+        var probe = new Probe([Firing], [Quiet, NotNull]);
+
+        await probe.FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding();
+        Assert.Equal(0, probe.PooledDatabaseCount);
+
+        await probe.SilentCases_ScannerStaysSilentAndTheEngineRefutesEachClaim();
+        Assert.Equal(0, probe.PooledDatabaseCount);
+    }
+
+    [Fact]
     public async Task StatementHoldingTwoStatements_Fails()
     {
         var failure = await FiringFailureAsync(new OracleCase("two-statements", Setup, FiringStatement + "\n" + FiringStatement));

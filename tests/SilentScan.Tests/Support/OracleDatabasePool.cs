@@ -44,6 +44,8 @@ public sealed class OracleDatabasePool : IAsyncDisposable
 
     private readonly ConcurrentDictionary<(SqlServerOptions, int?, string), PooledDatabase> _idle = new();
 
+    public int IdleCount => _idle.Count;
+
     public async Task<T> UseAsync<T>(SqlServerOptions options, int? compatibilityLevel, string setup, Func<string, Task<T>> use)
     {
         var key = (options, compatibilityLevel, setup);

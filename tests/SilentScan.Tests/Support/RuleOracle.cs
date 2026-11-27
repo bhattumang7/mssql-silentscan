@@ -114,6 +114,8 @@ public abstract class RuleOracle : IAsyncLifetime, IAsyncDisposable
 
     Task IAsyncLifetime.DisposeAsync() => DisposeAsync().AsTask();
 
+    public int PooledDatabaseCount => _databases.IdleCount;
+
     protected virtual IReadOnlyList<EngineTarget> Targets => AllTargets;
 
     protected virtual int? MinimumCompatibilityLevel =>
@@ -172,6 +174,18 @@ public abstract class RuleOracle : IAsyncLifetime, IAsyncDisposable
     [Fact]
     public async Task FiringCases_ScannerFlagsEachAndTheEngineConfirmsEveryFinding()
     {
+        try
+        {
+            await JudgeFiringCasesAsync();
+        }
+        finally
+        {
+            await _databases.DisposeAsync();
+        }
+    }
+
+    private async Task JudgeFiringCasesAsync()
+    {
         var cases = FiringCases;
         RequireWellFormed("firing", cases);
         RequirePartnersResolve(cases, SilentCases);
@@ -195,6 +209,18 @@ public abstract class RuleOracle : IAsyncLifetime, IAsyncDisposable
 
     [Fact]
     public async Task SilentCases_ScannerStaysSilentAndTheEngineRefutesEachClaim()
+    {
+        try
+        {
+            await JudgeSilentCasesAsync();
+        }
+        finally
+        {
+            await _databases.DisposeAsync();
+        }
+    }
+
+    private async Task JudgeSilentCasesAsync()
     {
         var cases = SilentCases;
         RequireWellFormed("silent", [.. cases.Select(c => c.Case)]);
