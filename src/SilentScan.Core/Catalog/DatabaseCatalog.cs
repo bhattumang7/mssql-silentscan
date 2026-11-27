@@ -139,9 +139,7 @@ public sealed class DatabaseCatalog
     private Dictionary<string, bool> _moduleUsesAnsiNullsByQualifiedName;
 
 
-    private Dictionary<string, bool> _moduleUsesDatabaseCollationByQualifiedName;
 
-    private Dictionary<string, bool> _moduleIsSchemaBoundByQualifiedName;
 
     private Dictionary<string, string> _synonymTargetsByQualifiedName;
 
@@ -172,8 +170,6 @@ public sealed class DatabaseCatalog
         _partitionFunctionSignatureBySchemeName = new(_identifierComparer);
         _moduleUsesQuotedIdentifierByQualifiedName = new(_identifierComparer);
         _moduleUsesAnsiNullsByQualifiedName = new(_identifierComparer);
-        _moduleUsesDatabaseCollationByQualifiedName = new(_identifierComparer);
-        _moduleIsSchemaBoundByQualifiedName = new(_identifierComparer);
         _synonymTargetsByQualifiedName = new(_identifierComparer);
         _procedureParametersByQualifiedName = new(_identifierComparer);
         _columnMasterKeyEnclaveSupportByName = new(_identifierComparer);
@@ -366,17 +362,7 @@ public sealed class DatabaseCatalog
     public bool TryGetModuleUsesAnsiNulls(string qualifiedName, out bool usesAnsiNulls) =>
         _moduleUsesAnsiNullsByQualifiedName.TryGetValue(qualifiedName, out usesAnsiNulls);
 
-    public void AddModuleUsesDatabaseCollation(string qualifiedName, bool usesDatabaseCollation) =>
-        _moduleUsesDatabaseCollationByQualifiedName[qualifiedName] = usesDatabaseCollation;
 
-    public bool TryGetModuleUsesDatabaseCollation(string qualifiedName, out bool usesDatabaseCollation) =>
-        _moduleUsesDatabaseCollationByQualifiedName.TryGetValue(qualifiedName, out usesDatabaseCollation);
-
-    public void AddModuleIsSchemaBound(string qualifiedName, bool isSchemaBound) =>
-        _moduleIsSchemaBoundByQualifiedName[qualifiedName] = isSchemaBound;
-
-    public bool TryGetModuleIsSchemaBound(string qualifiedName, out bool isSchemaBound) =>
-        _moduleIsSchemaBoundByQualifiedName.TryGetValue(qualifiedName, out isSchemaBound);
     public void AddProcedureParameters(string qualifiedName, IReadOnlyList<ProcedureParameterInfo> parameters)
     {
         if (parameters.Count == 0 && _procedureParametersByQualifiedName.TryGetValue(qualifiedName, out var existing) && existing.Count > 0)
@@ -515,8 +501,6 @@ public sealed class DatabaseCatalog
         _viewCompiledColumnsByQualifiedName = new(_viewCompiledColumnsByQualifiedName, comparer);
         _moduleUsesQuotedIdentifierByQualifiedName = new(_moduleUsesQuotedIdentifierByQualifiedName, comparer);
         _moduleUsesAnsiNullsByQualifiedName = new(_moduleUsesAnsiNullsByQualifiedName, comparer);
-        _moduleUsesDatabaseCollationByQualifiedName = new(_moduleUsesDatabaseCollationByQualifiedName, comparer);
-        _moduleIsSchemaBoundByQualifiedName = new(_moduleIsSchemaBoundByQualifiedName, comparer);
         _synonymTargetsByQualifiedName = new(_synonymTargetsByQualifiedName, comparer);
         _procedureParametersByQualifiedName = new(_procedureParametersByQualifiedName, comparer);
         _columnMasterKeyEnclaveSupportByName = new(_columnMasterKeyEnclaveSupportByName, comparer);

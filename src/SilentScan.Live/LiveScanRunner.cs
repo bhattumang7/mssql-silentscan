@@ -44,8 +44,6 @@ public static class LiveScanRunner
         {
             catalog.AddModuleUsesQuotedIdentifier(module.QualifiedName, module.UsesQuotedIdentifier);
             catalog.AddModuleUsesAnsiNulls(module.QualifiedName, module.UsesAnsiNulls);
-            catalog.AddModuleIsSchemaBound(module.QualifiedName, module.IsSchemaBound);
-            catalog.AddModuleUsesDatabaseCollation(module.QualifiedName, module.UsesDatabaseCollation);
         }
 
         var defaultSchemas = await new LiveDefaultSchemaReader(connectionString).ReadAsync(cancellationToken);

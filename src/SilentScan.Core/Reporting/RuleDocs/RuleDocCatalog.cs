@@ -93,7 +93,6 @@ public static class RuleDocCatalog
         [CallGraph.TableValuedArgumentMismatch.RuleId] = CallGraph.TableValuedArgumentMismatch.Content,
         [CallGraph.SpExecuteSqlParameterMismatch.RuleId] = CallGraph.SpExecuteSqlParameterMismatch.Content,
         [Catalog.MaxTypedColumn.RuleId] = Catalog.MaxTypedColumn.Content,
-        [Catalog.TableValuedFunctionReturnUsesDatabaseCollation.RuleId] = Catalog.TableValuedFunctionReturnUsesDatabaseCollation.Content,
         [Predicates.FloatEquality.RuleId] = Predicates.FloatEquality.Content,
         [Predicates.ExactApproximateComparison.RuleId] = Predicates.ExactApproximateComparison.Content,
         [Predicates.FloatOrderDependentAggregate.RuleId] = Predicates.FloatOrderDependentAggregate.Content,

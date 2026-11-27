@@ -102,12 +102,6 @@ public static class FindingRuleIds
     public const string RegexpAccentInsensitiveColumnRuleId = "silentscan/string-builtin/regexp-accent-insensitive-column-unsupported";
     public const string StringConcatNullRuleId = "silentscan/predicate/plus-operator-null-propagation";
     public const string SecurityPredicateIndexRuleId = "silentscan/catalog/rls-predicate-unindexed-column";
-    public const string ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId = "silentscan/catalog/tvf-return-database-collation";
-    public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => kind switch
-    {
-        ModuleCompileFlagFindingKind.TableValuedFunctionReturnUsesDatabaseCollation => ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId,
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
-    };
     public const string WindowFrameImplicitDefaultRangeFrameRuleId = "silentscan/window-frame/implicit-default-range";
     public static string WindowFrameRuleId(WindowFrameFindingKind kind) => kind switch
     {

@@ -116,7 +116,6 @@ public static class ReadableScanReportWriter
         blocks.AddRange(ExecResultSetsShape(report, headingLevel, pathBase));
         blocks.AddRange(SelfReferencingDml(report, headingLevel, pathBase));
         blocks.AddRange(TemporalTableHistoryIndexGap(report, headingLevel, pathBase));
-        blocks.AddRange(ModuleCompileFlag(report, headingLevel, pathBase));
         blocks.AddRange(WindowFrame(report, headingLevel, pathBase));
         blocks.AddRange(BoundedStringBuiltinTruncation(report, headingLevel, pathBase));
         blocks.AddRange(ViewOrdering(report, headingLevel, pathBase));
@@ -239,7 +238,6 @@ public static class ReadableScanReportWriter
         AddCount(counts, "EXEC ... WITH RESULT SETS shape mismatches", report.Find<ExecResultSetsShapeFinding>(ExecResultSetsShapeRuleId).Count);
         AddCount(counts, "Self-referencing DML (Halloween Protection risk)", report.Find<SelfReferencingDmlFinding>(nameof(SelfReferencingDmlScanner)).Count);
         AddCount(counts, "Temporal table history-side index gaps", report.Find<TemporalTableHistoryIndexGapFinding>(nameof(TemporalTableHistoryIndexGapScanner)).Count);
-        AddCount(counts, "Module compile flags (WITH RECOMPILE / TVF database-collation return)", report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count);
         AddCount(counts, "RANGE window-function frames", report.Find<WindowFrameFinding>(nameof(WindowFrameScanner)).Count);
         AddCount(counts, "REPLICATE/REPLACE/SPACE constant-provable result truncation", report.Find<BoundedStringBuiltinTruncationFinding>(nameof(BoundedStringBuiltinTruncationScanner)).Count);
         AddCount(counts, "View/inline TVF ordering not guaranteed", report.Find<ViewOrderingFinding>(nameof(ViewOrderingScanner)).Count);
@@ -1778,32 +1776,6 @@ public static class ReadableScanReportWriter
                 f.CurrentIndexName ?? "(unnamed)",
                 string.Join(", ", f.KeyColumns),
             })]);
-    }
-
-    private static IEnumerable<ReadableBlock> ModuleCompileFlag(ScanReport report, int level, string? pathBase)
-    {
-        if (report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count == 0)
-        {
-            yield break;
-        }
-
-        yield return new ReadableBlock.Heading(level, $"Module compile flags ({report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).Count})");
-        yield return new ReadableBlock.Paragraph(
-            "A non-schema-bound table-valued function's own RETURNS TABLE declaring a character column with no explicit COLLATE has its collation resolved against the database's default at CREATE/ALTER time, and it silently disagrees with the database's collation after any later ALTER DATABASE ... COLLATE. Schema-bound modules are deliberately excluded - oracle-confirmed that schema-binding sets the underlying flag unconditionally, string data or not, so it carries no differentiating signal there.");
-
-        foreach (var group in report.Find<ModuleCompileFlagFinding>(nameof(ModuleCompileFlagScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
-        {
-            var ordered = group.ToList();
-            yield return new ReadableBlock.Heading(level + 1, $"RETURNS TABLE column uses database collation ({ordered.Count})");
-            yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ModuleCompileFlagRuleId(group.Key)));
-            yield return new ReadableBlock.Table(
-                [WhereHeader, ModuleHeader],
-                [.. ordered.Select(f => new List<string>
-                {
-                    Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
-                    f.ModuleQualifiedName,
-                })]);
-        }
     }
 
     private static IEnumerable<ReadableBlock> WindowFrame(ScanReport report, int level, string? pathBase)

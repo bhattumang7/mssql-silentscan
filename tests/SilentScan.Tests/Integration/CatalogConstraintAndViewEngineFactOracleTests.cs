@@ -49,10 +49,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         GO
         CREATE TABLE dbo.Lob (Id INT PRIMARY KEY, Body TEXT NULL, BodyMax VARCHAR(MAX) NULL);
         GO
-        CREATE FUNCTION dbo.TvfDbCollation() RETURNS @t TABLE (N VARCHAR(10)) AS BEGIN RETURN; END;
-        GO
-        CREATE FUNCTION dbo.TvfExplicitCollation() RETURNS @t TABLE (N VARCHAR(10) COLLATE Latin1_General_CS_AS) AS BEGIN RETURN; END;
-        GO
         CREATE TABLE dbo.Base (A INT, B INT, C INT);
         INSERT INTO dbo.Base VALUES (1, 2, 3);
         GO
@@ -90,16 +86,6 @@ public sealed class CatalogConstraintAndViewEngineFactOracleTests : OracleTestFi
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullUdf VALUES (1, NULL);"));
         Assert.Null(await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullLen VALUES (1, NULL);"));
         Assert.Equal(547, await SqlErrorNumberAsync("INSERT INTO dbo.ChkNullLen VALUES (2, '');"));
-    }
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.ModuleCompileFlagTableValuedFunctionReturnUsesDatabaseCollationRuleId)]
-    public async Task TvfReturnColumnWithoutCollate_BakesInDatabaseCollation_ExplicitCollateControlDoesNot()
-    {
-        var rows = await RowsAsync("SELECT OBJECT_NAME(object_id), CAST(uses_database_collation AS INT) FROM sys.sql_modules WHERE object_id IN (OBJECT_ID('dbo.TvfDbCollation'), OBJECT_ID('dbo.TvfExplicitCollation'));");
-
-        Assert.Equal(1, rows.Single(r => (string)r[0]! == "TvfDbCollation")[1]);
-        Assert.Equal(0, rows.Single(r => (string)r[0]! == "TvfExplicitCollation")[1]);
     }
 
     [Fact]

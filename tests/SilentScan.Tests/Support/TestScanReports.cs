@@ -41,7 +41,6 @@ public static class TestScanReports
         IReadOnlyList<ExecResultSetsShapeFinding>? ExecResultSetsShapeFindings = null,
         IReadOnlyList<SelfReferencingDmlFinding>? SelfReferencingDmlFindings = null,
         IReadOnlyList<TemporalTableHistoryIndexGapFinding>? TemporalTableHistoryIndexGapFindings = null,
-        IReadOnlyList<ModuleCompileFlagFinding>? ModuleCompileFlagFindings = null,
         IReadOnlyList<WindowFrameFinding>? WindowFrameFindings = null,
         IReadOnlyList<ViewOrderingFinding>? ViewOrderingFindings = null,
         IReadOnlyList<TransactionHygieneFinding>? TransactionHygieneFindings = null,
@@ -127,7 +126,6 @@ public static class TestScanReports
         Set("ExecResultSetsShapeScanner", ExecResultSetsShapeFindings);
         Set("SelfReferencingDmlScanner", SelfReferencingDmlFindings);
         Set("TemporalTableHistoryIndexGapScanner", TemporalTableHistoryIndexGapFindings);
-        Set("ModuleCompileFlagScanner", ModuleCompileFlagFindings);
         Set("WindowFrameScanner", WindowFrameFindings);
         Set("ViewOrderingScanner", ViewOrderingFindings);
         Set("TransactionHygieneScanner", TransactionHygieneFindings);

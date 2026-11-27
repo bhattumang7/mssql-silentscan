@@ -37,7 +37,6 @@ public static class RuleRegistry
         new TransactionHygieneRule(),
         new DynamicDataMaskingRule(),
 
-        new ModuleCompileFlagRule(),
         new WindowFrameRule(),
         new BoundedStringBuiltinTruncationRule(),
         new ViewOrderingRule(),

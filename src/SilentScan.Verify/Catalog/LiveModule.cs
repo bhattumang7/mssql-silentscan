@@ -7,9 +7,7 @@ public sealed record LiveModule(
     string Definition,
     bool UsesQuotedIdentifier,
     bool UsesAnsiNulls,
-    bool IsSchemaBound,
-    bool IsRecompiled,
-    bool UsesDatabaseCollation)
+    bool IsRecompiled)
 {
     public string QualifiedName => $"{SchemaName}.{ObjectName}";
 }

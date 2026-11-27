@@ -19,7 +19,6 @@ public static class RulePrecisionLedger
         new("silentscan/catalog/check-constraint-null-not-handled", 68, 16, 4, 0),
         new("silentscan/catalog/max-typed-column", 242, 0, 20, 0),
         new("silentscan/catalog/non-persisted-computed-column", 41, 20, 0, 0),
-        new("silentscan/catalog/tvf-return-database-collation", 27, 20, 0, 0),
         new("silentscan/catalog/untrusted-check-constraint", 16, 16, 0, 0),
         new("silentscan/control-flow/case-expression-missing-else", 55, 9, 11, 0),
         new("silentscan/control-flow/dirty-read-isolation-hint", 80, 19, 1, 0),

@@ -30,7 +30,7 @@ public sealed class LiveModuleReader
     {
         const string sql = """
             SELECT s.name AS schema_name, o.name AS object_name, o.type AS object_type, m.definition, m.uses_quoted_identifier, m.uses_ansi_nulls,
-                   m.is_schema_bound, m.is_recompiled, m.uses_database_collation
+                   m.is_recompiled
             FROM sys.sql_modules m
             JOIN sys.objects o ON o.object_id = m.object_id
             JOIN sys.schemas s ON s.schema_id = o.schema_id
@@ -59,9 +59,7 @@ public sealed class LiveModuleReader
 
                 UsesAnsiNulls: reader.GetBoolean(5),
 
-                IsSchemaBound: reader.GetBoolean(6),
-                IsRecompiled: reader.GetBoolean(7),
-                UsesDatabaseCollation: reader.GetBoolean(8)));
+                IsRecompiled: reader.GetBoolean(6)));
         }
 
         return modules;

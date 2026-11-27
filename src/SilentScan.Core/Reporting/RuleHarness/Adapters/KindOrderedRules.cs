@@ -18,14 +18,6 @@ internal sealed class KindThenLocationComparer<TFinding>(Func<TFinding, ICompara
     }
 }
 
-internal sealed class ModuleCompileFlagRule : IPerFileRule
-{
-    public string Id => "ModuleCompileFlagScanner";
-    public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.NotApplicable;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ModuleCompileFlagScanner.Scan(parseResult, context.Catalog);
-    public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ModuleCompileFlagFinding>(f => f.Kind);
-}
-
 internal sealed class WindowFrameRule : IPerFileRule
 {
     public string Id => "WindowFrameScanner";

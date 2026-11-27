@@ -93,7 +93,6 @@ public static class SarifRuleCatalog
     public const string RegexpAccentInsensitiveColumnRuleId = FindingRuleIds.RegexpAccentInsensitiveColumnRuleId;
     public const string StringConcatNullRuleId = FindingRuleIds.StringConcatNullRuleId;
     public const string SecurityPredicateIndexRuleId = FindingRuleIds.SecurityPredicateIndexRuleId;
-    public static string ModuleCompileFlagRuleId(ModuleCompileFlagFindingKind kind) => FindingRuleIds.ModuleCompileFlagRuleId(kind);
     public static string WindowFrameRuleId(WindowFrameFindingKind kind) => FindingRuleIds.WindowFrameRuleId(kind);
     public static string BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind kind) => FindingRuleIds.BoundedStringBuiltinTruncationRuleId(kind);
     public static string TransactionHygieneRuleId(TransactionHygieneFindingKind kind) => FindingRuleIds.TransactionHygieneRuleId(kind);

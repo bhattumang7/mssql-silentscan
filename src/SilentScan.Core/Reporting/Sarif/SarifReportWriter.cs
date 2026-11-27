@@ -61,7 +61,6 @@ public static class SarifReportWriter
         results.AddRange(report.Find<OuterJoinPredicateCollapseFinding>(nameof(OuterJoinPredicateCollapseScanner)).Select(ToResult));
         results.AddRange(report.Find<SetOptionFinding>("SetOptionScanner").Select(ToResult));
         results.AddRange(report.Find<TemporalTableHistoryIndexGapFinding>("TemporalTableHistoryIndexGapScanner").Select(ToResult));
-        results.AddRange(report.Find<ModuleCompileFlagFinding>("ModuleCompileFlagScanner").Select(ToResult));
         results.AddRange(report.Find<WindowFrameFinding>("WindowFrameScanner").Select(ToResult));
         results.AddRange(report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Select(ToResult));
         results.AddRange(report.Find<ViewOrderingFinding>("ViewOrderingScanner").Select(ToResult));
@@ -714,21 +713,6 @@ public static class SarifReportWriter
         var message = $"{indexDisplay} on '{finding.CurrentTableQualifiedName}' ({keyColumns}) has no structurally matching index on its history table '{finding.HistoryTableQualifiedName}' - a FOR SYSTEM_TIME query that seeks the current side via this index cannot seek the history side on those columns, so it reads history rows through another access path and filters them afterwards.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: null);
-    }
-
-    private static SarifResult ToResult(ModuleCompileFlagFinding finding)
-    {
-
-        var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ModuleCompileFlagRuleId(finding.Kind), finding.Confidence);
-        var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);
-        var message = finding.Kind switch
-        {
-            ModuleCompileFlagFindingKind.TableValuedFunctionReturnUsesDatabaseCollation =>
-                $"'{finding.ModuleQualifiedName}' declares a RETURNS TABLE character column with no explicit COLLATE - its collation was baked in against the database's default collation at CREATE/ALTER time and will silently disagree with the database's collation after any future ALTER DATABASE ... COLLATE.",
-            _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
-        };
-
-        return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, finding.Column);
     }
 
     private static SarifResult ToResult(WindowFrameFinding finding)
