@@ -753,9 +753,37 @@ public static class QueryAntiPatternScanner
                 base.ExplicitVisit(node);
             }
 
+            private int _queriesOverTables;
+
+            public override void ExplicitVisit(QuerySpecification node)
+            {
+                var readsRows = node.FromClause is not null ? 1 : 0;
+                _queriesOverTables += readsRows;
+                base.ExplicitVisit(node);
+                _queriesOverTables -= readsRows;
+            }
+
+            private static bool CanVary(ScalarExpression value, AssignmentKind kind)
+            {
+                var finder = new VaryingTermFinder();
+                value.Accept(finder);
+                return kind != AssignmentKind.Equals || finder.Found;
+            }
+
+            private sealed class VaryingTermFinder : TSqlFragmentVisitor
+            {
+                public bool Found { get; private set; }
+
+                public override void Visit(VariableReference node) => Found = true;
+
+                public override void Visit(ScalarSubquery node) => Found = true;
+
+                public override void Visit(FunctionCall node) => Found = true;
+            }
+
             public override void ExplicitVisit(SetVariableStatement node)
             {
-                if (node.CursorDefinition is null)
+                if (node.CursorDefinition is null && node.Expression is { } value && CanVary(value, node.AssignmentKind))
                 {
                     assignedVariables.Add(node.Variable.Name);
                 }
@@ -765,7 +793,11 @@ public static class QueryAntiPatternScanner
 
             public override void ExplicitVisit(SelectSetVariable node)
             {
-                assignedVariables.Add(node.Variable.Name);
+                if (_queriesOverTables > 0 || CanVary(node.Expression, node.AssignmentKind))
+                {
+                    assignedVariables.Add(node.Variable.Name);
+                }
+
                 base.ExplicitVisit(node);
             }
 
@@ -940,6 +972,16 @@ public static class QueryAntiPatternScanner
                 .Distinct(catalog.IdentifierComparer)
                 .ToList();
 
+        private bool Projects(QuerySpecification node, string alias, string column) =>
+            node.SelectElements.Any(element => element switch
+            {
+                SelectStarExpression star => star.Qualifier is null
+                    || catalog.IdentifierComparer.Equals(star.Qualifier.Identifiers[^1].Value, alias),
+                SelectScalarExpression scalar => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(scalar.Expression, alias, catalog.IdentifierComparer)
+                    is { } name && catalog.IdentifierComparer.Equals(name, column),
+                _ => false,
+            });
+
         private List<string> PinnedColumnsQualifiedBy(QuerySpecification node, string joinedAlias) =>
             node.WhereClause is { SearchCondition: { } whereCondition }
                 ? PredicateTreeWalker.FlattenAnd(whereCondition)
@@ -992,7 +1034,9 @@ public static class QueryAntiPatternScanner
                 var isProvablyUnique = joinedTable.Indexes.Any(ix =>
                     ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled
                     && ix.KeyColumns.Count > 0
-                    && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer) || pinnedColumns.Contains(kc, catalog.IdentifierComparer)));
+                    && ix.KeyColumns.All(kc => joinColumns.Contains(kc, catalog.IdentifierComparer)
+                        || pinnedColumns.Contains(kc, catalog.IdentifierComparer)
+                        || Projects(node, joinedAlias, kc)));
                 if (isProvablyUnique)
                 {
                     continue;

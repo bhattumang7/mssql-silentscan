@@ -1366,4 +1366,34 @@ public sealed class QueryAntiPatternScannerTests
 
         Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip));
     }
+
+    [Theory]
+    [InlineData("SET @i = 1;", false)]
+    [InlineData("SELECT @i = 1 + 2;", false)]
+    [InlineData("SET @i += 1;", true)]
+    [InlineData("SET @i = @i + 1;", true)]
+    [InlineData("SELECT @i = Id FROM dbo.Big;", true)]
+    [InlineData("SET @i = (SELECT MAX(Id) FROM dbo.Big);", true)]
+    public void LoopDml_NeedsAKeyThatCanChangeBetweenIterations(string assignment, bool fires)
+    {
+        var findings = Scan(
+            "DECLARE @i INT = 0, @n INT = 0; WHILE @n < 100 BEGIN "
+            + $"UPDATE dbo.Big SET Col = 'x' WHERE Id = @i; {assignment} SET @n = @n + 1; END;");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.RbarSingleRowLoopDml));
+    }
+
+    [Theory]
+    [InlineData("SELECT DISTINCT c.Id, p.Id FROM dbo.Cust AS c JOIN dbo.Phones AS p ON p.CustId = c.Id;", false)]
+    [InlineData("SELECT DISTINCT c.Id, p.* FROM dbo.Cust AS c JOIN dbo.Phones AS p ON p.CustId = c.Id;", false)]
+    [InlineData("SELECT DISTINCT c.Id, p.Phone FROM dbo.Cust AS c JOIN dbo.Phones AS p ON p.CustId = c.Id;", true)]
+    [InlineData("SELECT DISTINCT c.Id, p.Id + 0 FROM dbo.Cust AS c JOIN dbo.Phones AS p ON p.CustId = c.Id;", true)]
+    public void DistinctProjectingTheJoinedUniqueKey_HidesNoFanout(string sql, bool fires)
+    {
+        var findings = Scan(
+            "CREATE TABLE dbo.Cust (Id INT NOT NULL PRIMARY KEY); "
+            + "CREATE TABLE dbo.Phones (Id INT NOT NULL PRIMARY KEY, CustId INT NOT NULL, Phone INT NOT NULL);\nGO\n" + sql);
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == QueryAntiPatternFindingKind.DistinctMaskingJoinFanout));
+    }
 }
