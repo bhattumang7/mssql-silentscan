@@ -37,6 +37,8 @@ public static class OutputParameterScanner
     {
         private int _procedureLine;
         private int _procedureColumn;
+        private readonly Stack<List<FlowState>> _loopJumps = new();
+        private readonly HashSet<string> _alwaysOneRowCursors = new(StringComparer.OrdinalIgnoreCase);
 
         public List<OutputParameterFinding> Findings { get; } = [];
 
@@ -70,6 +72,8 @@ public static class OutputParameterScanner
             _procedureLine = procedureName.BaseIdentifier.StartLine;
             _procedureColumn = procedureName.BaseIdentifier.StartColumn;
 
+            _loopJumps.Clear();
+            _alwaysOneRowCursors.Clear();
             var entryState = new FlowState(new HashSet<string>(outputNames, StringComparer.OrdinalIgnoreCase), false);
             var finalState = ProcedureBodyFlowWalker.Walk(statements, entryState, this);
 
@@ -92,12 +96,36 @@ public static class OutputParameterScanner
 
         public bool CatchEntersOnlyThroughExplicitRaise => true;
 
+        public bool ModelsLoopJumps => true;
+
+        public void OnEnterLoop() => _loopJumps.Push([]);
+
+        public FlowState OnLoopJump(FlowState state)
+        {
+            if (state.Declined || _loopJumps.Count == 0)
+            {
+                return state;
+            }
+
+            _loopJumps.Peek().Add(CloneForBranch(state));
+            return state with { Unassigned = [] };
+        }
+
+        public FlowState OnExitLoop(FlowState state) => _loopJumps.Pop().Aggregate(state, MergeBranches);
+
         public bool IsDeclined(FlowState state) => state.Declined;
 
         public bool IsDone(FlowState state) => state.Unassigned!.Count == 0;
 
         public FlowState PerStatement(TSqlStatement statement, FlowState state)
         {
+            TrackCursor(statement);
+            if (statement is FetchCursorStatement { IntoVariables: { } fetched, Cursor.Name.Value: { } cursorName }
+                && _alwaysOneRowCursors.Contains(cursorName))
+            {
+                state.Unassigned!.ExceptWith(fetched.Select(v => v.Name));
+            }
+
             foreach (var (name, _, isUnconditional) in VariableWriteSites.InStatement(statement))
             {
                 if (isUnconditional)
@@ -108,6 +136,27 @@ public static class OutputParameterScanner
 
             return state;
         }
+
+        private void TrackCursor(TSqlStatement statement)
+        {
+            if (statement is not DeclareCursorStatement declare)
+            {
+                return;
+            }
+
+            if (ReturnsExactlyOneRow(declare.CursorDefinition.Select.QueryExpression))
+            {
+                _alwaysOneRowCursors.Add(declare.Name.Value);
+            }
+            else
+            {
+                _alwaysOneRowCursors.Remove(declare.Name.Value);
+            }
+        }
+
+        private static bool ReturnsExactlyOneRow(QueryExpression query) =>
+            query is QuerySpecification { WhereClause: null, HavingClause: null, TopRowFilter: null, OffsetClause: null } spec
+            && VariableWriteSites.ProducesAtMostOneRow(spec);
 
         public FlowState OnReturn(FlowState state, TSqlStatement statement)
         {

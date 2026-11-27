@@ -38,7 +38,7 @@ public static class VariableWriteSites
             case FetchCursorStatement { IntoVariables: { } intoVariables }:
                 foreach (var variable in intoVariables)
                 {
-                    yield return (variable.Name, statement, true);
+                    yield return (variable.Name, statement, false);
                 }
 
                 break;

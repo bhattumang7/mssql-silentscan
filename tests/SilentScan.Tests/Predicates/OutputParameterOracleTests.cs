@@ -81,6 +81,52 @@ public sealed class OutputParameterOracleTests : OracleTestFixture
             END CATCH
         END
         GO
+        CREATE PROCEDURE dbo.p_break_before_return @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            DECLARE @i INT = 0;
+            WHILE @i = 0
+            BEGIN
+                BREAK;
+                RETURN;
+            END
+            SET @x = 42;
+        END
+        GO
+        CREATE PROCEDURE dbo.p_break_before_assign @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            DECLARE @i INT = 0;
+            WHILE @i = 0
+            BEGIN
+                BREAK;
+                SET @x = 42;
+            END
+        END
+        GO
+        CREATE PROCEDURE dbo.p_raiserror_before_return @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            BEGIN TRY
+                RAISERROR('boom', 16, 1);
+                RETURN;
+            END TRY
+            BEGIN CATCH
+                SET @x = 7;
+            END CATCH
+        END
+        GO
+        CREATE PROCEDURE dbo.p_fetch_no_row @x INT OUTPUT AS
+        BEGIN
+            SET NOCOUNT ON;
+            DECLARE @T TABLE (Val INT);
+            DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT Val FROM @T;
+            OPEN c;
+            FETCH NEXT FROM c INTO @x;
+            CLOSE c;
+            DEALLOCATE c;
+        END
+        GO
         """;
 
     private new async Task<SqlConnection> OpenConnectionAsync()
@@ -258,5 +304,33 @@ public sealed class OutputParameterOracleTests : OracleTestFixture
         var result = SqlScriptParser.ParseText("test.sql", sql);
         Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
         return OutputParameterScanner.Scan(result);
+    }
+
+    [Fact]
+    public async Task BreakLeavesTheLoopBeforeAnyLaterStatementOfItsBody()
+    {
+        Assert.Equal(42, await CallerValueAfterAsync("EXEC dbo.p_break_before_return @x = @caller OUTPUT"));
+        Assert.Equal(999, await CallerValueAfterAsync("EXEC dbo.p_break_before_assign @x = @caller OUTPUT"));
+
+        Assert.Empty(Scan("WHILE @x IS NULL BEGIN BREAK; RETURN; END SET @x = 42;"));
+        Assert.Single(Scan("WHILE @x IS NULL BEGIN BREAK; SET @x = 42; END"));
+    }
+
+    [Fact]
+    public async Task RaiserrorInsideTryJumpsToCatchBeforeAnyLaterStatement()
+    {
+        Assert.Equal(7, await CallerValueAfterAsync("EXEC dbo.p_raiserror_before_return @x = @caller OUTPUT"));
+
+        Assert.Empty(Scan("BEGIN TRY RAISERROR('boom', 16, 1); RETURN; END TRY BEGIN CATCH SET @x = 7; END CATCH"));
+        Assert.Single(Scan("BEGIN TRY RAISERROR('note', 10, 1); RETURN; END TRY BEGIN CATCH SET @x = 7; END CATCH"));
+    }
+
+    [Fact]
+    public async Task FetchWithNoRowLeavesTheTargetUnchanged()
+    {
+        Assert.Equal(999, await CallerValueAfterAsync("EXEC dbo.p_fetch_no_row @x = @caller OUTPUT"));
+
+        Assert.Single(Scan("DECLARE c CURSOR LOCAL FOR SELECT Val FROM dbo.T; OPEN c; FETCH c INTO @x; CLOSE c; DEALLOCATE c;"));
+        Assert.Empty(Scan("DECLARE c CURSOR LOCAL FOR SELECT 7; OPEN c; FETCH c INTO @x; CLOSE c; DEALLOCATE c;"));
     }
 }

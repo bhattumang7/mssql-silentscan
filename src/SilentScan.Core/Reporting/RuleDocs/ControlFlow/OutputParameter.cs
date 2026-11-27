@@ -15,6 +15,9 @@ internal static class OutputParameter
             reachability walk, not a heuristic, so a parameter assigned on SOME paths but left
             unassigned on others still fires, since the defect is per-path, not per-procedure.
 
+            `FETCH ... INTO @p` leaves `@p` unchanged when no row is fetched, so it does not count as
+            an assignment unless the cursor's query always returns a row.
+
             A `CATCH` block counts as reachable only through a `THROW` or a `RAISERROR` of
             severity 11 or higher written in the `TRY` body, and it is entered with the state at
             that raise. A statement that fails at run time is assumed to run without error, so a

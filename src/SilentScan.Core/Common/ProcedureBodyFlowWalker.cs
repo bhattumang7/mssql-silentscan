@@ -27,6 +27,16 @@ internal interface IStatementFlowPolicy<TState>
     TState MarkApproximateOnCapExceeded(TState state) => state;
 
     bool CatchEntersOnlyThroughExplicitRaise => false;
+
+    bool ModelsLoopJumps => false;
+
+    void OnEnterLoop()
+    {
+    }
+
+    TState OnLoopJump(TState state) => state;
+
+    TState OnExitLoop(TState state) => state;
 }
 
 internal static class ProcedureBodyFlowWalker
@@ -63,6 +73,12 @@ internal static class ProcedureBodyFlowWalker
 
                 case GoToStatement:
                     return policy.OnGoTo(state);
+
+                case BreakStatement or ContinueStatement when policy.ModelsLoopJumps:
+                    return policy.OnLoopJump(state);
+
+                case RaiseErrorStatement when catchEntries is not null && RaisesIntoCatch(statement):
+                    return policy.OnThrow(state);
 
                 case BeginEndBlockStatement block:
                     state = Walk(block.StatementList.Statements, state, policy, catchEntries);
@@ -117,6 +133,13 @@ internal static class ProcedureBodyFlowWalker
             return enteringState;
         }
 
+        policy.OnEnterLoop();
+        return policy.OnExitLoop(WalkLoopBody(whileStatement, enteringState, policy, catchEntries));
+    }
+
+    private static TState WalkLoopBody<TState>(
+        WhileStatement whileStatement, TState enteringState, IStatementFlowPolicy<TState> policy, List<TState>? catchEntries)
+    {
         var current = enteringState;
         for (var iteration = 0; iteration < policy.WhileFixpointCap; iteration++)
         {
