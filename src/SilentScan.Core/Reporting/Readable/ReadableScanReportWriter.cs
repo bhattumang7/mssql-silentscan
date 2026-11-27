@@ -875,7 +875,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"Predicates against a reassigned formal parameter ({report.Find<ParameterReassignmentPredicateFinding>(nameof(ParameterReassignmentPredicateScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "Purely informational, not a sargability claim: the predicate is still fully sargable and WILL seek if the column is indexed. The compared value is a formal parameter that is reassigned (SET/SELECT) on every statically reachable path before this predicate runs - the optimizer's compile-time sniffed value (the caller's original argument) is provably stale by the time this comparison executes. Distinct from a predicate against a plain DECLARE'd local variable (never sniffable to begin with) - here a value that WAS sniffable had its sniffed value invalidated by the procedure's own code. Suppressed entirely when the statement carries OPTION (RECOMPILE) or the procedure is WITH RECOMPILE.");
+            "Purely informational, not a sargability claim: the predicate is still fully sargable and WILL seek if the column is indexed. The compared value is a formal parameter that is reassigned (SET/SELECT) on every statically reachable path before this predicate runs - an estimate compiled with the procedure is built from the caller's original argument, not the value this comparison uses (a statement-level recompile uses the current value). Distinct from a predicate against a plain DECLARE'd local variable (never sniffable to begin with) - here a value that WAS sniffable had its sniffed value invalidated by the procedure's own code. Suppressed entirely when the statement carries OPTION (RECOMPILE) or the procedure is WITH RECOMPILE.");
 
         yield return new ReadableBlock.Paragraph(RuleDocSite.Url(SarifRuleCatalog.ParameterReassignmentPredicateRuleId));
         yield return new ReadableBlock.Table(
@@ -2212,7 +2212,7 @@ public static class ReadableScanReportWriter
 
         yield return new ReadableBlock.Heading(level, $"SET options silently disabling a filtered index/indexed view ({report.Find<SetOptionFinding>(nameof(SetOptionScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "QUOTED_IDENTIFIER OFF, ANSI_NULLS OFF, SET NUMERIC_ROUNDABORT ON, SET ANSI_WARNINGS OFF, and SET CONCAT_NULL_YIELDS_NULL OFF each independently make a filtered index or an indexed view unusable by the optimizer, silently falling back to a base-table/heap scan - none shows up in the query text as anything resembling a predicate, so the plan consequence is invisible at the call site. Oracle-confirmed directly (real seeded data, both a filtered index and an indexed view). Only reported when this module's own body directly references an indexed view, or has a statement whose WHERE clause restates every conjunct of a filtered index's filter on that table (a filtered index is only usable for a query that implies its filter, so a module that never restates it loses nothing) - see each row's own touched object. SET ARITHABORT OFF was investigated and deliberately excluded: oracle-probed directly, it changed neither plan at all on this engine version/edition, contradicting the checklist's original premise that lumped all six options together.");
+            "QUOTED_IDENTIFIER OFF, ANSI_NULLS OFF, SET NUMERIC_ROUNDABORT ON, SET ANSI_WARNINGS OFF, and SET CONCAT_NULL_YIELDS_NULL OFF each independently make a filtered index or an indexed view unusable by the optimizer, silently falling back to a base-table/heap scan - none shows up in the query text as anything resembling a predicate, so the plan consequence is invisible at the call site. Oracle-confirmed directly (real seeded data, both a filtered index and an indexed view). Only reported when this module's own body directly references an indexed view, has a statement whose WHERE clause restates every conjunct of a filtered index's filter on that table, or compares a computed column that leads an index (a filtered index is only usable for a query that implies its filter, so a module that never restates it loses nothing) - see each row's own touched object. SET ARITHABORT OFF was investigated and deliberately excluded: oracle-probed directly, it changed neither plan at all on this engine version/edition, contradicting the checklist's original premise that lumped all six options together.");
 
         foreach (var group in report.Find<SetOptionFinding>(nameof(SetOptionScanner))
             .GroupBy(f => f.Kind)
@@ -2229,7 +2229,7 @@ public static class ReadableScanReportWriter
                     Where(f.SourcePath, f.Line, dynamicSqlCallSite: DynamicSqlCallSiteOf(f), pathBase, f.Confidence),
                     f.ModuleQualifiedName,
                     DescribeTouchedObject(f.TouchedObjectQualifiedName, f.TouchedIndexName),
-                    f.TouchedIsIndexedView ? "indexed view" : "filtered index",
+                    SetOptionFeatureKind(f),
                 })]);
         }
     }
@@ -2242,6 +2242,12 @@ public static class ReadableScanReportWriter
         }
 
         return indexName is { } idx ? $"{qualifiedName}.{idx}" : qualifiedName;
+    }
+
+    private static string SetOptionFeatureKind(SetOptionFinding finding)
+    {
+        var indexKind = finding.TouchedIsComputedColumnIndex ? "computed column index" : "filtered index";
+        return finding.TouchedIsIndexedView ? "indexed view" : indexKind;
     }
 
     private static string SetOptionTitle(SetOptionFindingKind kind) => kind switch

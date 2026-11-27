@@ -472,7 +472,7 @@ public static class SarifReportWriter
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.ParameterReassignmentPredicateRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' {finding.Operator} @{finding.ParameterName} - {finding.ParameterName} is a formal parameter reassigned at line {finding.ReassignmentLine} before this predicate runs, so the optimizer's compile-time sniffed value (the caller's original argument) is stale by the time this comparison executes. The predicate still seeks if the column is indexed; only the row-count estimate is at risk.";
+        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' {finding.Operator} @{finding.ParameterName} - {finding.ParameterName} is a formal parameter reassigned at line {finding.ReassignmentLine} before this predicate runs, so an estimate compiled with the procedure is built from the caller's original argument, not the value this comparison uses. The predicate still seeks if the column is indexed; only the row-count estimate is at risk.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -507,13 +507,17 @@ public static class SarifReportWriter
         return BuildResult(ruleId, level, finding.DetailText, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
 
+    private static string NotInConsequence(bool underDisjunction) => underDisjunction
+        ? "so this branch of the condition is never TRUE"
+        : "so the whole predicate evaluates to UNKNOWN and silently returns zero rows";
+
     private static SarifResult ToResult(NotInNullableSubqueryFinding finding)
     {
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.NotInNullableSubqueryRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelError, finding.Confidence);
         var outerColumnDisplay = finding.OuterColumnName ?? "<expression>";
-        var message = $"{outerColumnDisplay} NOT IN (SELECT '{finding.SubqueryTableQualifiedName}.{finding.SubqueryColumnName}' ...) - the subquery column is nullable and unfiltered, so the whole predicate evaluates to UNKNOWN and silently returns zero rows the instant the data contains one NULL there, instead of the expected anti-join result.";
+        var message = $"{outerColumnDisplay} NOT IN (SELECT '{finding.SubqueryTableQualifiedName}.{finding.SubqueryColumnName}' ...) - the subquery column is nullable and unfiltered, {NotInConsequence(finding.UnderDisjunction)} the instant the data contains one NULL there, instead of the expected anti-join result.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -799,7 +803,7 @@ public static class SarifReportWriter
                 "AUTO_CREATE_STATISTICS is OFF - the optimizer can no longer create a missing single-column statistics object on demand, so a predicate against an unstatted column compiles against a guessed cardinality instead of a real histogram."),
             DatabaseConfigurationFindingKind.AutoUpdateStatisticsOff => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
-                "AUTO_UPDATE_STATISTICS is OFF - statistics never refresh as the underlying data changes, so every plan compiled against them drifts further from reality the longer the database runs."),
+                "AUTO_UPDATE_STATISTICS is OFF - statistics are no longer refreshed automatically as data changes; they stay stale until a manual UPDATE STATISTICS, sp_updatestats or an index rebuild."),
             DatabaseConfigurationFindingKind.SpatialPersistedComputedColumnDisabledOnCompatibilityLevelChange => (
                 SarifRuleCatalog.DatabaseConfigurationRuleId(finding.Kind), LevelWarning,
                 $"{finding.AffectedObjectName} depends on {finding.Dependency}; SQL Server's own compatibility-change DMV reports that it will be disabled at compatibility level {finding.TargetCompatibilityLevel}."),
@@ -1137,7 +1141,8 @@ public static class SarifReportWriter
             return string.Empty;
         }
 
-        var featureKind = finding.TouchedIsIndexedView ? "indexed view" : "filtered index";
+        var indexKind = finding.TouchedIsComputedColumnIndex ? "computed column index" : "filtered index";
+        var featureKind = finding.TouchedIsIndexedView ? "indexed view" : indexKind;
         var indexSuffix = finding.TouchedIndexName is { } idx ? $".{idx}" : string.Empty;
         return $" - touches {featureKind} '{touched}'{indexSuffix}";
     }

@@ -14,6 +14,9 @@ internal static class AnsiWarningsOff
             `SET ANSI_WARNINGS OFF` inside the module body. When it's OFF, the optimizer silently
             falls back to a base-table or clustered-index scan instead of using either feature - no
             error is raised.
+
+            An index on a computed column is lost the same way: a SELECT that compares the column
+            scans instead of using that index.
             """,
         HowToFixIt: """
             Remove the `SET ANSI_WARNINGS OFF` statement, or explicitly set it ON, before the module

@@ -9,10 +9,9 @@ internal static class AutoUpdateStatisticsOff
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            With `AUTO_UPDATE_STATISTICS` off, statistics never refresh as the underlying data
-            changes - a plan compiled today against a table's current data distribution drifts
-            further and further from reality the longer the database keeps running and being
-            written to, with nothing correcting for it. `AUTO_UPDATE_STATISTICS` being ON is the
+            With `AUTO_UPDATE_STATISTICS` off, statistics are no longer refreshed automatically as data changes - they stay stale
+            until a manual UPDATE STATISTICS, sp_updatestats or an index rebuild, so plans drift
+            from the table's real data distribution in between. `AUTO_UPDATE_STATISTICS` being ON is the
             engine's own out-of-the-box default, and this rule reports the same severity class as
             its `auto-create-statistics-off` sibling: a long-established, essentially
             uncontroversial anti-pattern to have turned off, not a deliberate operational choice the
@@ -34,7 +33,7 @@ internal static class AutoUpdateStatisticsOff
                 NoncompliantSql: """
                     ALTER DATABASE CURRENT SET AUTO_UPDATE_STATISTICS OFF;
                     """,
-                NoncompliantExplanation: "Statistics stop refreshing as the underlying data changes - every plan compiled against them drifts further from reality the longer the database runs, with nothing correcting for it.",
+                NoncompliantExplanation: "Statistics are no longer refreshed automatically - plans compiled against them drift from reality until a manual UPDATE STATISTICS, sp_updatestats or an index rebuild.",
                 CompliantSql: """
                     ALTER DATABASE CURRENT SET AUTO_UPDATE_STATISTICS ON;
                     """,

@@ -15,6 +15,7 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         CREATE TABLE dbo.HeapTarget (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetLocked (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetUpdlock (K INT NOT NULL, V INT NOT NULL);
+        CREATE TABLE dbo.HeapTargetTabLock (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.HeapTargetSerializable (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.ConstantFalseTarget (K INT NOT NULL, V INT NOT NULL);
         CREATE TABLE dbo.ConstantFalseTargetLocked (K INT NOT NULL, V INT NOT NULL);
@@ -136,6 +137,14 @@ public sealed class MergeMissingHoldlockEngineFactOracleTests : OracleTestFixtur
         var (duplicateKeys, _) = await RaceAsync("HeapTargetUpdlock", "WITH (UPDLOCK)");
 
         Assert.True(duplicateKeys > 0, $"duplicate keys {duplicateKeys}");
+    }
+
+    [Fact]
+    public async Task ConcurrentMergeWithTabLock_OnAHeapTarget_InsertsNoDuplicateKeys()
+    {
+        var (duplicateKeys, _) = await RaceAsync("HeapTargetTabLock", "WITH (TABLOCK)");
+
+        Assert.Equal(0, duplicateKeys);
     }
 
     [Fact]

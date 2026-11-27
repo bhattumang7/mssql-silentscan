@@ -20,6 +20,9 @@ internal static class QuotedIdentifierOff
             fixed for the module's lifetime and doesn't depend on the caller's own session state, so
             it's decidable without executing anything - the same silent-scan-instead-of-error
             behavior the optimizer would otherwise hide from a query plan review.
+
+            An index on a computed column is lost the same way: a SELECT that compares the column
+            scans instead of using that index.
             """,
         HowToFixIt: """
             Ensure QUOTED_IDENTIFIER is ON at the time the module is created or altered - most

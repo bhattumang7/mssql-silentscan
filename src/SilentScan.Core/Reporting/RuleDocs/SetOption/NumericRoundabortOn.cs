@@ -15,6 +15,9 @@ internal static class NumericRoundabortOn
             rather than by a compiled catalog flag. When it's ON, the optimizer silently falls back
             to a base-table or clustered-index scan instead of using either feature - no error is
             raised, and the query still returns correct results, just by a slower path.
+
+            An index on a computed column is lost the same way: a SELECT that compares the column
+            scans instead of using that index.
             """,
         HowToFixIt: """
             Remove the `SET NUMERIC_ROUNDABORT ON` statement, or explicitly set it OFF, before the

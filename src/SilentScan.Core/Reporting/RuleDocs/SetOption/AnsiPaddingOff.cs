@@ -18,6 +18,9 @@ internal static class AnsiPaddingOff
             This is distinct from the AnsiPaddingMismatch finding, which is a data-semantics claim
             about which rows a LIKE pattern matches under trailing-space padding, not a plan-shape
             one - the two can both apply to the same module for entirely different reasons.
+
+            An index on a computed column is lost the same way: a SELECT that compares the column
+            scans instead of using that index.
             """,
         HowToFixIt: """
             Remove the `SET ANSI_PADDING OFF` statement, or explicitly set it ON, before the module

@@ -21,12 +21,14 @@ internal static class ReassignedParameter
             SELECT @p = ... - on every statically reachable path before a later predicate uses it.
             The optimizer still sniffs a value for @p, but it's the ORIGINAL value the caller passed
             in, not the new value the reassignment produced and that the predicate will actually run
-            against by the time it executes. The sniffed estimate is therefore provably stale: it
-            reflects a value the predicate never actually compares against at all. Mechanically this
+            against by the time it executes. When the statement is compiled with the rest of the procedure, its estimate is built
+            from the caller's original argument, not the reassigned value; a statement-level
+            recompile during execution (for example after a statistics change) uses the current
+            value. An estimate from the original argument reflects a value the predicate never
+            compares against. Mechanically this
             sits between the other two predicate-estimate findings - the predicate is not
             using a generic average-density estimate like an untouched local variable would (a value
-            genuinely was sniffed), but that sniffed value is guaranteed wrong for this specific
-            predicate, which is a distinct and in some ways worse failure than falling back to a
+            genuinely was sniffed), but that sniffed value is not the one this predicate compares against, which is a distinct and in some ways worse failure than falling back to a
             generic estimate, because it looks and behaves exactly like ordinary, correct parameter
             sniffing until the estimate turns out to be wrong.
 
@@ -67,7 +69,7 @@ internal static class ReassignedParameter
                     FROM dbo.Orders
                     WHERE CustomerId = @customerId;
                     """,
-                NoncompliantExplanation: "The optimizer sniffs @customerId's original caller-supplied value to build the estimate, but the predicate actually runs against the value produced by the SET above it - on every call the sniffed estimate reflects a value the predicate never compares against.",
+                NoncompliantExplanation: "The optimizer sniffs @customerId's original caller-supplied value to build the estimate, but the predicate actually runs against the value produced by the SET above it - a plan compiled with the procedure carries an estimate for a value the predicate never compares against.",
                 CompliantSql: """
                     CREATE TABLE dbo.Orders
                     (

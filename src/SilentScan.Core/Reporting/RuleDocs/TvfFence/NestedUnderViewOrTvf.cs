@@ -26,12 +26,12 @@ internal static class NestedUnderViewOrTvf
             another view, through however many additional layers sit in between - before the actual
             cause of the bad estimate becomes visible.
 
-            This finding is reported only when the connected database is known to be below
-            compatibility level 140: oracle-confirmed on SQL Server 2022, from level 140 on,
+            This finding is reported when the connected database is below compatibility level
+            140: oracle-confirmed on SQL Server 2022, from level 140 on,
             interleaved execution gives a multi-statement TVF behind a view its real row count in
             the actual plan, so the fixed estimate is no longer inherited. A database that has
             switched the INTERLEAVED_EXECUTION_TVF database scoped configuration off keeps the
-            fixed estimate at any level, and is reported as well.
+            fixed estimate at any level, and is reported as well. So does a reference in a data modification, SELECT INTO, a cursor declaration, an IF or WHILE predicate, or a statement whose hint disables interleaved execution: only a read-only SELECT gets the real count.
             """,
         HowToFixIt: """
             Trace the view (or inline TVF) down to whichever underlying object is a multi-statement

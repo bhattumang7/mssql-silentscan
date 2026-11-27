@@ -18,6 +18,9 @@ internal static class AnsiNullsOff
 
             This is a purely catalog-derived fact once a module is deployed - the compiled setting is
             fixed for the module's lifetime - so it's decidable without executing anything.
+
+            An index on a computed column is lost the same way: a SELECT that compares the column
+            scans instead of using that index.
             """,
         HowToFixIt: """
             Ensure ANSI_NULLS is ON at the time the module is created or altered - most commonly by

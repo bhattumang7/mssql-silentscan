@@ -11,8 +11,8 @@ internal static class MultiRowInsertIgnoreDupKeyDrop
         WhyItMatters: """
             IGNORE_DUP_KEY is an index option (CREATE UNIQUE INDEX ... WITH (IGNORE_DUP_KEY = ON),
             or a later ALTER INDEX ... REBUILD WITH the same option) that changes what happens when
-            an INSERT would violate the index's own uniqueness. The offending row is skipped with a
-            warning instead of failing the statement - for a single-row INSERT just as for a batch.
+            an INSERT would violate the index's own uniqueness. The offending row is skipped with an informational message instead of failing the
+            statement - for a single-row INSERT just as for a batch.
 
             The loss is easiest to miss on a multi-row INSERT ... VALUES statement: if any one of
             the rows in the batch collides with an existing key value, or with an earlier row in the
@@ -50,10 +50,10 @@ internal static class MultiRowInsertIgnoreDupKeyDrop
 
                     INSERT INTO dbo.Coupons (Code, DiscountPercent)
                     VALUES ('SAVE10', 10), ('SAVE20', 20), ('SAVE10', 15);
-                    -- 'SAVE10' appears twice: the second occurrence is silently dropped, no error,
+                    -- 'SAVE10' appears twice: one of the two rows is dropped, no error,
                     -- and the statement reports success with only 2 of the 3 named rows inserted.
                     """,
-                NoncompliantExplanation: "The duplicate 'SAVE10' row is silently skipped (\"Duplicate key was ignored\") - the statement succeeds, and nothing signals that only 2 of the 3 rows were actually written unless the caller checks @@ROWCOUNT.",
+                NoncompliantExplanation: "One of the two 'SAVE10' rows is dropped, and which one is not guaranteed (\"Duplicate key was ignored\") - the statement succeeds, and nothing signals that only 2 of the 3 rows were actually written unless the caller checks @@ROWCOUNT.",
                 CompliantSql: """
                     INSERT INTO dbo.Coupons (Code, DiscountPercent)
                     VALUES ('SAVE10', 10), ('SAVE20', 20), ('SAVE10', 15);
