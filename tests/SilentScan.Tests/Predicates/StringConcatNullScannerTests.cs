@@ -327,4 +327,15 @@ public sealed class StringConcatNullScannerTests
 
         Assert.Single(findings);
     }
+
+    [Theory]
+    [InlineData("SELECT p.Id, (SELECT p.MiddleName + 'x') FROM dbo.Person p WHERE p.MiddleName IS NOT NULL;", false)]
+    [InlineData("SELECT p.Id, x.v FROM dbo.Person p CROSS APPLY (SELECT p.MiddleName + 'x' AS v) x WHERE p.MiddleName IS NOT NULL;", false)]
+    [InlineData("SELECT p.Id, (SELECT p.MiddleName + 'x') FROM dbo.Person p;", true)]
+    [InlineData("SELECT p.Id, (SELECT p.MiddleName + 'x') FROM dbo.Person p WHERE p.MiddleName IS NOT NULL OR p.Id > 0;", true)]
+    [InlineData("SELECT p.Id, (SELECT TOP (1) p.MiddleName + 'x' FROM dbo.Person p) FROM dbo.Person p WHERE p.MiddleName IS NOT NULL;", true)]
+    public void CorrelatedColumnRejectedByTheOuterQuery_NeverFires(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count > 0);
+    }
 }

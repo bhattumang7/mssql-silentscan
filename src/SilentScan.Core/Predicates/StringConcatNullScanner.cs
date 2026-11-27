@@ -53,6 +53,8 @@ public static class StringConcatNullScanner
 
         private bool _concatNullYieldsNullOff;
 
+        private readonly Stack<QueryScope> _enclosingQueries = new();
+
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) => UpdateCurrentState(node);
 
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) => UpdateCurrentState(node);
@@ -63,6 +65,10 @@ public static class StringConcatNullScanner
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            var nullRejected = CollectNullRejectedColumns(
+                [node.WhereClause?.SearchCondition, node.HavingClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(node.FromClause)]);
+            _enclosingQueries.Push(new QueryScope(nullRejected, DeclaredAliases(node.FromClause)));
+
             if (_concatNullYieldsNullOff)
             {
                 return;
@@ -74,26 +80,65 @@ public static class StringConcatNullScanner
                 return;
             }
 
-            var nullRejected = CollectNullRejectedColumns(
-                [node.WhereClause?.SearchCondition, node.HavingClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(node.FromClause)]);
             foreach (var element in node.SelectElements.OfType<SelectScalarExpression>())
             {
                 InspectTopLevel(element.Expression, scopeChain, nullRejected);
             }
         }
 
+        public void OnLeaveQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
+            _enclosingQueries.Pop();
+
+        public void OnLeaveUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
+            _enclosingQueries.Pop();
+
+        private HashSet<string> DeclaredAliases(FromClause? fromClause)
+        {
+            var collector = new DeclaredAliasCollector(catalog.IdentifierComparer);
+            fromClause?.Accept(collector);
+            return collector.Aliases;
+        }
+
+        private bool IsRejectedByAnEnclosingQuery(string referenceKey)
+        {
+            var parts = referenceKey.Split('.');
+            if (parts.Length < 2)
+            {
+                return false;
+            }
+
+            var qualifier = parts[^2];
+            foreach (var scope in _enclosingQueries)
+            {
+                if (scope.Aliases.Contains(qualifier))
+                {
+                    return scope.NullRejected.Contains(referenceKey);
+                }
+            }
+
+            return false;
+        }
+
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             UpdateCurrentState(node);
+
+            var spec = node.UpdateSpecification;
+            var nullRejected = CollectNullRejectedColumns(
+                [spec.WhereClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(spec.FromClause)]);
+            var aliases = DeclaredAliases(spec.FromClause);
+            if (spec.Target is NamedTableReference target)
+            {
+                aliases.Add(target.Alias?.Value ?? target.SchemaObject.BaseIdentifier.Value);
+            }
+
+            _enclosingQueries.Push(new QueryScope(nullRejected, aliases));
 
             if (_concatNullYieldsNullOff)
             {
                 return;
             }
 
-            var spec = node.UpdateSpecification;
-            var nullRejected = CollectNullRejectedColumns(
-                [spec.WhereClause?.SearchCondition, .. NullRejection.PreservedInnerJoinConditions(spec.FromClause)]);
             foreach (var setClause in spec.SetClauses.OfType<AssignmentSetClause>())
             {
                 if (setClause.NewValue is ScalarExpression newValue)
@@ -139,7 +184,8 @@ public static class StringConcatNullScanner
                 return;
             }
 
-            var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn && !(l.ReferenceKey is { } key && nullRejected.Contains(key)));
+            var nullableLeaf = leaves.FirstOrDefault(l => l.Kind == LeafKind.String && l.IsNullableColumn
+                && !(l.ReferenceKey is { } key && (nullRejected.Contains(key) || IsRejectedByAnEnclosingQuery(key))));
             if (nullableLeaf.TableQualifiedName is null)
             {
                 return;
@@ -215,6 +261,24 @@ public static class StringConcatNullScanner
 
         private static ScalarExpression Unwrap(ScalarExpression expression) =>
             expression is ParenthesisExpression parenthesis ? Unwrap(parenthesis.Expression) : expression;
+
+        private sealed record QueryScope(HashSet<string> NullRejected, HashSet<string> Aliases);
+
+        private sealed class DeclaredAliasCollector(StringComparer comparer) : TSqlFragmentVisitor
+        {
+            public HashSet<string> Aliases { get; } = new(comparer);
+
+            public override void ExplicitVisit(NamedTableReference node) =>
+                Aliases.Add(node.Alias?.Value ?? node.SchemaObject.BaseIdentifier.Value);
+
+            public override void ExplicitVisit(QueryDerivedTable node)
+            {
+                if (node.Alias is { } alias)
+                {
+                    Aliases.Add(alias.Value);
+                }
+            }
+        }
 
         private sealed class ConcatChainRootCollector : TSqlFragmentVisitor
         {
