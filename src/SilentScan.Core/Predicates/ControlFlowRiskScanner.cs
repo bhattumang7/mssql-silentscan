@@ -126,7 +126,7 @@ public static class ControlFlowRiskScanner
                     FindingConfidence.High));
             }
 
-            if (ContainsNonDeterministicCall(simpleCase.InputExpression) is { } functionName)
+            if (simpleCase.WhenClauses.Count > 1 && ContainsNonDeterministicCall(simpleCase.InputExpression) is { } functionName)
             {
                 Findings.Add(new ControlFlowRiskFinding(
                     ControlFlowRiskFindingKind.NonDeterministicCaseInput,

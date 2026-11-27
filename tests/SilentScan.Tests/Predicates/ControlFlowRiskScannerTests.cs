@@ -249,6 +249,7 @@ public sealed class ControlFlowRiskScannerTests
             BEGIN
                 SELECT CASE NEWID()
                     WHEN '00000000-0000-0000-0000-000000000000' THEN 'a'
+                    WHEN '11111111-1111-1111-1111-111111111111' THEN 'c'
                     ELSE 'b'
                 END;
             END
@@ -265,7 +266,7 @@ public sealed class ControlFlowRiskScannerTests
         var findings = Scan("""
             CREATE PROCEDURE dbo.P AS
             BEGIN
-                SELECT CASE RAND() WHEN 0.5 THEN 'a' ELSE 'b' END;
+                SELECT CASE RAND() WHEN 0.5 THEN 'a' WHEN 0.7 THEN 'c' ELSE 'b' END;
             END
             """);
 
@@ -293,7 +294,7 @@ public sealed class ControlFlowRiskScannerTests
         var findings = Scan("""
             CREATE PROCEDURE dbo.P AS
             BEGIN
-                SELECT CASE CRYPT_GEN_RANDOM(1) WHEN 0x00 THEN 'a' ELSE 'b' END;
+                SELECT CASE CRYPT_GEN_RANDOM(1) WHEN 0x00 THEN 'a' WHEN 0x01 THEN 'c' ELSE 'b' END;
             END
             """);
 
@@ -411,5 +412,18 @@ public sealed class ControlFlowRiskScannerTests
         var finding = Assert.Single(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
 
         Assert.DoesNotContain("unreachable", finding.DetailText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SingleWhenOverANonDeterministicInput_NeverFires()
+    {
+        var findings = Scan("""
+            CREATE PROCEDURE dbo.P AS
+            BEGIN
+                SELECT CASE ABS(CHECKSUM(NEWID())) % 2 WHEN 0 THEN 'a' ELSE 'b' END;
+            END
+            """);
+
+        Assert.DoesNotContain(findings, f => f.Kind == ControlFlowRiskFindingKind.NonDeterministicCaseInput);
     }
 }

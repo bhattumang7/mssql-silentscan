@@ -19,6 +19,8 @@ internal static class NonDeterministicCaseInput
             merely a repeated textual reference to one cached value: three bare `RAND()` references
             in a single real executed SELECT list independently returned three different values.
 
+            A simple CASE with a single WHEN compares its input once, so it is not reported.
+
             The practical consequence is severe: for a large-domain function like `NEWID()` or
             `CRYPT_GEN_RANDOM()` used bare, every WHEN branch becomes, in effect, permanently
             unreachable - the odds of one freshly-generated random value matching a fixed literal
