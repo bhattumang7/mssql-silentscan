@@ -49,10 +49,16 @@ public static class BareTopNoOrderByScanner
         private bool CannotVaryByRowChoice(QuerySpecification node, TopRowFilter top) =>
             IsZero(top.Expression)
             || node.FromClause is null
+            || ReadsAtMostOneRowSource(node.FromClause)
             || existsSubqueries.Contains(node)
             || node.SelectElements.All(IsLiteralSelectElement)
             || PinsOneRowByUniqueKey(node)
             || (node.GroupByClause is null && node.SelectElements.All(IsAggregateSelectElement));
+
+        private static bool ReadsAtMostOneRowSource(FromClause from) =>
+            from.TableReferences is [var only]
+            && (only is InlineDerivedTable { RowValues.Count: 1 }
+                || only is QueryDerivedTable derived && VariableWriteSites.ProducesAtMostOneRow(derived.QueryExpression));
 
         private bool PinsOneRowByUniqueKey(QuerySpecification node)
         {

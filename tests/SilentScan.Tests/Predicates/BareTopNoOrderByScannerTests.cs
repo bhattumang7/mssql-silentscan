@@ -263,4 +263,16 @@ public sealed class BareTopNoOrderByScannerTests
 
         Assert.Single(findings);
     }
+
+    [Theory]
+    [InlineData("SELECT TOP (5) v.x FROM (VALUES (1)) AS v(x);", false)]
+    [InlineData("SELECT TOP (5) d.x FROM (SELECT 1 AS x) AS d;", false)]
+    [InlineData("SELECT TOP (5) d.c FROM (SELECT COUNT(*) AS c FROM dbo.H) AS d;", false)]
+    [InlineData("SELECT TOP (1) v.x FROM (VALUES (1), (2)) AS v(x);", true)]
+    [InlineData("SELECT TOP (1) d.x FROM (SELECT Id AS x FROM dbo.H) AS d;", true)]
+    [InlineData("SELECT TOP (1) d.x FROM (SELECT 1 AS x UNION ALL SELECT 2) AS d;", true)]
+    public void TopOverASourceOfAtMostOneRow_NeverFires(string sql, bool fires)
+    {
+        Assert.Equal(fires, Scan(sql).Count == 1);
+    }
 }
