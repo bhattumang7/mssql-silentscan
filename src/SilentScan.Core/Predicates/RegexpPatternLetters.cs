@@ -31,10 +31,12 @@ internal static partial class RegexpPatternLetters
         return CaseCarryingTokens.IsMatch(stripped) || CaseNeutralTokens.Replace(stripped, string.Empty).Any(char.IsAsciiLetter);
     }
 
-    public static bool HasLiteralLetter(string pattern)
+    public static bool HasLiteralLetter(string pattern) => LiteralLetters(pattern).Any();
+
+    public static IEnumerable<char> LiteralLetters(string pattern)
     {
         var withoutProperties = PropertyClasses.Replace(pattern, string.Empty);
-        return CaseNeutralTokens.Replace(CaseCarryingTokens.Replace(withoutProperties, string.Empty), string.Empty).Any(char.IsLetter);
+        return CaseNeutralTokens.Replace(CaseCarryingTokens.Replace(withoutProperties, string.Empty), string.Empty).Where(char.IsLetter);
     }
 
     private static string StripCaseClosedClasses(string pattern) =>

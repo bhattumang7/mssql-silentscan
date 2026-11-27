@@ -2,6 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -69,6 +70,16 @@ public static class RegexpAccentInsensitiveColumnScanner
             Inspect(name.ToUpperInvariant(), function.Parameters[0], function.Parameters[1], function.StartLine, function.StartColumn, walker);
         }
 
+        private const int WesternSingleByteCodePage = 1252;
+
+        private const string LettersWithoutAnAccentedForm = "bhjklmpqrtx";
+
+        private static bool NoLetterHasAnAccentedForm(SqlType type, string pattern) =>
+            type is { IsNonUnicodeString: true, Collation: { } collation }
+            && CollationCodePageCatalog.TryGetCodePage(collation.Name) == WesternSingleByteCodePage
+            && RegexpPatternLetters.LiteralLetters(pattern)
+                .All(letter => LettersWithoutAnAccentedForm.Contains(char.ToLowerInvariant(letter), StringComparison.Ordinal));
+
         private void Inspect(
             string functionName, ScalarExpression subject, ScalarExpression pattern,
             int line, int column, ModuleWalker walker)
@@ -81,7 +92,8 @@ public static class RegexpAccentInsensitiveColumnScanner
             }
 
             var resolved = walker.ResolveCatalogColumn(columnRef, walker.CurrentScopeChain());
-            if (resolved is not { } r || r.Column.Type?.Collation is not { IsAccentInsensitive: true })
+            if (resolved is not { } r || r.Column.Type?.Collation is not { IsAccentInsensitive: true }
+                || NoLetterHasAnAccentedForm(r.Column.Type, patternLiteral.Value))
             {
                 return;
             }

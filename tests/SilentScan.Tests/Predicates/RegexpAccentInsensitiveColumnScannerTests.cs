@@ -123,4 +123,18 @@ public sealed class RegexpAccentInsensitiveColumnScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("VARCHAR(50)", "bq", false)]
+    [InlineData("VARCHAR(50)", "^blm\\d", false)]
+    [InlineData("VARCHAR(50)", "be", true)]
+    [InlineData("NVARCHAR(50)", "bq", true)]
+    public void SingleByteLettersWithoutAnAccentedForm_NeverFire(string type, string pattern, bool fires)
+    {
+        var findings = Scan(
+            $"CREATE TABLE dbo.T (Name {type} COLLATE SQL_Latin1_General_CP1_CI_AI NOT NULL);",
+            $"SELECT * FROM dbo.T WHERE REGEXP_LIKE(Name, '{pattern}');");
+
+        Assert.Equal(fires, findings.Count == 1);
+    }
 }
