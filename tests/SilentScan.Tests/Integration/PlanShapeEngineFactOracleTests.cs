@@ -135,6 +135,21 @@ public sealed class PlanShapeEngineFactOracleTests : OracleTestFixture
         Assert.NotEqual("TSQLUserDefinedFunctionsNotParallelizable", ShowPlan.NonParallelPlanReason(plain));
     }
 
+    [Theory]
+    [Trait("Rule", FindingRuleIds.ScalarUdfNestedUnderViewOrTvfRuleId)]
+    [InlineData(140)]
+    [InlineData(160)]
+    public async Task ViewWithAUdfColumnKeepsTheQuerySerialEvenWhenThatColumnIsNotSelected(int compatibilityLevel)
+    {
+        await ExecuteAsync($"ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = {compatibilityLevel};");
+
+        var udf = await PlanInSessionAsync(string.Empty, "SELECT SUM(CAST(Id AS BIGINT)) FROM dbo.VSu OPTION (RECOMPILE);");
+        var plain = await PlanInSessionAsync(string.Empty, "SELECT SUM(CAST(Id AS BIGINT)) FROM dbo.VPlain OPTION (RECOMPILE);");
+
+        Assert.Equal("TSQLUserDefinedFunctionsNotParallelizable", ShowPlan.NonParallelPlanReason(udf));
+        Assert.NotEqual("TSQLUserDefinedFunctionsNotParallelizable", ShowPlan.NonParallelPlanReason(plain));
+    }
+
     [Fact]
     [Trait("Rule", FindingRuleIds.UnindexedTempTableUsageFilteredInWhereRuleId)]
     public async Task UnindexedTempTableFilter_Scans_IndexedTempTableSeeks()
