@@ -48,9 +48,21 @@ public static class CompositeIndexLeadingColumnScanner
                 join.SearchCondition.Accept(referenceVisitor);
             }
 
+            var compared = new ComparedExpressionCollector();
+            statement.WhereCondition?.Accept(compared);
+            foreach (var join in statement.JoinNodes)
+            {
+                join.SearchCondition.Accept(compared);
+            }
+
             foreach (var table in statement.BaseTables)
             {
-                InspectTable(table, statement.RowFilterColumns, statement.RowFilterConstantComparedColumns, anyReferencedColumns, statement.Node);
+                var references = new HashSet<(string Table, string Column)>(anyReferencedColumns, TableColumnKeyComparer.For(Catalog));
+                references.UnionWith(table.Columns
+                    .Where(column => column.IsComputed
+                        && ComputedColumnMatcher.DefinitionMatches(Catalog, table.QualifiedName, column.Name, compared.Expressions))
+                    .Select(column => (table.QualifiedName, column.Name)));
+                InspectTable(table, statement.RowFilterColumns, statement.RowFilterConstantComparedColumns, references, statement.Node);
             }
         }
 

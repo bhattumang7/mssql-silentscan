@@ -200,4 +200,18 @@ public sealed class CompositeIndexLeadingColumnScannerTests
         Assert.Equal("OrderId", finding.ViolatingColumnName);
         Assert.Equal(2, finding.ViolatingColumnPosition);
     }
+
+    [Theory]
+    [InlineData("CAST(d AS DATE) = '20200105' AND b = 100", false)]
+    [InlineData("d = '20200105' AND b = 100", true)]
+    public void ComputedLeadingColumnMatchedByItsDefinition_CountsAsReferenced(string where, bool fires)
+    {
+        var result = SqlScriptParser.ParseText(
+            "test.sql",
+            "CREATE TABLE dbo.C (b INT NOT NULL, d DATETIME NOT NULL, day1 AS CAST(d AS DATE) PERSISTED);\n"
+            + "CREATE INDEX icb ON dbo.C (day1, b);\nGO\n" + $"SELECT b FROM dbo.C WHERE {where};");
+        var catalog = SilentScan.Core.Catalog.CatalogBuilder.Build([result]);
+
+        Assert.Equal(fires, CompositeIndexLeadingColumnScanner.Scan(result, catalog).Count > 0);
+    }
 }

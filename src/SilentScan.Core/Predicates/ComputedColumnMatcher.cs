@@ -21,6 +21,13 @@ internal static class ComputedColumnMatcher
         return false;
     }
 
+    public static bool DefinitionMatches(
+        DatabaseCatalog catalog, string tableQualifiedName, string computedColumnName, IEnumerable<ScalarExpression> expressions) =>
+        IndexedComputedColumnDefinitions(catalog, tableQualifiedName)
+            .Where(definition => catalog.IdentifierComparer.Equals(definition.ColumnName, computedColumnName))
+            .Any(definition => expressions.Any(
+                expression => StructurallyEqual(definition.Definition, expression, catalog.IdentifierComparer)));
+
     public static bool HasIndexedMatchingCastComputedColumn(
         DatabaseCatalog catalog, string tableQualifiedName, string baseColumnName, SqlType explicitType)
     {
