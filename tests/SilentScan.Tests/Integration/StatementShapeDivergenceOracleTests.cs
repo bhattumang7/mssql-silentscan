@@ -1,3 +1,4 @@
+using SilentScan.Core.Rules;
 using System.Globalization;
 using System.Xml.Linq;
 using SilentScan.Core.Catalog;
@@ -228,5 +229,48 @@ public sealed class StatementShapeDivergenceOracleTests : EngineDivergenceOracle
         var finding = Assert.Single(
             NonSargablePredicateScanner.Scan(result), f => f.Kind == SargabilityFindingKind.CharindexOrLeftOnColumn);
         Assert.DoesNotContain("rewritable to col LIKE 'x%', which", finding.Detail, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("^v12", true)]
+    [InlineData("^v12[0-9]", true)]
+    [InlineData("^v12[0-9]$", true)]
+    [InlineData("^v12+", true)]
+    [InlineData("^v12*x", true)]
+    [InlineData("^vv?", true)]
+    [InlineData("^v{2}", true)]
+    [InlineData("^v\\.", true)]
+    [InlineData("^[ab]*", true)]
+    [InlineData("^v12[^a]", true)]
+    [InlineData("v12", false)]
+    [InlineData("^v*", false)]
+    [InlineData("^v?", false)]
+    [InlineData("^v{0,}", false)]
+    [InlineData("^v12.", false)]
+    [InlineData("^v12.*", false)]
+    [InlineData("^v12$", false)]
+    [InlineData("^v1\\d", false)]
+    [InlineData("^v12|x", false)]
+    [InlineData("^(v12)", false)]
+    [InlineData("^[^a]", false)]
+    [InlineData("^v12[[:digit:]]", false)]
+    [InlineData("^v-1", false)]
+    [Trait("Rule", FindingRuleIds.Tier1RegexpPatternNoLiteralPrefixRuleId)]
+    public async Task RegexpLike_SeeksOnlyForPatternsWithADerivablePrefix(string pattern, bool seeks)
+    {
+        const string ddl = "CREATE TABLE dbo.R (s VARCHAR(50) COLLATE Latin1_General_100_CS_AS NOT NULL INDEX IX_R CLUSTERED);";
+        var probe = $"SELECT s FROM dbo.R WHERE REGEXP_LIKE(s, '{pattern}');";
+        await ExecuteAsync("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170;");
+        await ExecuteAsync(ddl);
+        await ExecuteAsync("INSERT dbo.R SELECT TOP (3000) CONCAT('v', ROW_NUMBER() OVER (ORDER BY (SELECT 1))) FROM sys.all_columns a CROSS JOIN sys.all_columns b;");
+        var plan = await PlanInSessionAsync(string.Empty, probe);
+        Assert.Equal(
+            seeks,
+            plan.Descendants().Any(e => e.Name.LocalName == "RelOp" && (string?)e.Attribute("PhysicalOp") == "Clustered Index Seek"));
+
+        var (result, _) = Parse($"{ddl}\nGO\n{probe}");
+        Assert.Equal(
+            !seeks,
+            NonSargablePredicateScanner.Scan(result).Any(f => f.Kind == SargabilityFindingKind.RegexpPatternNoLiteralPrefix));
     }
 }

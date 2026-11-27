@@ -154,4 +154,17 @@ public sealed class TypeAndValueDivergenceOracleTests : EngineDivergenceOracleTe
         Assert.NotEmpty(ProcCallArgumentMismatchScanner.Scan(quietGraph));
         Assert.NotEmpty(SpExecuteSqlParameterMismatchScanner.Scan(quietGraph));
     }
+
+    [Fact]
+    public async Task DynamicSqlReplaceOverAccentedText_IsNotFolded_BecauseTheCollationCanMatchAcrossAccents()
+    {
+        Assert.Equal("cafX", await ScalarAsync<string>("SELECT REPLACE(N'caf' + NCHAR(233) COLLATE Latin1_General_CI_AI, N'e', N'X');"));
+
+        BuiltinFoldResult Fold(string source) => BuiltinRegistry.Fold(new BuiltinCall(
+            "REPLACE",
+            [new BuiltinArgument.Text(source), new BuiltinArgument.Text("e"), new BuiltinArgument.Text("X")],
+            new SourceSpan("test.sql", 1, 1)));
+        Assert.IsType<BuiltinFoldResult.Fail>(Fold("caf" + (char)233));
+        Assert.IsType<BuiltinFoldResult.Ok>(Fold("cafe"));
+    }
 }

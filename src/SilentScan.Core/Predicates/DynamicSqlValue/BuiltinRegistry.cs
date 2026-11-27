@@ -389,10 +389,12 @@ public static class BuiltinRegistry
 
         var ordinal = source.Replace(pattern, replacement, StringComparison.Ordinal);
         var ordinalIgnoreCase = source.Replace(pattern, replacement, StringComparison.OrdinalIgnoreCase);
-        return string.Equals(ordinal, ordinalIgnoreCase, StringComparison.Ordinal)
+        return string.Equals(ordinal, ordinalIgnoreCase, StringComparison.Ordinal) && IsAscii(source) && IsAscii(pattern)
             ? BuiltinFoldResult.OkText(ordinal, call.Site)
             : new BuiltinFoldResult.Fail("non-literal-expression:replace-collation-sensitive");
     }
+
+    private static bool IsAscii(string text) => text.All(char.IsAscii);
 
     private static BuiltinFoldResult ReplaceHoleTransfer(BuiltinCall call)
     {
