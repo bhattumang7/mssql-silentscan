@@ -1,6 +1,3 @@
--- Near-miss for NON_SCHEMABOUND_CONSTANT_ARGS_fires.sql: same real dbo.discount_price function
--- and the same all-literal call, but WITH SCHEMABINDING added - the engine can now prove the
--- call deterministic, so ConstantArgumentsNotFolded must be false.
 CREATE FUNCTION dbo.discount_price
 (
     @price DECIMAL (12, 2),

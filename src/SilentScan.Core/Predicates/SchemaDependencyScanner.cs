@@ -1,3 +1,4 @@
+using SilentScan.Core.Rules;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Diagnostics;
@@ -35,7 +36,7 @@ public static class SchemaDependencyScanner
                     continue;
                 }
 
-                if (reference.Kind == SchemaDependencyKind.DefaultConstraint && !IsEvaluatedPerRow(info))
+                if (reference.Kind == SchemaDependencyKind.DefaultConstraint && !ScalarUdfClassifier.CannotBeFoldedToOneEvaluation(info))
                 {
                     continue;
                 }
@@ -63,13 +64,6 @@ public static class SchemaDependencyScanner
 
         return findings;
     }
-
-    private static bool IsEvaluatedPerRow(ScalarUdfInfo info) =>
-        info.IsSchemaBound == false
-        || info.InlineabilityTableReferenceCount > 0
-        || (info.InlineabilityBlocker?.StartsWith(TimeDependentBlockerPrefix, StringComparison.Ordinal) ?? false);
-
-    private const string TimeDependentBlockerPrefix = "time-dependent intrinsic";
 
     private static TSqlFragment? TryParse(SchemaExpressionReference reference, int? compatibilityLevel)
     {

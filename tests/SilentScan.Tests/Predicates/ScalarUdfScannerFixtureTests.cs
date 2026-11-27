@@ -120,12 +120,9 @@ public sealed class ScalarUdfScannerFixtureTests
     }
 
     [Fact]
-    public void NonSchemaboundConstantArgs_SchemaboundTwin_DoesNotFlag()
+    public void NonSchemaboundConstantArgs_SchemaboundTwin_IsEvaluatedOnceAndNotReported()
     {
-        var findings = ScanFixture("NON_SCHEMABOUND_CONSTANT_ARGS_clean.sql");
-
-        var finding = Assert.Single(findings);
-        Assert.False(finding.ConstantArgumentsNotFolded);
+        Assert.Empty(ScanFixture("NON_SCHEMABOUND_CONSTANT_ARGS_clean.sql"));
     }
 
     [Fact]

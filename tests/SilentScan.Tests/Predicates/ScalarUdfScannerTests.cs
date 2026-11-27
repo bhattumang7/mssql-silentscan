@@ -354,6 +354,7 @@ public sealed class ScalarUdfScannerTests
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE dbo.fn_Compute(@v) = Id;")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE V > 0 AND Id = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.U WHERE Id = dbo.fn_Compute(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.C WHERE A = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT x.V FROM dbo.K AS x WHERE x.Id = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; UPDATE dbo.K SET V = 0 WHERE Id = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; DELETE dbo.K WHERE Id = dbo.fn_Compute(@v);")]
@@ -367,7 +368,6 @@ public sealed class ScalarUdfScannerTests
     [Theory]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.N WHERE Id = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.F WHERE Id = dbo.fn_Compute(@v);")]
-    [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.C WHERE A = dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id > dbo.fn_Compute(@v);")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(V);")]
     [InlineData("DECLARE @v INT = 1; SELECT V FROM dbo.K WHERE Id = dbo.fn_Compute(@v) OR V = 5;")]
@@ -483,7 +483,7 @@ public sealed class ScalarUdfScannerTests
     }
 
     [Fact]
-    public void CallWithAllLiteralArgumentsOnSchemaBoundFunction_DoesNotFlagConstantArgumentsNotFolded()
+    public void CallWithAllLiteralArgumentsOnSchemaBoundFunction_IsEvaluatedOnceAndNotReported()
     {
         var findings = ScanSql("""
             CREATE FUNCTION dbo.fn_Compute(@x INT) RETURNS INT WITH SCHEMABINDING AS BEGIN RETURN @x + 1; END;
@@ -493,8 +493,7 @@ public sealed class ScalarUdfScannerTests
             SELECT dbo.fn_Compute(5) FROM dbo.T;
             """);
 
-        var finding = Assert.Single(findings);
-        Assert.False(finding.ConstantArgumentsNotFolded);
+        Assert.Empty(findings);
     }
 
     [Fact]

@@ -1,4 +1,9 @@
+using SilentScan.Core.Rules;
 using System.Xml.Linq;
+using SilentScan.Core.Catalog;
+using SilentScan.Core.Lineage;
+using SilentScan.Core.Parsing;
+using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -27,6 +32,22 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
         CREATE FUNCTION dbo.BumpText(@x INT) RETURNS VARCHAR(20) WITH INLINE = OFF AS BEGIN RETURN CAST(@x + 1 AS VARCHAR(20)); END;
         GO
         CREATE FUNCTION dbo.BumpUnicode(@x INT) RETURNS NVARCHAR(20) WITH INLINE = OFF AS BEGIN RETURN CAST(@x + 1 AS NVARCHAR(20)); END;
+        GO
+        CREATE FUNCTION dbo.Pure(@x INT) RETURNS INT WITH SCHEMABINDING, INLINE = OFF AS BEGIN RETURN @x + 1; END;
+        GO
+        CREATE FUNCTION dbo.Reads(@x INT) RETURNS INT WITH SCHEMABINDING, INLINE = OFF AS BEGIN RETURN (SELECT MAX(V) FROM dbo.Source) + @x; END;
+        GO
+        CREATE FUNCTION dbo.Clocked(@x INT) RETURNS INT WITH SCHEMABINDING, INLINE = OFF AS BEGIN RETURN @x + DATEPART(ms, GETDATE()) * 0; END;
+        GO
+        CREATE TABLE dbo.Composite (A INT NOT NULL, B INT NOT NULL, V INT NOT NULL DEFAULT 0, PRIMARY KEY (A, B));
+        GO
+        INSERT INTO dbo.Composite (A, B) SELECT TOP ({RowCount}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), 0 FROM sys.all_objects;
+        GO
+        CREATE TABLE dbo.Covered (N INT NOT NULL, P INT NOT NULL DEFAULT 0);
+        GO
+        CREATE INDEX IX_Covered_N ON dbo.Covered (N);
+        GO
+        INSERT INTO dbo.Covered (N) SELECT TOP ({RowCount}) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) FROM sys.all_objects;
         GO
         """;
 
@@ -70,7 +91,7 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
 
     private async Task<long> UdfExecutionsAsync(string statement)
     {
-        const string counter = "SELECT ISNULL(SUM(execution_count), 0) FROM sys.dm_exec_function_stats WHERE database_id = DB_ID() AND object_id IN (OBJECT_ID('dbo.Bump'), OBJECT_ID('dbo.BumpText'), OBJECT_ID('dbo.BumpUnicode'));";
+        const string counter = "SELECT ISNULL(SUM(execution_count), 0) FROM sys.dm_exec_function_stats WHERE database_id = DB_ID() AND object_id IN (OBJECT_ID('dbo.Bump'), OBJECT_ID('dbo.BumpText'), OBJECT_ID('dbo.BumpUnicode'), OBJECT_ID('dbo.Pure'), OBJECT_ID('dbo.Reads'), OBJECT_ID('dbo.Clocked'));";
         var before = await ScalarAsync<long>(counter);
         await ExecuteAsync(statement);
         return await ScalarAsync<long>(counter) - before;
@@ -139,5 +160,44 @@ public sealed class ScalarUdfProjectionRowSourceOracleTests : OracleTestFixture
     public async Task UdfInStatementWithoutRowSource_RunsOnce(string statement)
     {
         Assert.Equal(1, await MaxActualRowsOfOperatorsCallingUdfAsync(statement));
+    }
+
+    private bool Reports(string statement)
+    {
+        var result = SqlScriptParser.ParseText("test.sql", Ddl + "\n" + statement);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        var catalog = CatalogBuilder.Build([result]);
+        var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
+        return ScalarUdfScanner.Scan(result, catalog, ScalarUdfMap.Build(views, catalog))
+            .Any(f => f.Kind is ScalarUdfFindingKind.PredicateInvocation or ScalarUdfFindingKind.ProjectionInvocation
+                && f.Line > Ddl.AsSpan().Count('\n') + 1);
+    }
+
+    [Theory]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
+    [InlineData("DECLARE @v INT = 1; SELECT COUNT(*) FROM dbo.Source WHERE V = dbo.Pure(@v);")]
+    [InlineData("SELECT COUNT(*) FROM dbo.Source WHERE V + 0 > dbo.Pure(5);")]
+    [InlineData("SELECT dbo.Pure(5) AS P FROM dbo.Source;")]
+    [InlineData("UPDATE dbo.Source SET V = dbo.Pure(-1);")]
+    [InlineData("DECLARE @v INT = 1; SELECT SUM(V) FROM dbo.Composite WHERE A = dbo.Bump(@v);")]
+    [InlineData("DECLARE @v INT = 1; SELECT N FROM dbo.Covered WHERE N > dbo.Bump(@v);")]
+    public async Task UdfTheEngineEvaluatesOncePerStatement_IsNotReported(string statement)
+    {
+        Assert.Equal(1, await UdfExecutionsAsync(statement));
+        Assert.False(Reports(statement));
+    }
+
+    [Theory]
+    [Trait("Rule", FindingRuleIds.ScalarUdfPredicateInvocationRuleId)]
+    [InlineData("SELECT COUNT(*) FROM dbo.Source WHERE V = dbo.Reads(5);")]
+    [InlineData("SELECT COUNT(*) FROM dbo.Source WHERE V = dbo.Clocked(5);")]
+    [InlineData("SELECT CASE WHEN V >= 0 THEN dbo.Pure(5) ELSE 0 END AS P FROM dbo.Source;")]
+    [InlineData("SELECT IIF(V >= 0, dbo.Pure(5), 0) AS P FROM dbo.Source;")]
+    [InlineData("SELECT dbo.Pure(V) AS P FROM dbo.Source;")]
+    [InlineData("DECLARE @v INT = 0; SELECT @v = dbo.Pure(@v) FROM dbo.Source;")]
+    public async Task UdfTheEngineEvaluatesForEveryRow_IsReported(string statement)
+    {
+        Assert.True(await UdfExecutionsAsync(statement) >= RowCount);
+        Assert.True(Reports(statement));
     }
 }

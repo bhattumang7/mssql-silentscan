@@ -23,6 +23,15 @@ public static class ScalarUdfScanner
 
     internal static IReadOnlyList<ScalarUdfFinding> Harvest(Rule rule) => rule.Findings;
 
+    private static readonly BooleanComparisonType[] SeekableComparisons =
+    [
+        BooleanComparisonType.Equals,
+        BooleanComparisonType.GreaterThan,
+        BooleanComparisonType.GreaterThanOrEqualTo,
+        BooleanComparisonType.LessThan,
+        BooleanComparisonType.LessThanOrEqualTo,
+    ];
+
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
     private const int MaxInlinedReferencesPerStatement = 100;
@@ -42,7 +51,9 @@ public static class ScalarUdfScanner
 
         private readonly List<(int Start, int End)> _columnFreeConjunctRegions = [];
 
-        private readonly List<(int Start, int End)> _uniqueKeySeekBoundRegions = [];
+        private readonly List<(int Start, int End)> _indexSeekBoundRegions = [];
+
+        private readonly List<(int Start, int End)> _conditionallyEvaluatedRegions = [];
 
         private bool _scanForcingHintSeen;
 
@@ -123,10 +134,10 @@ public static class ScalarUdfScanner
         {
             RecordRegion(node.SearchCondition, ScalarUdfContext.Where);
             RecordColumnFreeConjuncts(node.SearchCondition);
-            RecordUniqueKeySeekBounds(node.SearchCondition, walker);
+            RecordIndexSeekBounds(node.SearchCondition, walker);
         }
 
-        private void RecordUniqueKeySeekBounds(BooleanExpression? condition, ModuleWalker walker)
+        private void RecordIndexSeekBounds(BooleanExpression? condition, ModuleWalker walker)
         {
             if (_scanForcingHintSeen)
             {
@@ -134,23 +145,24 @@ public static class ScalarUdfScanner
             }
 
             var scopeChain = walker.CurrentScopeChain();
-            foreach (var conjunct in PredicateTreeWalker.FlattenAnd(condition))
+            foreach (var comparison in PredicateTreeWalker.FlattenAnd(condition).OfType<BooleanComparisonExpression>())
             {
-                if (conjunct is not BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
+                if (!SeekableComparisons.Contains(comparison.ComparisonType))
                 {
                     continue;
                 }
 
-                var bound = UniqueKeySeekBound(comparison.FirstExpression, comparison.SecondExpression, scopeChain, walker)
-                    ?? UniqueKeySeekBound(comparison.SecondExpression, comparison.FirstExpression, scopeChain, walker);
+                var isEquality = comparison.ComparisonType == BooleanComparisonType.Equals;
+                var bound = IndexSeekBound(comparison.FirstExpression, comparison.SecondExpression, isEquality, scopeChain, walker)
+                    ?? IndexSeekBound(comparison.SecondExpression, comparison.FirstExpression, isEquality, scopeChain, walker);
                 if (bound is not null)
                 {
-                    _uniqueKeySeekBoundRegions.Add((bound.StartOffset, bound.StartOffset + bound.FragmentLength));
+                    _indexSeekBoundRegions.Add((bound.StartOffset, bound.StartOffset + bound.FragmentLength));
                 }
             }
         }
 
-        private FunctionCall? UniqueKeySeekBound(ScalarExpression keySide, ScalarExpression boundSide, ScopeChain scopeChain, ModuleWalker walker)
+        private FunctionCall? IndexSeekBound(ScalarExpression keySide, ScalarExpression boundSide, bool isEquality, ScopeChain scopeChain, ModuleWalker walker)
         {
             if (keySide is not ColumnReferenceExpression columnRef || boundSide is not FunctionCall call)
             {
@@ -165,12 +177,13 @@ public static class ScalarUdfScanner
             }
 
             var table = catalog.Find(resolved.TableQualifiedName, walker.CurrentProcScope);
-            var hasSingleColumnUniqueKey = table is { Kind: CatalogTableKind.Table }
+            var leadsUsableIndex = table is { Kind: CatalogTableKind.Table }
                 && table.Indexes.Any(ix =>
-                    ix.IsUnique && !ix.IsFiltered && !ix.IsDisabled && !ix.IsColumnstore
-                    && ix.KeyColumns.Count == 1
+                    !ix.IsFiltered && !ix.IsDisabled && !ix.IsColumnstore
+                    && (isEquality || !ix.IsClustered && !ix.IsUnique)
+                    && ix.KeyColumns.Count > 0
                     && catalog.IdentifierComparer.Equals(ix.KeyColumns[0], resolved.Column.Name));
-            if (!hasSingleColumnUniqueKey)
+            if (!leadsUsableIndex)
             {
                 return null;
             }
@@ -260,6 +273,9 @@ public static class ScalarUdfScanner
             if (region is not null)
             {
                 _regions.Add((region.StartOffset, region.StartOffset + region.FragmentLength, context));
+                var collector = new ConditionalExpressionCollector();
+                region.Accept(collector);
+                _conditionallyEvaluatedRegions.AddRange(collector.Spans);
             }
         }
 
@@ -283,7 +299,23 @@ public static class ScalarUdfScanner
             Contains(_rowSourceRegions, node)
             && !Contains(_uncorrelatedFunctionArgumentRegions, node)
             && !Contains(_columnFreeConjunctRegions, node)
-            && !Contains(_uniqueKeySeekBoundRegions, node);
+            && !Contains(_indexSeekBoundRegions, node);
+
+        private bool IsFoldedToOneEvaluation(FunctionCall node, ScalarUdfInfo info, ScalarUdfContext context) =>
+            info.IsSchemaBound == true
+            && !ScalarUdfClassifier.CannotBeFoldedToOneEvaluation(info)
+            && !Contains(_conditionallyEvaluatedRegions, node)
+            && node.Parameters.All(parameter => IsStatementConstant(parameter, allowVariables: context != ScalarUdfContext.VariableAssignment));
+
+        private static bool IsStatementConstant(ScalarExpression expression, bool allowVariables) => expression switch
+        {
+            Literal or GlobalVariableExpression => true,
+            VariableReference => allowVariables,
+            ParenthesisExpression parenthesis => IsStatementConstant(parenthesis.Expression, allowVariables),
+            UnaryExpression unary => IsStatementConstant(unary.Expression, allowVariables),
+            BinaryExpression binary => IsStatementConstant(binary.FirstExpression, allowVariables) && IsStatementConstant(binary.SecondExpression, allowVariables),
+            _ => false,
+        };
 
         private static bool Contains(List<(int Start, int End)> regions, FunctionCall node) =>
             regions.Exists(region => node.StartOffset >= region.Start && node.StartOffset < region.End);
@@ -359,7 +391,7 @@ public static class ScalarUdfScanner
         {
             var context = ResolveContext(node);
             var kind = ScalarUdfClassifier.ClassifyInvocationKind(context);
-            if (!IsEvaluatedPerRow(node))
+            if (!IsEvaluatedPerRow(node) || IsFoldedToOneEvaluation(node, info, context))
             {
                 return;
             }
@@ -405,6 +437,23 @@ public static class ScalarUdfScanner
             {
                 _claimed.Add(nested);
             }
+        }
+
+        private sealed class ConditionalExpressionCollector : TSqlFragmentVisitor
+        {
+            public List<(int Start, int End)> Spans { get; } = [];
+
+            public override void ExplicitVisit(SearchedCaseExpression node) => Record(node);
+
+            public override void ExplicitVisit(SimpleCaseExpression node) => Record(node);
+
+            public override void ExplicitVisit(IIfCall node) => Record(node);
+
+            public override void ExplicitVisit(CoalesceExpression node) => Record(node);
+
+            public override void ExplicitVisit(NullIfExpression node) => Record(node);
+
+            private void Record(TSqlFragment node) => Spans.Add((node.StartOffset, node.StartOffset + node.FragmentLength));
         }
 
         private sealed class NestedFunctionCallCollector : TSqlFragmentVisitor
