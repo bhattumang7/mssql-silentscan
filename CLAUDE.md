@@ -8,8 +8,7 @@ Static analyser for SQL Server code.
 - silent data loss (truncation, rounding, precision or offset dropped).
 
 Style, formatting, metrics, naming, duplication, dead code and general design
-advice are out of scope. Do not add a rule outside these three, and do not add
-any new rule while a published rule has unmeasured precision.
+advice are out of scope. Do not add a rule outside these three.
 
 **Tool-first.** The tool (`silentscan scan-db`, JSON + SARIF
 findings) is the deliverable. **Precision beats recall everywhere** — one false
