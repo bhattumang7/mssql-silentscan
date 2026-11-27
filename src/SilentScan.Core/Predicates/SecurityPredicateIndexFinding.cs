@@ -10,7 +10,8 @@ public sealed record SecurityPredicateIndexFinding(
     IReadOnlyList<string> FilteredColumns,
     [property: JsonIgnore] string SourcePath,
     [property: JsonIgnore] int Line,
-    FindingConfidence Confidence = FindingConfidence.Medium) : IFinding
+    FindingConfidence Confidence = FindingConfidence.Medium,
+    string? ConvertedIndexName = null) : IFinding
 {
     public string RuleId { get; } = FindingRuleIds.SecurityPredicateIndexRuleId;
 

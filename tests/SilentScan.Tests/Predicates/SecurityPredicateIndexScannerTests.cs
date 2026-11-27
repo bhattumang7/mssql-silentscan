@@ -299,4 +299,27 @@ public sealed class SecurityPredicateIndexScannerTests
             report.Find<SecurityPredicateIndexFinding>("SecurityPredicateIndexScanner"),
             f => f.TableQualifiedName == "dbo.RlsDisabledTarget");
     }
+
+    [Theory]
+    [InlineData(SqlTypeCategory.VarChar, 50, 128, true)]
+    [InlineData(SqlTypeCategory.NVarChar, 200, 128, true)]
+    [InlineData(SqlTypeCategory.NVarChar, 128, 128, false)]
+    [InlineData(SqlTypeCategory.NVarChar, 50, 128, false)]
+    [InlineData(SqlTypeCategory.NChar, 20, 128, false)]
+    public void IndexWhoseColumnMustBeConvertedToTheParameterType_DoesNotSupportTheSeek(
+        SqlTypeCategory category, int columnLength, int parameterLength, bool fires)
+    {
+        var catalog = new DatabaseCatalog();
+        var column = new CatalogColumn(
+            "Owner", new SqlType(category, Length: columnLength), IsNullable: false, IsIdentity: false, IsComputed: false, IsPersisted: false);
+        catalog.AddOrReplace(Table("dbo", "T", [column], [Index("IX_Owner", "Owner")]));
+        catalog.AddSecurityPredicate(new CatalogSecurityPredicate(
+            "Security.OwnerFilter", "dbo.T", "([Security].[fn_Owner]([Owner]))", IsFilterPredicate: true, IsPolicyEnabled: true,
+            PredicateFunctionDefinition: $"CREATE FUNCTION Security.fn_Owner(@Owner NVARCHAR({parameterLength})) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS Allowed WHERE @Owner = USER_NAME();"));
+
+        var findings = SecurityPredicateIndexScanner.Scan(catalog);
+
+        Assert.Equal(fires, findings.Count == 1);
+        Assert.All(findings, finding => Assert.Equal("IX_Owner", finding.ConvertedIndexName));
+    }
 }

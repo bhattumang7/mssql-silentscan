@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Parsing;
@@ -53,17 +54,18 @@ public static class SecurityPredicateIndexScanner
             .Distinct(catalog.IdentifierComparer)
             .ToList();
 
-        if (boundColumns.Count == 0
-            || !PredicateFunctionAllowsSeek(predicate.PredicateFunctionDefinition, call, catalog))
+        var seekable = SeekableParameters(predicate.PredicateFunctionDefinition, call, catalog);
+        if (boundColumns.Count == 0 || seekable.Count == 0)
         {
             return;
         }
 
-        var hasSupportingIndex = table.Indexes.Any(i =>
+        var ledByBoundColumn = table.Indexes.Where(i =>
             !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex && i.KeyColumns.Count > 0
-            && boundColumns.Contains(i.KeyColumns[0], catalog.IdentifierComparer));
+            && boundColumns.Contains(i.KeyColumns[0], catalog.IdentifierComparer))
+            .ToList();
 
-        if (hasSupportingIndex)
+        if (ledByBoundColumn.Exists(index => !MustConvertColumn(table, index.KeyColumns[0], seekable, catalog.IdentifierComparer)))
         {
             return;
         }
@@ -74,7 +76,30 @@ public static class SecurityPredicateIndexScanner
             SchemaObjectNameHelper.QualifyFunctionCall(call),
             boundColumns,
             table.SourcePath,
-            table.SourceLine));
+            table.SourceLine,
+            ConvertedIndexName: ledByBoundColumn.Count > 0 ? ledByBoundColumn[0].Name : null));
+    }
+
+    private static bool MustConvertColumn(
+        CatalogTable table, string columnName, Dictionary<string, ProcedureParameter> seekable, StringComparer comparer)
+    {
+        if (!seekable.TryGetValue(columnName, out var parameter)
+            || table.FindColumn(columnName, comparer)?.Type is not { IsStringFamily: true } column
+            || parameter.DataType is not SqlDataTypeReference { SqlDataTypeOption: var parameterType } declared
+            || parameterType is not (SqlDataTypeOption.NVarChar or SqlDataTypeOption.NChar))
+        {
+            return false;
+        }
+
+        if (!column.IsUnicodeString)
+        {
+            return true;
+        }
+
+        var parameterLength = declared.Parameters is [var length]
+            ? int.TryParse(length.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : int.MaxValue
+            : 1;
+        return column.Length > parameterLength;
     }
 
     private static readonly HashSet<string> NationalCharacterSessionFunctions = new(StringComparer.OrdinalIgnoreCase)
@@ -82,36 +107,33 @@ public static class SecurityPredicateIndexScanner
         "USER_NAME", "SUSER_SNAME", "SUSER_NAME", "ORIGINAL_LOGIN",
     };
 
-    private static bool PredicateFunctionAllowsSeek(string? definition, FunctionCall call, DatabaseCatalog catalog)
+    private static Dictionary<string, ProcedureParameter> SeekableParameters(string? definition, FunctionCall call, DatabaseCatalog catalog)
     {
+        var seekable = new Dictionary<string, ProcedureParameter>(catalog.IdentifierComparer);
         if (string.IsNullOrWhiteSpace(definition))
         {
-            return false;
+            return seekable;
         }
 
         var parsed = SqlScriptParser.ParseText("security-predicate-function.sql", definition, initialQuotedIdentifiers: true, catalog.CompatibilityLevel);
         if (parsed.HasErrors
             || parsed.Fragment is not TSqlScript { Batches: [{ Statements: [CreateFunctionStatement { ReturnType: SelectFunctionReturnType { SelectStatement.QueryExpression: QuerySpecification specification } } function] }] })
         {
-            return false;
+            return seekable;
         }
 
         var conjuncts = PredicateTreeWalker.FlattenAnd(specification.WhereClause?.SearchCondition).ToList();
         for (var i = 0; i < call.Parameters.Count && i < function.Parameters.Count; i++)
         {
-            if (call.Parameters[i] is not ColumnReferenceExpression)
-            {
-                continue;
-            }
-
             var parameter = function.Parameters[i];
-            if (conjuncts.Any(c => IsSeekableEquality(c, parameter, catalog.IdentifierComparer)))
+            if (call.Parameters[i] is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [.., { Value: { } column }] }
+                && conjuncts.Exists(c => IsSeekableEquality(c, parameter, catalog.IdentifierComparer)))
             {
-                return true;
+                seekable.TryAdd(column, parameter);
             }
         }
 
-        return false;
+        return seekable;
     }
 
     private static bool IsSeekableEquality(BooleanExpression conjunct, ProcedureParameter parameter, StringComparer comparer)
