@@ -54,18 +54,47 @@ public static class NotInNullableSubqueryScanner
                 return;
             }
 
-            foreach (var predicate in PredicateTreeWalker.FlattenAnd(searchCondition).OfType<InPredicate>())
+            foreach (var membership in NotInMemberships(searchCondition, negated: false, underDisjunction: false))
             {
-                TryMatch(predicate, scopeChain, walker);
+                TryMatch(membership, scopeChain, walker);
             }
         }
 
+        private readonly record struct Membership(
+            ScalarExpression Outer, ScalarSubquery Subquery, BooleanExpression Predicate, bool UnderDisjunction);
+
+        private static IEnumerable<Membership> NotInMemberships(BooleanExpression condition, bool negated, bool underDisjunction)
+        {
+            switch (condition)
+            {
+                case BooleanParenthesisExpression parenthesis:
+                    return NotInMemberships(parenthesis.Expression, negated, underDisjunction);
+                case BooleanNotExpression not:
+                    return NotInMemberships(not.Expression, !negated, underDisjunction);
+                case BooleanBinaryExpression binary:
+                    var splits = underDisjunction || (binary.BinaryExpressionType == BooleanBinaryExpressionType.Or) != negated;
+                    return NotInMemberships(binary.FirstExpression, negated, splits)
+                        .Concat(NotInMemberships(binary.SecondExpression, negated, splits));
+                case InPredicate { Subquery: { } subquery } membership when membership.NotDefined != negated:
+                    return [new Membership(membership.Expression, subquery, membership, underDisjunction)];
+                case SubqueryComparisonPredicate quantified when IsNotInShape(quantified, negated):
+                    return [new Membership(quantified.Expression, quantified.Subquery, quantified, underDisjunction)];
+                default:
+                    return [];
+            }
+        }
+
+        private static bool IsNotInShape(SubqueryComparisonPredicate predicate, bool negated) =>
+            predicate.SubqueryComparisonPredicateType == SubqueryComparisonPredicateType.All
+                ? !negated && predicate.ComparisonType is BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation
+                : negated && predicate.ComparisonType == BooleanComparisonType.Equals;
+
         private void TryMatch(
-            InPredicate predicate,
+            Membership membership,
             IReadOnlyList<(IReadOnlyDictionary<string, ScopeEntry> ByAlias, IReadOnlyList<ScopeEntry> Ordered)> enclosingScopeChain,
             ModuleWalker walker)
         {
-            if (!predicate.NotDefined || predicate.Subquery is not { QueryExpression: QuerySpecification subquerySpec })
+            if (membership.Subquery.QueryExpression is not QuerySpecification subquerySpec)
             {
                 return;
             }
@@ -97,7 +126,7 @@ public static class NotInNullableSubqueryScanner
                 return;
             }
 
-            var outerColumnName = predicate.Expression is ColumnReferenceExpression outerColumnRef
+            var outerColumnName = membership.Outer is ColumnReferenceExpression outerColumnRef
                 ? outerColumnRef.MultiPartIdentifier.Identifiers[^1].Value
                 : null;
 
@@ -105,7 +134,8 @@ public static class NotInNullableSubqueryScanner
 
             Findings.Add(new NotInNullableSubqueryFinding(
                 outerColumnName, innerColumn.TableQualifiedName, innerColumn.ColumnName, indexed,
-                sourcePath, predicate.StartLine, predicate.StartColumn));
+                sourcePath, membership.Predicate.StartLine, membership.Predicate.StartColumn,
+                UnderDisjunction: membership.UnderDisjunction));
         }
 
         private bool HasDefensiveNotNullFilter(

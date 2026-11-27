@@ -208,15 +208,6 @@ public sealed class NotInNullableSubqueryScannerTests
     }
 
     [Fact]
-    public void InPredicateInsideOrBranch_NeverFires()
-    {
-        var findings = Scan(
-            "SELECT Id FROM dbo.Parent WHERE Id = 1 OR Id NOT IN (SELECT RefId FROM dbo.ChildNullable);");
-
-        Assert.Empty(findings);
-    }
-
-    [Fact]
     public void NullableSubqueryColumn_InJoinOnClause_Fires()
     {
         var findings = Scan(
@@ -262,5 +253,23 @@ public sealed class NotInNullableSubqueryScannerTests
         Assert.Equal("dbo.CorrOuter", finding.SubqueryTableQualifiedName);
         Assert.Equal("RefId", finding.SubqueryColumnName);
         Assert.Equal("Id", finding.OuterColumnName);
+    }
+
+    [Theory]
+    [InlineData("NOT (Id IN (SELECT RefId FROM dbo.ChildNullable))", true, false)]
+    [InlineData("NOT Id IN (SELECT RefId FROM dbo.ChildNullable)", true, false)]
+    [InlineData("Id <> ALL (SELECT RefId FROM dbo.ChildNullable)", true, false)]
+    [InlineData("NOT (Id = ANY (SELECT RefId FROM dbo.ChildNullable))", true, false)]
+    [InlineData("Id = 3 OR Id NOT IN (SELECT RefId FROM dbo.ChildNullable)", true, true)]
+    [InlineData("NOT (Id IN (SELECT RefId FROM dbo.ChildNullable) AND Id = 1)", true, true)]
+    [InlineData("NOT (Id NOT IN (SELECT RefId FROM dbo.ChildNullable))", false, false)]
+    [InlineData("Id = ANY (SELECT RefId FROM dbo.ChildNullable)", false, false)]
+    [InlineData("Id <> ANY (SELECT RefId FROM dbo.ChildNullable)", false, false)]
+    public void EveryEffectiveNotInIsReported(string predicate, bool fires, bool underDisjunction)
+    {
+        var findings = Scan($"SELECT Id FROM dbo.Parent WHERE {predicate};");
+
+        Assert.Equal(fires, findings.Count == 1);
+        Assert.Equal(underDisjunction, findings.Any(f => f.UnderDisjunction));
     }
 }

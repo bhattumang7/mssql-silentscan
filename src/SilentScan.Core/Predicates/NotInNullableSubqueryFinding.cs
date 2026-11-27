@@ -12,7 +12,8 @@ public sealed record NotInNullableSubqueryFinding(
     [property: JsonIgnore] int Line,
     [property: JsonIgnore] int Column,
     FindingConfidence Confidence = FindingConfidence.High,
-    SourceSpan? DynamicSqlCallSite = null) : IRelocatableFinding<NotInNullableSubqueryFinding>, IFinding
+    SourceSpan? DynamicSqlCallSite = null,
+    bool UnderDisjunction = false) : IRelocatableFinding<NotInNullableSubqueryFinding>, IFinding
 {
     public string RuleId { get; } = FindingRuleIds.NotInNullableSubqueryRuleId;
 
