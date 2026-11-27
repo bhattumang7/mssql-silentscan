@@ -190,4 +190,14 @@ public sealed class ViewOrderingScannerTests
 
         Assert.Equal(ViewOrderingFindingKind.TopPercentOrderByNeverLimits, finding.Kind);
     }
+
+    [Theory]
+    [InlineData("SELECT TOP (2) Id FROM dbo.T ORDER BY (SELECT NULL)", false)]
+    [InlineData("SELECT TOP (2) Id FROM dbo.T ORDER BY @@SPID", false)]
+    [InlineData("SELECT Id FROM dbo.T ORDER BY (SELECT NULL) OFFSET 1 ROWS", false)]
+    [InlineData("SELECT TOP (2) Id FROM dbo.T ORDER BY Id", true)]
+    public void RowIndependentOrderKeys_PromiseNoOrder(string query, bool fires)
+    {
+        Assert.Equal(fires, Scan($"CREATE VIEW dbo.V AS {query};").Count > 0);
+    }
 }

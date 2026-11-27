@@ -58,7 +58,7 @@ public static class ViewOrderingScanner
         {
             var outer = OutermostQueryExpression(queryExpression);
             var target = outer is BinaryQueryExpression binary ? TrailingOrderedQueryExpression(binary) : outer;
-            if (target is null || target.OrderByClause is null)
+            if (target is null || target.OrderByClause is null || KeepsRowsInNoParticularOrder(target))
             {
                 return;
             }
@@ -87,6 +87,12 @@ public static class ViewOrderingScanner
             }
 
         }
+
+        private static bool KeepsRowsInNoParticularOrder(QueryExpression target) =>
+            target is QuerySpecification specification
+            && !(specification.TopRowFilter is { Percent: true } top && TopPercentLiteralHelper.IsHundredPercentLiteral(top.Expression))
+            && RowIndependentExpression.OrderKeysAreAllRowIndependent(
+                specification.OrderByClause.OrderByElements, specification.SelectElements);
 
         private static QueryExpression OutermostQueryExpression(QueryExpression queryExpression) =>
             queryExpression is QueryParenthesisExpression parenthesis
