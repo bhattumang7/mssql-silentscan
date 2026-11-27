@@ -10,7 +10,7 @@ internal static partial class LiteralParameterizationProbe
 
     private const string OtherSample = "8";
 
-    public static Perturbation Describe(string? spliced)
+    public static Perturbation Describe(string? spliced, Difference observed = Difference.PlanTextChanged)
     {
         if (string.IsNullOrEmpty(spliced) || !PlaceholderToken().IsMatch(spliced))
         {
@@ -20,7 +20,7 @@ internal static partial class LiteralParameterizationProbe
         var shape = PlaceholderToken().Replace(spliced, Sample);
         return new Perturbation(
             [],
-            Difference.PlanTextChanged,
+            observed,
             static (_, _, _) => Task.FromResult(0),
             static (_, _, _) => Task.FromResult(0),
             static _ => false,
