@@ -66,7 +66,7 @@ public static class RegexpReplaceDollarBackreferenceScanner
 
                 if (c == '\\' && i + 1 < pattern.Length)
                 {
-                    i += 2;
+                    i = SkipEscape(pattern, i);
                     continue;
                 }
 
@@ -88,6 +88,17 @@ public static class RegexpReplaceDollarBackreferenceScanner
             }
 
             return groupCount;
+        }
+
+        private static int SkipEscape(string pattern, int index)
+        {
+            if (pattern[index + 1] != 'Q')
+            {
+                return index + 2;
+            }
+
+            var end = pattern.IndexOf("\\E", index + 2, StringComparison.Ordinal);
+            return end < 0 ? pattern.Length : end + 2;
         }
 
         private static bool IsGroupExtension(string pattern, int index) =>

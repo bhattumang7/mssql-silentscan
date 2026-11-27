@@ -96,4 +96,13 @@ public sealed class RegexpReplaceDollarBackreferenceScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData(@"\Q(\E(b)", "$2", false)]
+    [InlineData(@"\Q(\E(b)", "$1", true)]
+    [InlineData(@"\Q(b)", "$1", false)]
+    public void ParenthesesInsideAQuotedLiteralRun_AreNotGroups(string pattern, string replacement, bool fires)
+    {
+        Assert.Equal(fires, Scan($"SELECT REGEXP_REPLACE('a(b', '{pattern}', '{replacement}');").Count > 0);
+    }
 }
