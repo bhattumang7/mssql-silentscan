@@ -177,7 +177,7 @@ internal static class BaseColumnResolver
             if (node.ColumnType != ColumnType.Wildcard)
             {
                 var provenance = ScalarExpressionResolver.ResolveColumnReference(node, scopeChain, sourcePath, ledger: null, catalog);
-                if (provenance is ColumnProvenance.BaseColumn { Depth: 0 } baseColumn)
+                if (provenance is ColumnProvenance.BaseColumn baseColumn && (baseColumn.Depth == 0 || valuePositionsOnly))
                 {
                     sink.Add((baseColumn.TableQualifiedName, baseColumn.ColumnName));
                 }
