@@ -1,9 +1,12 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SilentScan.Core.TypeInference;
 
 public static class LiteralTypeResolver
 {
+    private const int MaxIntLiteralLength = 11;
+
     public static SqlType? Resolve(Literal literal) => literal switch
     {
         StringLiteral { IsNational: true } s => new SqlType(SqlTypeCategory.NVarChar, Length: EmptyStringAwareLength(s.Value), Collation: ExplicitCollation(s)),
@@ -18,7 +21,7 @@ public static class LiteralTypeResolver
 
         MoneyLiteral => new SqlType(SqlTypeCategory.Money),
 
-        BinaryLiteral b => new SqlType(SqlTypeCategory.Binary, Length: (b.Value.Length - 2) / 2),
+        BinaryLiteral b => new SqlType(SqlTypeCategory.VarBinary, Length: Math.Max(1, (b.Value.Length - 1) / 2)),
 
         _ => null,
     };
@@ -34,8 +37,9 @@ public static class LiteralTypeResolver
         var dotIndex = value.IndexOf('.', StringComparison.Ordinal);
         if (dotIndex < 0)
         {
-
-            return new SqlType(SqlTypeCategory.Decimal, Precision: value.Length, Scale: 0);
+            return value.Length <= MaxIntLiteralLength && int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out _)
+                ? new SqlType(SqlTypeCategory.Int)
+                : new SqlType(SqlTypeCategory.Decimal, Precision: Math.Max(1, value.TrimStart('0').Length), Scale: 0);
         }
 
         var integerDigits = value[..dotIndex].TrimStart('0').Length;

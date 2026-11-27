@@ -75,11 +75,11 @@ public sealed class LiteralTypeResolverTests
     }
 
     [Fact]
-    public void Resolve_BinaryLiteral_ResolvesToBinaryWithByteLength()
+    public void Resolve_BinaryLiteral_ResolvesToVarBinaryWithByteLength()
     {
         var type = LiteralTypeResolver.Resolve(ParseLiteral("0x1A2B"));
 
-        Assert.Equal(SqlTypeCategory.Binary, type!.Category);
+        Assert.Equal(SqlTypeCategory.VarBinary, type!.Category);
         Assert.Equal(2, type.Length);
     }
 

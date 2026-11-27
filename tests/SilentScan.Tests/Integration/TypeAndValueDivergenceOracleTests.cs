@@ -65,6 +65,35 @@ public sealed class TypeAndValueDivergenceOracleTests : EngineDivergenceOracleTe
     }
 
     [Theory]
+    [InlineData("2147483647")]
+    [InlineData("2147483648")]
+    [InlineData("0002147483647")]
+    [InlineData("0002147483648")]
+    [InlineData("00000000001")]
+    [InlineData("000000000001")]
+    [InlineData("02147483647")]
+    [InlineData("99999999999999999999")]
+    public async Task IntegerLiteral_IsNumericOnceItLeavesTheIntRange(string literal)
+    {
+        var ours = OurType(literal)!;
+        Assert.Equal(
+            await EngineTypeAsync(literal),
+            ours.Category == SqlTypeCategory.Int ? "int" : $"numeric({ours.Precision},{ours.Scale})");
+    }
+
+    [Theory]
+    [InlineData("0x")]
+    [InlineData("0x01")]
+    [InlineData("0x010203")]
+    [InlineData("0x1")]
+    public async Task BinaryLiteral_IsVarBinaryOfAtLeastOneByte(string literal)
+    {
+        var ours = OurType(literal)!;
+        Assert.Equal(SqlTypeCategory.VarBinary, ours.Category);
+        Assert.Equal(await EngineTypeAsync(literal), $"varbinary({ours.Length})");
+    }
+
+    [Theory]
     [InlineData("DATETIME2(3)", "'2024-01-01 10:00:00.001'", true)]
     [InlineData("DATETIME2(7)", "'2024-01-01 10:00:00.9999999'", true)]
     [InlineData("TIME(4)", "'10:00:00.0010'", true)]
