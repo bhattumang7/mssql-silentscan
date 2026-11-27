@@ -833,12 +833,11 @@ confirmed discrepancy:
   conditionally nondeterministic, and is now modeled.** A plain `CAST` (no
   style parameter exists) is always nondeterministic. `CONVERT` depends
   entirely on the style code: oracle-swept the full public style-code space
-  against a live instance (37 styles tested against `CONVERT(..., ..., n)`
-  targeting a date/time type) and found an exact boundary - no style, or
-  style `0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 106, 107, 109, 113`, is
-  nondeterministic (Msg 4936 on `PERSISTED`); every other tested style
-  (`101, 103, 104, 105, 108, 110, 111, 112, 114, 120, 121, 126, 127, 130,
-  131`) is deterministic. A numeric-source conversion (e.g. `int`→
+  against a live instance (`CONVERT(..., ..., n)` targeting a date/time
+  type) and found the boundary - no style, any style from `0` to `19` or
+  from `22` to `100`, and `106, 107, 109, 113` are nondeterministic (Msg
+  4936 on `PERSISTED`); `20, 21`, `101`-`105`, `108`, `110`-`112` and the
+  styles from `114` up are deterministic. A numeric-source conversion (e.g. `int`→
   `datetime`) is deterministic regardless of style - the rule only applies
   when the source is a character type, matching the well-known reason this
   class of conversion is locale/date-format-dependent. `CHECKSUM`'s
@@ -929,7 +928,7 @@ grouped by why they're nondeterministic:
   `CHANGE_TRACKING_MIN_VALID_VERSION`.
 - **Locking/lock-state:** `APPLOCK_MODE`, `APPLOCK_TEST`.
 - **Cryptography** (random IV/salt per call, or key-material state that can
-  change): `COMPRESS`, `DECOMPRESS`, `PWDENCRYPT`, `PWDCOMPARE`, `KEY_GUID`,
+  change): `COMPRESS`, `PWDENCRYPT`, `PWDCOMPARE`, `KEY_GUID`,
   `KEY_ID`, `KEY_NAME`, `CERTPROPERTY`, `ASYMKEY_ID`, `ASYMKEYPROPERTY`,
   `SYMKEYPROPERTY`, `SIGNBYASYMKEY`.
 - **Culture/locale-dependent formatting** (the same class of hazard as the
