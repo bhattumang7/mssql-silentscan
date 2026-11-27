@@ -130,4 +130,21 @@ public sealed class DynamicSqlUnparameterizedTests
 
         Assert.Empty(result.UnparameterizedFindings);
     }
+
+    [Theory]
+    [InlineData("SELECT TOP (1) Name FROM dbo.T WHERE Code = ''' + @Code + '''", true)]
+    [InlineData("SELECT Name FROM dbo.T WHERE Code = ''' + @Code + ''' FOR XML PATH", false)]
+    [InlineData("SELECT Name FROM dbo.T WHERE Code = ''' + @Code + ''' FOR JSON PATH", false)]
+    [InlineData("SELECT TOP (1) Name FROM dbo.T WHERE Code = ''' + @Code + ''' OPTION (RECOMPILE)", false)]
+    public void OnlyShapesTheEngineLeavesUnparameterizedAreReported(string inner, bool fires)
+    {
+        var appSql =
+            "CREATE PROCEDURE dbo.usp_Find AS\n"
+            + "BEGIN\n"
+            + "    DECLARE @Code VARCHAR(20) = 'ABC'\n"
+            + $"    EXEC('{inner}')\n"
+            + "END\n";
+
+        Assert.Equal(fires, Analyze(appSql).UnparameterizedFindings.Count > 0);
+    }
 }

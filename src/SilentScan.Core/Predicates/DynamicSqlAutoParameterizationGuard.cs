@@ -6,7 +6,8 @@ internal static class DynamicSqlAutoParameterizationGuard
 {
     public static bool IsProvablyNotAutoParameterized(TSqlFragment root, int offset)
     {
-        if (ForcedParameterizationPosition.EnclosingStatement(root, offset) is not { } statement)
+        if (ForcedParameterizationPosition.EnclosingStatement(root, offset) is not { } statement
+            || ForcedParameterizationPosition.IsRecompiled(statement))
         {
             return false;
         }
@@ -47,8 +48,6 @@ internal static class DynamicSqlAutoParameterizationGuard
         public override void Visit(OptimizerHint node) => Found = true;
 
         public override void Visit(OverClause node) => Found = true;
-
-        public override void Visit(ForClause node) => Found = true;
 
         public override void Visit(WithCtesAndXmlNamespaces node)
         {
