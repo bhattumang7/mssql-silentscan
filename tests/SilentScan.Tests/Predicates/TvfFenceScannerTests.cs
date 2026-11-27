@@ -194,4 +194,33 @@ public sealed class TvfFenceScannerTests
     {
         Assert.Empty(ScanFixture("NESTED_UNDER_VIEW_OR_TVF_via_inline_tvf_clean.sql"));
     }
+
+    [Theory]
+    [InlineData("SELECT v.Id FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id;", false)]
+    [InlineData("INSERT dbo.Sink SELECT v.Id FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id;", true)]
+    [InlineData("SELECT v.Id INTO #x FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id;", true)]
+    [InlineData("IF EXISTS (SELECT 1 FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id) SELECT 1;", true)]
+    [InlineData("DECLARE c CURSOR LOCAL FOR SELECT v.Id FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id;", true)]
+    [InlineData("SELECT v.Id FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id OPTION (USE HINT('DISABLE_INTERLEAVED_EXECUTION_TVF'));", true)]
+    [InlineData("SELECT v.Id FROM dbo.VMs v JOIN dbo.Other o ON o.Id = v.Id OPTION (QUERYTRACEON 11005);", true)]
+    public void AtCompat140AndLater_OnlyStatementsWithoutInterleavedExecutionInheritTheFence(string statement, bool fires)
+    {
+        const string setup = """
+            CREATE TABLE dbo.Other (Id INT NOT NULL);
+            CREATE TABLE dbo.Sink (Id INT NOT NULL);
+            GO
+            CREATE FUNCTION dbo.Ms() RETURNS @t TABLE (Id INT) AS BEGIN INSERT @t VALUES (1); RETURN; END;
+            GO
+            CREATE VIEW dbo.VMs AS SELECT Id FROM dbo.Ms();
+            GO
+            """;
+        var result = SqlScriptParser.ParseText("test.sql", $"{setup}\n{statement}");
+        var catalog = CatalogBuilder.Build([result]);
+        catalog.CompatibilityLevel = 160;
+        var (views, _) = ViewDefinitionExtractor.Extract([result], catalog.DefaultCollation, catalog.TypeAliases);
+
+        var findings = TvfFenceScanner.Scan(result, catalog, TvfFenceMap.Build(views, catalog));
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == TvfFenceFindingKind.NestedUnderViewOrTvf));
+    }
 }

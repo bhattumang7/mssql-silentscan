@@ -37,6 +37,13 @@ public static class TvfFenceScanner
 
         private int _blockedDepth;
 
+        private readonly HashSet<FromClause> _withoutInterleavedExecution = [];
+
+        private bool _insideAStatementWithoutInterleavedExecution;
+
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+            node.Accept(new InterleavedExecutionBlockers(_withoutInterleavedExecution));
+
         public void OnEnterBinaryQueryExpression(BinaryQueryExpression node, ModuleWalker walker) => CollectUnionOperands(node);
 
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) => _blockedDepth++;
@@ -105,6 +112,7 @@ public static class TvfFenceScanner
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
+            _insideAStatementWithoutInterleavedExecution = _withoutInterleavedExecution.Contains(node);
             foreach (var tableReference in node.TableReferences)
             {
                 Flatten(tableReference, isApplySecondSide: false);
@@ -184,7 +192,8 @@ public static class TvfFenceScanner
 
         private bool EstimateIsInheritedFromTheFence =>
             catalog.CompatibilityLevel is { } level
-            && (level < 140 || catalog.IsScopedConfigurationDisabled("INTERLEAVED_EXECUTION_TVF"));
+            && (level < 140 || _insideAStatementWithoutInterleavedExecution
+                || catalog.IsScopedConfigurationDisabled("INTERLEAVED_EXECUTION_TVF"));
 
         private void TryEmitNestedFinding(string qualifiedName, TableReference reference, string fragmentText)
         {
