@@ -968,7 +968,8 @@ public sealed class LiveCatalogReader
                    c.is_nullable, c.is_identity, c.is_computed, cc.is_persisted, c.is_ansi_padded,
                    CONVERT(decimal(38,0), idc.seed_value), CONVERT(decimal(38,0), idc.increment_value),
                    CONVERT(decimal(38,0), idc.last_value), c.encryption_type,
-                   c.is_masked, mc.masking_function, c.generated_always_type, c.is_hidden
+                   c.is_masked, mc.masking_function, c.generated_always_type, c.is_hidden,
+                   CONVERT(bit, ISNULL(COLUMNPROPERTY(c.object_id, c.name, 'IsDeterministic'), 0))
             FROM sys.columns c
             JOIN sys.types ty ON ty.user_type_id = c.user_type_id
             LEFT JOIN sys.types bt ON bt.user_type_id = ty.system_type_id AND ty.is_user_defined = 1 AND ty.is_assembly_type = 0 AND ty.is_table_type = 0
@@ -1032,7 +1033,8 @@ public sealed class LiveCatalogReader
             IsMasked: isMasked,
             MaskingFunctionName: maskingFunctionName,
             IsGeneratedAlwaysPeriod: generatedAlwaysType is 1 or 2,
-            IsHidden: reader.GetBoolean(21));
+            IsHidden: reader.GetBoolean(21),
+            IsDeterministic: reader.GetBoolean(22));
         return (objectId, column);
     }
 

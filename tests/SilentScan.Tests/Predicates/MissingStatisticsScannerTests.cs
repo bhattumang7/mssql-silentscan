@@ -127,4 +127,18 @@ public sealed class MissingStatisticsScannerTests
         Assert.Contains(findings, f => f.ColumnName == "Region");
         Assert.Contains(findings, f => f.ColumnName == "Status");
     }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 1)]
+    public void ComputedColumn_IsReportedOnlyWhenKnownDeterministic(bool isDeterministic, int expected)
+    {
+        var catalog = new DatabaseCatalog { IsAutoCreateStatsOn = false };
+        catalog.AddOrReplace(Table() with
+        {
+            Columns = [Col("OrderId") with { IsComputed = true, IsDeterministic = isDeterministic }],
+        });
+
+        Assert.Equal(expected, Scan("SELECT 1 FROM dbo.Orders WHERE OrderId = 1;", catalog).Count);
+    }
 }

@@ -20,4 +20,5 @@ public sealed record CatalogColumn(
     string? MaskingFunctionName = null,
     bool IsGeneratedAlwaysPeriod = false,
     bool IsSparse = false,
-    bool IsHidden = false);
+    bool IsHidden = false,
+    bool IsDeterministic = false);

@@ -49,7 +49,7 @@ public static class MissingStatisticsScanner
 
                 foreach (var columnName in constrainedColumns)
                 {
-                    if (HasApplicableStatistic(table, columnName))
+                    if (HasApplicableStatistic(table, columnName) || CannotHaveAStatistic(table, columnName))
                     {
                         continue;
                     }
@@ -59,6 +59,9 @@ public static class MissingStatisticsScanner
                 }
             }
         }
+
+        private bool CannotHaveAStatistic(CatalogTable table, string columnName) =>
+            table.FindColumn(columnName, Catalog.IdentifierComparer) is { IsComputed: true, IsDeterministic: false };
 
         private bool HasApplicableStatistic(CatalogTable table, string columnName) =>
             table.EffectiveStatistics.Any(s =>
