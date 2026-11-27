@@ -1065,7 +1065,7 @@ public sealed class LiveCatalogReader
         const string sql = """
             SELECT i.object_id, i.index_id, i.name AS index_name, i.type_desc, i.is_unique,
                    i.is_primary_key, i.is_unique_constraint, i.has_filter, i.is_disabled,
-                   i.is_hypothetical, i.filter_definition, i.optimize_for_sequential_key,
+                   i.filter_definition, i.optimize_for_sequential_key,
                    ic.key_ordinal, ic.is_included_column, ic.index_column_id, c.name AS column_name,
                    ic.is_descending_key,
                    CASE WHEN ds.type = 'PS' THEN ds.name ELSE NULL END AS partition_scheme_name,
@@ -1078,7 +1078,7 @@ public sealed class LiveCatalogReader
             LEFT JOIN sys.data_spaces ds ON ds.data_space_id = i.data_space_id
             LEFT JOIN sys.index_columns pic ON pic.object_id = i.object_id AND pic.index_id = i.index_id AND pic.partition_ordinal = 1
             LEFT JOIN sys.columns pc ON pc.object_id = pic.object_id AND pc.column_id = pic.column_id
-            WHERE t.is_ms_shipped = 0 AND i.type_desc <> 'HEAP'
+            WHERE t.is_ms_shipped = 0 AND i.type_desc <> 'HEAP' AND i.is_hypothetical = 0
             ORDER BY i.object_id, i.index_id, ic.index_column_id;
             """;
 
@@ -1106,9 +1106,9 @@ public sealed class LiveCatalogReader
         if (!rowsByIndex.TryGetValue(key, out var row))
         {
             var indexName = await reader.IsDBNullAsync(2, cancellationToken) ? null : reader.GetString(2);
-            var filterDefinition = await reader.IsDBNullAsync(10, cancellationToken) ? null : reader.GetString(10);
-            var partitionSchemeName = await reader.IsDBNullAsync(17, cancellationToken) ? null : reader.GetString(17);
-            var partitioningColumnName = await reader.IsDBNullAsync(18, cancellationToken) ? null : reader.GetString(18);
+            var filterDefinition = await reader.IsDBNullAsync(9, cancellationToken) ? null : reader.GetString(9);
+            var partitionSchemeName = await reader.IsDBNullAsync(16, cancellationToken) ? null : reader.GetString(16);
+            var partitioningColumnName = await reader.IsDBNullAsync(17, cancellationToken) ? null : reader.GetString(17);
             row = new IndexRow(
                 Name: indexName,
                 TypeDesc: reader.GetString(3),
@@ -1117,27 +1117,26 @@ public sealed class LiveCatalogReader
                 IsUniqueConstraint: reader.GetBoolean(6),
                 HasFilter: reader.GetBoolean(7),
                 IsDisabled: reader.GetBoolean(8),
-                IsHypothetical: reader.GetBoolean(9),
                 KeyColumns: [],
                 IncludedColumns: [],
                 FilterDefinition: filterDefinition,
-                OptimizeForSequentialKey: reader.GetBoolean(11),
+                OptimizeForSequentialKey: reader.GetBoolean(10),
                 PartitionSchemeName: partitionSchemeName,
                 PartitioningColumnName: partitioningColumnName,
-                IgnoreDupKey: reader.GetBoolean(19),
-                AllowRowLocks: reader.GetBoolean(20),
-                AllowPageLocks: reader.GetBoolean(21));
+                IgnoreDupKey: reader.GetBoolean(18),
+                AllowRowLocks: reader.GetBoolean(19),
+                AllowPageLocks: reader.GetBoolean(20));
             rowsByIndex[key] = row;
         }
 
-        if (await reader.IsDBNullAsync(15, cancellationToken))
+        if (await reader.IsDBNullAsync(14, cancellationToken))
         {
 
             return;
         }
 
-        var isIncluded = reader.GetBoolean(13);
-        var columnName = reader.GetString(15);
+        var isIncluded = reader.GetBoolean(12);
+        var columnName = reader.GetString(14);
         if (isIncluded)
         {
             row.IncludedColumns.Add(columnName);
@@ -1145,8 +1144,8 @@ public sealed class LiveCatalogReader
         else
         {
 
-            var isDescending = reader.GetBoolean(16);
-            row.KeyColumns.Add((reader.GetByte(12), columnName, isDescending));
+            var isDescending = reader.GetBoolean(15);
+            row.KeyColumns.Add((reader.GetByte(11), columnName, isDescending));
         }
     }
 
@@ -1172,7 +1171,6 @@ public sealed class LiveCatalogReader
                 IsColumnstore: row.TypeDesc.Contains("COLUMNSTORE", StringComparison.OrdinalIgnoreCase),
                 IsDisabled: row.IsDisabled,
                 IsClustered: row.TypeDesc.StartsWith("CLUSTERED", StringComparison.OrdinalIgnoreCase),
-                IsHypothetical: row.IsHypothetical,
                 FilterDefinition: row.FilterDefinition,
                 KeyColumnIsDescendingRaw: orderedKeyColumns.Count > 0 ? orderedDescendingFlags : [],
                 OptimizeForSequentialKey: row.OptimizeForSequentialKey,
@@ -1443,7 +1441,6 @@ public sealed class LiveCatalogReader
         List<(int Ordinal, string Name, bool IsDescending)> KeyColumns,
         List<string> IncludedColumns,
 
-        bool IsHypothetical = false,
 
         string? FilterDefinition = null,
 
@@ -1471,7 +1468,7 @@ public sealed class LiveCatalogReader
             LEFT JOIN sys.partition_schemes ps ON ps.data_space_id = i.data_space_id
             LEFT JOIN sys.index_columns pic ON pic.object_id = i.object_id AND pic.index_id = i.index_id AND pic.partition_ordinal = 1
             LEFT JOIN sys.columns pc ON pc.object_id = pic.object_id AND pc.column_id = pic.column_id
-            WHERE v.is_ms_shipped = 0 AND i.type_desc <> 'HEAP'
+            WHERE v.is_ms_shipped = 0 AND i.type_desc <> 'HEAP' AND i.is_hypothetical = 0
             ORDER BY s.name, v.name, i.index_id, ic.index_column_id;
             """;
 

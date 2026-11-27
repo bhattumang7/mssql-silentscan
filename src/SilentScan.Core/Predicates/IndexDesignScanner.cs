@@ -68,7 +68,7 @@ public static class IndexDesignScanner
             return;
         }
 
-        var activeNonclustered = table.Indexes.Where(i => !i.IsDisabled && !i.IsHypothetical).ToList();
+        var activeNonclustered = table.Indexes.Where(i => !i.IsDisabled).ToList();
         if (activeNonclustered.Count == 0)
         {
 
@@ -127,7 +127,7 @@ public static class IndexDesignScanner
     private static void ScanDuplicateAndSubsumedIndexes(CatalogTable table, StringComparer identifierComparer, List<IndexDesignFinding> findings)
     {
         var candidates = table.Indexes
-            .Where(i => !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex && !i.IsXmlIndex && !i.IsSpatialIndex && !i.IsHypothetical && i.KeyColumns.Count > 0)
+            .Where(i => !i.IsDisabled && !i.IsFiltered && !i.IsColumnstore && !i.IsJsonIndex && !i.IsXmlIndex && !i.IsSpatialIndex && i.KeyColumns.Count > 0)
             .ToList();
 
         for (var i = 0; i < candidates.Count; i++)
@@ -426,7 +426,7 @@ public static class IndexDesignScanner
     {
         foreach (var index in table.Indexes)
         {
-            if (index.IsDisabled || index.IsHypothetical || index.IsColumnstore)
+            if (index.IsDisabled || index.IsColumnstore)
             {
                 continue;
             }

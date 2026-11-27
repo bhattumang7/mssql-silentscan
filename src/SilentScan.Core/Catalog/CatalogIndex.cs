@@ -10,7 +10,6 @@ public sealed record CatalogIndex(
     bool IsColumnstore = false,
     bool IsDisabled = false,
     bool IsClustered = false,
-    bool IsHypothetical = false,
     string? FilterDefinition = null,
     IReadOnlyList<bool>? KeyColumnIsDescendingRaw = null,
     bool OptimizeForSequentialKey = false,

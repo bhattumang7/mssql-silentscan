@@ -316,13 +316,12 @@ public sealed class IndexDesignScannerTests
     }
 
     [Theory]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, true)]
-    public void XmlSpatialOrHypotheticalIndexesWithIdenticalKeys_NeverFireDuplicate(bool xml, bool spatial, bool hypothetical)
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void XmlOrSpatialIndexesWithIdenticalKeys_NeverFireDuplicate(bool xml, bool spatial)
     {
-        var first = new CatalogIndex("A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial, IsHypothetical: hypothetical);
-        var second = new CatalogIndex("B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial, IsHypothetical: hypothetical);
+        var first = new CatalogIndex("A", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial);
+        var second = new CatalogIndex("B", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsXmlIndex: xml, IsSpatialIndex: spatial);
 
         Assert.DoesNotContain(ScanPair(first, second), f => f.Kind == IndexDesignFindingKind.DuplicateIndex);
     }
@@ -635,16 +634,6 @@ public sealed class IndexDesignScannerTests
         var findings = IndexDesignScanner.Scan(catalog);
 
         Assert.DoesNotContain(findings, f => f.Kind == IndexDesignFindingKind.NoRecomputeStatistics);
-    }
-
-    [Fact]
-    public void HeapWithOnlyAHypotheticalIndex_NeverFires()
-    {
-        var catalog = new DatabaseCatalog();
-        var index = new CatalogIndex("IX_Orders_CustomerId", CatalogIndexKind.Index, IsUnique: false, ["CustomerId"], [], IsClustered: false, IsHypothetical: true);
-        catalog.AddOrReplace(Table("dbo", "Orders", [Column("Id", IntType), Column("CustomerId", IntType)], [index]));
-
-        Assert.DoesNotContain(IndexDesignScanner.Scan(catalog), f => f.Kind == IndexDesignFindingKind.HeapWithNonclusteredIndexes);
     }
 
     [Theory]

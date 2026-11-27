@@ -61,7 +61,7 @@ public sealed record CatalogTable(
     public bool IsColumnStoredInAnIndex(string columnName, StringComparer? identifierComparer = null)
     {
         var comparer = identifierComparer ?? StringComparer.OrdinalIgnoreCase;
-        return Indexes.Any(i => !i.IsFiltered && !i.IsColumnstore && !i.IsDisabled && !i.IsHypothetical && !i.IsJsonIndex
+        return Indexes.Any(i => !i.IsFiltered && !i.IsColumnstore && !i.IsDisabled && !i.IsJsonIndex
             && (i.KeyColumns.Any(c => comparer.Equals(c, columnName)) || i.IncludedColumns.Any(c => comparer.Equals(c, columnName))));
     }
 
