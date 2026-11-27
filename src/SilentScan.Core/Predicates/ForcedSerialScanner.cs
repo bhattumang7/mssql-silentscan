@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Common;
@@ -22,14 +23,63 @@ public static class ForcedSerialScanner
         "GET_FILESTREAM_TRANSACTION_CONTEXT", "GET_TRANSMISSION_STATUS", "IS_OBJECTSIGNED", "TEXTVALID", "USER_OID", "COLUMNS_UPDATED",
     };
 
-    public static IReadOnlyList<ForcedSerialFinding> Scan(SqlParseResult parseResult)
+    private static readonly ConditionalWeakTable<IReadOnlyList<ViewDefinition>, HashSet<string>> CatalogReadingViewsByDefinitions = new();
+
+    public static IReadOnlyList<ForcedSerialFinding> Scan(SqlParseResult parseResult, IReadOnlyList<ViewDefinition>? views = null)
     {
-        var rule = CreateRule(parseResult.SourcePath);
+        var rule = CreateRule(parseResult.SourcePath, views);
         var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
     return Harvest(rule);
     }
-    internal static Rule CreateRule(string sourcePath) => new(sourcePath);
+
+    internal static Rule CreateRule(string sourcePath, IReadOnlyList<ViewDefinition>? views = null) =>
+        new(sourcePath, views is null ? [] : CatalogReadingViewsByDefinitions.GetValue(views, FindCatalogReadingViews));
+
+    private static HashSet<string> FindCatalogReadingViews(IReadOnlyList<ViewDefinition> views)
+    {
+        var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = views.Select(view => (view.QualifiedName, References: ReferencedTables(view.SelectStatement))).ToList();
+        while (pending.RemoveAll(view => view.References.Any(r => ReadsSystemCatalog(r, found)) && Add(found, view.QualifiedName)) > 0)
+        {
+        }
+
+        return found;
+
+        static bool Add(HashSet<string> set, string name)
+        {
+            set.Add(name);
+            return true;
+        }
+    }
+
+    private static List<NamedTableReference> ReferencedTables(TSqlFragment query)
+    {
+        var references = new NamedTableReferenceCollector();
+        query.Accept(references);
+        return references.References;
+    }
+
+    private static bool ReadsSystemCatalog(NamedTableReference reference, HashSet<string> catalogReadingViews)
+    {
+        var (schema, name) = SchemaObjectNameHelper.Resolve(reference.SchemaObject);
+        return catalogReadingViews.Contains(SchemaObjectNameHelper.Qualify(reference.SchemaObject))
+            || schema is not null
+                && (string.Equals(schema, "sys", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(schema, "INFORMATION_SCHEMA", StringComparison.OrdinalIgnoreCase)
+                    || SystemCatalogViewRegistry.TryResolve($"{schema}.{name}") is not null);
+    }
+
+    private sealed class NamedTableReferenceCollector : TSqlFragmentVisitor
+    {
+        public List<NamedTableReference> References { get; } = [];
+
+        public override void ExplicitVisit(NamedTableReference node)
+        {
+            References.Add(node);
+            base.ExplicitVisit(node);
+        }
+    }
 
     internal static IReadOnlyList<ForcedSerialFinding> Harvest(Rule rule) =>
             [
@@ -43,7 +93,7 @@ public static class ForcedSerialScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath) : IModuleRule
+    internal sealed class Rule(string sourcePath, HashSet<string> catalogReadingViews) : IModuleRule
     {
         public List<ForcedSerialFinding> Findings { get; } = [];
 
@@ -53,32 +103,8 @@ public static class ForcedSerialScanner
 
         private bool _outermostQueryReadsSystemCatalogView;
 
-        private static bool ReadsSystemCatalogView(TSqlFragment query)
-        {
-            var references = new NamedTableReferenceCollector();
-            query.Accept(references);
-            return references.References.Any(IsSystemCatalogView);
-        }
-
-        private static bool IsSystemCatalogView(NamedTableReference reference)
-        {
-            var (schema, name) = SchemaObjectNameHelper.Resolve(reference.SchemaObject);
-            return schema is not null
-                && (string.Equals(schema, "sys", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(schema, "INFORMATION_SCHEMA", StringComparison.OrdinalIgnoreCase)
-                    || SystemCatalogViewRegistry.TryResolve($"{schema}.{name}") is not null);
-        }
-
-        private sealed class NamedTableReferenceCollector : TSqlFragmentVisitor
-        {
-            public List<NamedTableReference> References { get; } = [];
-
-            public override void ExplicitVisit(NamedTableReference node)
-            {
-                References.Add(node);
-                base.ExplicitVisit(node);
-            }
-        }
+        private bool ReadsSystemCatalogView(TSqlFragment query) =>
+            ReferencedTables(query).Exists(reference => ReadsSystemCatalog(reference, catalogReadingViews));
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) => _tableVariableNames.Clear();
 

@@ -96,7 +96,7 @@ public static class CartesianJoinScanner
             var unionFind = new AliasUnionFind(allNamed.Select(AliasKey), identifierComparer);
             foreach (var leaf in allPredicates.SelectMany(FlattenLeaves))
             {
-                var qualifiers = CollectQualifiers(leaf).Where(unionFind.Contains).ToList();
+                var qualifiers = CollectQualifiers(leaf).Concat(CollectGraphMatchAliases(leaf)).Where(unionFind.Contains).ToList();
                 for (var i = 1; i < qualifiers.Count; i++)
                 {
                     unionFind.Union(qualifiers[0], qualifiers[i]);
@@ -104,6 +104,25 @@ public static class CartesianJoinScanner
             }
 
             return unionFind;
+        }
+
+        private static List<string> CollectGraphMatchAliases(BooleanExpression leaf)
+        {
+            if (!leaf.GetType().Name.StartsWith("GraphMatch", StringComparison.Ordinal))
+            {
+                return [];
+            }
+
+            var collector = new IdentifierCollector();
+            leaf.Accept(collector);
+            return collector.Values;
+        }
+
+        private sealed class IdentifierCollector : TSqlFragmentVisitor
+        {
+            public List<string> Values { get; } = [];
+
+            public override void ExplicitVisit(Identifier node) => Values.Add(node.Value);
         }
 
         private void ReportAlwaysFalseInnerJoinPredicates(

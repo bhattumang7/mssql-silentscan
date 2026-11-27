@@ -110,9 +110,9 @@ internal sealed class ForcedSerialRule : IPerFileRule
 {
     public string Id => "ForcedSerialScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
-    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.Scan(parseResult);
+    public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.Scan(parseResult, context.ViewDefinitions);
     public IComparer<IFinding>? Comparer => new KindThenLocationComparer<ForcedSerialFinding>(f => f.Kind);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.CreateRule(parseResult.SourcePath);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => ForcedSerialScanner.CreateRule(parseResult.SourcePath, context.ViewDefinitions);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => ForcedSerialScanner.Harvest((ForcedSerialScanner.Rule)moduleRule);
 }
 

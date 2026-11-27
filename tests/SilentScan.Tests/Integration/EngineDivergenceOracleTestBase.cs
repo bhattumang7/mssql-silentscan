@@ -44,7 +44,7 @@ public abstract class EngineDivergenceOracleTestBase : OracleTestFixture
 
         await ExecuteAsync(connection, "SET STATISTICS XML OFF;");
         return plans
-            .SelectMany(plan => XDocument.Parse(plan).Descendants().Where(e => e.Name.LocalName == "StmtSimple"))
+            .SelectMany(plan => XDocument.Parse(plan).Descendants().Where(e => e.Name.LocalName is "StmtSimple" or "StmtCond"))
             .Where(statement => statement.Attribute("StatementText")!.Value.Contains(statementTextFragment, StringComparison.Ordinal))
             .SelectMany(statement => statement.Descendants().Where(e => e.Name.LocalName == "RelOp"))
             .ToList();

@@ -162,7 +162,7 @@ public static class TvfFenceScanner
                 return;
             }
 
-            var argumentColumns = function.Parameters.SelectMany(CollectColumnReferences)
+            var argumentColumns = function.Parameters.SelectMany(CollectOuterColumnReferences)
                 .Select(c => c.MultiPartIdentifier.Identifiers[^1].Value)
                 .Distinct(catalog.IdentifierComparer)
                 .ToList();
@@ -215,26 +215,69 @@ public static class TvfFenceScanner
                 ReferencedObjectQualifiedName: qualifiedName,
                 FunctionKind: origin.FunctionKind,
                 SourcePath: sourcePath,
-                Line: line,
-                Column: column,
+                Line: reference.StartLine,
+                Column: reference.StartColumn,
                 Depth: origin.Depth,
                 OriginSourcePath: origin.OriginSourcePath,
                 OriginLine: origin.OriginLine,
                 ReferenceFragmentText: fragmentText));
         }
 
-        private static List<ColumnReferenceExpression> CollectColumnReferences(ScalarExpression argument)
+        private static bool ContainsSubquery(ScalarExpression argument)
         {
-            var finder = new ColumnReferenceCollector();
+            var finder = new SubqueryCollector();
             argument.Accept(finder);
-            return finder.Found;
+            return finder.Found.Count > 0;
         }
 
-        private sealed class ColumnReferenceCollector : TSqlFragmentVisitor
+        private List<ColumnReferenceExpression> CollectOuterColumnReferences(ScalarExpression argument)
+        {
+            var direct = new ColumnReferenceCollector();
+            argument.Accept(direct);
+            var subqueries = new SubqueryCollector();
+            argument.Accept(subqueries);
+            return [.. direct.Found, .. subqueries.Found.SelectMany(CorrelatedColumnReferences)];
+        }
+
+        private IEnumerable<ColumnReferenceExpression> CorrelatedColumnReferences(ScalarSubquery subquery)
+        {
+            var sources = new TableAliasCollector();
+            subquery.QueryExpression.Accept(sources);
+            var references = new RawColumnCollector();
+            subquery.QueryExpression.Accept(references);
+            return references.Found.Where(column =>
+                column.MultiPartIdentifier is { Identifiers: [.., var qualifier, _] }
+                && !sources.Aliases.Contains(qualifier.Value, catalog.IdentifierComparer));
+        }
+
+        private class RawColumnCollector : TSqlFragmentVisitor
         {
             public List<ColumnReferenceExpression> Found { get; } = [];
 
             public override void ExplicitVisit(ColumnReferenceExpression node) => Found.Add(node);
+        }
+
+        private sealed class ColumnReferenceCollector : RawColumnCollector
+        {
+            public override void ExplicitVisit(ScalarSubquery node)
+            {
+                _ = node;
+            }
+        }
+
+        private sealed class SubqueryCollector : TSqlFragmentVisitor
+        {
+            public List<ScalarSubquery> Found { get; } = [];
+
+            public override void ExplicitVisit(ScalarSubquery node) => Found.Add(node);
+        }
+
+        private sealed class TableAliasCollector : TSqlFragmentVisitor
+        {
+            public List<string> Aliases { get; } = [];
+
+            public override void ExplicitVisit(NamedTableReference node) =>
+                Aliases.Add(node.Alias?.Value ?? node.SchemaObject.BaseIdentifier.Value);
         }
     }
 }
