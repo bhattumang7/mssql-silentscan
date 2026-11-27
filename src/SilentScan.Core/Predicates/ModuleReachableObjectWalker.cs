@@ -40,12 +40,12 @@ public static class ModuleReachableObjectWalker
         {
             var restated = table.Indexes.FirstOrDefault(i =>
                 i.IsFiltered && i.FilterDefinition is not null
-                && ModuleRestatesFilter(i.FilterDefinition, table.QualifiedName, catalog, collector.Statements).Count > 0);
+                && ModuleRestatesFilter(i.FilterDefinition, i.Name, table.QualifiedName, catalog, collector.Statements).Count > 0);
             if (restated is not null)
             {
                 touch = new Touch(
                     qualifiedName, restated.Name, IsIndexedView: false,
-                    ModuleRestatesFilter(restated.FilterDefinition!, table.QualifiedName, catalog, collector.Statements));
+                    ModuleRestatesFilter(restated.FilterDefinition!, restated.Name, table.QualifiedName, catalog, collector.Statements));
                 return true;
             }
         }
@@ -54,7 +54,9 @@ public static class ModuleReachableObjectWalker
         return false;
     }
 
-    private static List<int> ModuleRestatesFilter(string filterDefinition, string tableQualifiedName, DatabaseCatalog catalog, IReadOnlyList<StatementPredicates> statements)
+    private static List<int> ModuleRestatesFilter(
+        string filterDefinition, string? indexName, string tableQualifiedName, DatabaseCatalog catalog,
+        IReadOnlyList<StatementPredicates> statements)
     {
         var parsed = SqlScriptParser.ParseText("filter-definition.sql", $"SELECT 1 WHERE {filterDefinition};", initialQuotedIdentifiers: true, catalog.CompatibilityLevel);
         if (parsed.HasErrors
@@ -73,7 +75,8 @@ public static class ModuleReachableObjectWalker
         foreach (var statement in statements)
         {
             var aliases = statement.Tables
-                .Where(t => catalog.IdentifierComparer.Equals(t.QualifiedName, tableQualifiedName))
+                .Where(t => catalog.IdentifierComparer.Equals(t.QualifiedName, tableQualifiedName)
+                    && !t.HintedIndexes.Contains(indexName ?? string.Empty, catalog.IdentifierComparer))
                 .Select(t => t.AliasKey)
                 .ToList();
             if (aliases.Count == 0)
@@ -134,7 +137,7 @@ public static class ModuleReachableObjectWalker
 
     private readonly record struct NormalizedPredicate(string Text, List<string> Qualifiers);
 
-    private readonly record struct StatementTable(string QualifiedName, string AliasKey);
+    private readonly record struct StatementTable(string QualifiedName, string AliasKey, IReadOnlyList<string> HintedIndexes);
 
     private sealed record StatementPredicates(List<StatementTable> Tables, List<NormalizedPredicate> Conjuncts, int Offset);
 
@@ -148,7 +151,7 @@ public static class ModuleReachableObjectWalker
 
         public override void Visit(NamedTableReference node)
         {
-            if (!_writeTargets.Contains(node))
+            if (!_writeTargets.Contains(node) && node.TableHints.All(hint => hint.HintKind != TableHintKind.NoExpand))
             {
                 QualifiedNames.Add((SchemaObjectNameHelper.Qualify(node.SchemaObject), node.StartOffset));
             }
@@ -209,7 +212,9 @@ public static class ModuleReachableObjectWalker
             {
                 tables.Add(new StatementTable(
                     catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(named.SchemaObject)),
-                    named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value));
+                    named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value,
+                    [.. named.TableHints.OfType<IndexTableHint>().SelectMany(hint => hint.IndexValues)
+                        .Select(value => value.Identifier?.Value).OfType<string>()]));
             }
 
             Statements.Add(new StatementPredicates(tables, [.. PredicateTreeWalker.FlattenAnd(condition).Select(Normalize)], offset));

@@ -430,4 +430,17 @@ public sealed class SetOptionScannerTests
         Assert.Contains(findings, f => f.Kind == SetOptionFindingKind.AnsiWarningsOffBlocksIndexedFeature);
         Assert.Contains(findings, f => f.Kind == SetOptionFindingKind.ConcatNullYieldsNullOffBlocksIndexedFeature);
     }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Orders WITH (INDEX(IX_Filtered)) WHERE Id > 0;", false)]
+    [InlineData("SELECT Id FROM dbo.Orders WHERE Id > 0;", true)]
+    public void AHintNamingTheFilteredIndexRaisesInsteadOfFallingBack(string statement, bool fires)
+    {
+        var catalog = new DatabaseCatalog();
+        catalog.AddOrReplace(FilteredIndexTable("dbo", "Orders"));
+
+        var findings = Scan($"SET ANSI_WARNINGS OFF; {statement}", catalog);
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
 }
