@@ -10,13 +10,18 @@ public static class OuterJoinPredicateCollapseScanner
 {
     public static IReadOnlyList<OuterJoinPredicateCollapseFinding> Scan(SqlParseResult parseResult, DatabaseCatalog? catalog = null)
     {
-        var rule = CreateRule(parseResult.SourcePath, catalog);
+        var rule = CreateRule(parseResult.SourcePath, catalog, parseResult.Fragment);
         var walker = new ModuleWalker(parseResult.SourcePath, catalog ?? new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
         parseResult.Fragment.Accept(walker);
         return Harvest(rule);
     }
 
-    internal static Rule CreateRule(string sourcePath, DatabaseCatalog? catalog = null) => new(sourcePath, catalog?.IdentifierComparer ?? StringComparer.OrdinalIgnoreCase);
+    internal static Rule CreateRule(string sourcePath, DatabaseCatalog? catalog, TSqlFragment fragment) =>
+        new(
+            sourcePath,
+            catalog ?? new DatabaseCatalog(),
+            ConcatNullYieldsNullFlowResolver.Resolve(fragment),
+            SetOptionFlowTracker.ComputeFinalOffState(fragment, SetOptions.AnsiNulls));
 
     internal static IReadOnlyList<OuterJoinPredicateCollapseFinding> Harvest(Rule rule) =>
         [
@@ -28,29 +33,54 @@ public static class OuterJoinPredicateCollapseScanner
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    internal sealed class Rule(string sourcePath, StringComparer identifierComparer) : IModuleRule
+    internal sealed class Rule(
+        string sourcePath,
+        DatabaseCatalog catalog,
+        IReadOnlyDictionary<TSqlStatement, bool> concatNullYieldsNullOffByStatement,
+        bool scriptTurnsAnsiNullsOff) : IModuleRule
     {
+        private bool _concatNullYieldsNullOff;
+
+        private bool _ansiNullsOff;
+
         private readonly List<(OuterJoinPredicateCollapseFinding Finding, AliasNullSide Side)> _hits = [];
 
         public List<OuterJoinPredicateCollapseFinding> Findings { get; } = [];
 
+        public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) => UpdateCurrentState(node);
+
+        public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker) => UpdateCurrentState(node);
+
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker) =>
-            Inspect(node.FromClause, node.WhereClause);
+            Inspect(node.FromClause, node.WhereClause, walker);
 
-        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
-            Inspect(node.UpdateSpecification.FromClause, node.UpdateSpecification.WhereClause);
-
-        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker) =>
-            Inspect(node.DeleteSpecification.FromClause, node.DeleteSpecification.WhereClause);
-
-        private void Inspect(FromClause? fromClause, WhereClause? whereClause)
+        public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
+            UpdateCurrentState(node);
+            Inspect(node.UpdateSpecification.FromClause, node.UpdateSpecification.WhereClause, walker);
+        }
+
+        public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            UpdateCurrentState(node);
+            Inspect(node.DeleteSpecification.FromClause, node.DeleteSpecification.WhereClause, walker);
+        }
+
+        private void UpdateCurrentState(TSqlStatement statement) =>
+            _concatNullYieldsNullOff = concatNullYieldsNullOffByStatement.GetValueOrDefault(statement);
+
+        private void Inspect(FromClause? fromClause, WhereClause? whereClause, ModuleWalker walker)
+        {
+            _ansiNullsOff = walker.CurrentProcScope is { } module && catalog.TryGetModuleUsesAnsiNulls(module, out var usesAnsiNulls)
+                ? !usesAnsiNulls
+                : scriptTurnsAnsiNullsOff;
+
             if (fromClause is null || whereClause?.SearchCondition is not { } searchCondition)
             {
                 return;
             }
 
-            var nullSupplyingAliases = CollectNullSupplyingAliases(fromClause, identifierComparer);
+            var nullSupplyingAliases = CollectNullSupplyingAliases(fromClause, catalog.IdentifierComparer);
             if (nullSupplyingAliases.Count == 0)
             {
                 return;
@@ -93,7 +123,7 @@ public static class OuterJoinPredicateCollapseScanner
                     InspectNegatedConjunct(not.Expression, nullSupplyingAliases);
                     return;
 
-                case BooleanComparisonExpression cmp:
+                case BooleanComparisonExpression cmp when !CanMatchNull(cmp):
                     InspectOperand(cmp.FirstExpression, nullSupplyingAliases);
                     InspectOperand(cmp.SecondExpression, nullSupplyingAliases);
                     break;
@@ -102,7 +132,7 @@ public static class OuterJoinPredicateCollapseScanner
                     InspectOperand(between.FirstExpression, nullSupplyingAliases);
                     break;
 
-                case InPredicate inPredicate when !KeepsNullAgainstEmptySubquery(inPredicate, negated: false):
+                case InPredicate inPredicate when !KeepsNull(inPredicate, negated: false):
                     InspectOperand(inPredicate.Expression, nullSupplyingAliases);
                     break;
 
@@ -125,11 +155,11 @@ public static class OuterJoinPredicateCollapseScanner
 
             switch (negated)
             {
-                case BooleanComparisonExpression cmp:
+                case BooleanComparisonExpression cmp when !CanMatchNull(cmp):
                     InspectOperand(cmp.FirstExpression, nullSupplyingAliases);
                     InspectOperand(cmp.SecondExpression, nullSupplyingAliases);
                     break;
-                case InPredicate inPredicate when !KeepsNullAgainstEmptySubquery(inPredicate, negated: true):
+                case InPredicate inPredicate when !KeepsNull(inPredicate, negated: true):
                     InspectOperand(inPredicate.Expression, nullSupplyingAliases);
                     break;
                 case LikePredicate like:
@@ -141,8 +171,25 @@ public static class OuterJoinPredicateCollapseScanner
             }
         }
 
-        private static bool KeepsNullAgainstEmptySubquery(InPredicate predicate, bool negated) =>
-            predicate.Subquery is not null && predicate.NotDefined != negated;
+        private bool KeepsNull(InPredicate predicate, bool negated)
+        {
+            var isNegated = predicate.NotDefined != negated;
+            return predicate.Subquery is not null && isNegated
+                || _ansiNullsOff && (isNegated || predicate.Values.Any(IsNullOrVariable));
+        }
+
+        private bool CanMatchNull(BooleanComparisonExpression comparison) =>
+            _ansiNullsOff
+            && comparison.ComparisonType is BooleanComparisonType.Equals
+                or BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation
+            && (IsNullOrVariable(comparison.FirstExpression) || IsNullOrVariable(comparison.SecondExpression));
+
+        private static bool IsNullOrVariable(ScalarExpression expression) => expression switch
+        {
+            NullLiteral or VariableReference => true,
+            ParenthesisExpression parenthesis => IsNullOrVariable(parenthesis.Expression),
+            _ => false,
+        };
 
         private void InspectOperand(ScalarExpression operand, Dictionary<string, AliasNullSide> nullSupplyingAliases)
         {
@@ -169,7 +216,7 @@ public static class OuterJoinPredicateCollapseScanner
                 side));
         }
 
-        private static ScalarExpression UnwrapNullPropagating(ScalarExpression operand)
+        private ScalarExpression UnwrapNullPropagating(ScalarExpression operand)
         {
             while (true)
             {
@@ -187,6 +234,8 @@ public static class OuterJoinPredicateCollapseScanner
                     case ConvertCall convert:
                         operand = convert.Parameter;
                         break;
+                    case BinaryExpression { BinaryExpressionType: BinaryExpressionType.Add } when _concatNullYieldsNullOff:
+                        return operand;
                     case BinaryExpression binary when binary.FirstExpression is ColumnReferenceExpression:
                         operand = binary.FirstExpression;
                         break;

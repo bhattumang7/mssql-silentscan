@@ -61,4 +61,23 @@ public sealed class OuterJoinPredicateCollapseScannerTests
     {
         Assert.NotEmpty(Scan(sql));
     }
+
+    [Theory]
+    [InlineData("SET CONCAT_NULL_YIELDS_NULL OFF;", "b.Y + 1 = 1", false)]
+    [InlineData("SET CONCAT_NULL_YIELDS_NULL ON;", "b.Y + 1 = 1", true)]
+    [InlineData("SET CONCAT_NULL_YIELDS_NULL OFF;", "b.Y = 1", true)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y = NULL", false)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y <> @v", false)]
+    [InlineData("SET ANSI_NULLS OFF;", "NOT b.Y = @v", false)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y IN (NULL, 1)", false)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y NOT IN (1, 2)", false)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y <> 1", true)]
+    [InlineData("SET ANSI_NULLS OFF;", "b.Y IN (1, 2)", true)]
+    [InlineData("SET ANSI_NULLS ON;", "b.Y <> @v", true)]
+    public void NullPreservingSessionSettings_AreHonoured(string setting, string predicate, bool fires)
+    {
+        var findings = Scan($"{setting}\nDECLARE @v INT;\nSELECT a.Id FROM dbo.A a LEFT JOIN dbo.B b ON b.AId = a.Id WHERE {predicate};");
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
 }

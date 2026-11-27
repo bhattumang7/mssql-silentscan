@@ -45,7 +45,7 @@ internal sealed class OuterJoinPredicateCollapseRule : IPerFileRule
     public string Id => "OuterJoinPredicateCollapseScanner";
     public DynamicSqlApplicability DynamicSql => DynamicSqlApplicability.Always;
     public IReadOnlyList<IFinding> Scan(SqlParseResult parseResult, RuleContext context, object? state) => OuterJoinPredicateCollapseScanner.Scan(parseResult, context.Catalog);
-    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => OuterJoinPredicateCollapseScanner.CreateRule(parseResult.SourcePath, context.Catalog);
+    public IModuleRule CreateModuleRule(SqlParseResult parseResult, RuleContext context, object? state) => OuterJoinPredicateCollapseScanner.CreateRule(parseResult.SourcePath, context.Catalog, parseResult.Fragment);
     public IReadOnlyList<IFinding> HarvestFindings(SqlParseResult parseResult, RuleContext context, object? state, IModuleRule moduleRule) => OuterJoinPredicateCollapseScanner.Harvest((OuterJoinPredicateCollapseScanner.Rule)moduleRule);
 }
 
