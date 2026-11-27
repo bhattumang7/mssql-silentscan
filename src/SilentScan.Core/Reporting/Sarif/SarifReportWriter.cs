@@ -451,7 +451,7 @@ public static class SarifReportWriter
 
         var ruleId = SarifRuleCatalog.RuleId(SarifRuleCatalog.LocalVariablePredicateRuleId, finding.Confidence);
         var level = FloorLevelForConfidence(LevelNote, finding.Confidence);
-        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' {finding.Operator} {finding.VariableName} - a DECLARE'd local, not a formal parameter, so its value is invisible to the cardinality estimator (falls back to average-density statistics). The predicate still seeks if the column is indexed; only the row-count estimate is at risk.";
+        var message = $"'{finding.TableQualifiedName}.{finding.ColumnName}' {finding.Operator} {finding.VariableName} - a DECLARE'd local, not a formal parameter, so its value is invisible to the cardinality estimator (it uses a value-independent estimate). The predicate still seeks if the column is indexed; only the row-count estimate is at risk.";
 
         return BuildResult(ruleId, level, message, finding.SourcePath, finding.Line, startColumn: finding.Column);
     }
@@ -837,7 +837,7 @@ public static class SarifReportWriter
         var message = finding.Kind switch
         {
             IndexHintFindingKind.HintedIndexNotSeekable =>
-                $"INDEX hint on {finding.TableQualifiedName} forces index '{finding.HintedIndexName}', whose leading key column {finding.LeadingColumnName} is never bound anywhere in this statement - oracle-confirmed this degrades the forced index to a full scan instead of a seek.",
+                $"INDEX hint on {finding.TableQualifiedName} forces index '{finding.HintedIndexName}', whose leading key column {finding.LeadingColumnName} has no seekable reference in this statement - oracle-confirmed this degrades the forced index to a full scan instead of a seek.",
             _ => throw new ArgumentOutOfRangeException(nameof(finding), finding.Kind, null),
         };
         var level = FloorLevelForConfidence(LevelWarning, finding.Confidence);

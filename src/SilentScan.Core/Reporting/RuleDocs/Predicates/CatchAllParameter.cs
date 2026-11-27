@@ -38,7 +38,7 @@ internal static class CatchAllParameter
             oracle-confirmed on SQL Server 2025, optional parameter optimization there compiles a
             plan per branch for this exact shape in a SELECT, UPDATE, DELETE or INSERT ... SELECT,
             so a selective call seeks the index and reads a small fraction of the pages the full
-            scan reads at level 160 or lower. A local variable never qualifies. The optimization is
+            scan reads at level 160 or lower. A variable-assigning SELECT, a subquery in SET or DECLARE, an IF predicate, a cursor declaration and an insert into a table variable get no such plan and are still reported. A local variable never qualifies. The optimization is
             also switched off by the database scoped configuration OPTIONAL_PARAMETER_OPTIMIZATION =
             OFF, in which case a database at level 170 is reported like one at level 160.
             """,

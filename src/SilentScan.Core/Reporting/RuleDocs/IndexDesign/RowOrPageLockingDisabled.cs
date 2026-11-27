@@ -13,7 +13,7 @@ internal static class RowOrPageLockingDisabled
             (`sys.indexes.allow_row_locks` / `allow_page_locks`), set at `CREATE INDEX`/inline
             constraint time or later via `ALTER INDEX ... SET (...)`. Both default to `ON`. Turning
             either `OFF` changes the locking granularity the engine is willing to take for any DML
-            that touches that index, permanently, until someone turns it back on - a plain
+            that touches that index, permanently, until someone turns it back on. ALLOW_ROW_LOCKS = OFF forces page or table locks where row locks would be taken. ALLOW_PAGE_LOCKS = OFF removes the page level, so a scan that would lock pages takes one lock per row instead (more lock memory and lock calls) or a table lock. With both OFF every access locks the whole table. A plain
             `UPDATE`/`DELETE`/`INSERT` statement gives no hint of this at its own call site, because
             the option lives entirely in the index's own catalog metadata.
 
@@ -21,13 +21,12 @@ internal static class RowOrPageLockingDisabled
             invisible from the DML site" shape as `READCOMMITTEDLOCK` reverting RCSI row versioning
             - except here there's no keyword anywhere in the DML text at all. Two statements a
             developer assumes can run concurrently against unrelated rows can end up blocking or
-            deadlocking behind a coarser lock instead. Shipped as a structural risk flag only:
+            deadlocking on locks they did not expect. Shipped as a structural risk flag only:
             whether contention actually occurs depends on the concurrent access pattern, which is
             workload data out of reach for a static pass.
             """,
         HowToFixIt: """
-            Re-enable ALLOW_ROW_LOCKS and ALLOW_PAGE_LOCKS on the index unless the coarser locking
-            granularity was a deliberate, documented choice.
+            Re-enable ALLOW_ROW_LOCKS and ALLOW_PAGE_LOCKS on the index unless the changed locking granularity was a deliberate, documented choice.
             """,
         Examples:
         [
@@ -40,7 +39,7 @@ internal static class RowOrPageLockingDisabled
                         ON dbo.Orders (CustomerId)
                         WITH (ALLOW_ROW_LOCKS = OFF);
                     """,
-                NoncompliantExplanation: "Every UPDATE/DELETE that touches this index is forced onto a coarser locking granularity than row-level - invisible from the DML statement itself, which never mentions this index's own locking configuration.",
+                NoncompliantExplanation: "Every UPDATE/DELETE that would take row locks on this index takes page or table locks instead - invisible from the DML statement itself, which never mentions this index's own locking configuration.",
                 CompliantSql: """
                     CREATE TABLE dbo.Orders (OrderId INT NOT NULL PRIMARY KEY, CustomerId INT NOT NULL);
                     GO

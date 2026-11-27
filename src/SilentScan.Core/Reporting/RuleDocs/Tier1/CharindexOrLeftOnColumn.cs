@@ -13,7 +13,7 @@ internal static class CharindexOrLeftOnColumn
             defeat an index seek exactly like any other wrapped-column pattern - but this rule
             treats them specially because, unlike a genuine substring search, some uses of these
             two functions are actually asking a prefix question in disguise, and a prefix question
-            has an exact sargable rewrite available.
+            has a sargable rewrite available.
 
             CHARINDEX(x, col) = 1 asks "does col start with x" - CHARINDEX returns the 1-based
             position of the first match, and requiring that position to be exactly 1 means the
@@ -31,10 +31,11 @@ internal static class CharindexOrLeftOnColumn
             search.
             """,
         HowToFixIt: """
-            For the prefix-match shape specifically - CHARINDEX(x, col) = 1, or LEFT(col, n) = 'x'
-            where LEN('x') = n - rewrite as col LIKE 'x%'. The rewrite is exact, not an
-            approximation: both forms match exactly the rows whose column value starts with x, and
-            the LIKE form is fully seekable. For any other shape (a genuine substring search, or a
+            For the prefix-match shape specifically - CHARINDEX(x, col) = 1, or LEFT(col, n) = x
+            where LEN(x) = n - rewrite as col LIKE 'x%', which can seek. The two forms match the
+            same rows only when x is a non-empty value with no trailing spaces and every %, _
+            and [ in it is escaped (for example [%], [_], [[]). Without escaping, or with
+            trailing spaces or an empty x, the LIKE form matches different rows. For any other shape (a genuine substring search, or a
             fixed non-1 starting position), there is no equivalent LIKE rewrite - the same
             full-text-search or computed-column approach LeadingWildcardLike's own fix guidance
             describes applies here too.
@@ -61,7 +62,7 @@ internal static class CharindexOrLeftOnColumn
                     FROM dbo.Products
                     WHERE Code LIKE 'AB-%';
                     """,
-                CompliantExplanation: "The exact same rows, expressed as a prefix LIKE pattern - Code is now bare, and the optimizer can seek IX_Products_Code."),
+                CompliantExplanation: "The same rows, expressed as a prefix LIKE pattern - Code is now bare, and the optimizer can seek IX_Products_Code."),
             new RuleDocExample(
                 Title: "A genuine substring search has no sargable rewrite",
                 NoncompliantSql: """

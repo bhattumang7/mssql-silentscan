@@ -451,12 +451,19 @@ public static class IndexDesignScanner
                 IndexDesignFindingKind.RowOrPageLockingDisabled,
                 table.QualifiedName,
                 index.Name,
-                $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' has {string.Join(" and ", disabledOptions)} set to OFF - any DML statement touching this index is silently forced onto a coarser locking granularity than the statement itself suggests, with no hint of this at the DML site. Structural risk flag only: whether this actually causes blocking or deadlocks depends on the concurrent access pattern, which is workload data out of reach for this static pass.",
+                $"'{table.QualifiedName}' index '{index.Name ?? UnnamedIndexPlaceholder}' has {string.Join(" and ", disabledOptions)} set to OFF - {LockingConsequence(index)} Nothing at the DML site shows this. Structural risk flag only: whether this actually causes blocking or deadlocks depends on the concurrent access pattern, which is workload data out of reach for this static pass.",
                 table.SourcePath,
                 table.SourceLine,
                 FindingConfidence.Medium));
         }
     }
+
+    private static string LockingConsequence(CatalogIndex index) => (index.AllowRowLocks, index.AllowPageLocks) switch
+    {
+        (false, true) => "page or table locks are taken where row locks would be.",
+        (true, false) => "the page level is gone, so a scan that would lock pages takes one lock per row or a table lock.",
+        _ => "every access locks the whole table.",
+    };
 
     private static bool IsNewIdDefault(string? definitionText)
     {

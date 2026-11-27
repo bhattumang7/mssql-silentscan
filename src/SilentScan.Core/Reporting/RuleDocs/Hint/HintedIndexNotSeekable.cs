@@ -13,8 +13,9 @@ internal static class HintedIndexNotSeekable
             T-SQL's own documented semantics, it FORCES the engine to use exactly that index, with no
             fallback. That's fine when the statement's own predicate actually binds the hinted
             index's leading key column, since the engine can still descend the index's B-tree to a
-            useful starting point. When nothing in the statement references that leading column at
-            all, the engine has no way to seek into the index - it's forced to use it anyway, and the
+            useful starting point. When the statement has no seekable reference to that leading column (none at all, or
+            only one wrapped in a function or arithmetic, or matched by a leading-wildcard
+            LIKE), the engine has no way to seek into the index - it's forced to use it anyway, and the
             only way to satisfy that is a full Index Scan reading every row, typically followed by a
             bookmark lookup back to the real access path the query actually needed.
 
@@ -23,10 +24,8 @@ internal static class HintedIndexNotSeekable
             touches the hinted index's leading column degrades the same query to an Index Scan plus
             Nested Loops; hinting an index whose leading column IS bound by the query's own predicate
             stays a clean seek even through the hint - confirming it's the leading-column binding,
-            not the presence of a hint per se, that decides seek versus scan. This shares its
-            "is the leading column bound anywhere" check with this tool's composite-index
-            leading-column rule, deliberately the same conservative, liberal-to-suppress test
-            generalized to single-column indexes.
+            not the presence of a hint per se, that decides seek versus scan. Any other reference keeps the finding silent, a deliberately liberal-to-suppress
+            test.
             """,
         HowToFixIt: """
             Bind the hinted index's own leading key column somewhere in the statement (a predicate,

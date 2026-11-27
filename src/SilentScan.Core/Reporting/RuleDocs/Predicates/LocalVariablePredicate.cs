@@ -17,14 +17,15 @@ internal static class LocalVariablePredicate
             actually equal this value." A local variable's value is never visible to the optimizer
             at compile time: it's assigned by a separate statement (a SET or SELECT) that runs
             before the predicate, and the optimizer does not execute statements to discover what
-            they'll assign. It has no choice but to fall back to a generic estimate built from the
-            column's average density statistic - roughly "how many rows share the average distinct
-            value across the whole column" - regardless of what the variable will actually hold.
+            they'll assign. It has no choice but to use a value-independent estimate, regardless of what the
+            variable will actually hold: for an equality the column's average density - roughly
+            "how many rows share the average distinct value across the whole column" - and for
+            inequality, range and LIKE comparisons a fixed guess.
 
             This is a meaningfully different failure mode from a catch-all OR @p IS NULL predicate:
             there the plan's overall SHAPE has to compromise across possible values. Here the shape
             is fine - it'll seek - but the estimated ROW COUNT feeding that seek is generic rather
-            than value-specific. A generic average-density estimate can still steer the optimizer
+            than value-specific. A value-independent estimate can still steer the optimizer
             wrong further up the plan: a join order chosen because the local-variable predicate was
             estimated to return a small, average-ish number of rows when the actual value is highly
             skewed (matching far more or far fewer rows than average), or a memory grant sized for
@@ -40,7 +41,7 @@ internal static class LocalVariablePredicate
         HowToFixIt: """
             Add OPTION (RECOMPILE) to the statement, or WITH RECOMPILE to the procedure, so the
             cardinality estimate for the local-variable predicate is built from the variable's real
-            runtime value instead of the column's generic average-density statistic. Where the
+            runtime value instead of a value-independent estimate. Where the
             variable's value is really just standing in for a caller-supplied value, converting it
             to a formal parameter of the procedure (so the optimizer can sniff it directly) is often
             a cleaner fix than reaching for RECOMPILE at all.
@@ -85,6 +86,6 @@ internal static class LocalVariablePredicate
                     WHERE CustomerId = @customerId
                     OPTION (RECOMPILE);
                     """,
-                CompliantExplanation: "OPTION (RECOMPILE) defers compilation until @customerId's actual value is known, letting the optimizer build a value-specific estimate from the histogram instead of the generic average-density fallback."),
+                CompliantExplanation: "OPTION (RECOMPILE) defers compilation until @customerId's actual value is known, letting the optimizer build a value-specific estimate from the histogram instead of the value-independent one."),
         ]);
 }

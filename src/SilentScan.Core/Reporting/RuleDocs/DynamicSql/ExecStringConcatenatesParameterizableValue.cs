@@ -24,8 +24,8 @@ internal static class ExecStringConcatenatesParameterizableValue
             you had a straightforward way to avoid it that this specific call shape never used."
 
             It is scoped to statements the engine provably cannot auto-parameterize - one with a
-            join, subquery, GROUP BY, HAVING, DISTINCT, TOP, set operator, CTE, windowed function,
-            FOR clause or OPTION hint. A trivial statement (a single-table SELECT, DELETE or
+            join, subquery, GROUP BY, HAVING, DISTINCT, TOP, set operator, CTE, windowed function or OPTION hint. A statement with OPTION (RECOMPILE) leaves no
+            cached plan and is not reported. A trivial statement (a single-table SELECT, DELETE or
             INSERT ... VALUES) is simple-parameterized by the engine into one shared plan even
             when the value is concatenated, oracle-confirmed, so it is deliberately not reported.
             """,

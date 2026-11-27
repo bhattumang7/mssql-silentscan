@@ -14,9 +14,9 @@ internal static class FilterColumnNotInIndex
             the filter predicate references a column the index itself does not carry - neither as a
             key column nor as an INCLUDE column - any query that returns, sorts or otherwise needs
             that column's value must fetch it from the base table with a key lookup per row, even
-            though the filter fixes what the value is. Oracle-confirmed on the engine: the same
-            filtered index serves a query that only filters on that column with no lookup at all,
-            and a query that also selects it gets the lookup unless the column is in the INCLUDE
+            though the filter fixes what the value is. Oracle-confirmed on the engine: a query whose only use of the column is a predicate the index filter already
+            guarantees (such as restating the filter) is covered; a stricter predicate on it
+            needs the lookup, and a query that also selects it gets the lookup unless the column is in the INCLUDE
             list. The finding is therefore a structural fact about the index, and the lookup cost
             applies only to queries that need the column's value.
 
