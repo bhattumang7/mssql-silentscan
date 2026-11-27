@@ -180,4 +180,14 @@ public sealed class ViewOrderingScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("TOP (1E2) PERCENT")]
+    [InlineData("TOP (100.0000000000000001) PERCENT")]
+    public void View_TopPercentThatConvertsToExactlyOneHundred_FiresAsNeverLimits(string top)
+    {
+        var finding = Assert.Single(Scan($"CREATE VIEW dbo.v1 AS SELECT {top} Id FROM dbo.T ORDER BY Id;"));
+
+        Assert.Equal(ViewOrderingFindingKind.TopPercentOrderByNeverLimits, finding.Kind);
+    }
 }
