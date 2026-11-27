@@ -177,4 +177,21 @@ public sealed class IndexHintScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("ABS(Status) = 5", true)]
+    [InlineData("Status + 1 = 5", true)]
+    [InlineData("COALESCE(Status, 0) = 5", true)]
+    [InlineData("Status LIKE '%5'", true)]
+    [InlineData("Status <> 5", false)]
+    [InlineData("Status NOT IN (5, 6)", false)]
+    [InlineData("CAST(Status AS BIGINT) = 5", false)]
+    [InlineData("ISNULL(Status, 0) = 5", false)]
+    [InlineData("ABS(Status) = 5 AND Status > 1", false)]
+    public void LeadingColumnReachedOnlyThroughAWrapper_IsNotSeekable(string predicate, bool fires)
+    {
+        var findings = Scan($"SELECT OrderId FROM dbo.Orders WITH (INDEX(IX_Orders_Status)) WHERE {predicate};", CatalogWithIndex());
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == IndexHintFindingKind.HintedIndexNotSeekable));
+    }
 }

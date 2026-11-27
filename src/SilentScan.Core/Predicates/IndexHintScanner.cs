@@ -74,10 +74,15 @@ public static class IndexHintScanner
 
             var anyReferencedColumns = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(catalog));
             var referenceVisitor = new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, anyReferencedColumns, catalog);
-            whereCondition?.Accept(referenceVisitor);
-            foreach (var join in joinNodes)
+            var seekableColumns = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(catalog));
+            var seekableVisitor = new SeekableReferenceVisitor(
+                new BaseColumnResolver.ColumnReferenceCollector(sourcePath, scopeChain, seekableColumns, catalog));
+            foreach (var condition in joinNodes.Select(join => join.SearchCondition)
+                .Append(whereCondition)
+                .OfType<BooleanExpression>())
             {
-                join.SearchCondition.Accept(referenceVisitor);
+                condition.Accept(referenceVisitor);
+                condition.Accept(seekableVisitor);
             }
 
             var statementColumns = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(catalog));
@@ -91,13 +96,16 @@ public static class IndexHintScanner
 
             foreach (var namedTable in namedTables)
             {
-                InspectNamedTable(namedTable, byAlias, anyReferencedColumns, statementColumns, wildcardDetector.Found);
+                InspectNamedTable(namedTable, byAlias, new References(anyReferencedColumns, seekableColumns), statementColumns, wildcardDetector.Found);
             }
         }
 
+        private sealed record References(
+            HashSet<(string Table, string Column)> Any, HashSet<(string Table, string Column)> Seekable);
+
         private void InspectNamedTable(
             NamedTableReference namedTable, IReadOnlyDictionary<string, ScopeEntry> byAlias,
-            HashSet<(string Table, string Column)> anyReferencedColumns, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
+            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
         {
             var indexHints = namedTable.TableHints.OfType<IndexTableHint>().ToList();
             if (indexHints.Count == 0)
@@ -119,13 +127,13 @@ public static class IndexHintScanner
 
             foreach (var hint in indexHints)
             {
-                InspectHint(hint, table, anyReferencedColumns, statementColumns, hasWildcard);
+                InspectHint(hint, table, references, statementColumns, hasWildcard);
             }
         }
 
         private void InspectHint(
             IndexTableHint hint, CatalogTable table,
-            HashSet<(string Table, string Column)> anyReferencedColumns, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
+            References references, HashSet<(string Table, string Column)> statementColumns, bool hasWildcard)
         {
             foreach (var indexValue in hint.IndexValues)
             {
@@ -148,8 +156,10 @@ public static class IndexHintScanner
                 }
 
                 var leadingColumn = matchedIndex.KeyColumns[0];
-                if (!anyReferencedColumns.Contains((table.QualifiedName, leadingColumn))
-                    && !IsCoveringScanWithNoPredicate(matchedIndex, table, anyReferencedColumns, statementColumns, hasWildcard))
+                if (!references.Seekable.Contains((table.QualifiedName, leadingColumn))
+                    && (references.Any.Contains((table.QualifiedName, leadingColumn))
+                        ? table.FindColumn(leadingColumn, catalog.IdentifierComparer) is not { IsComputed: true }
+                        : !IsCoveringScanWithNoPredicate(matchedIndex, table, references.Any, statementColumns, hasWildcard)))
                 {
                     Findings.Add(new IndexHintFinding(
                         IndexHintFindingKind.HintedIndexNotSeekable, table.QualifiedName, hintedName, leadingColumn,
