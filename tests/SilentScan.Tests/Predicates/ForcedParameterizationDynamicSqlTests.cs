@@ -83,6 +83,24 @@ public sealed class ForcedParameterizationDynamicSqlTests
     }
 
     [Fact]
+    public async Task ConvertedNumberInAProcedureDefinedByDynamicSql_Fires()
+    {
+        var report = await EngineAuthoritativeScan.ScanAsync($"""
+            {Forced}
+            GO
+            {Tables}
+            GO
+            EXEC sys.sp_executesql N'CREATE PROCEDURE dbo.Inner1 @v INT AS
+            BEGIN
+                DECLARE @sql NVARCHAR(MAX) = N''SELECT Val FROM dbo.T GROUP BY Val HAVING COUNT(*) > '' + CAST(@v AS NVARCHAR(10));
+                EXEC (@sql);
+            END;';
+            """);
+
+        Assert.Equal(ForcedParameterizationFindingKind.HavingLiteral, Assert.Single(Forcing(report)).Kind);
+    }
+
+    [Fact]
     public async Task LiteralInAModuleStatement_NeverFires()
     {
         var report = await EngineAuthoritativeScan.ScanAsync($"""

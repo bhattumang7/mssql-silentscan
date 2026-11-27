@@ -90,7 +90,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
   <p class="rule-key"><code>silentscan/forced-parameterization/table-sample-size-literal</code></p>
   <p class="tagline">A medium-confidence or low-confidence finding of this same rule links here too - only the finding's certainty differs, not the underlying issue.</p>
   <h2>Why is this an issue?</h2>
-  <p class="rationale">A changing value is spliced into a TABLESAMPLE size in a dynamic SQL string on a database with PARAMETERIZATION FORCED - the engine leaves that position unparameterized, so each distinct value compiles its own plan.</p>
+  <p class="rationale">A changing value is spliced into a TABLESAMPLE size in a dynamic SQL string on a database with PARAMETERIZATION FORCED - the engine leaves that position unparameterized, so each distinct value compiles its own plan. Fires when a changing value is spliced into a TABLESAMPLE size, which keeps its literal under forced parameterization. Never fires when the same changing value sits in a comparison, which forced parameterization replaces with a parameter.</p>
   <p class="rationale">Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting replaces literals in ad hoc and dynamic SQL with parameters so that statements differing only by value share one plan, but it skips a TABLESAMPLE size.</p>
   <p class="rationale">This dynamic SQL string splices a value that changes between executions into that position, so every distinct value produces a different statement and compiles its own plan. Literals written directly inside a procedure, view, function or trigger are not affected: the engine never applies forced parameterization there, and their text does not change.</p>
   <h2>How can I fix it?</h2>

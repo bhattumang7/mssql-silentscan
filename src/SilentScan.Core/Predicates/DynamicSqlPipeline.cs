@@ -776,7 +776,7 @@ public static partial class DynamicSqlPipeline
         int depth)
     {
 
-        var nestedExtraction = DynamicSqlScannerV2.Scan(innerParseResult, script.Scope, catalog: context.Catalog);
+        var nestedExtraction = DynamicSqlScannerV2.Scan(innerParseResult, script.Scope, new ProcCallGraph([]), catalog: context.Catalog);
         var findings = nestedExtraction.Findings.Select(f => RemapFinding(f, script)).ToList();
 
         if (nestedExtraction.AnalyzableScripts.Count == 0)
