@@ -19,7 +19,7 @@ public static class WriteLossTargetPolicy
     {
         WriteLossTarget.FunctionReturn or WriteLossTarget.ParameterDefault =>
             kind is WriteLossKind.LengthTruncation or WriteLossKind.NumericScaleNarrowing or WriteLossKind.ApproximateToExactTruncation
-                or WriteLossKind.ExactToApproximatePrecisionLoss,
+                or WriteLossKind.ExactToApproximatePrecisionLoss or WriteLossKind.TemporalScaleNarrowing,
         _ => true,
     };
 }
