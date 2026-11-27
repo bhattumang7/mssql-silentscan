@@ -375,7 +375,7 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (UnwrapParentheses(node.FirstExpression) is CastCall or ConvertCall)
+            if (UnwrapParentheses(node.FirstExpression) is CastCall or ConvertCall or TryCastCall or TryConvertCall)
             {
                 if (IsSeekablePattern(node))
                 {
@@ -470,6 +470,8 @@ public static class NonSargablePredicateScanner
                 !AggregateFunctionNames.Contains(functionCall.FunctionName.Value) && FirstNamedColumn(functionCall.Parameters) is not null,
             CastCall castCall => FindAnyColumn(castCall.Parameter) is not null,
             ConvertCall convertCall => FindAnyColumn(convertCall.Parameter) is not null,
+            TryCastCall tryCast => FindAnyColumn(tryCast.Parameter) is not null,
+            TryConvertCall tryConvert => FindAnyColumn(tryConvert.Parameter) is not null,
             BinaryExpression binary => FindAnyColumn(binary.FirstExpression) is not null || FindAnyColumn(binary.SecondExpression) is not null,
             CoalesceExpression or NullIfExpression or IIfCall or SearchedCaseExpression or SimpleCaseExpression => FindAnyColumn(UnwrapParentheses(expression)) is not null,
             _ => false,
@@ -494,6 +496,14 @@ public static class NonSargablePredicateScanner
                     InspectCastOrConvert(convertCall, convertCall.Parameter, convertCall.DataType, "CONVERT", found, scopeChain, walker);
                     break;
 
+                case TryCastCall tryCast when FindAnyColumn(tryCast.Parameter) is { } found:
+                    InspectCastOrConvert(tryCast, tryCast.Parameter, tryCast.DataType, "TRY_CAST", found, scopeChain, walker);
+                    break;
+
+                case TryConvertCall tryConvert when FindAnyColumn(tryConvert.Parameter) is { } found:
+                    InspectCastOrConvert(tryConvert, tryConvert.Parameter, tryConvert.DataType, "TRY_CONVERT", found, scopeChain, walker);
+                    break;
+
                 case BinaryExpression binary:
                     InspectArithmetic(binary, scopeChain, walker);
                     break;
@@ -515,7 +525,7 @@ public static class NonSargablePredicateScanner
 
             var site = new CastSite(
                 IsKnownNotNullColumn(found.Ref, scopeChain, walker),
-                castOrConvert is ConvertCall { Style: not null },
+                castOrConvert is ConvertCall { Style: not null } or TryConvertCall { Style: not null },
                 (castOrConvert as PrimaryExpression)?.Collation?.Value);
             if (AsDirectColumn(parameter) is not null && PreservesSeekability(dataType, sourceType, site))
             {
@@ -610,6 +620,8 @@ public static class NonSargablePredicateScanner
             UnaryExpression unary => FindAnyColumn(unary.Expression),
             CastCall castCall => FindAnyColumn(castCall.Parameter),
             ConvertCall convertCall => FindAnyColumn(convertCall.Parameter),
+            TryCastCall tryCast => FindAnyColumn(tryCast.Parameter),
+            TryConvertCall tryConvert => FindAnyColumn(tryConvert.Parameter),
             BinaryExpression binary => FindAnyColumn(binary.FirstExpression) ?? FindAnyColumn(binary.SecondExpression),
             FunctionCall functionCall => functionCall.Parameters.Select(FindAnyColumn).FirstOrDefault(r => r is not null),
             CoalesceExpression coalesce => coalesce.Expressions.Select(FindAnyColumn).FirstOrDefault(r => r is not null),

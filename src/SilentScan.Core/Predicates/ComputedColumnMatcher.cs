@@ -122,6 +122,10 @@ internal static class ComputedColumnMatcher
             (ConvertCall converta, ConvertCall convertb) => TypeEqual(converta.DataType, convertb.DataType)
                 && StructurallyEqual(converta.Parameter, convertb.Parameter, identifierComparer)
                 && StructurallyEqual(converta.Style, convertb.Style, identifierComparer),
+            (TryCastCall tryA, TryCastCall tryB) => TypeEqual(tryA.DataType, tryB.DataType) && StructurallyEqual(tryA.Parameter, tryB.Parameter, identifierComparer),
+            (TryConvertCall tryA, TryConvertCall tryB) => TypeEqual(tryA.DataType, tryB.DataType)
+                && StructurallyEqual(tryA.Parameter, tryB.Parameter, identifierComparer)
+                && StructurallyEqual(tryA.Style, tryB.Style, identifierComparer),
             (BinaryExpression ba, BinaryExpression bb) => ba.BinaryExpressionType == bb.BinaryExpressionType
                 && StructurallyEqual(ba.FirstExpression, bb.FirstExpression, identifierComparer)
                 && StructurallyEqual(ba.SecondExpression, bb.SecondExpression, identifierComparer),

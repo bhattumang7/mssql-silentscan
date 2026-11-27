@@ -53,6 +53,36 @@ public sealed class NonSargableLikeWrappedColumnTests
         Assert.Empty(Scan("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "VARCHAR(20)", predicate));
 
     [Theory]
+    [InlineData("TRY_CAST(c AS VARCHAR(40)) = @p")]
+    [InlineData("TRY_CONVERT(VARCHAR(40), c) = @p")]
+    [InlineData("TRY_CONVERT(VARCHAR(20), c, 0) = @p")]
+    [InlineData("TRY_CAST(c AS VARCHAR(40)) LIKE 'k123%'")]
+    public void TryCastColumn_IsFlagged_WhenTheEngineCannotRemoveIt(string predicate) =>
+        Assert.Equal(
+            SargabilityFindingKind.CastOrConvertOnColumn,
+            Assert.Single(Scan("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "VARCHAR(20)", predicate)).Kind);
+
+    [Theory]
+    [InlineData("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "TRY_CAST(c AS VARCHAR(20)) = @p")]
+    [InlineData("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "TRY_CONVERT(VARCHAR(20), c) = @p")]
+    [InlineData("INT", "TRY_CAST(c AS BIGINT) = @p")]
+    [InlineData("DATETIME", "TRY_CONVERT(DATE, c, 121) = @p")]
+    public void TryCastColumn_IsNotFlagged_WhenTheEngineSeeksThroughIt(string columnType, string predicate) =>
+        Assert.Empty(Scan(columnType, "INT", predicate));
+
+    [Theory]
+    [InlineData("TRY_CAST(c AS INT)")]
+    [InlineData("TRY_CONVERT(INT, c)")]
+    public void TryCastMatchingAnIndexedComputedColumn_IsNotFlagged(string expression)
+    {
+        var sql = $"CREATE TABLE dbo.t (c VARCHAR(20) NULL, n AS {expression});\nGO\nCREATE INDEX ix ON dbo.t (n);\nGO\nCREATE PROCEDURE dbo.p AS SELECT n FROM dbo.t WHERE {expression} = 5;";
+        var result = SqlScriptParser.ParseText("t.sql", sql);
+        var catalog = CatalogBuilder.Build([result]);
+
+        Assert.Empty(NonSargablePredicateScanner.Scan(result, catalog, LineageResolver.Resolve(catalog, [result])));
+    }
+
+    [Theory]
     [InlineData("c LIKE '[^a]%'")]
     [InlineData("c LIKE '[^^]%'")]
     public void NegatedLeadingClass_IsFlagged(string predicate) =>

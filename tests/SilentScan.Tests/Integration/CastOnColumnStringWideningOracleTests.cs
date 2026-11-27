@@ -32,6 +32,9 @@ public sealed class CastOnColumnStringWideningOracleTests : OracleTestFixture
         CREATE INDEX IX_Names_Null ON dbo.Names (NullCol);
         CREATE INDEX IX_Names_Bin ON dbo.Names (BinCol);
         CREATE INDEX IX_Names_SolidBin ON dbo.Names (SolidBinCol);
+        ALTER TABLE dbo.Names ADD Parsed AS TRY_CAST(SqlCol AS INT);
+        GO
+        CREATE INDEX IX_Names_Parsed ON dbo.Names (Parsed);
         GO
         """;
 
@@ -50,6 +53,9 @@ public sealed class CastOnColumnStringWideningOracleTests : OracleTestFixture
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(NullCol AS VARCHAR(20)) = 'v5';", "IX_Names_Null")]
     [InlineData("SELECT Id FROM dbo.Names WHERE TRY_CAST(NullCol AS VARCHAR(20)) = 'v5';", "IX_Names_Null")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CONVERT(VARCHAR(20), NullCol) = 'v5';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE TRY_CONVERT(VARCHAR(20), NullCol) = 'v5';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE TRY_CAST(SqlCol AS INT) = 5;", "IX_Names_Parsed")]
+    [InlineData("SELECT Pad FROM dbo.Names WHERE TRY_CAST(WinCol AS NVARCHAR(20)) = N'v5';", "IX_Names_Win")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(NullCol AS VARCHAR(20)) COLLATE SQL_Latin1_General_CP1_CI_AS = 'v5';", "IX_Names_Null")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(BinCol AS VARBINARY(20)) = 0x00000005;", "IX_Names_Bin")]
     public async Task SameTypeCastOfANullableStringOrBinaryColumn_SeeksTheColumnIndex(string statement, string index)
@@ -61,6 +67,8 @@ public sealed class CastOnColumnStringWideningOracleTests : OracleTestFixture
 
     [Theory]
     [InlineData("SELECT Id FROM dbo.Names WHERE CONVERT(VARCHAR(20), NullCol, 0) = 'v5';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE TRY_CONVERT(VARCHAR(20), NullCol, 0) = 'v5';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE TRY_CAST(NullCol AS VARCHAR(40)) = 'v5';", "IX_Names_Null")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(NullCol AS VARCHAR(20)) COLLATE Latin1_General_CS_AS = 'v5';", "IX_Names_Null")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(WinCol AS NVARCHAR(20)) COLLATE Latin1_General_CS_AS = N'v5';", "IX_Names_Win")]
     [InlineData("SELECT Id FROM dbo.Names WHERE CAST(WinCol AS NVARCHAR(MAX)) = N'v5';", "IX_Names_Win")]
