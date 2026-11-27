@@ -2,6 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
+using SilentScan.Core.TypeInference;
 using SilentScan.Core.Predicates.Normalization;
 
 namespace SilentScan.Core.Predicates;
@@ -130,12 +131,10 @@ public static class NonUniqueUpdateSourceScanner
                 return;
             }
 
-            var setColumnNames = spec.SetClauses
-                .OfType<AssignmentSetClause>()
-                .Where(sc => ReferencesAlias(sc.NewValue, sourceAlias))
-                .Select(sc => sc.Column.MultiPartIdentifier.Identifiers[^1].Value)
-                .Distinct(catalog.IdentifierComparer)
-                .ToList();
+            var conjuncts = PredicateTreeWalker.FlattenAnd(join.SearchCondition)
+                .Concat(PredicateTreeWalker.FlattenAnd(whereCondition));
+            var fixedColumns = FixedColumns(conjuncts, sourceAlias, sourceTable, targetAlias, catalog.Find(targetQualifiedName));
+            var setColumnNames = SetColumnsReading(spec, sourceAlias, fixedColumns);
 
             if (setColumnNames.Count == 0)
             {
@@ -244,11 +243,50 @@ public static class NonUniqueUpdateSourceScanner
                 .OfType<string>();
         }
 
-        private bool ReferencesAlias(ScalarExpression expression, string alias)
+        private static readonly HashSet<SqlTypeCategory> ValueIdenticalWhenEqual =
+        [
+            SqlTypeCategory.TinyInt, SqlTypeCategory.SmallInt, SqlTypeCategory.Int, SqlTypeCategory.BigInt,
+            SqlTypeCategory.Bit, SqlTypeCategory.Decimal, SqlTypeCategory.Money, SqlTypeCategory.SmallMoney,
+            SqlTypeCategory.Date, SqlTypeCategory.DateTime, SqlTypeCategory.SmallDateTime, SqlTypeCategory.DateTime2,
+            SqlTypeCategory.Time, SqlTypeCategory.UniqueIdentifier,
+        ];
+
+        private List<string> FixedColumns(
+            IEnumerable<BooleanExpression> conjuncts, string sourceAlias, CatalogTable sourceTable,
+            string targetAlias, CatalogTable? targetTable)
         {
-            var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
-            expression.Accept(collector);
-            return collector.References.Any(columnRef => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(columnRef, alias, catalog.IdentifierComparer) is not null);
+            var fixedColumns = new List<string>();
+            foreach (var comparison in conjuncts.OfType<BooleanComparisonExpression>()
+                .Where(c => c.ComparisonType == BooleanComparisonType.Equals))
+            {
+                foreach (var (columnSide, otherSide) in new[]
+                {
+                    (comparison.FirstExpression, comparison.SecondExpression),
+                    (comparison.SecondExpression, comparison.FirstExpression),
+                })
+                {
+                    if (ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(columnSide, sourceAlias, catalog.IdentifierComparer) is not { } column
+                        || sourceTable.FindColumn(column, catalog.IdentifierComparer)?.Type?.Category is not { } category
+                        || !ValueIdenticalWhenEqual.Contains(category))
+                    {
+                        continue;
+                    }
+
+                    var fixedByOtherSide = otherSide switch
+                    {
+                        IntegerLiteral => category is SqlTypeCategory.TinyInt or SqlTypeCategory.SmallInt
+                            or SqlTypeCategory.Int or SqlTypeCategory.BigInt,
+                        _ => ColumnAliasHelpers.ColumnNameIfQualifiedByAlias(otherSide, targetAlias, catalog.IdentifierComparer) is { } target
+                            && targetTable?.FindColumn(target, catalog.IdentifierComparer)?.Type?.Category == category,
+                    };
+                    if (fixedByOtherSide)
+                    {
+                        fixedColumns.Add(column);
+                    }
+                }
+            }
+
+            return fixedColumns;
         }
     }
 }

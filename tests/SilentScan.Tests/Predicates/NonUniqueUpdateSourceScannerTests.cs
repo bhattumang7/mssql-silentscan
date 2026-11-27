@@ -143,7 +143,7 @@ public sealed class NonUniqueUpdateSourceScannerTests
     {
 
         var findings = Scan(
-            "UPDATE t1 SET t1.Val = t2.Val FROM dbo.TargetT t1 JOIN dbo.TargetT t2 ON t1.Id = t2.Val;");
+            "UPDATE t1 SET t1.Val = t2.Id FROM dbo.TargetT t1 JOIN dbo.TargetT t2 ON t1.Id = t2.Val;");
 
         var finding = Assert.Single(findings);
         Assert.Equal("dbo.TargetT", finding.TargetTableQualifiedName);
@@ -196,5 +196,27 @@ public sealed class NonUniqueUpdateSourceScannerTests
         var findings = Scan($"UPDATE t SET Val = s.V FROM dbo.TargetT AS t {joins};", HopTables);
 
         Assert.Equal(fires, findings.Any(f => f.SourceTableQualifiedName == "dbo.Leaf"));
+    }
+
+    [Theory]
+    [InlineData("t.Val = s.TargetId", false)]
+    [InlineData("t.Val = s.TargetId + t.Id", false)]
+    [InlineData("t.Val = s.Val", true)]
+    [InlineData("t.Val = s.TargetId + s.Val", true)]
+    public void SetValueBuiltOnlyFromPinnedIntegerColumns_IsDeterministic(string set, bool fires)
+    {
+        var findings = Scan($"UPDATE t SET {set} FROM dbo.TargetT t JOIN dbo.SourceNonUnique s ON s.TargetId = t.Id;");
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
+
+    [Fact]
+    public void SetFromACaseInsensitiveJoinColumn_StillFires()
+    {
+        var findings = Scan(
+            "UPDATE t SET t.Name = s.Code FROM dbo.Named t JOIN dbo.Codes s ON s.Code = t.Code;",
+            "CREATE TABLE dbo.Named (Code VARCHAR(10) NOT NULL PRIMARY KEY, Name VARCHAR(10) NULL); CREATE TABLE dbo.Codes (Code VARCHAR(10) NOT NULL);");
+
+        Assert.Single(findings);
     }
 }
