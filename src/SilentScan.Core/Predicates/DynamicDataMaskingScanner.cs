@@ -33,6 +33,16 @@ public static class DynamicDataMaskingScanner
 
         public List<DynamicDataMaskingFinding> Findings { get; } = [];
 
+        private readonly Dictionary<OrderByClause, IList<SelectElement>> _selectListsByOrderBy = [];
+
+        public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
+        {
+            if (node.OrderByClause is { } orderBy)
+            {
+                _selectListsByOrderBy[orderBy] = node.SelectElements;
+            }
+        }
+
         public void OnBooleanComparisonExpression(BooleanComparisonExpression node, ModuleWalker walker) =>
             InspectOperands(node, walker, "comparison", node.FirstExpression, node.SecondExpression);
 
@@ -59,9 +69,17 @@ public static class DynamicDataMaskingScanner
             var scopeChain = walker.CurrentScopeChain();
             foreach (var element in node.OrderByElements)
             {
-                InspectOperand(element, walker, scopeChain, "ORDER BY", element.Expression);
+                InspectOperand(element, walker, scopeChain, "ORDER BY", ThroughSelectAlias(node, element.Expression));
             }
         }
+
+        private ScalarExpression ThroughSelectAlias(OrderByClause orderBy, ScalarExpression key) =>
+            key is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [{ Value: var name }] }
+            && _selectListsByOrderBy.TryGetValue(orderBy, out var selectList)
+            && selectList.OfType<SelectScalarExpression>().FirstOrDefault(
+                element => element.ColumnName?.Value is { } alias && catalog.IdentifierComparer.Equals(alias, name)) is { } aliased
+                ? aliased.Expression
+                : key;
 
         public void OnEnterSelectScalarExpression(SelectScalarExpression node, ModuleWalker walker)
         {
