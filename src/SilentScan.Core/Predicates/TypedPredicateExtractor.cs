@@ -31,7 +31,7 @@ public static class TypedPredicateExtractor
         parseResult.Fragment.Accept(walker);
         return new PredicateExtractionResult(
             rule.Findings, rule.ExpressionDerivedFindings, rule.WriteLossFindings, ledger.Entries,
-            rule.UnderLengthParameterFindings, rule.AnsiPaddingMismatchFindings,
+            rule.UnderLengthParametersThatCanTruncate(), rule.AnsiPaddingMismatchFindings,
             rule.LocalVariablePredicateFindings, rule.FilteredIndexParameterMismatchFindings);
     }
 
@@ -110,7 +110,12 @@ public static class TypedPredicateExtractor
         public List<WriteLossFinding> WriteLossFindings { get; } = [];
 
 
-        public List<UnderLengthParameterFinding> UnderLengthParameterFindings { get; } = [];
+        private readonly List<(UnderLengthParameterFinding Finding, VariableSourceCollector? Sources, SqlType DeclaredType)> _underLengthCandidates = [];
+
+        private readonly Dictionary<ColumnReferenceExpression, SqlType?> _assignedColumnTypes = [];
+
+        public List<UnderLengthParameterFinding> UnderLengthParametersThatCanTruncate() =>
+            [.. _underLengthCandidates.Where(c => !EverySourceFits(c.Finding, c.Sources, c.DeclaredType)).Select(c => c.Finding)];
 
         public List<AnsiPaddingMismatchFinding> AnsiPaddingMismatchFindings { get; } = [];
 
@@ -189,11 +194,11 @@ public static class TypedPredicateExtractor
             && numericRoundAbortByStatement.TryGetValue(statement, out var isOn)
             && isOn;
 
-        private LiteralOnlyVariableCollector _literalOnlyVariables = new();
+        private VariableSourceCollector _variableSources = new();
 
         public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker)
         {
-            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
+            _variableSources = VariableSourceCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -244,7 +249,7 @@ public static class TypedPredicateExtractor
 
         public void OnEnterTriggerBody(TriggerStatementBody node, ModuleWalker walker)
         {
-            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
+            _variableSources = VariableSourceCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -435,7 +440,7 @@ public static class TypedPredicateExtractor
 
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
         {
-            _literalOnlyVariables = LiteralOnlyVariableCollector.Collect(node);
+            _variableSources = VariableSourceCollector.Collect(node);
             _variables.Clear();
             _formalParameterNames.Clear();
             _cursorSelectSourcesByName.Clear();
@@ -836,6 +841,11 @@ public static class TypedPredicateExtractor
         {
             if (_variables.TryGetValue(variableName, out var variableType) && variableType is { } targetType)
             {
+                if (source is ColumnReferenceExpression column)
+                {
+                    _assignedColumnTypes[column] = OperandType(ResolveOperand(column, walker.CurrentScopeChain(), walker));
+                }
+
                 EmitResolvedAssignment(target, tableQualifiedName: null, variableName, targetType, source, walker);
             }
         }
@@ -1283,24 +1293,36 @@ public static class TypedPredicateExtractor
             PredicateOperand.Column column, PredicateOperand other, bool otherIsLiteral, string operatorText, TSqlFragment node)
         {
             if (otherIsLiteral || other is not PredicateOperand.Value { Type: { } otherType, IsDerivedType: false } value
-                || Rules.ParameterLengthClassifier.ClassifyUnderLength(column.Type, otherType) is not { } result
-                || CannotExceedDeclaredLength(value, otherType.Length ?? 1))
+                || Rules.ParameterLengthClassifier.ClassifyUnderLength(column.Type, otherType) is not { } result)
             {
                 return;
             }
 
             var changesRangeOrPatternShape = Rules.ParameterLengthClassifier.ChangesRangeOrPatternShape(operatorText);
 
-            UnderLengthParameterFindings.Add(new UnderLengthParameterFinding(
+            var finding = new UnderLengthParameterFinding(
                 column.TableQualifiedName, column.ColumnName, result.ColumnLength, result.OtherLength, result.IsImplicitDefault,
                 operatorText, changesRangeOrPatternShape, sourcePath, node.StartLine, node.StartColumn,
-                VariableName: value.VariableName));
+                VariableName: value.VariableName);
+            var sources = value.IsFormalParameter ? null : _variableSources;
+            _underLengthCandidates.Add((finding, sources, otherType));
         }
 
-        private bool CannotExceedDeclaredLength(PredicateOperand.Value value, int declaredLength) =>
-            value is { VariableName: { } name, IsFormalParameter: false }
-            && _literalOnlyVariables.TryGetLongestLiteral(name, out var longestLiteral)
-            && longestLiteral <= declaredLength;
+        private bool EverySourceFits(UnderLengthParameterFinding finding, VariableSourceCollector? sources, SqlType declaredType)
+        {
+            if (sources is null
+                || finding.VariableName is not { } name
+                || !sources.TryGetSources(name, out var longestLiteral, out var columns))
+            {
+                return false;
+            }
+
+            var declaredLength = declaredType.Length ?? 1;
+            return longestLiteral <= declaredLength
+                && columns.All(c => _assignedColumnTypes.GetValueOrDefault(c) is { IsMax: false, Length: { } length } type
+                    && type.Category == declaredType.Category
+                    && length <= declaredLength);
+        }
 
         private void TryAddAnsiPaddingMismatchFinding(PredicateOperand.Column column, PredicateOperand other, string operatorText, TSqlFragment node, ModuleWalker walker)
         {

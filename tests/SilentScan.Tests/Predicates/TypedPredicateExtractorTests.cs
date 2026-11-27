@@ -1773,6 +1773,23 @@ public sealed class TypedPredicateExtractorTests
         Assert.Empty(result.UnderLengthParameterFindings);
     }
 
+    [Theory]
+    [InlineData("SELECT @p = Country FROM dbo.Codes; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 0)]
+    [InlineData("SET @p = 'AB'; SELECT @p = Country FROM dbo.Codes; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 0)]
+    [InlineData("SELECT 1 FROM dbo.Customers WHERE Code = @p; SELECT @p = Country FROM dbo.Codes;", 0)]
+    [InlineData("SELECT @p = Code FROM dbo.Customers; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 1)]
+    [InlineData("SELECT @p = Country FROM dbo.Codes; SELECT @p = Code FROM dbo.Customers; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 1)]
+    [InlineData("SELECT @p = Wide FROM dbo.Codes; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 1)]
+    [InlineData("SELECT @p = Country FROM dbo.Codes; SET @p += 'X'; SELECT 1 FROM dbo.Customers WHERE Code = @p;", 1)]
+    public void Extract_VariableFilledOnlyFromColumnsThatFit_DoesNotFireUnderLength(string body, int expected)
+    {
+        var result = ExtractAll(
+            "CREATE TABLE dbo.Customers (Code VARCHAR(20) NOT NULL); CREATE TABLE dbo.Codes (Country VARCHAR(2) NOT NULL, Wide NVARCHAR(2) NOT NULL);",
+            "DECLARE @p VARCHAR(2); " + body);
+
+        Assert.Equal(expected, result.UnderLengthParameterFindings.Count);
+    }
+
     [Fact]
     public void Extract_ColumnComparedToShorterLiteral_NeverFiresUnderLength()
     {

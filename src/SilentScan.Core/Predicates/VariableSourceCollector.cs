@@ -2,29 +2,26 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace SilentScan.Core.Predicates;
 
-internal sealed class LiteralOnlyVariableCollector : TSqlFragmentVisitor
+internal sealed class VariableSourceCollector : TSqlFragmentVisitor
 {
     private readonly Dictionary<string, int> _longestLiteral = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<string, List<ColumnReferenceExpression>> _columnSources = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly HashSet<string> _otherwiseWritten = new(StringComparer.OrdinalIgnoreCase);
 
-    public static LiteralOnlyVariableCollector Collect(TSqlFragment root)
+    public static VariableSourceCollector Collect(TSqlFragment root)
     {
-        var collector = new LiteralOnlyVariableCollector();
+        var collector = new VariableSourceCollector();
         root.Accept(collector);
         return collector;
     }
 
-    public bool TryGetLongestLiteral(string variableName, out int length)
+    public bool TryGetSources(string variableName, out int longestLiteral, out IReadOnlyList<ColumnReferenceExpression> columns)
     {
-        length = 0;
-        if (_otherwiseWritten.Contains(variableName))
-        {
-            return false;
-        }
-
-        _longestLiteral.TryGetValue(variableName, out length);
-        return true;
+        _longestLiteral.TryGetValue(variableName, out longestLiteral);
+        columns = _columnSources.TryGetValue(variableName, out var sources) ? sources : [];
+        return !_otherwiseWritten.Contains(variableName);
     }
 
     public override void ExplicitVisit(DeclareVariableElement node)
@@ -105,6 +102,15 @@ internal sealed class LiteralOnlyVariableCollector : TSqlFragmentVisitor
                 break;
 
             case NullLiteral:
+                break;
+
+            case ColumnReferenceExpression column:
+                if (!_columnSources.TryGetValue(variableName, out var sources))
+                {
+                    _columnSources[variableName] = sources = [];
+                }
+
+                sources.Add(column);
                 break;
 
             default:
