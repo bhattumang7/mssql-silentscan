@@ -138,6 +138,25 @@ public static class BuiltinRegistry
         yield return FixedTypeSpec("SCOPE_IDENTITY", HoleKind.EnvironmentDependent);
     }
 
+    private static BuiltinSpec LengthSpec(string name) => new(
+        name,
+        Evaluate: null,
+        HoleTransfer: call => BuiltinFoldResult.OkHole(
+            TypeInference.BuiltinFunctionTypeResolver.ResolveLengthResult(
+                call.Arguments is [var argument, ..] ? DeclaredArgumentType(argument) : null),
+            call.Site,
+            HoleKind.ArgumentIndependentReturnType),
+        ReturnType: null,
+        ReturnKind: default,
+        UnconditionalFailReason: null);
+
+    private static SqlType? DeclaredArgumentType(BuiltinArgument argument) => argument switch
+    {
+        BuiltinArgument.Hole hole => hole.Type,
+        BuiltinArgument.Unresolved unresolved => unresolved.Type,
+        _ => null,
+    };
+
     private static BuiltinSpec DateAdd() => new(
         "DATEADD",
         Evaluate: null,

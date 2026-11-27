@@ -12,8 +12,8 @@ internal static class SubsumedIndex
             One active, unfiltered, non-columnstore index's key-column list is a proper (strictly
             shorter) ordered prefix of a second such index's own key-column list on the same table,
             with the shorter index's own INCLUDE columns already a subset of the longer index's
-            INCLUDE columns, and the same uniqueness/kind between the two - the same precision guard
-            the sibling `duplicate-index` rule uses. Any seek the shorter (subsumed) index could
+            INCLUDE columns, and the same kind between the two, where the shorter index is not
+            unique. Any seek the shorter (subsumed) index could
             serve, the longer index can also serve: it carries every one of the shorter index's key
             columns as its own leading prefix, in the same order, plus everything the shorter index
             put in INCLUDE - so for seeks the shorter index adds nothing the longer one lacks.

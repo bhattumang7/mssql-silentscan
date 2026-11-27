@@ -65,6 +65,11 @@ public static partial class WriteLossClassifier
         return null;
     }
 
+    public static bool RaisesUnderNumericRoundAbort(Predicates.WriteLossKind kind, SqlType target, SqlType source) =>
+        kind == Predicates.WriteLossKind.NumericScaleNarrowing
+        && target.Category == SqlTypeCategory.Decimal
+        && source.Category is SqlTypeCategory.Decimal or SqlTypeCategory.Money or SqlTypeCategory.SmallMoney;
+
     private static bool IsUnicodeReplacementRisk(SqlType target, SqlType source, Literal? literal) =>
         source.IsUnicodeString && target.IsNonUnicodeString && target.Collation is not { IsUtf8: true } && !IsRepresentableInTargetCodePage(target, literal);
 

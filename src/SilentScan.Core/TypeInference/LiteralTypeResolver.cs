@@ -38,8 +38,8 @@ public static class LiteralTypeResolver
             return new SqlType(SqlTypeCategory.Decimal, Precision: value.Length, Scale: 0);
         }
 
-        var integerDigits = dotIndex;
+        var integerDigits = value[..dotIndex].TrimStart('0').Length;
         var fractionalDigits = value.Length - dotIndex - 1;
-        return new SqlType(SqlTypeCategory.Decimal, Precision: integerDigits + fractionalDigits, Scale: fractionalDigits);
+        return new SqlType(SqlTypeCategory.Decimal, Precision: Math.Max(1, integerDigits + fractionalDigits), Scale: fractionalDigits);
     }
 }

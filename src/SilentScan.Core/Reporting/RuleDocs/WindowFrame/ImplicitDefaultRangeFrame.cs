@@ -36,6 +36,6 @@ internal static class ImplicitDefaultRangeFrame
                 NoncompliantSql: "SELECT SUM(Amt) OVER (PARTITION BY GroupId ORDER BY D) FROM dbo.Sales;",
                 NoncompliantExplanation: "Nothing in this text says RANGE, but T-SQL's own default rule makes this an implicit RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW frame - the same measured cost as writing RANGE explicitly, invisible to a reader who doesn't already know the default.",
                 CompliantSql: "SELECT SUM(Amt) OVER (PARTITION BY GroupId ORDER BY D ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM dbo.Sales;",
-                CompliantExplanation: "The frame is now explicit ROWS, both documenting the intended behavior in the source text and avoiding RANGE's extra cost."),
+                CompliantExplanation: "The frame is now explicit ROWS, documenting the intended behavior and avoiding RANGE's extra cost; this is equivalent only if D is unique within each GroupId."),
         ]);
 }

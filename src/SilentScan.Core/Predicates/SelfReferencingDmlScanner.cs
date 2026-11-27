@@ -3,6 +3,7 @@ using SilentScan.Core.Catalog;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Common;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -33,6 +34,35 @@ public static class SelfReferencingDmlScanner
     internal sealed class Rule(string sourcePath, DatabaseCatalog catalog, IReadOnlyDictionary<string, ViewExpansionOrigin> viewExpansionMap) : IModuleRule
     {
         public List<SelfReferencingDmlFinding> Findings { get; } = [];
+
+        private readonly Dictionary<string, SqlType?> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
+
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+            _variableTypes.Clear();
+
+        public void OnEnterProcedureOrFunctionBody(ProcedureStatementBodyBase node, ModuleWalker walker)
+        {
+            _variableTypes.Clear();
+            foreach (var parameter in node.Parameters)
+            {
+                _variableTypes[parameter.VariableName.Value] =
+                    SqlTypeReferenceResolver.Resolve(parameter.DataType, columnCollation: null, catalog.TypeAliases);
+            }
+        }
+
+        public void OnEnterDeclareVariableStatement(DeclareVariableStatement node, ModuleWalker walker)
+        {
+            foreach (var declaration in node.Declarations)
+            {
+                _variableTypes[declaration.VariableName.Value] =
+                    SqlTypeReferenceResolver.Resolve(declaration.DataType, columnCollation: null, catalog.TypeAliases);
+            }
+        }
+
+        private SqlType? BoundType(ScalarExpression expression) =>
+            ScalarExpressionResolver.ResolveScalarType(
+                expression, [], sourcePath,
+                new ScalarExpressionResolver.ScalarTypeContext(null, catalog.TypeAliases, catalog, _variableTypes));
 
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {

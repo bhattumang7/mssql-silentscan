@@ -7,7 +7,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/write-loss/approximate-to-exact-truncation")]
+[Trait("Rule", FindingRuleIds.WriteLossApproximateTruncationRuleId)]
 public sealed class WriteLossInsertArityOracleTests : OracleTestFixture
 {
     private const string TableDdl = """

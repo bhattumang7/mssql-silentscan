@@ -299,6 +299,8 @@ public static class BuiltinFunctionTypeResolver
     private static readonly Dictionary<string, int> ArgumentTypeFunctions = new(StringComparer.OrdinalIgnoreCase)
     {
         ["ISNULL"] = 0,
+        ["LEN"] = 0,
+        ["DATALENGTH"] = 0,
         ["UPPER"] = 0,
         ["LOWER"] = 0,
         ["LTRIM"] = 0,
@@ -357,6 +359,11 @@ public static class BuiltinFunctionTypeResolver
             return null;
         }
 
+        if (IsLengthFunction(functionName))
+        {
+            return ResolveLengthResult(argumentType);
+        }
+
         if (WidensIntegerAggregateArgument(functionName))
         {
             var widened = WidenIntegerAggregateResult(argumentType);
@@ -382,6 +389,15 @@ public static class BuiltinFunctionTypeResolver
 
         return argumentType;
     }
+
+    public static SqlType ResolveLengthResult(SqlType? argumentType) =>
+        argumentType is { IsMax: true }
+            ? new SqlType(SqlTypeCategory.BigInt)
+            : new SqlType(SqlTypeCategory.Int);
+
+    private static bool IsLengthFunction(string functionName) =>
+        string.Equals(functionName, "LEN", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(functionName, "DATALENGTH", StringComparison.OrdinalIgnoreCase);
 
     public static SqlType ResolveDateAddResult(SqlType thirdArgumentType) =>
         thirdArgumentType.IsDateTimeFamily
@@ -423,6 +439,7 @@ public static class BuiltinFunctionTypeResolver
         SqlTypeCategory.TinyInt or SqlTypeCategory.SmallInt => new SqlType(SqlTypeCategory.Int),
         SqlTypeCategory.Decimal => argumentType with { Precision = 38 },
         SqlTypeCategory.Real => new SqlType(SqlTypeCategory.Float),
+        SqlTypeCategory.SmallMoney => new SqlType(SqlTypeCategory.Money),
         _ => argumentType,
     };
 

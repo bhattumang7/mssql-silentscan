@@ -81,7 +81,7 @@ public static class ExpressionEvaluator
                     && string.Equals(sourceRef.Name, lenArgRef.Name, StringComparison.OrdinalIgnoreCase)
                     && FoldInteger(startExpr, state, sourcePath, cap, out var substringStart)
                     && substringStart >= 1
-                    && TryTrimThroughAlternatives(Fold(sourceRef, state, sourcePath, cap, catalog), substringStart - 1, TryTrimLeadingCharacters) is { } trimmedFromStart:
+                    && TryTrimThroughAlternatives(Fold(sourceRef, state, sourcePath, cap, catalog), value => TrimByLen(value, substringStart - 1, blanks => Math.Max(0, blanks - (substringStart - 1)))) is { } trimmedFromStart:
 
                 return trimmedFromStart;
 
@@ -95,7 +95,7 @@ public static class ExpressionEvaluator
                     && string.Equals(zeroStartSourceRef.Name, zeroStartLenArgRef.Name, StringComparison.OrdinalIgnoreCase)
                     && FoldInteger(zeroStartExpr, state, sourcePath, cap, out var zeroStart)
                     && zeroStart == 0
-                    && TryTrimThroughAlternatives(Fold(zeroStartSourceRef, state, sourcePath, cap, catalog), 1, TryTrimTrailingCharacters) is { } trimmedForZeroStart:
+                    && TryTrimThroughAlternatives(Fold(zeroStartSourceRef, state, sourcePath, cap, catalog), value => TrimByLen(value, 0, blanks => blanks + 1)) is { } trimmedForZeroStart:
 
                 return trimmedForZeroStart;
 
@@ -116,7 +116,7 @@ public static class ExpressionEvaluator
                     && trailingStart == 1
                     && FoldInteger(trimCountExpr, state, sourcePath, cap, out var trimCount)
                     && trimCount >= 0
-                    && TryTrimThroughAlternatives(Fold(trailingSourceRef, state, sourcePath, cap, catalog), trimCount, TryTrimTrailingCharacters) is { } trimmedFromEnd:
+                    && TryTrimThroughAlternatives(Fold(trailingSourceRef, state, sourcePath, cap, catalog), value => TrimByLen(value, 0, blanks => blanks + trimCount)) is { } trimmedFromEnd:
 
                 return trimmedFromEnd;
 
@@ -759,9 +759,38 @@ public static class ExpressionEvaluator
         return null;
     }
 
-    private static SqlTextValue? TryTrimThroughAlternatives(SqlTextValue value, int count, Func<SqlTextValue, int, SqlTextValue?> trim)
+    private static SqlTextValue? TrimByLen(SqlTextValue value, int leading, Func<int, int> trailingFromBlanks)
     {
-        if (trim(value, count) is { } direct)
+        if (value is not SqlTextValue.Template template)
+        {
+            return null;
+        }
+
+        var trailing = trailingFromBlanks(CountTrailingBlanks(template.Pieces));
+        return TryTrimLeadingCharacters(value, leading) is { } leadingTrimmed
+            ? TryTrimTrailingCharacters(leadingTrimmed, trailing)
+            : null;
+    }
+
+    private static int CountTrailingBlanks(IReadOnlyList<TemplatePiece> pieces)
+    {
+        var total = 0;
+        for (var index = pieces.Count - 1; index >= 0 && pieces[index] is TemplatePiece.Lit lit; index--)
+        {
+            var blanks = lit.Text.Length - lit.Text.TrimEnd(' ').Length;
+            total += blanks;
+            if (blanks < lit.Text.Length)
+            {
+                break;
+            }
+        }
+
+        return total;
+    }
+
+    private static SqlTextValue? TryTrimThroughAlternatives(SqlTextValue value, Func<SqlTextValue, SqlTextValue?> trim)
+    {
+        if (trim(value) is { } direct)
         {
             return direct;
         }
@@ -772,7 +801,7 @@ public static class ExpressionEvaluator
         }
 
         var trimmedAlternatives = alternatives
-            .Select(alt => trim(alt.Value, count) is SqlTextValue.Template trimmed ? alt with { Value = trimmed } : null)
+            .Select(alt => trim(alt.Value) is SqlTextValue.Template trimmed ? alt with { Value = trimmed } : null)
             .Where(alt => alt is not null)
             .Select(alt => alt!)
             .ToList();

@@ -567,6 +567,8 @@ public sealed class DatabaseCatalog
 
     public bool? IsAnsiNullDefaultOn { get; set; }
 
+    public bool? IsLocalCursorDefault { get; set; }
+
     public bool? IsReadCommittedSnapshotOn { get; set; }
 
     public SkipLedger Skipped { get; } = new();

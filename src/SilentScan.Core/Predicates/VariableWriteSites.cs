@@ -1,16 +1,10 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using SilentScan.Core.Common;
 
 namespace SilentScan.Core.Predicates;
 
 public static class VariableWriteSites
 {
-    private static readonly HashSet<string> AggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "SUM", "COUNT", "COUNT_BIG", "AVG", "MIN", "MAX",
-        "STDEV", "STDEVP", "VAR", "VARP",
-        "GROUPING", "GROUPING_ID", "STRING_AGG", "CHECKSUM_AGG", "APPROX_COUNT_DISTINCT",
-    };
-
     public static IEnumerable<(string Name, TSqlFragment Site, bool IsUnconditional)> InStatement(TSqlStatement statement)
     {
         switch (statement)
@@ -90,7 +84,7 @@ public static class VariableWriteSites
                     && spec.SelectElements.OfType<SelectScalarExpression>().Any(e => ContainsTopLevelAggregate(e.Expression))));
     }
 
-    private static bool ContainsTopLevelAggregate(ScalarExpression expression)
+    public static bool ContainsTopLevelAggregate(ScalarExpression expression)
     {
         var collector = new TopLevelAggregateCollector();
         expression.Accept(collector);
@@ -103,7 +97,7 @@ public static class VariableWriteSites
 
         public override void ExplicitVisit(FunctionCall node)
         {
-            if (node.OverClause is null && AggregateFunctionNames.Contains(node.FunctionName.Value))
+            if (node.OverClause is null && AggregateFunctions.Names.Contains(node.FunctionName.Value))
             {
                 Found = true;
                 return;

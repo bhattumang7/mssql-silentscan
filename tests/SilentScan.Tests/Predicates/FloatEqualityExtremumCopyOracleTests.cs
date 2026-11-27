@@ -6,7 +6,7 @@ using SilentScan.Tests.Support;
 namespace SilentScan.Tests.Predicates;
 
 [Trait("Category", "Oracle")]
-[Trait("Rule", "silentscan/predicates/float-equality")]
+[Trait("Rule", FindingRuleIds.FloatEqualityRuleId)]
 public sealed class FloatEqualityExtremumCopyOracleTests : OracleTestFixture
 {
     private const string TableDdl = "CREATE TABLE dbo.Readings (Grp INT NOT NULL, V FLOAT NOT NULL);";

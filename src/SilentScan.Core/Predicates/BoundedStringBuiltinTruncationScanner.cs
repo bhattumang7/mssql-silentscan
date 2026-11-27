@@ -124,6 +124,23 @@ public static class BoundedStringBuiltinTruncationScanner
             return collation is { IsCaseSensitive: false } ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         }
 
+        private StringComparison ReplaceComparison(FunctionCall node)
+        {
+            var explicitCollation = node.Parameters
+                .OfType<PrimaryExpression>()
+                .Select(parameter => parameter.Collation?.Value)
+                .FirstOrDefault(name => name is not null);
+            var collation = explicitCollation is null ? databaseCollation : new Collation(explicitCollation);
+            return collation is { IsCaseSensitive: false } && !HasDottedAndDotlessI(collation)
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+        }
+
+        private static bool HasDottedAndDotlessI(Collation collation) =>
+            collation.Name.Contains("Turkish", StringComparison.OrdinalIgnoreCase)
+            || collation.Name.Contains("Azeri", StringComparison.OrdinalIgnoreCase)
+            || collation.Name.Contains("CP1254", StringComparison.OrdinalIgnoreCase);
+
         private void CheckSpace(FunctionCall node)
         {
             if (LiteralComparisonFolder.TryFoldToNumeric(node.Parameters[0]) is not { } rawCount

@@ -39,6 +39,9 @@ internal static class TableVariableStaleEstimateInLoop
             table variable, while the same loop without the hint keeps the first iteration's estimate.
             """,
         HowToFixIt: """
+            A read statement carrying OPTION (RECOMPILE) is recompiled on every iteration and gets
+            an estimate matching the current row count, so it is not reported.
+
             Replace the table variable with a #temp table for any loop that both grows it and reads
             it back for a cost-sensitive operation: #temp tables carry real statistics, and SQL
             Server automatically recompiles a statement once the underlying temp table's row count

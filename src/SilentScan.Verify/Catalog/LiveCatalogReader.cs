@@ -38,6 +38,7 @@ public sealed class LiveCatalogReader
         catalog.IsDisallowResultsFromTriggersEnabled = await ReadIsDisallowResultsFromTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsAutoCreateStatsOn = await ReadIsAutoCreateStatsOnAsync(connection, cancellationToken);
         catalog.IsAnsiNullDefaultOn = await ReadIsAnsiNullDefaultOnAsync(connection, cancellationToken);
+        catalog.IsLocalCursorDefault = await ReadIsLocalCursorDefaultAsync(connection, cancellationToken);
         catalog.IsReadCommittedSnapshotOn = await ReadIsReadCommittedSnapshotOnAsync(connection, cancellationToken);
 
         foreach (var (qualifiedName, underlyingType) in await ReadTypeAliasesAsync(connection, cancellationToken))
@@ -824,6 +825,13 @@ public sealed class LiveCatalogReader
     private static async Task<bool?> ReadIsAnsiNullDefaultOnAsync(SqlConnection connection, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateReadOnlyCommand("SELECT is_ansi_null_default_on FROM sys.databases WHERE database_id = DB_ID();");
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is bool isOn ? isOn : null;
+    }
+
+    private static async Task<bool?> ReadIsLocalCursorDefaultAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateReadOnlyCommand("SELECT is_local_cursor_default FROM sys.databases WHERE database_id = DB_ID();");
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return result is bool isOn ? isOn : null;
     }
