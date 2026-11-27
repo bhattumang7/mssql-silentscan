@@ -31,6 +31,20 @@ public sealed partial class CatchAllOptionalParameterOptimizationOracleTests : I
         GO
         CREATE PROCEDURE dbo.InsertSelectByA @p INT = NULL AS INSERT dbo.Sink (Id) SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
         GO
+        CREATE PROCEDURE dbo.AssignByA @p INT = NULL AS DECLARE @x INT; SELECT @x = Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
+        GO
+        CREATE PROCEDURE dbo.SetByA @p INT = NULL AS DECLARE @x INT; SET @x = (SELECT COUNT(*) FROM dbo.Wide WHERE (A = @p OR @p IS NULL));
+        GO
+        CREATE PROCEDURE dbo.DeclareByA @p INT = NULL AS DECLARE @x INT = (SELECT COUNT(*) FROM dbo.Wide WHERE (A = @p OR @p IS NULL));
+        GO
+        CREATE PROCEDURE dbo.IfByA @p INT = NULL AS IF EXISTS (SELECT 1 FROM dbo.Wide WHERE (A = @p OR @p IS NULL)) SELECT 1;
+        GO
+        CREATE PROCEDURE dbo.CursorByA @p INT = NULL AS
+            DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
+            OPEN c; FETCH NEXT FROM c; CLOSE c; DEALLOCATE c;
+        GO
+        CREATE PROCEDURE dbo.TableVariableByA @p INT = NULL AS DECLARE @t TABLE (Id INT); INSERT @t SELECT Id FROM dbo.Wide WHERE (A = @p OR @p IS NULL);
+        GO
         """;
 
     public async Task InitializeAsync()
@@ -66,6 +80,19 @@ public sealed partial class CatchAllOptionalParameterOptimizationOracleTests : I
         await using var call = new SqlCommand(statement, connection);
         await call.ExecuteNonQueryAsync();
         return reads;
+    }
+
+    [Theory]
+    [InlineData("dbo.FindByA", true)]
+    [InlineData("dbo.AssignByA", false)]
+    [InlineData("dbo.SetByA", false)]
+    [InlineData("dbo.DeclareByA", false)]
+    [InlineData("dbo.IfByA", false)]
+    [InlineData("dbo.CursorByA", false)]
+    [InlineData("dbo.TableVariableByA", false)]
+    public async Task AtCompat170_OnlySomeStatementKindsGetAPlanPerBranch(string procedure, bool dispatched)
+    {
+        Assert.Equal(dispatched, await PlanDispatchesOnOptionalParameterAsync(170, $"EXEC {procedure} @p = 7;"));
     }
 
     [Fact]

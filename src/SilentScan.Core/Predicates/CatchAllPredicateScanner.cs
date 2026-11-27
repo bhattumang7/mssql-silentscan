@@ -90,9 +90,15 @@ public static class CatchAllPredicateScanner
             _statementHasOptionRecompile = _statementRecompileStack.Pop();
         }
 
+        private readonly HashSet<QuerySpecification> _queriesWithoutAPlanPerBranch = [];
+
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+            node.Accept(new PlanPerBranchExclusions(_queriesWithoutAPlanPerBranch));
+
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
+            if (!HasActiveRecompileGuard
+                && (!OptionalParameterOptimizationApplies || _queriesWithoutAPlanPerBranch.Contains(node)))
             {
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }

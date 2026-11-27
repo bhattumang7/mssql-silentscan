@@ -482,4 +482,19 @@ public sealed class CatchAllPredicateScannerTests
 
         Assert.Single(findings);
     }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Customers WHERE Code = @p OR @p IS NULL;", false)]
+    [InlineData("UPDATE dbo.Customers SET Region = 'x' WHERE Code = @p OR @p IS NULL;", false)]
+    [InlineData("DECLARE @x INT; SELECT @x = Id FROM dbo.Customers WHERE Code = @p OR @p IS NULL;", true)]
+    [InlineData("DECLARE @x INT; SET @x = (SELECT COUNT(*) FROM dbo.Customers WHERE Code = @p OR @p IS NULL);", true)]
+    [InlineData("IF EXISTS (SELECT 1 FROM dbo.Customers WHERE Code = @p OR @p IS NULL) SELECT 1;", true)]
+    [InlineData("DECLARE c CURSOR LOCAL FOR SELECT Id FROM dbo.Customers WHERE Code = @p OR @p IS NULL;", true)]
+    [InlineData("DECLARE @t TABLE (Id INT); INSERT INTO @t SELECT Id FROM dbo.Customers WHERE Code = @p OR @p IS NULL;", true)]
+    public void AtCompat170_StatementsWithoutAPlanPerBranch_StillFire(string statement, bool fires)
+    {
+        var findings = Scan($"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20) AS BEGIN {statement} END", compatibilityLevel: 170);
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
 }
