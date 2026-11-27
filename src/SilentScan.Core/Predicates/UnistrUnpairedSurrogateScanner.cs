@@ -47,6 +47,11 @@ public static class UnistrUnpairedSurrogateScanner
             }
         }
 
+        private static bool IsPairedWithARawSurrogate(string value, UnistrEscapeParser.UnicodeEscape escape) =>
+            char.IsHighSurrogate((char)escape.CodePoint)
+                ? escape.EndIndex < value.Length && char.IsLowSurrogate(value[escape.EndIndex])
+                : escape.StartIndex > 0 && char.IsHighSurrogate(value[escape.StartIndex - 1]);
+
         private static List<UnistrEscapeParser.UnicodeEscape> FindUnpairedSurrogates(string value)
         {
             var escapes = UnistrEscapeParser.ParseEscapes(value);
@@ -71,7 +76,11 @@ public static class UnistrUnpairedSurrogateScanner
                     continue;
                 }
 
-                result.Add(current);
+                if (!IsPairedWithARawSurrogate(value, current))
+                {
+                    result.Add(current);
+                }
+
                 index++;
             }
 

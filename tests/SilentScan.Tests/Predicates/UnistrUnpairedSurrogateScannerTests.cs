@@ -85,4 +85,14 @@ public sealed class UnistrUnpairedSurrogateScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("\\D83D", 0xDE00, true)]
+    [InlineData("\\DE00", 0xD83D, false)]
+    public void EscapedSurrogateBesideItsRawPartner_NeverFires(string escape, int raw, bool escapeFirst)
+    {
+        var literal = escapeFirst ? escape + (char)raw : (char)raw + escape;
+
+        Assert.Empty(Scan($"SELECT UNISTR(N'{literal}');"));
+    }
 }
