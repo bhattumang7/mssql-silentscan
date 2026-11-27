@@ -24,6 +24,8 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         CREATE TABLE dbo.DynParam (Id INT PRIMARY KEY, V INT);
         CREATE TABLE dbo.DynExec (Id INT PRIMARY KEY, V INT);
         CREATE TABLE dbo.DynTrivial (Id INT PRIMARY KEY, V INT);
+        CREATE TABLE dbo.DynVariable (Id INT PRIMARY KEY, V INT);
+        CREATE TABLE dbo.DynLiteral (Id INT PRIMARY KEY, V INT);
         INSERT INTO dbo.DynTrivial VALUES (1, 1), (2, 2), (3, 3);
         INSERT INTO dbo.DynConcat VALUES (1, 1), (2, 2), (3, 3);
         INSERT INTO dbo.DynParam VALUES (1, 1), (2, 2), (3, 3);
@@ -55,15 +57,36 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         GO
         """;
 
+    private static readonly int[] ThreeValues = [1, 2, 3];
+
     private const string CachedPlansWhere = "FROM sys.dm_exec_cached_plans cp CROSS APPLY sys.dm_exec_sql_text(cp.plan_handle) st CROSS APPLY sys.dm_exec_plan_attributes(cp.plan_handle) pa WHERE pa.attribute = 'dbid' AND CAST(pa.value AS INT) = DB_ID()";
 
     private async Task<string> PreparedTextAsync(string table, string statement)
     {
-        await ExecuteAsync(statement);
-        var rows = await RowsAsync($"SELECT st.text {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%{table}%' AND st.text NOT LIKE '%dm_exec%';");
+        var rows = await ObserveUntilCachedAsync(
+            () => ExecuteAsync(statement),
+            () => RowsAsync($"SELECT st.text {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%{table}%' AND st.text NOT LIKE '%dm_exec%';"),
+            found => found.Count > 0);
         Assert.Single(rows);
         return ((string)rows[0][0]!).Replace(" ", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
+
+    private static async Task<T> ObserveUntilCachedAsync<T>(Func<Task> run, Func<Task<T>> read, Func<T, bool> stillCached)
+    {
+        const int Attempts = 50;
+        for (var attempt = 1; ; attempt++)
+        {
+            await run();
+            var observed = await read();
+            if (attempt == Attempts || stillCached(observed))
+            {
+                return observed;
+            }
+        }
+    }
+
+    private Task<int> PreparedPlanCountAsync(string table) =>
+        ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%{table}%' AND st.text NOT LIKE '%dm_exec%';");
 
     private async Task<int> CachedPlanCountAsync(string textLike) =>
         await ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND st.text LIKE '{textLike}' AND st.text NOT LIKE '%dm_exec%';");
@@ -159,14 +182,22 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     public async Task ConcatenatedExecStrings_CompileOnePlanPerValue_SpExecutesqlParameterControlCompilesOne()
     {
         await using var connection = await OpenConnectionAsync();
-        foreach (var id in new[] { 1, 2, 3 })
-        {
-            await ExecuteAsync(connection, $"DECLARE @s NVARCHAR(200) = N'SELECT V FROM dbo.DynConcat WHERE Id = ' + CAST({id} AS NVARCHAR(10)) + N' OPTION (MAXDOP 1)'; EXEC(@s);");
-            await ExecuteAsync(connection, $"EXEC sp_executesql N'SELECT V FROM dbo.DynParam WHERE Id = @i OPTION (MAXDOP 1)', N'@i INT', @i = {id};");
-        }
 
-        Assert.Equal(3, await CachedPlanCountAsync("%FROM dbo.DynConcat WHERE Id = [0-9]%"));
-        Assert.Equal(1, await CachedPlanCountAsync("%FROM dbo.DynParam WHERE Id = @i%"));
+        var counts = await ObserveUntilCachedAsync(
+            async () =>
+            {
+                foreach (var id in ThreeValues)
+                {
+                    await ExecuteAsync(connection, $"DECLARE @s NVARCHAR(200) = N'SELECT V FROM dbo.DynConcat WHERE Id = ' + CAST({id} AS NVARCHAR(10)) + N' OPTION (MAXDOP 1)'; EXEC(@s);");
+                    await ExecuteAsync(connection, $"EXEC sp_executesql N'SELECT V FROM dbo.DynParam WHERE Id = @i OPTION (MAXDOP 1)', N'@i INT', @i = {id};");
+                }
+            },
+            async () => (
+                Concatenated: await CachedPlanCountAsync("%FROM dbo.DynConcat WHERE Id = [0-9]%"),
+                Parameterized: await CachedPlanCountAsync("%FROM dbo.DynParam WHERE Id = @i%")),
+            found => found is (3, 1));
+
+        Assert.Equal((3, 1), counts);
     }
 
     [Fact]
@@ -175,14 +206,43 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     public async Task ConcatenatedExecStringOfATrivialStatement_IsAutoParameterizedIntoOneSharedPlan()
     {
         await using var connection = await OpenConnectionAsync();
-        foreach (var id in new[] { 1, 2, 3 })
-        {
-            await ExecuteAsync(connection, $"DECLARE @s NVARCHAR(200) = N'SELECT V FROM dbo.DynTrivial WHERE Id = ' + CAST({id} AS NVARCHAR(10)); EXEC(@s);");
-        }
 
-        var rows = await RowsAsync($"SELECT COUNT(*) {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%SELECT V FROM%DynTrivial%' AND st.text NOT LIKE '%dm_exec%';");
+        var prepared = await ObserveUntilCachedAsync(
+            async () =>
+            {
+                foreach (var id in ThreeValues)
+                {
+                    await ExecuteAsync(connection, $"DECLARE @s NVARCHAR(200) = N'SELECT V FROM dbo.DynTrivial WHERE Id = ' + CAST({id} AS NVARCHAR(10)); EXEC(@s);");
+                }
+            },
+            () => ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND cp.objtype = 'Prepared' AND st.text LIKE '(@%' AND st.text LIKE '%SELECT V FROM%DynTrivial%' AND st.text NOT LIKE '%dm_exec%';"),
+            found => found > 0);
 
-        Assert.Equal(1, (int)rows[0][0]!);
+        Assert.Equal(1, prepared);
+    }
+
+    [Fact]
+    [Trait("Rule", FindingRuleIds.ConcatenatedValueInConstantSqlRuleId)]
+    public async Task ForcedDatabaseStatementUsingAVariable_CompilesOnePlanPerConcatenatedValue()
+    {
+        await using var connection = await OpenConnectionAsync();
+
+        var counts = await ObserveUntilCachedAsync(
+            async () =>
+            {
+                foreach (var id in ThreeValues)
+                {
+                    await ExecuteAsync(connection, $"EXEC(N'DECLARE @v INT = 1; SELECT V FROM dbo.DynVariable WHERE V = @v AND Id = {id} OPTION (MAXDOP 1)');");
+                    await ExecuteAsync(connection, $"EXEC(N'SELECT V FROM dbo.DynLiteral WHERE Id = {id} OPTION (MAXDOP 1)');");
+                }
+            },
+            async () => (
+                WithVariable: await CachedPlanCountAsync("%FROM dbo.DynVariable WHERE V = @v AND Id = [0-9]%"),
+                ParameterizedWithVariable: await PreparedPlanCountAsync("DynVariable"),
+                ParameterizedWithout: await PreparedPlanCountAsync("DynLiteral")),
+            found => found is (3, 0, 1));
+
+        Assert.Equal((3, 0, 1), counts);
     }
 
     [Fact]
@@ -190,11 +250,19 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     public async Task UnqualifiedTableReference_CompilesOnePlanPerSchemaContext_QualifiedControlSharesOne()
     {
         await using var connection = await OpenConnectionAsync();
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC('SELECT Id FROM Q /*tagunq*/'); EXEC('SELECT Id FROM dbo.QualifiedT /*tagqual*/'); REVERT;");
-        await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC('SELECT Id FROM Q /*tagunq*/'); EXEC('SELECT Id FROM dbo.QualifiedT /*tagqual*/'); REVERT;");
 
-        Assert.Equal(2, await CachedPlanCountAsync("%FROM Q /*tagunq*/%"));
-        Assert.Equal(1, await CachedPlanCountAsync("%FROM dbo.QualifiedT /*tagqual*/%"));
+        var counts = await ObserveUntilCachedAsync(
+            async () =>
+            {
+                await ExecuteAsync(connection, "EXECUTE AS USER = 'u1'; EXEC('SELECT Id FROM Q /*tagunq*/'); EXEC('SELECT Id FROM dbo.QualifiedT /*tagqual*/'); REVERT;");
+                await ExecuteAsync(connection, "EXECUTE AS USER = 'u2'; EXEC('SELECT Id FROM Q /*tagunq*/'); EXEC('SELECT Id FROM dbo.QualifiedT /*tagqual*/'); REVERT;");
+            },
+            async () => (
+                Unqualified: await CachedPlanCountAsync("%FROM Q /*tagunq*/%"),
+                Qualified: await CachedPlanCountAsync("%FROM dbo.QualifiedT /*tagqual*/%")),
+            found => found is (2, 1));
+
+        Assert.Equal((2, 1), counts);
     }
 
     [Fact]
