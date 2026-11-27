@@ -105,7 +105,7 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
         var rowFilterComparisons = joinNodes
             .SelectMany(j => PredicateTreeWalker.FlattenAnd(j.SearchCondition)
                 .OfType<BooleanComparisonExpression>()
-                .Where(c => !IsConstantOnPreservedSide(c, j)))
+                .Where(c => !IsConstantOnPreservedSide(c.FirstExpression, c.SecondExpression, j)))
             .Concat(PredicateTreeWalker.FlattenAnd(whereCondition).OfType<BooleanComparisonExpression>())
             .ToList();
 
@@ -122,12 +122,21 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
             .SelectMany(c => BaseColumnResolver.ResolveAgainstColumnFreeSide(c, SourcePath, scopeChain, Catalog))
             .ToHashSet(TableColumnKeyComparer.For(Catalog));
 
+        rowFilterEqualityColumns.UnionWith(joinNodes
+            .SelectMany(j => PredicateTreeWalker.FlattenAnd(j.SearchCondition)
+                .OfType<InPredicate>()
+                .Where(i => !IsConstantOnPreservedSide(i.Expression, i.Values.FirstOrDefault(), j)))
+            .Concat(PredicateTreeWalker.FlattenAnd(whereCondition).OfType<InPredicate>())
+            .Where(i => !i.NotDefined && i.Subquery is null && !i.Values.Any(BaseColumnResolver.ContainsColumnReference))
+            .Select(i => BaseColumnResolver.ResolveBaseColumn(i.Expression, SourcePath, scopeChain, Catalog))
+            .OfType<ColumnProvenance.BaseColumn>());
+
         InspectStatement(new ConstrainedStatement(
             baseTables, andConstrainedColumns, andEqualityConstrainedColumns, rowFilterColumns, rowFilterEqualityColumns, rowFilterConstantComparedColumns,
             scopeChain, joinNodes, whereCondition, node, walker));
     }
 
-    private bool IsConstantOnPreservedSide(BooleanComparisonExpression comparison, QualifiedJoin join)
+    private bool IsConstantOnPreservedSide(ScalarExpression first, ScalarExpression? second, QualifiedJoin join)
     {
         var preservedBranches = join.QualifiedJoinType switch
         {
@@ -137,20 +146,20 @@ internal abstract class ConstrainedColumnStatementVisitor(string sourcePath, Dat
             _ => [],
         };
 
-        if (preservedBranches.Length == 0)
+        if (preservedBranches.Length == 0 || second is null)
         {
             return false;
         }
 
-        var firstFree = !BaseColumnResolver.ContainsColumnReference(comparison.FirstExpression);
-        var secondFree = !BaseColumnResolver.ContainsColumnReference(comparison.SecondExpression);
+        var firstFree = !BaseColumnResolver.ContainsColumnReference(first);
+        var secondFree = !BaseColumnResolver.ContainsColumnReference(second);
         if (firstFree == secondFree)
         {
             return false;
         }
 
         var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
-        (firstFree ? comparison.SecondExpression : comparison.FirstExpression).Accept(collector);
+        (firstFree ? second : first).Accept(collector);
 
         var preservedAliases = preservedBranches
             .SelectMany(PredicateTreeWalker.FlattenNamedTables)

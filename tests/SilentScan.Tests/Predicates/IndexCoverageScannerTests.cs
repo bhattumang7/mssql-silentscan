@@ -78,4 +78,16 @@ public sealed class IndexCoverageScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("A IN (1, 2, 3)", true)]
+    [InlineData("A NOT IN (1, 2, 3)", false)]
+    [InlineData("A IN (1, B)", false)]
+    [InlineData("A IN (SELECT Id FROM dbo.T3)", false)]
+    public void LeadingColumnInList_IsKeyLookupProne(string predicate, bool fires)
+    {
+        var findings = Scan($"SELECT Id, A, B, C FROM dbo.T WHERE {predicate};");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == IndexCoverageFindingKind.KeyLookupProneIndex && f.TableQualifiedName == "dbo.T"));
+    }
 }
