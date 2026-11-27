@@ -711,25 +711,51 @@ public sealed class NonSargablePredicateScannerTests
     }
 
     [Theory]
-    [InlineData("m", "Latin1_General_100_CI_AS", true)]
-    [InlineData("im", "Latin1_General_100_CI_AS", true)]
-    [InlineData("i", "Latin1_General_100_BIN2", true)]
-    [InlineData("ic", "Latin1_General_100_BIN2", true)]
-    [InlineData("i", "Latin1_General_100_CI_AS", false)]
-    [InlineData("i", "Latin1_General_100_CS_AS", false)]
-    [InlineData("c", "Latin1_General_100_BIN2", false)]
-    [InlineData("s", "Latin1_General_100_BIN2", false)]
-    [InlineData("cs", "Latin1_General_100_CI_AS", false)]
-    public void RegexpLikeFlags_FireExactlyWhenTheEngineStopsSeeking(string flags, string collation, bool fires)
+    [InlineData("^abc", "m", "Latin1_General_100_CI_AS")]
+    [InlineData("^abc", "im", "Latin1_General_100_CI_AS")]
+    [InlineData("^12", "m", "Latin1_General_100_BIN2")]
+    [InlineData("^abc", "i", "Latin1_General_100_BIN2")]
+    [InlineData("^abc", "ci", "Latin1_General_BIN")]
+    [InlineData("^12a", "i", "Latin1_General_100_BIN2")]
+    [InlineData("^ab+", "i", "Latin1_General_100_BIN2")]
+    public void RegexpLikeFlags_TheSeekRangeIgnores_FireAsDroppedMatches(string pattern, string flags, string collation)
     {
-        var sql = RegexpQuery("^abc")
-            .Replace("DisplayName NVARCHAR(40) NOT NULL", $"DisplayName VARCHAR(40) COLLATE {collation} NOT NULL", StringComparison.Ordinal)
-            .Replace("'^abc')", $"'^abc', '{flags}')", StringComparison.Ordinal);
+        var finding = Assert.Single(ScanSqlWithCatalog(RegexpFlagQuery(pattern, flags, collation)));
 
-        var findings = ScanSqlWithCatalog(sql);
-
-        Assert.Equal(fires, findings.Count == 1);
+        Assert.Equal(SargabilityFindingKind.RegexpSeekDropsMatches, finding.Kind);
+        Assert.Equal("DisplayName", finding.ColumnName);
     }
+
+    [Theory]
+    [InlineData("^abc", "i", "Latin1_General_100_CI_AS")]
+    [InlineData("^abc", "i", "Latin1_General_100_CS_AS")]
+    [InlineData("^abc", "c", "Latin1_General_100_BIN2")]
+    [InlineData("^abc", "ic", "Latin1_General_100_BIN2")]
+    [InlineData("^abc", "s", "Latin1_General_100_BIN2")]
+    [InlineData("^abc", "cs", "Latin1_General_100_CI_AS")]
+    [InlineData("^12", "i", "Latin1_General_100_BIN2")]
+    [InlineData("^1a?", "i", "Latin1_General_100_BIN2")]
+    [InlineData("^12[ab]", "i", "Latin1_General_100_BIN2")]
+    public void RegexpLikeFlags_TheSeekRangeHonoursOrCannotMiss_DoNotFire(string pattern, string flags, string collation) =>
+        Assert.Empty(ScanSqlWithCatalog(RegexpFlagQuery(pattern, flags, collation)));
+
+    [Theory]
+    [InlineData("WHERE NOT REGEXP_LIKE(DisplayName, '^abc', 'm')")]
+    [InlineData("WHERE CASE WHEN REGEXP_LIKE(DisplayName, '^abc', 'm') THEN 1 ELSE 0 END = 1")]
+    [InlineData("WHERE UserId = 1 AND REGEXP_LIKE(DisplayName, '^abc', 'm')")]
+    public void RegexpLikeFlags_WhereNoSeekOnTheColumnCanHappen_DoNotFire(string where) =>
+        Assert.Empty(ScanSqlWithCatalog(RegexpFlagQuery("^abc", "m", "Latin1_General_100_CI_AS")
+            .Replace("WHERE REGEXP_LIKE(DisplayName, '^abc', 'm')", where, StringComparison.Ordinal)));
+
+    [Fact]
+    public void RegexpLikeFlags_OnAnUnindexedColumn_DoNotFire() =>
+        Assert.Empty(ScanSqlWithCatalog(RegexpFlagQuery("^abc", "m", "Latin1_General_100_CI_AS")
+            .Replace("CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);", string.Empty, StringComparison.Ordinal)));
+
+    private static string RegexpFlagQuery(string pattern, string flags, string collation) =>
+        RegexpQuery(pattern)
+            .Replace("DisplayName NVARCHAR(40) NOT NULL", $"DisplayName VARCHAR(40) COLLATE {collation} NOT NULL", StringComparison.Ordinal)
+            .Replace($"'{pattern}')", $"'{pattern}', '{flags}')", StringComparison.Ordinal);
 
     [Fact]
     public void RegexpLikeFlags_FromAVariable_NeverFires()

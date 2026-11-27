@@ -98,7 +98,7 @@ public static class RegexpDefaultCaseSensitiveOnCiColumnScanner
                 return;
             }
 
-            if (flags is StringLiteral flagsLiteral && LastCaseFlag(flagsLiteral.Value) == 'i')
+            if (flags is StringLiteral flagsLiteral && RegexpSeekability.LastCaseFlag(flagsLiteral.Value) == 'i')
             {
                 return;
             }
@@ -112,15 +112,5 @@ public static class RegexpDefaultCaseSensitiveOnCiColumnScanner
             Findings.Add(new RegexpDefaultCaseSensitiveOnCiColumnFinding(functionName, r.TableQualifiedName, r.Column.Name, sourcePath, line, column));
         }
 
-        private static char? LastCaseFlag(string flags)
-        {
-            char? last = null;
-            foreach (var c in flags.Where(c => c is 'c' or 'i'))
-            {
-                last = c;
-            }
-
-            return last;
-        }
     }
 }

@@ -86,7 +86,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
 <main>
   <a class="back-link" href="index.html">&larr; SilentScan</a>
   <h1>SilentScan rules</h1>
-  <p class="tagline">145 rules. 111 carry fix guidance; 16 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
+  <p class="tagline">146 rules. 112 carry fix guidance; 17 link a real fixture example. Generated from the same catalog SARIF's own <code>rules</code> block reads &mdash; never hand-edited.</p>
 
   <section class="family-section">
     <h2>call-graph</h2>
@@ -372,6 +372,7 @@ footer { margin-top: 4rem; color: var(--muted); font-size: 0.85rem; }
       <li><a class="id" href="rules/tier1-function-wrapped-column.html">Function Wrapped Column</a> <code class="rule-key">silentscan/tier1/function-wrapped-column</code><span class="snippet">A column is wrapped in a function call inside a predicate, preventing an index seek.</span></li>
       <li><a class="id" href="rules/tier1-leading-wildcard-like.html">Leading Wildcard LIKE</a> <code class="rule-key">silentscan/tier1/leading-wildcard-like</code><span class="snippet">A LIKE predicate on a column starts with a wildcard, forcing a full scan.</span></li>
       <li><a class="id" href="rules/tier1-regexp-pattern-no-literal-prefix.html">Regexp Pattern No Literal Prefix</a> <code class="rule-key">silentscan/tier1/regexp-pattern-no-literal-prefix</code><span class="snippet">A REGEXP_LIKE predicate&#x27;s literal pattern has no anchored literal prefix, so the engine cannot derive a seek range from it and the predicate forces a scan.</span></li>
+      <li><a class="id" href="rules/tier1-regexp-seek-drops-matches.html">Regexp Seek Drops Matches</a> <code class="rule-key">silentscan/tier1/regexp-seek-drops-matches</code><span class="snippet">A REGEXP_LIKE predicate on an indexed column has an anchored literal prefix and flags that the seek range ignores.</span></li>
     </ul>
   </section>
 

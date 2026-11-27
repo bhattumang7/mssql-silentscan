@@ -96,6 +96,8 @@ public static class NonSargablePredicateScanner
 
         private ScalarExpression? _otherSide;
 
+        private HashSet<RegexpLikePredicate> _filteringRegexps = [];
+
         private enum OtherSideKind
         {
             ColumnFree,
@@ -136,6 +138,7 @@ public static class NonSargablePredicateScanner
         {
             _seekable = [];
             _equalityBound = [];
+            _filteringRegexps = [];
             var collector = new PredicateLeafCollector();
             node.Accept(collector);
             foreach (var leaf in collector.Leaves)
@@ -293,6 +296,7 @@ public static class NonSargablePredicateScanner
         {
             var dead = PredicateSurvivalAnalyzer.FindDeadComparisons(condition, columnRef => walker.ResolveColumnFacts(columnRef, scopeChain));
             (_seekable, _equalityBound) = CollectBareSeekableColumns(_companions.Contains(condition) ? _companions : [condition], scopeChain);
+            _filteringRegexps = [.. FilteringRegexps(condition)];
 
             var collector = new PredicateLeafCollector();
             condition.Accept(collector);
@@ -333,6 +337,14 @@ public static class NonSargablePredicateScanner
                     break;
             }
         }
+
+        private static IEnumerable<RegexpLikePredicate> FilteringRegexps(BooleanExpression condition) => condition switch
+        {
+            RegexpLikePredicate regexp => [regexp],
+            BooleanParenthesisExpression parenthesis => FilteringRegexps(parenthesis.Expression),
+            BooleanBinaryExpression binary => FilteringRegexps(binary.FirstExpression).Concat(FilteringRegexps(binary.SecondExpression)),
+            _ => [],
+        };
 
         private void InspectComparison(BooleanComparisonExpression node, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -422,28 +434,40 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (node.Pattern is StringLiteral literal
-                && (RegexpSeekability.CannotDeriveRange(literal.Value) || FlagsStopTheSeek(node.Flags, columnRef, scopeChain, walker)))
+            if (node.Pattern is not StringLiteral literal)
+            {
+                return;
+            }
+
+            if (RegexpSeekability.CannotDeriveRange(literal.Value))
             {
                 Add(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, columnName, detail: null, node, columnRef, scopeChain, walker);
             }
+            else if (FlagTheSeekRangeIgnores(node, literal.Value, columnRef, scopeChain, walker) is { } flag)
+            {
+                Add(SargabilityFindingKind.RegexpSeekDropsMatches, columnName, flag, node, columnRef, scopeChain, walker);
+            }
         }
 
-        private static bool FlagsStopTheSeek(ScalarExpression? flags, ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
+        private string? FlagTheSeekRangeIgnores(RegexpLikePredicate node, string pattern, ColumnReferenceExpression columnRef, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (flags is not StringLiteral { Value: { } value })
+            if (!_filteringRegexps.Contains(node)
+                || node.Flags is not StringLiteral { Value: { } flags }
+                || ResolveIndexInfo(columnRef, scopeChain, walker).Indexed != true)
             {
-                return false;
+                return null;
             }
 
-            if (value.Contains('m', StringComparison.Ordinal))
+            if (flags.Contains('m', StringComparison.Ordinal))
             {
-                return true;
+                return "m";
             }
 
-            return value.Contains('i', StringComparison.Ordinal)
-                && walker.ResolveCatalogColumn(columnRef, scopeChain) is { } resolved
-                && resolved.Column.Type?.Collation is { IsBinary: true };
+            return RegexpSeekability.LastCaseFlag(flags) == 'i'
+                && RegexpSeekability.RangeHoldsALetter(pattern)
+                && walker.ResolveCatalogColumn(columnRef, scopeChain) is { Column.Type.Collation.IsBinary: true }
+                    ? "i"
+                    : null;
         }
 
         private static ScalarExpression UnwrapParentheses(ScalarExpression expression)

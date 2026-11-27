@@ -351,6 +351,7 @@ public static class FindingRuleIds
     public const string Tier1ColumnArithmeticRuleId = "silentscan/tier1/column-arithmetic";
     public const string Tier1LeadingWildcardLikeRuleId = "silentscan/tier1/leading-wildcard-like";
     public const string Tier1RegexpPatternNoLiteralPrefixRuleId = "silentscan/tier1/regexp-pattern-no-literal-prefix";
+    public const string Tier1RegexpSeekDropsMatchesRuleId = "silentscan/tier1/regexp-seek-drops-matches";
     public const string Tier1CaseFoldOnColumnRuleId = "silentscan/tier1/case-fold-on-column";
     public const string Tier1DateFunctionOnColumnRuleId = "silentscan/tier1/date-function-on-column";
     public const string Tier1CharindexOrLeftOnColumnRuleId = "silentscan/tier1/charindex-or-left-on-column";
@@ -361,6 +362,7 @@ public static class FindingRuleIds
         SargabilityFindingKind.ColumnArithmetic => Tier1ColumnArithmeticRuleId,
         SargabilityFindingKind.LeadingWildcardLike => Tier1LeadingWildcardLikeRuleId,
         SargabilityFindingKind.RegexpPatternNoLiteralPrefix => Tier1RegexpPatternNoLiteralPrefixRuleId,
+        SargabilityFindingKind.RegexpSeekDropsMatches => Tier1RegexpSeekDropsMatchesRuleId,
         SargabilityFindingKind.CaseFoldOnColumn => Tier1CaseFoldOnColumnRuleId,
         SargabilityFindingKind.DateFunctionOnColumn => Tier1DateFunctionOnColumnRuleId,
         SargabilityFindingKind.CharindexOrLeftOnColumn => Tier1CharindexOrLeftOnColumnRuleId,

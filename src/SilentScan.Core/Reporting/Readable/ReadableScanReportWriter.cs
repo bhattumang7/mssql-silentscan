@@ -440,6 +440,7 @@ public static class ReadableScanReportWriter
         SargabilityFindingKind.DateFunctionOnColumn => "Date-part function applied to the column",
         SargabilityFindingKind.CharindexOrLeftOnColumn => "CHARINDEX/LEFT applied to the column",
         SargabilityFindingKind.RegexpPatternNoLiteralPrefix => "REGEXP_LIKE pattern has no anchored literal prefix",
+        SargabilityFindingKind.RegexpSeekDropsMatches => "REGEXP_LIKE index seek leaves out matching rows",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled SargabilityFindingKind."),
     };
 
@@ -459,6 +460,8 @@ public static class ReadableScanReportWriter
             "Oracle-verified: the date-part function forces a per-row scan just like any other function wrap. Usually rewritable to a sargable literal date range (e.g. YEAR(col)=2024 becomes col >= '2024-01-01' AND col < '2025-01-01') that restores the seek.",
         SargabilityFindingKind.CharindexOrLeftOnColumn =>
             "See the finding's own Detail for whether this specific comparison is a prefix match with a real sargable rewrite (col LIKE 'x%'), or a genuine substring search with none.",
+        SargabilityFindingKind.RegexpSeekDropsMatches =>
+            "The engine builds the index range from the literal start of the pattern without applying the flags, so a seek never reads some rows the pattern matches. See the finding's own Detail for the flag.",
         _ =>
             "The pattern is a variable or expression, so the plan cannot be built around a known prefix; the engine has to assume the worst at compile time.",
     };

@@ -24,12 +24,6 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
         GO
         CREATE INDEX IX_Users_DisplayName ON dbo.Users(DisplayName);
         GO
-        CREATE TABLE dbo.Codes (BinaryCode VARCHAR(40) COLLATE Latin1_General_100_BIN2 NOT NULL, CaseCode VARCHAR(40) COLLATE Latin1_General_100_CS_AS NOT NULL);
-        GO
-        CREATE INDEX IX_Codes_BinaryCode ON dbo.Codes(BinaryCode);
-        GO
-        CREATE INDEX IX_Codes_CaseCode ON dbo.Codes(CaseCode);
-        GO
         """;
 
     public async Task InitializeAsync()
@@ -124,22 +118,5 @@ public sealed class RegexpPatternNoLiteralPrefixOracleTests : IAsyncLifetime
         var result = await _verifier.VerifyAsync(_databaseName, finding, _catalog);
 
         Assert.Equal(Tier1Outcome.Confirmed, result.Outcome);
-    }
-
-    [Theory]
-    [InlineData("dbo.Users", "DisplayName", "m", Tier1Outcome.Confirmed)]
-    [InlineData("dbo.Users", "DisplayName", "i", Tier1Outcome.NotConfirmed)]
-    [InlineData("dbo.Codes", "CaseCode", "i", Tier1Outcome.NotConfirmed)]
-    [InlineData("dbo.Codes", "BinaryCode", "i", Tier1Outcome.Confirmed)]
-    [InlineData("dbo.Codes", "BinaryCode", "ic", Tier1Outcome.Confirmed)]
-    [InlineData("dbo.Codes", "BinaryCode", "c", Tier1Outcome.NotConfirmed)]
-    [InlineData("dbo.Codes", "BinaryCode", "s", Tier1Outcome.NotConfirmed)]
-    public async Task VerifyAsync_FlagsArgument_DecidesWhetherTheEngineStillSeeks(string table, string column, string flags, Tier1Outcome expected)
-    {
-        var finding = Finding(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, $"REGEXP_LIKE({column}, '^John', '{flags}')") with { TableQualifiedName = table, ColumnName = column };
-
-        var result = await _verifier.VerifyAsync(_databaseName, finding, _catalog);
-
-        Assert.Equal(expected, result.Outcome);
     }
 }

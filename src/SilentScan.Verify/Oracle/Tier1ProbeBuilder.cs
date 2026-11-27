@@ -7,7 +7,8 @@ public static class Tier1ProbeBuilder
 {
     public static string? Build(SargabilityFinding finding, DatabaseCatalog catalog)
     {
-        if (finding.PredicateFragmentText is not { } fragmentText || finding.TableQualifiedName is not { } tableQualifiedName)
+        if (finding.Kind == SargabilityFindingKind.RegexpSeekDropsMatches
+            || finding.PredicateFragmentText is not { } fragmentText || finding.TableQualifiedName is not { } tableQualifiedName)
         {
             return null;
         }

@@ -17,4 +17,5 @@ public enum SargabilityFindingKind
     DateFunctionOnColumn,
 
     CharindexOrLeftOnColumn,
+    RegexpSeekDropsMatches,
 }

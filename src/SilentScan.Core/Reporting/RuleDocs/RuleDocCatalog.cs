@@ -10,6 +10,7 @@ public static class RuleDocCatalog
         [Tier1.ColumnArithmetic.RuleId] = Tier1.ColumnArithmetic.Content,
         [Tier1.LeadingWildcardLike.RuleId] = Tier1.LeadingWildcardLike.Content,
         [Tier1.RegexpPatternNoLiteralPrefix.RuleId] = Tier1.RegexpPatternNoLiteralPrefix.Content,
+        [Tier1.RegexpSeekDropsMatches.RuleId] = Tier1.RegexpSeekDropsMatches.Content,
         [Tier1.CaseFoldOnColumn.RuleId] = Tier1.CaseFoldOnColumn.Content,
         [Tier1.DateFunctionOnColumn.RuleId] = Tier1.DateFunctionOnColumn.Content,
         [Tier1.CharindexOrLeftOnColumn.RuleId] = Tier1.CharindexOrLeftOnColumn.Content,
