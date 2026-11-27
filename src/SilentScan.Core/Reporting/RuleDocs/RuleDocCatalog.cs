@@ -23,6 +23,7 @@ public static class RuleDocCatalog
         [WriteLoss.NumericScaleNarrowing.RuleId] = WriteLoss.NumericScaleNarrowing.Content,
         [WriteLoss.TemporalPrecisionLoss.RuleId] = WriteLoss.TemporalPrecisionLoss.Content,
         [WriteLoss.LengthTruncation.RuleId] = WriteLoss.LengthTruncation.Content,
+        [WriteLoss.ExactToApproximate.RuleId] = WriteLoss.ExactToApproximate.Content,
         [WriteLoss.TemporalScaleNarrowing.RuleId] = WriteLoss.TemporalScaleNarrowing.Content,
         [WriteLoss.TemporalOffsetDropped.RuleId] = WriteLoss.TemporalOffsetDropped.Content,
         [WriteLoss.SmallDateTimeRounding.RuleId] = WriteLoss.SmallDateTimeRounding.Content,

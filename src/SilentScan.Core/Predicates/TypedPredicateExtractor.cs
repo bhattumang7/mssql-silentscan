@@ -17,8 +17,10 @@ public static class TypedPredicateExtractor
     {
         var resolvedViews = lineage.AllRelations;
         var ledger = new SkipLedger();
-        var numericRoundAbortByStatement = NumericRoundAbortFlowResolver.Resolve(parseResult.Fragment);
-        var rule = new Rule(parseResult.SourcePath, catalog, resolvedViews, externalVariables, ledger, callerScopeByCalleeScope, numericRoundAbortByStatement);
+        var settings = new StatementSettings(
+            SetOptionByStatementResolver.Resolve(parseResult.Fragment, SetOptions.NumericRoundAbort, setting: true),
+            SetOptionByStatementResolver.Resolve(parseResult.Fragment, SetOptions.AnsiWarnings, setting: false));
+        var rule = new Rule(parseResult.SourcePath, catalog, resolvedViews, externalVariables, ledger, callerScopeByCalleeScope, settings);
         var walker = new ModuleWalker(
             parseResult.SourcePath, catalog, resolvedViews, rules: [rule],
             callerContext: new ModuleWalkerCallerContext(ledger, enclosingScope?.ProcScope, callerScopeByCalleeScope));
@@ -35,6 +37,10 @@ public static class TypedPredicateExtractor
             rule.LocalVariablePredicateFindings, rule.FilteredIndexParameterMismatchFindings);
     }
 
+    private sealed record StatementSettings(
+        IReadOnlyDictionary<TSqlStatement, bool> NumericRoundAbortOn,
+        IReadOnlyDictionary<TSqlStatement, bool> AnsiWarningsOff);
+
     private sealed class Rule(
         string sourcePath,
         DatabaseCatalog catalog,
@@ -42,7 +48,7 @@ public static class TypedPredicateExtractor
         IReadOnlyDictionary<string, SqlType?>? externalVariables,
         SkipLedger ledger,
         IReadOnlyDictionary<string, IReadOnlyList<string>>? callerScopeByCalleeScope,
-        IReadOnlyDictionary<TSqlStatement, bool> numericRoundAbortByStatement) : IModuleRule
+        StatementSettings settings) : IModuleRule
     {
         private const string PredicateOperandConstructKind = "predicate operand";
 
@@ -191,8 +197,13 @@ public static class TypedPredicateExtractor
 
         private bool IsNumericRoundAbortOnForCurrentStatement =>
             _currentWriteStatement is { } statement
-            && numericRoundAbortByStatement.TryGetValue(statement, out var isOn)
+            && settings.NumericRoundAbortOn.TryGetValue(statement, out var isOn)
             && isOn;
+
+        private bool IsAnsiWarningsOffForCurrentStatement =>
+            _currentWriteStatement is { } statement
+            && settings.AnsiWarningsOff.TryGetValue(statement, out var isOff)
+            && isOff;
 
         private VariableSourceCollector _variableSources = new();
 
@@ -864,7 +875,8 @@ public static class TypedPredicateExtractor
                 ? null
                 : leaf => OperandType(ResolveOperand(leaf, site.Scope, site.Walker));
             var kind = Rules.WriteLossClassifier.Classify(
-                site.TargetType, site.SourceType, site.Source as ScalarExpression, isVariableTarget: site.Target.IsSilentTarget(), operandType);
+                site.TargetType, site.SourceType, site.Source as ScalarExpression,
+                isVariableTarget: site.Target.IsSilentTarget() || IsAnsiWarningsOffForCurrentStatement, operandType);
             if (kind is null || !site.Target.IsOracleVerified(kind.Value))
             {
                 return false;

@@ -13,12 +13,11 @@ internal static class LengthTruncation
             SELECT, SQL Server does not raise an error. It silently keeps only the leading
             characters/bytes that fit and discards the rest.
 
-            This is scoped to variable targets specifically, because the same narrowing behaves
-            completely differently against a table column: inserting or updating a table column
-            with a value longer than its declared length raises a hard error ("String or binary
-            data would be truncated"), not a silent loss. So this rule only fires where the loss is
-            actually silent - local variable assignment - never for INSERT/UPDATE into a real
-            column, where the engine already stops you.
+            Inserting or updating a table column with a value longer than its declared length
+            normally raises an error ("String or binary data would be truncated"), which this rule
+            leaves to the engine. Under SET ANSI_WARNINGS OFF that error is not raised and the
+            column receives the shortened value, so column writes are reported where that setting
+            is in effect on every path to the statement.
 
             A scalar function's RETURN is the same kind of assignment: the returned value is
             converted to the function's declared RETURNS type, so a longer value is cut to the

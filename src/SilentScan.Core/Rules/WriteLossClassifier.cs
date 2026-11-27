@@ -32,6 +32,11 @@ public static partial class WriteLossClassifier
             return numericKind;
         }
 
+        if (IsExactToApproximatePrecisionRisk(target, source, literal))
+        {
+            return Predicates.WriteLossKind.ExactToApproximatePrecisionLoss;
+        }
+
         if (IsTemporalPrecisionLossRisk(target, source, literal) && !IsProvablyMidnight(sourceExpression, operandType))
         {
             return Predicates.WriteLossKind.TemporalPrecisionLoss;
@@ -79,6 +84,37 @@ public static partial class WriteLossClassifier
             ? Predicates.WriteLossKind.ApproximateToExactTruncation
             : Predicates.WriteLossKind.NumericScaleNarrowing;
     }
+
+    private const int RealDigitsKept = 7;
+
+    private const int FloatDigitsKept = 15;
+
+    private const int LargestRealMantissaBits = 24;
+
+    private static bool IsExactToApproximatePrecisionRisk(SqlType target, SqlType source, Literal? literal) =>
+        ApproximateDigitsKept(target) is { } kept
+        && ExactDigits(source) > kept
+        && (literal is null || SignificantDigits(literal) > kept);
+
+    private static int? ApproximateDigitsKept(SqlType target) => target.Category switch
+    {
+        SqlTypeCategory.Real => RealDigitsKept,
+        SqlTypeCategory.Float => target.Precision is { } bits && bits <= LargestRealMantissaBits ? RealDigitsKept : FloatDigitsKept,
+        _ => null,
+    };
+
+    private static int ExactDigits(SqlType source) => source.Category switch
+    {
+        SqlTypeCategory.TinyInt => 3,
+        SqlTypeCategory.SmallInt => 5,
+        SqlTypeCategory.Int or SqlTypeCategory.SmallMoney => 10,
+        SqlTypeCategory.BigInt or SqlTypeCategory.Money => 19,
+        SqlTypeCategory.Decimal => source.Precision ?? 18,
+        _ => 0,
+    };
+
+    private static int SignificantDigits(Literal literal) =>
+        string.Concat(literal.Value.Where(char.IsAsciiDigit)).Trim('0').Length;
 
     private static bool IsTemporalPrecisionLossRisk(SqlType target, SqlType source, Literal? literal) =>
         target.Category == SqlTypeCategory.Date && (IsWiderTemporal(source.Category) || source.IsStringFamily) && !IsDateOnlyLiteral(literal);

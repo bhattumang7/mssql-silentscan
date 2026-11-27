@@ -31,6 +31,14 @@ public sealed class WriteLossLengthTruncationPairedOracleTests : RuleOracle
 
     private const string DefaultTruncating = "default-value-longer-than-the-parameter";
 
+    private const string Table = "CREATE TABLE dbo.T (C VARCHAR(5) NULL);\nGO\n";
+
+    private const string ColumnTruncated = Table + "CREATE PROCEDURE dbo.P AS BEGIN SET ANSI_WARNINGS OFF; DECLARE @src VARCHAR(20) = 'HelloWorldHello'; INSERT INTO dbo.T (C) VALUES (@src); SELECT C FROM dbo.T; END\nGO\n";
+
+    private const string ColumnFitting = Table + "CREATE PROCEDURE dbo.P AS BEGIN SET ANSI_WARNINGS OFF; DECLARE @src VARCHAR(5) = 'Hello'; INSERT INTO dbo.T (C) VALUES (@src); SELECT C FROM dbo.T; END\nGO\n";
+
+    private const string ColumnTruncating = "value-written-to-a-shorter-column-with-ansi-warnings-off";
+
     protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations { get; } =
     [
         finding => ((WriteLossFinding)finding) with { ColumnName = "@other" },
@@ -43,6 +51,7 @@ public sealed class WriteLossLengthTruncationPairedOracleTests : RuleOracle
         new(ReturnTruncating, ReturnTruncated, "SELECT dbo.F() AS V;"),
         new(SelectTruncating, SelectTruncated, "EXEC dbo.P;"),
         new(DefaultTruncating, DefaultTruncated, "EXEC dbo.P;"),
+        new(ColumnTruncating, ColumnTruncated, "EXEC dbo.P;"),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
@@ -51,5 +60,6 @@ public sealed class WriteLossLengthTruncationPairedOracleTests : RuleOracle
         new(new("value-fits-the-return-type", ReturnFitting, "SELECT dbo.F() AS V;"), ReturnTruncating, OwnSetup: true),
         new(new("value-selected-fits-the-variable", SelectFitting, "EXEC dbo.P;"), SelectTruncating, OwnSetup: true),
         new(new("default-value-fits-the-parameter", DefaultFitting, "EXEC dbo.P;"), DefaultTruncating, OwnSetup: true),
+        new(new("value-fits-the-column", ColumnFitting, "EXEC dbo.P;"), ColumnTruncating, OwnSetup: true),
     ];
 }

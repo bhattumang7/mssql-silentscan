@@ -12,6 +12,7 @@ public static class FindingRuleIds
     public const string WriteLossTemporalScaleNarrowingRuleId = "silentscan/write-loss/temporal-scale-narrowing";
     public const string WriteLossTemporalOffsetDroppedRuleId = "silentscan/write-loss/temporal-offset-dropped";
     public const string WriteLossSmallDateTimeRoundingRuleId = "silentscan/write-loss/smalldatetime-rounding";
+    public const string WriteLossExactToApproximateRuleId = "silentscan/write-loss/exact-to-approximate-precision-loss";
     public const string TvfFenceCorrelatedApplyRuleId = "silentscan/tvf-fence/correlated-apply";
     public const string TvfFenceNestedUnderViewOrTvfRuleId = "silentscan/tvf-fence/nested-under-view-or-tvf";
     public const string ScalarUdfPredicateInvocationRuleId = "silentscan/scalar-udf/in-predicate";
@@ -344,6 +345,7 @@ public static class FindingRuleIds
         WriteLossKind.TemporalScaleNarrowing => WriteLossTemporalScaleNarrowingRuleId,
         WriteLossKind.TemporalOffsetDropped => WriteLossTemporalOffsetDroppedRuleId,
         WriteLossKind.SmallDateTimeRounding => WriteLossSmallDateTimeRoundingRuleId,
+        WriteLossKind.ExactToApproximatePrecisionLoss => WriteLossExactToApproximateRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unhandled WriteLossKind."),
     };
     public const string Tier1FunctionWrappedColumnRuleId = "silentscan/tier1/function-wrapped-column";

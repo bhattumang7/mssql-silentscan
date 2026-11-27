@@ -38,6 +38,64 @@ public sealed class WriteLossExtractionTests
         Assert.Equal(fires, findings.Any(f => f.Kind == WriteLossKind.TemporalScaleNarrowing));
     }
 
+    [Theory]
+    [InlineData("FLOAT", "BIGINT")]
+    [InlineData("FLOAT", "MONEY")]
+    [InlineData("FLOAT", "DECIMAL(16,0)")]
+    [InlineData("FLOAT(53)", "DECIMAL(38,4)")]
+    [InlineData("REAL", "INT")]
+    [InlineData("REAL", "SMALLMONEY")]
+    [InlineData("REAL", "DECIMAL(8,0)")]
+    [InlineData("FLOAT(24)", "BIGINT")]
+    public void Extract_ExactSourceWithMoreDigitsThanTheApproximateTargetKeeps_FlagsPrecisionLoss(string targetType, string sourceType)
+    {
+        var findings = Extract(
+            $"CREATE TABLE dbo.Src (C {sourceType} NULL); CREATE TABLE dbo.Dst (C {targetType} NULL);",
+            "INSERT INTO dbo.Dst (C) SELECT C FROM dbo.Src;");
+
+        Assert.Equal(WriteLossKind.ExactToApproximatePrecisionLoss, Assert.Single(findings).Kind);
+    }
+
+    [Theory]
+    [InlineData("FLOAT", "INT")]
+    [InlineData("FLOAT", "SMALLMONEY")]
+    [InlineData("FLOAT", "DECIMAL(15,4)")]
+    [InlineData("REAL", "SMALLINT")]
+    [InlineData("REAL", "DECIMAL(7,0)")]
+    [InlineData("DECIMAL(38,0)", "BIGINT")]
+    public void Extract_ExactSourceTheApproximateTargetKeeps_DoesNotFlagPrecisionLoss(string targetType, string sourceType) =>
+        Assert.Empty(Extract(
+            $"CREATE TABLE dbo.Src (C {sourceType} NULL); CREATE TABLE dbo.Dst (C {targetType} NULL);",
+            "INSERT INTO dbo.Dst (C) SELECT C FROM dbo.Src;"));
+
+    [Theory]
+    [InlineData("FLOAT", "9007199254740993", true)]
+    [InlineData("FLOAT", "12345.5", false)]
+    [InlineData("REAL", "16777217", true)]
+    [InlineData("REAL", "1000000000", false)]
+    [InlineData("REAL", "-0.125", false)]
+    public void Extract_ExactLiteralIntoApproximateColumn_FlagsOnlyWhenItsDigitsDoNotFit(string targetType, string literal, bool fires)
+    {
+        var findings = Extract($"CREATE TABLE dbo.Dst (C {targetType} NULL);", $"INSERT INTO dbo.Dst (C) VALUES ({literal});");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == WriteLossKind.ExactToApproximatePrecisionLoss));
+    }
+
+    [Theory]
+    [InlineData("SET ANSI_WARNINGS OFF;\n    INSERT INTO dbo.T (C) SELECT W FROM dbo.S;", true)]
+    [InlineData("SET ANSI_WARNINGS OFF;\n    UPDATE dbo.T SET C = (SELECT MAX(W) FROM dbo.S);", true)]
+    [InlineData("SET ANSI_WARNINGS OFF;\n    SET ANSI_WARNINGS ON;\n    INSERT INTO dbo.T (C) SELECT W FROM dbo.S;", false)]
+    [InlineData("INSERT INTO dbo.T (C) SELECT W FROM dbo.S;\n    SET ANSI_WARNINGS OFF;", false)]
+    [InlineData("IF @f = 1 SET ANSI_WARNINGS OFF;\n    INSERT INTO dbo.T (C) SELECT W FROM dbo.S;", false)]
+    public void Extract_LongerValueIntoColumn_FlagsLengthTruncationOnlyWithAnsiWarningsOff(string body, bool fires)
+    {
+        var findings = Extract(
+            "CREATE TABLE dbo.S (W VARCHAR(20) NULL); CREATE TABLE dbo.T (C VARCHAR(3) NULL);",
+            $"CREATE PROCEDURE dbo.P @f INT AS\nBEGIN\n    {body}\nEND");
+
+        Assert.Equal(fires, findings.Any(f => f.Kind == WriteLossKind.LengthTruncation));
+    }
+
     [Fact]
     public void Extract_InsertValuesWithNonAsciiUnicodeLiteralIntoVarchar_FlagsUnicodeReplacement()
     {

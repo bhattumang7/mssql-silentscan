@@ -17,4 +17,6 @@ public enum WriteLossKind
     TemporalOffsetDropped,
 
     SmallDateTimeRounding,
+
+    ExactToApproximatePrecisionLoss,
 }
