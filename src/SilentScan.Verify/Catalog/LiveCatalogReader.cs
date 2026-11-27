@@ -1200,7 +1200,7 @@ public sealed class LiveCatalogReader
         SqlConnection connection, CancellationToken cancellationToken)
     {
         const string sql = """
-            SELECT s.object_id, s.stats_id, s.name, s.no_recompute, s.auto_created, c.name AS column_name
+            SELECT s.object_id, s.stats_id, s.name, s.no_recompute, s.auto_created, c.name AS column_name, s.filter_definition
             FROM sys.stats s
             JOIN sys.tables t ON t.object_id = s.object_id
             JOIN sys.stats_columns sc ON sc.object_id = s.object_id AND sc.stats_id = s.stats_id
@@ -1211,7 +1211,7 @@ public sealed class LiveCatalogReader
 
         await using var command = connection.CreateReadOnlyCommand(sql);
 
-        var rowsByStat = new Dictionary<(int ObjectId, int StatsId), (string Name, bool NoRecompute, bool IsAutoCreated, List<string> KeyColumns)>();
+        var rowsByStat = new Dictionary<(int ObjectId, int StatsId), (string Name, bool NoRecompute, bool IsAutoCreated, List<string> KeyColumns, string? Filter)>();
         var statOrderByTable = new Dictionary<int, List<(int ObjectId, int StatsId)>>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -1222,7 +1222,8 @@ public sealed class LiveCatalogReader
 
             if (!rowsByStat.TryGetValue(key, out var row))
             {
-                row = (reader.GetString(2), reader.GetBoolean(3), reader.GetBoolean(4), []);
+                row = (reader.GetString(2), reader.GetBoolean(3), reader.GetBoolean(4), [],
+                    await reader.IsDBNullAsync(6, cancellationToken) ? null : reader.GetString(6));
                 rowsByStat[key] = row;
 
                 if (!statOrderByTable.TryGetValue(objectId, out var order))
@@ -1242,7 +1243,7 @@ public sealed class LiveCatalogReader
         {
             statisticsByTable[objectId] = order
                 .Select(key => rowsByStat[key])
-                .Select(row => new CatalogStatisticsInfo(row.Name, row.NoRecompute, row.IsAutoCreated, row.KeyColumns))
+                .Select(row => new CatalogStatisticsInfo(row.Name, row.NoRecompute, row.IsAutoCreated, row.KeyColumns, row.Filter))
                 .ToList();
         }
 

@@ -40,6 +40,9 @@ public static class MissingStatisticsScanner
 
         protected override void InspectStatement(ConstrainedStatement statement)
         {
+            var referenced = new HashSet<(string Table, string Column)>(TableColumnKeyComparer.For(Catalog));
+            statement.Node.Accept(new BaseColumnResolver.ColumnReferenceCollector(SourcePath, statement.ScopeChain, referenced, Catalog));
+
             foreach (var table in statement.BaseTables)
             {
                 var constrainedColumns = statement.AndConstrainedColumns
@@ -49,7 +52,7 @@ public static class MissingStatisticsScanner
 
                 foreach (var columnName in constrainedColumns)
                 {
-                    if (HasApplicableStatistic(table, columnName) || CannotHaveAStatistic(table, columnName))
+                    if (HasApplicableStatistic(table, columnName, referenced) || CannotHaveAStatistic(table, columnName))
                     {
                         continue;
                     }
@@ -63,8 +66,24 @@ public static class MissingStatisticsScanner
         private bool CannotHaveAStatistic(CatalogTable table, string columnName) =>
             table.FindColumn(columnName, Catalog.IdentifierComparer) is { IsComputed: true, IsDeterministic: false };
 
-        private bool HasApplicableStatistic(CatalogTable table, string columnName) =>
+        private bool HasApplicableStatistic(
+            CatalogTable table, string columnName, HashSet<(string Table, string Column)> referenced) =>
             table.EffectiveStatistics.Any(s =>
-                s.KeyColumns.Count > 0 && Catalog.IdentifierComparer.Equals(s.KeyColumns[0], columnName));
+                s.KeyColumns.Count > 0 && Catalog.IdentifierComparer.Equals(s.KeyColumns[0], columnName)
+                && FilterColumns(s.FilterDefinition).All(column => referenced.Contains((table.QualifiedName, column))));
+
+        private IEnumerable<string> FilterColumns(string? filterDefinition)
+        {
+            if (filterDefinition is null)
+            {
+                return [];
+            }
+
+            var parsed = SqlScriptParser.ParseText(
+                "filter-definition.sql", $"SELECT 1 WHERE {filterDefinition};", initialQuotedIdentifiers: true, Catalog.CompatibilityLevel);
+            var collector = new ColumnAliasHelpers.RawColumnReferenceCollector();
+            parsed.Fragment.Accept(collector);
+            return collector.References.Select(reference => reference.MultiPartIdentifier.Identifiers[^1].Value);
+        }
     }
 }

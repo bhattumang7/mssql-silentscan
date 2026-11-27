@@ -141,4 +141,17 @@ public sealed class MissingStatisticsScannerTests
 
         Assert.Equal(expected, Scan("SELECT 1 FROM dbo.Orders WHERE OrderId = 1;", catalog).Count);
     }
+
+    [Theory]
+    [InlineData("SELECT 1 FROM dbo.Orders WHERE Status = 5;", true)]
+    [InlineData("SELECT 1 FROM dbo.Orders WHERE Status = 5 AND Region = 1;", false)]
+    public void AFilteredStatisticNeedsItsFilterColumnsInTheStatement(string statement, bool reportsStatus)
+    {
+        var catalog = Catalog(false, [
+            new CatalogStatisticsInfo("S_Filtered", false, false, ["Status"], "([Region]=(1))"),
+            new CatalogStatisticsInfo("S_Region", false, false, ["Region"]),
+        ]);
+
+        Assert.Equal(reportsStatus, Scan(statement, catalog).Any(f => f.ColumnName == "Status"));
+    }
 }
