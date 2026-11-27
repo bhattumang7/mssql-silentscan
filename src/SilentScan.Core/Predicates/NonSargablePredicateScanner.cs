@@ -375,6 +375,16 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
+            if (UnwrapParentheses(node.FirstExpression) is CastCall or ConvertCall)
+            {
+                if (IsSeekablePattern(node))
+                {
+                    InspectSide(node.FirstExpression, scopeChain, walker);
+                }
+
+                return;
+            }
+
             if (node.FirstExpression is not ColumnReferenceExpression columnRef || ColumnName(columnRef) is not { } columnName)
             {
                 return;
@@ -391,6 +401,15 @@ public static class NonSargablePredicateScanner
                     break;
             }
         }
+
+        private static bool IsSeekablePattern(LikePredicate node) =>
+            !node.NotDefined
+            && UnwrapParentheses(node.SecondExpression) switch
+            {
+                StringLiteral literal => node.EscapeExpression is not null || !StartsWithUnseekableWildcard(literal.Value),
+                VariableReference => true,
+                _ => false,
+            };
 
         private static bool StartsWithUnseekableWildcard(string pattern) =>
             pattern != "%" && pattern is ['%' or '_', ..]

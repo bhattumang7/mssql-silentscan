@@ -33,6 +33,26 @@ public sealed class NonSargableLikeWrappedColumnTests
         Assert.Empty(Scan("VARCHAR(20) COLLATE Latin1_General_CI_AS", "VARCHAR(20)", "c LIKE 'k123%'"));
 
     [Theory]
+    [InlineData("CAST(c AS VARCHAR(40)) LIKE 'k123%'")]
+    [InlineData("CAST(c AS NVARCHAR(20)) LIKE N'k123%'")]
+    [InlineData("(CONVERT(VARCHAR(20), c, 0)) LIKE @p")]
+    public void CastColumnOnTheLeftOfLike_IsFlagged_WhenTheCastStopsTheSeek(string predicate)
+    {
+        var finding = Assert.Single(Scan("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "VARCHAR(20)", predicate));
+
+        Assert.Equal(SargabilityFindingKind.CastOrConvertOnColumn, finding.Kind);
+        Assert.Equal("c", finding.ColumnName);
+    }
+
+    [Theory]
+    [InlineData("CAST(c AS VARCHAR(20)) LIKE 'k123%'")]
+    [InlineData("CAST(c AS VARCHAR(40)) LIKE '%k123'")]
+    [InlineData("CAST(c AS VARCHAR(40)) NOT LIKE 'k123%'")]
+    [InlineData("CAST(c AS VARCHAR(40)) LIKE c")]
+    public void CastColumnOnTheLeftOfLike_IsNotFlagged_WhenRemovingTheCastWouldChangeNothing(string predicate) =>
+        Assert.Empty(Scan("VARCHAR(20) COLLATE SQL_Latin1_General_CP1_CI_AS", "VARCHAR(20)", predicate));
+
+    [Theory]
     [InlineData("c LIKE '[^a]%'")]
     [InlineData("c LIKE '[^^]%'")]
     public void NegatedLeadingClass_IsFlagged(string predicate) =>

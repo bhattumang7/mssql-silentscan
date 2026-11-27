@@ -74,6 +74,28 @@ public sealed class CastOnColumnStringWideningOracleTests : OracleTestFixture
     }
 
     [Theory]
+    [InlineData("SELECT Id FROM dbo.Names WHERE NullCol LIKE 'v1999%';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE CAST(NullCol AS VARCHAR(20)) LIKE 'v1999%';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE CAST(WinCol AS NVARCHAR(20)) LIKE N'v1999%';", "IX_Names_Win")]
+    public async Task LikeOverABareColumnOrARemovableCast_SeeksTheColumnIndex(string statement, string index)
+    {
+        var plan = await PlanAsync(statement);
+
+        Assert.True(IndexAccessDetector.HasIndexSeek(plan, index), plan);
+    }
+
+    [Theory]
+    [InlineData("SELECT Id FROM dbo.Names WHERE CAST(NullCol AS VARCHAR(40)) LIKE 'v1999%';", "IX_Names_Null")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE CAST(SqlCol AS NVARCHAR(20)) LIKE N'v1999%';", "IX_Names_Sql")]
+    [InlineData("SELECT Id FROM dbo.Names WHERE CONVERT(VARCHAR(20), NullCol, 0) LIKE 'v1999%';", "IX_Names_Null")]
+    public async Task LikeOverACastTheEngineCannotRemove_NeverSeeksTheColumnIndex(string statement, string index)
+    {
+        var plan = await PlanAsync(statement);
+
+        Assert.False(IndexAccessDetector.HasIndexSeek(plan, index), plan);
+    }
+
+    [Theory]
     [InlineData("SELECT Pad FROM dbo.Names WHERE CAST(SqlCol AS NVARCHAR(20)) = N'v5';")]
     [InlineData("SELECT Pad FROM dbo.Names WHERE CAST(WinCol AS NVARCHAR(3)) = N'v5';")]
     public async Task SqlCollationOrNarrowerCast_ScansInsteadOfSeekingTheColumnIndex(string statement)
