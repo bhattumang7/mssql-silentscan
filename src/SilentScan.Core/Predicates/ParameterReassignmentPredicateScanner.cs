@@ -145,9 +145,71 @@ public static class ParameterReassignmentPredicateScanner
                     InspectDerivedTablesInFromClause(del.FromClause, state);
                     break;
 
+                case InsertStatement
+                    {
+                        InsertSpecification.InsertSource: SelectInsertSource { Select: QuerySpecification inserted },
+                    } insert when !DefeatsStaleSniffing(insert.OptimizerHints, insert):
+                    InspectQuerySpecificationTree(inserted, BuildScopeChain(inserted.FromClause, insert.WithCtesAndXmlNamespaces), state);
+                    break;
+
+                case MergeStatement { MergeSpecification: { } merged } merge when !DefeatsStaleSniffing(merge.OptimizerHints, merge):
+                    InspectSearchConditionCore(merged.SearchCondition, BuildMergeScopeChain(merged, merge.WithCtesAndXmlNamespaces), state);
+                    InspectDerivedTablesInFromClause(new FromClause { TableReferences = { merged.TableReference } }, state);
+                    break;
+
+                case IfStatement branch:
+                    InspectSubqueries(branch.Predicate, state);
+                    break;
+
+                case WhileStatement loop:
+                    InspectSubqueries(loop.Predicate, state);
+                    break;
+
+                case SetVariableStatement assignment:
+                    InspectSubqueries(assignment.Expression, state);
+                    break;
+
+                case DeclareVariableStatement declaration:
+                    foreach (var value in declaration.Declarations.Select(d => d.Value))
+                    {
+                        InspectSubqueries(value, state);
+                    }
+
+                    break;
+
                 default:
                     break;
             }
+        }
+
+        private void InspectSubqueries(TSqlFragment? fragment, FlowState state)
+        {
+            if (fragment is null || ReadsTemporaryTable(fragment))
+            {
+                return;
+            }
+
+            var collector = new OutermostQueryCollector();
+            fragment.Accept(collector);
+            foreach (var specification in collector.Queries)
+            {
+                InspectQuerySpecificationTree(specification, BuildScopeChain(specification.FromClause, withClause: null), state);
+            }
+        }
+
+        private sealed class OutermostQueryCollector : TSqlFragmentVisitor
+        {
+            public List<QuerySpecification> Queries { get; } = [];
+
+            public override void ExplicitVisit(QuerySpecification node) => Queries.Add(node);
+        }
+
+        private ScopeChain BuildMergeScopeChain(MergeSpecification merge, WithCtesAndXmlNamespaces? withClause)
+        {
+            var cteRelations = CteResolver.Resolve(withClause, catalog, EmptyResolvedViews, sourcePath, ledger: null, _walker!.CurrentProcScope);
+            var context = new FromScopeResolver.ResolutionContext(catalog, EmptyResolvedViews, sourcePath, Ledger: null, cteRelations, _walker!.CurrentProcScope);
+            var (byAlias, ordered) = FromScopeResolver.ResolveForMerge(merge.Target, merge.TableAlias, merge.TableReference, context);
+            return [((IReadOnlyDictionary<string, ScopeEntry>)byAlias, (IReadOnlyList<ScopeEntry>)ordered)];
         }
 
         private void InspectQuerySpecificationTree(QuerySpecification spec, ScopeChain scopeChain, FlowState state)

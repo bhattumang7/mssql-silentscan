@@ -852,4 +852,23 @@ public sealed class ParameterReassignmentPredicateScannerTests
         Assert.Equal("Code", finding.ColumnName);
         Assert.True(finding.Indexed);
     }
+
+    [Theory]
+    [InlineData("INSERT dbo.Sink (Id) SELECT Id FROM dbo.Rows WHERE K = @k;", true)]
+    [InlineData("MERGE dbo.Sink AS t USING (SELECT Id FROM dbo.Rows WHERE K = @k) AS s ON t.Id = s.Id WHEN NOT MATCHED THEN INSERT (Id) VALUES (s.Id);", true)]
+    [InlineData("IF EXISTS (SELECT 1 FROM dbo.Rows WHERE K = @k) SELECT 1;", true)]
+    [InlineData("WHILE EXISTS (SELECT 1 FROM dbo.Rows WHERE K = @k) BREAK;", true)]
+    [InlineData("DECLARE @c INT; SET @c = (SELECT COUNT(*) FROM dbo.Rows WHERE K = @k);", true)]
+    [InlineData("DECLARE @c INT = (SELECT COUNT(*) FROM dbo.Rows WHERE K = @k);", true)]
+    [InlineData("IF @k = 1 SELECT 1;", false)]
+    [InlineData("CREATE TABLE #s (Id INT); INSERT #s SELECT Id FROM dbo.Rows WHERE K = @k;", false)]
+    public void AReassignedParameterIsReportedInEveryStatementThatReadsWithIt(string statement, bool fires)
+    {
+        var findings = ParameterReassignmentPredicateScanner.Scan(
+            SqlScriptParser.ParseText("test.sql", $"CREATE PROCEDURE dbo.P @k INT AS BEGIN SET @k = 1; {statement} END"),
+            CatalogBuilder.Build([SqlScriptParser.ParseText(
+                "ddl.sql", "CREATE TABLE dbo.Rows (Id INT NOT NULL, K INT NOT NULL); CREATE TABLE dbo.Sink (Id INT NOT NULL);")]));
+
+        Assert.Equal(fires, findings.Count > 0);
+    }
 }
