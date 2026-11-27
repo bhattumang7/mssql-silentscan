@@ -314,4 +314,19 @@ public sealed class SelfReferencingDmlScannerTests
 
         Assert.Empty(findings);
     }
+
+    [Theory]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT TOP (1) Id + 100, Val, Flag FROM dbo.T WHERE Val = 5;", false)]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) (SELECT TOP (1) Id + 100, Val, Flag FROM dbo.T WHERE Val = 5);", false)]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT TOP (2) Id + 100, Val, Flag FROM dbo.T WHERE Val = 5;", true)]
+    [InlineData("INSERT INTO dbo.T (Id, Val, Flag) SELECT TOP (1) WITH TIES Id + 100, Val, Flag FROM dbo.T ORDER BY Val;", true)]
+    [InlineData("DELETE t FROM dbo.T AS t WHERE t.Id = 5 AND EXISTS (SELECT 1 FROM dbo.T AS x WHERE x.Val = t.Val);", false)]
+    [InlineData("DELETE t FROM dbo.T AS t WHERE t.Val = 5 AND EXISTS (SELECT 1 FROM dbo.T AS x WHERE x.Val = t.Val);", true)]
+    [InlineData("UPDATE t SET Val = x.Val + 1 FROM dbo.T AS t JOIN dbo.T AS x ON x.Id = t.Val WHERE t.Id = 5;", false)]
+    [InlineData("UPDATE t SET Val = x.Val + 1 FROM dbo.T AS t JOIN dbo.T AS x ON x.Id = t.Val WHERE t.Val = 5;", true)]
+    [InlineData("UPDATE t SET Val = x.Val + 1 FROM dbo.T AS t LEFT JOIN dbo.T AS x ON x.Id = t.Val AND t.Id = 5;", true)]
+    public void SingleRowSourcesAndKeyPinnedTargets_NeverFire(string statement, bool fires)
+    {
+        Assert.Equal(fires, Scan(statement).Count > 0);
+    }
 }

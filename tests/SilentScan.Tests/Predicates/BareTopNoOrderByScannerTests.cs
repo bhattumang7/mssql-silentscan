@@ -275,4 +275,28 @@ public sealed class BareTopNoOrderByScannerTests
     {
         Assert.Equal(fires, Scan(sql).Count == 1);
     }
+
+    [Theory]
+    [InlineData("SELECT TOP (5) a.R FROM dbo.U AS a JOIN dbo.U2 AS b ON b.Id = a.R WHERE a.Id = 1;", false)]
+    [InlineData("SELECT TOP (5) R FROM dbo.U WHERE Id IN (1);", false)]
+    [InlineData("SELECT TOP (5) R FROM dbo.USyn WHERE Id = 1;", false)]
+    [InlineData("SELECT TOP (5) x.R FROM (SELECT TOP (1) R FROM dbo.U ORDER BY R) AS x;", false)]
+    [InlineData("SELECT TOP (5) x.R FROM (SELECT R FROM dbo.U WHERE Id = 1) AS x;", false)]
+    [InlineData("SELECT TOP (5) x.R FROM (SELECT TOP (1) WITH TIES R FROM dbo.U ORDER BY R) AS x;", true)]
+    [InlineData("SELECT TOP (5) R FROM dbo.U WHERE R = 10;", true)]
+    [InlineData("SELECT TOP (5) a.R FROM dbo.U AS a LEFT JOIN dbo.U2 AS b ON a.Id = 1 AND b.Id = 10;", true)]
+    [InlineData("SELECT TOP (5) a.R FROM dbo.U AS a LEFT JOIN dbo.U2 AS b ON b.Id = a.R WHERE a.Id = 1;", false)]
+    [InlineData("WITH U AS (SELECT R AS Id, R FROM dbo.U) SELECT TOP (5) R FROM U WHERE Id = 1;", true)]
+    public void RowSourcesPinnedToOneRow_NeverFire(string statement, bool fires)
+    {
+        var result = SqlScriptParser.ParseText(
+            "test.sql",
+            "CREATE TABLE dbo.U (Id INT NOT NULL PRIMARY KEY, R INT NOT NULL);\n"
+            + "CREATE TABLE dbo.U2 (Id INT NOT NULL PRIMARY KEY, R INT NOT NULL);\n"
+            + "CREATE SYNONYM dbo.USyn FOR dbo.U;\nGO\n" + statement);
+        Assert.False(result.HasErrors, string.Join("; ", result.Errors.Select(e => e.Message)));
+        var catalog = SilentScan.Core.Catalog.CatalogBuilder.Build([result]);
+
+        Assert.Equal(fires, BareTopNoOrderByScanner.Scan(result, catalog).Count > 0);
+    }
 }

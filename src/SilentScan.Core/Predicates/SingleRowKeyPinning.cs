@@ -4,11 +4,17 @@ using SilentScan.Core.Common;
 
 namespace SilentScan.Core.Predicates;
 
+internal sealed record PinningConjunct(BooleanExpression Condition, IReadOnlySet<string>? OnlyAliases = null)
+{
+    public static List<PinningConjunct> From(BooleanExpression? condition, IReadOnlySet<string>? onlyAliases = null) =>
+        [.. PredicateTreeWalker.FlattenAnd(condition).Select(conjunct => new PinningConjunct(conjunct, onlyAliases))];
+}
+
 internal static class SingleRowKeyPinning
 {
     public static bool PinsAtMostOneRow(
         IReadOnlyList<NamedTableReference> tables,
-        IEnumerable<BooleanExpression> conjuncts,
+        IEnumerable<PinningConjunct> conjuncts,
         HashSet<string> cteNames,
         DatabaseCatalog catalog)
     {
@@ -20,15 +26,22 @@ internal static class SingleRowKeyPinning
 
         var comparer = catalog.IdentifierComparer;
         var equalities = new List<ColumnEquality>();
-        foreach (var conjunct in conjuncts)
+        foreach (var (conjunct, onlyAliases) in conjuncts)
         {
+            var first = equalities.Count;
             if (conjunct is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
             {
                 AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries);
                 AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries);
-            }            else if (conjunct is InPredicate { NotDefined: false, Subquery: null, Values: [{ } onlyValue] } singleValueIn)
+            }
+            else if (conjunct is InPredicate { NotDefined: false, Subquery: null, Values: [{ } onlyValue] } singleValueIn)
             {
                 AddEquality(equalities, singleValueIn.Expression, onlyValue, entries);
+            }
+
+            if (onlyAliases is not null)
+            {
+                equalities.RemoveAll(equality => equalities.IndexOf(equality) >= first && !onlyAliases.Contains(equality.Alias));
             }
         }
 
@@ -50,7 +63,7 @@ internal static class SingleRowKeyPinning
         return pinned.Count == entries.Count;
     }
 
-    public static bool QueryReadsAtMostOneRow(QuerySpecification spec, DatabaseCatalog catalog)
+    public static bool QueryReadsAtMostOneRow(QuerySpecification spec, DatabaseCatalog catalog, HashSet<string>? cteNames = null)
     {
         if (spec.GroupByClause is not null)
         {
@@ -68,12 +81,13 @@ internal static class SingleRowKeyPinning
         }
 
         var tables = new List<NamedTableReference>();
-        var conjuncts = PredicateTreeWalker.FlattenAnd(spec.WhereClause?.SearchCondition).ToList();
-        return CollectPinnableTables(spec.FromClause.TableReferences[0], tables, conjuncts)
-            && PinsAtMostOneRow(tables, conjuncts, new HashSet<string>(catalog.IdentifierComparer), catalog);
+        var conjuncts = PinningConjunct.From(spec.WhereClause?.SearchCondition);
+        return CollectPinnableTables(spec.FromClause.TableReferences[0], tables, conjuncts, catalog.IdentifierComparer)
+            && PinsAtMostOneRow(tables, conjuncts, cteNames ?? new HashSet<string>(catalog.IdentifierComparer), catalog);
     }
 
-    public static bool CollectPinnableTables(TableReference reference, List<NamedTableReference> tables, List<BooleanExpression> conjuncts)
+    public static bool CollectPinnableTables(
+        TableReference reference, List<NamedTableReference> tables, List<PinningConjunct> conjuncts, StringComparer comparer)
     {
         switch (reference)
         {
@@ -82,17 +96,33 @@ internal static class SingleRowKeyPinning
                 return true;
 
             case QualifiedJoin { QualifiedJoinType: QualifiedJoinType.Inner or QualifiedJoinType.LeftOuter } join:
-                conjuncts.AddRange(PredicateTreeWalker.FlattenAnd(join.SearchCondition));
-                return CollectPinnableTables(join.FirstTableReference, tables, conjuncts)
-                    && CollectPinnableTables(join.SecondTableReference, tables, conjuncts);
+                if (!CollectPinnableTables(join.FirstTableReference, tables, conjuncts, comparer))
+                {
+                    return false;
+                }
+
+                var preserved = tables.Count;
+                if (!CollectPinnableTables(join.SecondTableReference, tables, conjuncts, comparer))
+                {
+                    return false;
+                }
+
+                var nullSupplying = join.QualifiedJoinType == QualifiedJoinType.LeftOuter
+                    ? tables.Skip(preserved).Select(AliasOf).ToHashSet(comparer)
+                    : null;
+                conjuncts.AddRange(PinningConjunct.From(join.SearchCondition, nullSupplying));
+                return true;
 
             case JoinParenthesisTableReference { Join: { } inner }:
-                return CollectPinnableTables(inner, tables, conjuncts);
+                return CollectPinnableTables(inner, tables, conjuncts, comparer);
 
             default:
                 return false;
         }
     }
+
+    public static string AliasOf(NamedTableReference reference) =>
+        reference.Alias?.Value ?? reference.SchemaObject.BaseIdentifier.Value;
 
     private static Dictionary<string, CatalogTable>? ResolveTables(IReadOnlyList<NamedTableReference> tables, HashSet<string> cteNames, DatabaseCatalog catalog)
     {
@@ -106,8 +136,8 @@ internal static class SingleRowKeyPinning
         {
             var isCte = reference.SchemaObject.SchemaIdentifier is null && cteNames.Contains(reference.SchemaObject.BaseIdentifier.Value);
             var table = isCte ? null : catalog.Find(catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(reference.SchemaObject)));
-            var alias = reference.Alias?.Value ?? reference.SchemaObject.BaseIdentifier.Value;
-            if (table is not { Kind: CatalogTableKind.Table } || !entries.TryAdd(alias, table))
+            var alias = AliasOf(reference);
+            if (table is not { Kind: CatalogTableKind.Table or CatalogTableKind.TemporaryTable } || !entries.TryAdd(alias, table))
             {
                 return null;
             }

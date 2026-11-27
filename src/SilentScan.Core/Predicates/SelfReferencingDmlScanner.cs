@@ -37,13 +37,14 @@ public static class SelfReferencingDmlScanner
         public void OnEnterInsertStatementScope(InsertStatement node, ModuleWalker walker)
         {
             var spec = node.InsertSpecification;
-            if (spec.Target is NamedTableReference targetRef && !HasLiteralTopOne(spec.TopRowFilter))
+            if (spec.Target is NamedTableReference targetRef && !TopPercentLiteralHelper.ReturnsAtMostOneRow(spec.TopRowFilter))
             {
                 var targetQualifiedName = catalog.ResolveSynonymName(SchemaObjectNameHelper.Qualify(targetRef.SchemaObject));
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
 
                 var match = spec.InsertSource is SelectInsertSource select
                     && !VariableWriteSites.ProducesAtMostOneRow(select.Select)
+                    && !IsTopOne(select.Select)
                     && !IsPinnedToOneRowByUniqueKeys(select.Select, cteNames)
                     ? FindMatchInFragment(select.Select, targetQualifiedName, cteNames)
                     : null;
@@ -55,7 +56,7 @@ public static class SelfReferencingDmlScanner
         {
             var spec = node.UpdateSpecification;
             var updateTargetAlias = (spec.Target as NamedTableReference)?.Alias?.Value ?? (spec.Target as NamedTableReference)?.SchemaObject.BaseIdentifier.Value;
-            if (!HasLiteralTopOne(spec.TopRowFilter)
+            if (!TopPercentLiteralHelper.ReturnsAtMostOneRow(spec.TopRowFilter)
                 && ResolveTargetQualifiedName(spec.Target, updateTargetAlias, scopeChain) is { } targetQualifiedName)
             {
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
@@ -74,7 +75,7 @@ public static class SelfReferencingDmlScanner
         {
             var spec = node.DeleteSpecification;
             var deleteTargetAlias = (spec.Target as NamedTableReference)?.Alias?.Value ?? (spec.Target as NamedTableReference)?.SchemaObject.BaseIdentifier.Value;
-            if (!HasLiteralTopOne(spec.TopRowFilter)
+            if (!TopPercentLiteralHelper.ReturnsAtMostOneRow(spec.TopRowFilter)
                 && ResolveTargetQualifiedName(spec.Target, deleteTargetAlias, scopeChain) is { } targetQualifiedName)
             {
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
@@ -90,7 +91,7 @@ public static class SelfReferencingDmlScanner
         {
             var spec = node.MergeSpecification;
             var mergeTargetAlias = spec.TableAlias?.Value ?? (spec.Target as NamedTableReference)?.SchemaObject.BaseIdentifier.Value;
-            if (!HasLiteralTopOne(spec.TopRowFilter)
+            if (!TopPercentLiteralHelper.ReturnsAtMostOneRow(spec.TopRowFilter)
                 && ResolveTargetQualifiedName(spec.Target, mergeTargetAlias, scopeChain) is { } targetQualifiedName)
             {
                 var cteNames = CteNamesOf(node.WithCtesAndXmlNamespaces);
@@ -104,42 +105,38 @@ public static class SelfReferencingDmlScanner
         }
 
         private bool IsTargetPinnedToOneRowByUniqueKey(FromClause? fromClause, TableReference target, WhereClause? whereClause, HashSet<string> cteNames) =>
-            fromClause is null
-            && target is NamedTableReference named
-            && SingleRowKeyPinning.PinsAtMostOneRow([named], PredicateTreeWalker.FlattenAnd(whereClause?.SearchCondition), cteNames, catalog);
+            target is NamedTableReference named
+            && (fromClause is null
+                ? SingleRowKeyPinning.PinsAtMostOneRow([named], PinningConjunct.From(whereClause?.SearchCondition), cteNames, catalog)
+                : fromClause.TableReferences is [var only] && PinsEveryTable(only, SingleRowKeyPinning.AliasOf(named), whereClause, cteNames));
 
-        private bool IsPinnedToOneRowByUniqueKeys(QueryExpression query, HashSet<string> cteNames)
+        private bool PinsEveryTable(TableReference reference, string? requiredAlias, WhereClause? whereClause, HashSet<string> cteNames)
+        {
+            var tables = new List<NamedTableReference>();
+            var conjuncts = PinningConjunct.From(whereClause?.SearchCondition);
+            return SingleRowKeyPinning.CollectPinnableTables(reference, tables, conjuncts, catalog.IdentifierComparer)
+                && (requiredAlias is null
+                    || tables.Exists(table => catalog.IdentifierComparer.Equals(SingleRowKeyPinning.AliasOf(table), requiredAlias)))
+                && SingleRowKeyPinning.PinsAtMostOneRow(tables, conjuncts, cteNames, catalog);
+        }
+
+        private static QueryExpression Unparenthesized(QueryExpression query)
         {
             while (query is QueryParenthesisExpression parenthesized)
             {
                 query = parenthesized.QueryExpression;
             }
 
-            if (query is not QuerySpecification { FromClause.TableReferences.Count: 1 } spec)
-            {
-                return false;
-            }
-
-            var tables = new List<NamedTableReference>();
-            var conjuncts = PredicateTreeWalker.FlattenAnd(spec.WhereClause?.SearchCondition).ToList();
-            return SingleRowKeyPinning.CollectPinnableTables(spec.FromClause.TableReferences[0], tables, conjuncts)
-                && SingleRowKeyPinning.PinsAtMostOneRow(tables, conjuncts, cteNames, catalog);
+            return query;
         }
 
-        private static bool HasLiteralTopOne(TopRowFilter? topRowFilter)
+        private static bool IsTopOne(QueryExpression query) =>
+            Unparenthesized(query) is QuerySpecification spec && TopPercentLiteralHelper.ReturnsAtMostOneRow(spec.TopRowFilter);
+
+        private bool IsPinnedToOneRowByUniqueKeys(QueryExpression query, HashSet<string> cteNames)
         {
-            if (topRowFilter is not { Percent: false } filter)
-            {
-                return false;
-            }
-
-            var expression = filter.Expression;
-            while (expression is ParenthesisExpression parenthesized)
-            {
-                expression = parenthesized.Expression;
-            }
-
-            return expression is IntegerLiteral { Value: "1" };
+            return Unparenthesized(query) is QuerySpecification { FromClause.TableReferences: [var only] } spec
+                && PinsEveryTable(only, requiredAlias: null, spec.WhereClause, cteNames);
         }
 
         private HashSet<string> CteNamesOf(WithCtesAndXmlNamespaces? withClause) =>

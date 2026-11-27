@@ -77,7 +77,7 @@ public static class CartesianJoinScanner
             var whereConjuncts = PredicateTreeWalker.FlattenAnd(whereClause?.SearchCondition).ToList();
             _pinnedAliases = new HashSet<string>(
                 allNamed
-                    .Where(named => SingleRowKeyPinning.PinsAtMostOneRow([named], whereConjuncts, [], catalog))
+                    .Where(named => SingleRowKeyPinning.PinsAtMostOneRow([named], whereConjuncts.Select(conjunct => new PinningConjunct(conjunct)), [], catalog))
                     .Select(AliasKey),
                 identifierComparer);
 

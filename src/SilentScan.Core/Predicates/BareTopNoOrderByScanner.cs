@@ -33,10 +33,15 @@ public static class BareTopNoOrderByScanner
     {
         private readonly HashSet<QuerySpecification> existsSubqueries = [];
 
+        private readonly HashSet<string> commonTableExpressionNames = new(catalog.IdentifierComparer);
+
         public List<BareTopNoOrderByFinding> Findings { get; } = [];
 
-        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker) =>
+        public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
+        {
             node.Accept(new ExistsSubqueryCollector(existsSubqueries));
+            node.Accept(new CommonTableExpressionNameCollector(commonTableExpressionNames));
+        }
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -55,62 +60,27 @@ public static class BareTopNoOrderByScanner
             || PinsOneRowByUniqueKey(node)
             || (node.GroupByClause is null && node.SelectElements.All(IsAggregateSelectElement));
 
-        private static bool ReadsAtMostOneRowSource(FromClause from) =>
+        private bool ReadsAtMostOneRowSource(FromClause from) =>
             from.TableReferences is [var only]
             && (only is InlineDerivedTable { RowValues.Count: 1 }
-                || only is QueryDerivedTable derived && VariableWriteSites.ProducesAtMostOneRow(derived.QueryExpression));
+                || only is QueryDerivedTable derived && ProducesAtMostOneRow(derived.QueryExpression));
 
-        private bool PinsOneRowByUniqueKey(QuerySpecification node)
+        private bool ProducesAtMostOneRow(QueryExpression query) =>
+            VariableWriteSites.ProducesAtMostOneRow(query)
+            || query is QueryParenthesisExpression parenthesis && ProducesAtMostOneRow(parenthesis.QueryExpression)
+            || query is QuerySpecification specification
+                && (TopPercentLiteralHelper.ReturnsAtMostOneRow(specification.TopRowFilter)
+                    || SingleRowKeyPinning.QueryReadsAtMostOneRow(specification, catalog, commonTableExpressionNames));
+
+        private bool PinsOneRowByUniqueKey(QuerySpecification node) =>
+            node.FromClause is { TableReferences: [var only] } && PinsAtMostOneRow(only, node.WhereClause);
+
+        private bool PinsAtMostOneRow(TableReference reference, WhereClause? where)
         {
-            if (node.FromClause is not { TableReferences: [NamedTableReference reference] }
-                || node.WhereClause?.SearchCondition is not { } condition
-                || catalog.Find(SchemaObjectNameHelper.Qualify(reference.SchemaObject)) is not { } table)
-            {
-                return false;
-            }
-
-            var names = new List<string> { reference.SchemaObject.BaseIdentifier.Value };
-            if (reference.Alias is { } alias)
-            {
-                names.Add(alias.Value);
-            }
-
-            var pinned = new HashSet<string>(catalog.IdentifierComparer);
-            CollectPinnedColumns(condition, names, pinned);
-            return table.Indexes.Any(index =>
-                index.IsUnique && !index.IsFiltered && !index.IsDisabled && index.KeyColumns.Count > 0
-                && index.KeyColumns.All(pinned.Contains));
-        }
-
-        private void CollectPinnedColumns(BooleanExpression condition, List<string> tableNames, HashSet<string> pinned)
-        {
-            switch (condition)
-            {
-                case BooleanParenthesisExpression parenthesis:
-                    CollectPinnedColumns(parenthesis.Expression, tableNames, pinned);
-                    break;
-                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } both:
-                    CollectPinnedColumns(both.FirstExpression, tableNames, pinned);
-                    CollectPinnedColumns(both.SecondExpression, tableNames, pinned);
-                    break;
-                case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } equality:
-                    AddPinnedColumn(equality.FirstExpression, equality.SecondExpression, tableNames, pinned);
-                    AddPinnedColumn(equality.SecondExpression, equality.FirstExpression, tableNames, pinned);
-                    break;
-            }
-        }
-
-        private void AddPinnedColumn(ScalarExpression column, ScalarExpression value, List<string> tableNames, HashSet<string> pinned)
-        {
-            if (column is not ColumnReferenceExpression { MultiPartIdentifier.Identifiers: { Count: > 0 } identifiers }
-                || identifiers.Count > 2
-                || (identifiers.Count == 2 && !tableNames.Contains(identifiers[0].Value, catalog.IdentifierComparer))
-                || !RowIndependentExpression.Is(value))
-            {
-                return;
-            }
-
-            pinned.Add(identifiers[^1].Value);
+            var tables = new List<NamedTableReference>();
+            var conjuncts = PinningConjunct.From(where?.SearchCondition);
+            return SingleRowKeyPinning.CollectPinnableTables(reference, tables, conjuncts, catalog.IdentifierComparer)
+                && SingleRowKeyPinning.PinsAtMostOneRow(tables, conjuncts, commonTableExpressionNames, catalog);
         }
 
         private static bool IsHundredPercent(TopRowFilter top) =>
@@ -124,6 +94,11 @@ public static class BareTopNoOrderByScanner
             }
 
             return expression is IntegerLiteral { Value: "0" };
+        }
+
+        private sealed class CommonTableExpressionNameCollector(HashSet<string> names) : TSqlFragmentVisitor
+        {
+            public override void Visit(CommonTableExpression node) => names.Add(node.ExpressionName.Value);
         }
 
         private static bool IsLiteralSelectElement(SelectElement element) =>
