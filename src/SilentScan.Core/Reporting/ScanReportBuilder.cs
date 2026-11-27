@@ -236,6 +236,11 @@ public static class ScanReportBuilder
                 .. localVariablePredicateFindings, .. filteredIndexParameterMismatchFindings,
             ],
             ["DynamicSqlScanner"] = [.. dynamicSqlFindings, .. unparameterizedDynamicSqlFindings],
+            ["ForcedParameterizationScanner"] = [.. (dynamicSqlResult.ForcedParameterizationFindings ?? [])
+                .OrderBy(f => f.Kind)
+                .ThenBy(f => f.SourcePath, StringComparer.Ordinal)
+                .ThenBy(f => f.Line)
+                .ThenBy(f => f.Column)],
             ["TvfFenceScanner"] = tvfFenceFindings,
             ["ScalarUdfScanner"] = scalarUdfFindings,
         };

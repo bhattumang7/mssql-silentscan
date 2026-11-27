@@ -9,31 +9,35 @@ internal static class TopOrPagingLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: a literal `TOP N`, and a literal `OFFSET n ROWS FETCH
-            NEXT m ROWS ONLY`, both stay untouched in the cached plan while an unrelated equality
-            predicate in the same statement correctly parameterizes.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a TOP or OFFSET/FETCH row count.
 
-            A paginated query - one of the most common shapes in real application code - varying
-            only its page size or offset gets a fresh compile per distinct value, right where
-            PARAMETERIZATION FORCED was expected to collapse them into one shared plan.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the row count as a parameter or local variable (`TOP (@N)`, `OFFSET @Skip ROWS
-            FETCH NEXT @Take ROWS ONLY`) instead of a literal.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal page size",
+                Title: "A changing value spliced into a TOP or OFFSET/FETCH row count",
                 NoncompliantSql: """
-                    SELECT OrderId FROM dbo.Orders ORDER BY OrderId OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;
+                    CREATE PROCEDURE dbo.RunDynamic @Value INT AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT TOP (' + CAST(@Value AS NVARCHAR(10)) + N') CustomerId FROM dbo.Customers';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 20 and 10 both stay literal in the cached plan - a different page size recompiles instead of reusing this plan.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetOrdersPage @Skip int, @Take int AS
-                    SELECT OrderId FROM dbo.Orders ORDER BY OrderId OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY;
+                    CREATE PROCEDURE dbo.RunParameterized @Value INT AS
+                    EXEC sys.sp_executesql N'SELECT TOP (@p) CustomerId FROM dbo.Customers', N'@p INT', @p = @Value;
                     """,
-                CompliantExplanation: "The paging counts are already parameters, so every call shares the one compiled plan regardless of PARAMETERIZATION FORCED."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

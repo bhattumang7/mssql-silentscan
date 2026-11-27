@@ -9,30 +9,35 @@ internal static class HavingLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: `... GROUP BY Id HAVING COUNT(*) > 2` keeps the `2`
-            literal untouched in the cached plan while the statement's own WHERE-clause equality
-            correctly parameterizes.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a HAVING comparison.
 
-            A reporting/aggregation query whose HAVING threshold varies (a minimum count, a sum
-            cutoff) gets a fresh compile per distinct threshold under PARAMETERIZATION FORCED,
-            even though the rest of the query is identical between calls.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the HAVING comparand as a parameter or local variable instead of a literal.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal threshold in HAVING",
+                Title: "A changing value spliced into a HAVING comparison",
                 NoncompliantSql: """
-                    SELECT CustomerId, COUNT(*) AS OrderCount FROM dbo.Orders GROUP BY CustomerId HAVING COUNT(*) > 5;
+                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING MAX(Name) > ''' + @Value + N'''';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 5 stays literal in the cached plan - a different threshold recompiles instead of reusing this plan.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetFrequentCustomers @MinOrders int AS
-                    SELECT CustomerId, COUNT(*) AS OrderCount FROM dbo.Orders GROUP BY CustomerId HAVING COUNT(*) > @MinOrders;
+                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
+                    EXEC sys.sp_executesql N'SELECT Region FROM dbo.Customers GROUP BY Region HAVING MAX(Name) > @p', N'@p NVARCHAR(100)', @p = @Value;
                     """,
-                CompliantExplanation: "The threshold is already a parameter, so every call shares the one compiled plan regardless of PARAMETERIZATION FORCED."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

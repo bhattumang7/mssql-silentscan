@@ -33,6 +33,7 @@ public sealed class LiveCatalogReader
         }
 
         catalog.EngineMajorVersion = await ReadEngineMajorVersionAsync(connection, cancellationToken);
+        catalog.IsParameterizationForced = await ReadIsParameterizationForcedAsync(connection, cancellationToken);
         catalog.IsNestedTriggersEnabled = await ReadIsNestedTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsDisallowResultsFromTriggersEnabled = await ReadIsDisallowResultsFromTriggersEnabledAsync(connection, cancellationToken);
         catalog.IsAutoCreateStatsOn = await ReadIsAutoCreateStatsOnAsync(connection, cancellationToken);
@@ -805,6 +806,12 @@ public sealed class LiveCatalogReader
         await using var command = connection.CreateReadOnlyCommand("SELECT CAST(SERVERPROPERTY('ProductMajorVersion') AS INT);");
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return result is int version ? version : null;
+    }
+
+    private static async Task<bool> ReadIsParameterizationForcedAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateReadOnlyCommand("SELECT is_parameterization_forced FROM sys.databases WHERE database_id = DB_ID();");
+        return await command.ExecuteScalarAsync(cancellationToken) is true;
     }
 
     private static async Task<bool?> ReadIsAutoCreateStatsOnAsync(SqlConnection connection, CancellationToken cancellationToken)

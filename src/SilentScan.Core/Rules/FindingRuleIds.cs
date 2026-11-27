@@ -209,7 +209,6 @@ public static class FindingRuleIds
     public const string ForcedParameterizationTableSampleSizeLiteralRuleId = "silentscan/forced-parameterization/table-sample-size-literal";
     public const string ForcedParameterizationDmlOutputListLiteralRuleId = "silentscan/forced-parameterization/dml-output-list-literal";
     public const string ForcedParameterizationConvertStyleCodeLiteralRuleId = "silentscan/forced-parameterization/convert-style-code-literal";
-    public const string ForcedParameterizationConstantFoldableExpressionLiteralRuleId = "silentscan/forced-parameterization/constant-foldable-expression-literal";
     public const string ForcedParameterizationGroupByExpressionLiteralRuleId = "silentscan/forced-parameterization/group-by-expression-literal";
     public static string ForcedParameterizationRuleId(ForcedParameterizationFindingKind kind) => kind switch
     {
@@ -221,7 +220,6 @@ public static class FindingRuleIds
         ForcedParameterizationFindingKind.TableSampleSizeLiteral => ForcedParameterizationTableSampleSizeLiteralRuleId,
         ForcedParameterizationFindingKind.DmlOutputListLiteral => ForcedParameterizationDmlOutputListLiteralRuleId,
         ForcedParameterizationFindingKind.ConvertStyleCodeLiteral => ForcedParameterizationConvertStyleCodeLiteralRuleId,
-        ForcedParameterizationFindingKind.ConstantFoldableExpressionLiteral => ForcedParameterizationConstantFoldableExpressionLiteralRuleId,
         ForcedParameterizationFindingKind.GroupByExpressionLiteral => ForcedParameterizationGroupByExpressionLiteralRuleId,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };

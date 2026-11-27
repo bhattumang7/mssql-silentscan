@@ -9,35 +9,35 @@ internal static class LikePatternLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on - a deliberate
-            setting meant to stop per-literal ad-hoc plan-cache bloat by having the engine treat
-            every literal in a query as if it were a parameter, sharing one compiled plan across
-            calls that only differ by value.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a LIKE pattern.
 
-            Confirmed directly against a real engine: under `PARAMETERIZATION FORCED`,
-            `WHERE Id = 42 AND Name LIKE 'abc%'` compiles to a shared `(@0 int) ... WHERE Id = @0
-            AND Name LIKE 'abc%'` plan - the equality parameterizes, the LIKE pattern does not.
-            This is a real, documented exception, not a bug in the engine - but it means a search
-            query varying only its LIKE pattern (the overwhelmingly common real-world shape for a
-            search box) gets a fresh compile per distinct pattern regardless of the setting, right
-            where the setting was expected to help most.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the LIKE pattern as a parameter or local variable instead of a literal - the
-            engine has no exclusion for a LIKE predicate whose pattern is already a parameter.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A LIKE pattern hard-coded as a literal",
+                Title: "A changing value spliced into a LIKE pattern",
                 NoncompliantSql: """
-                    SELECT CustomerId, Name FROM dbo.Customers WHERE Name LIKE 'Smith%';
+                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT CustomerId FROM dbo.Customers WHERE Name LIKE ''' + @Value + N'%''';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, the pattern stays literal in the cached plan - a search for 'Jones%' next recompiles instead of reusing this plan.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.SearchCustomersByName @Pattern varchar(100) AS
-                    SELECT CustomerId, Name FROM dbo.Customers WHERE Name LIKE @Pattern;
+                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
+                    EXEC sys.sp_executesql N'SELECT CustomerId FROM dbo.Customers WHERE Name LIKE @p + ''%''', N'@p NVARCHAR(100)', @p = @Value;
                     """,
-                CompliantExplanation: "The pattern is already a parameter, so there is nothing for this exclusion to apply to - every call shares the one compiled plan regardless of PARAMETERIZATION FORCED."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

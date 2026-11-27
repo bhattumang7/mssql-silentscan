@@ -49,7 +49,7 @@ public static partial class StatementForms
 
     public static IReadOnlyList<StatementForm> All { get; } =
     [
-        new(Procedure, static _ => true, static c => c with
+        new(Procedure, static s => !IsModuleDefinition(s), static c => c with
         {
             Setup = c.Setup + Break + "CREATE PROCEDURE " + ProcedureName + " AS BEGIN" + Line + c.Statement + Line + "END" + Break,
             Statement = "EXEC " + ProcedureName + ";",
@@ -64,6 +64,8 @@ public static partial class StatementForms
         new(BracketedNames, static s => SchemaQualifiedName().IsMatch(s), static c => c with { Statement = BracketAndAlias(c.Statement) }),
         new(DynamicSql, static _ => true, static c => c with { Statement = "EXEC sp_executesql N'" + c.Statement.Replace("'", "''", StringComparison.Ordinal) + "';" }),
     ];
+
+    private static bool IsModuleDefinition(string statement) => statement.TrimStart().StartsWith("CREATE ", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsQuery(string statement) => statement.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase);
 

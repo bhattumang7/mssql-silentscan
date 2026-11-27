@@ -34,6 +34,11 @@ internal static class ConcatenatedValueInConstantSql
             FOR clause or OPTION hint. A trivial statement (a single-table SELECT, DELETE or
             INSERT ... VALUES) is simple-parameterized by the engine into one shared plan even
             when the value is concatenated, oracle-confirmed, so it is deliberately not reported.
+
+            On a database with `PARAMETERIZATION FORCED` on, the engine replaces most spliced
+            values with parameters, so this finding is reported there only when a changing value
+            lands in a statement that uses variables, which the engine does not force-parameterize.
+            Positions the engine skips have their own forced-parameterization rules.
             """,
         HowToFixIt: """
             Pass the value through sp_executesql's own @params mechanism instead of concatenating it

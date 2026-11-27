@@ -165,17 +165,6 @@ public static class LiveScanRunner
             databaseConfigStage.Complete($"{databaseConfigFindings.Count:N0} findings");
         }
 
-        using (var forcedParamStage = progress.Begin("checking forced-parameterization-defeating query shapes", moduleCount * 2))
-        {
-            var isParameterizationForced = await new DatabaseConfigurationReader(connectionString)
-                .ReadIsParameterizationForcedAsync(cancellationToken);
-            var forcedParameterizationFindings = isParameterizationForced
-                ? ForcedParameterizationScanner.Scan(parseResultSource(forcedParamStage), forcedParamStage).ToList()
-                : [];
-            report = report.WithFindings("ForcedParameterizationScanner", forcedParameterizationFindings);
-            forcedParamStage.Complete($"{forcedParameterizationFindings.Count:N0} findings");
-        }
-
         using (var indexDesignStage = progress.Begin("checking clustered/heap index design"))
         {
 

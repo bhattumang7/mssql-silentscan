@@ -32,7 +32,10 @@ public static class TemplateRenderer
                     var innerStart = map.AppendPlaceholder(hole.Origin.SourcePath, hole.Origin.Line, hole.Origin.Column, token);
                     if (!renderAsSpace)
                     {
-                        placeholders.Add(new PlaceholderOccurrence(innerStart, token.Length, hole.Type, hole.Origin));
+                        placeholders.Add(new PlaceholderOccurrence(
+                            innerStart, token.Length, hole.Type, hole.Origin,
+                            hole.Kind is not (HoleKind.WidenedChoice or HoleKind.UninitializedDeclare
+                                or HoleKind.EnvironmentDependent or HoleKind.TryOnlyDeclaration)));
                     }
 
                     break;

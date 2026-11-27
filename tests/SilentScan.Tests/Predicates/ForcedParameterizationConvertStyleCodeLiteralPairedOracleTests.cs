@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -7,17 +6,15 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", FindingRuleIds.ForcedParameterizationConvertStyleCodeLiteralRuleId)]
 public sealed class ForcedParameterizationConvertStyleCodeLiteralPairedOracleTests : ForcedParameterizationPairedOracle
 {
-    private const string Kept = "convert-style-literal";
-
-    protected override string AbsentLiteral => "99999";
+    private const string Kept = "convert-style-value";
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
-        new(Kept, Setup, "SELECT CONVERT(VARCHAR(30), D, 126) AS C FROM dbo.T;"),
+        new(Kept, Setup, Splicing("N'SELECT CONVERT(VARCHAR(30), D, ' + CAST(@v AS NVARCHAR(10)) + N') FROM dbo.T'")),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("comparison-literal", Setup, "SELECT Id FROM dbo.T WHERE Val = 126;"), Kept),
+        new(new("comparison-value", Setup, Splicing("N'SELECT Id FROM dbo.T WHERE Val = ' + CAST(@v AS NVARCHAR(10))")), Kept),
     ];
 }

@@ -144,16 +144,4 @@ public sealed class DatabaseConfigurationReader
         bool IsAutoCreateStatsOn,
         bool IsAutoUpdateStatsOn,
         int CompatibilityLevel);
-
-    public async Task<bool> ReadIsParameterizationForcedAsync(CancellationToken cancellationToken = default)
-    {
-        await using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
-
-        await using var command = connection.CreateReadOnlyCommand(
-            "SELECT is_parameterization_forced FROM sys.databases WHERE database_id = DB_ID();");
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-
-        return await reader.ReadAsync(cancellationToken) && reader.GetBoolean(0);
-    }
 }

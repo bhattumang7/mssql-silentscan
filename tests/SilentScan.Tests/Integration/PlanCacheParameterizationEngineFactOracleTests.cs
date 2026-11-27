@@ -10,7 +10,6 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
     protected override string Ddl => """
         ALTER DATABASE CURRENT SET PARAMETERIZATION FORCED;
         GO
-        CREATE TABLE dbo.FpConst (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         CREATE TABLE dbo.FpConvert (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         CREATE TABLE dbo.FpOutput (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         CREATE TABLE dbo.FpHaving (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
@@ -20,7 +19,6 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
         CREATE TABLE dbo.FpSample (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         CREATE TABLE dbo.FpTopTable (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         CREATE TABLE dbo.FpPaging (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
-        CREATE TABLE dbo.FpPlain (Id INT, Val INT, Nm VARCHAR(20), D DATETIME);
         GO
         CREATE TABLE dbo.DynConcat (Id INT PRIMARY KEY, V INT);
         CREATE TABLE dbo.DynParam (Id INT PRIMARY KEY, V INT);
@@ -69,19 +67,6 @@ public sealed class PlanCacheParameterizationEngineFactOracleTests : OracleTestF
 
     private async Task<int> CachedPlanCountAsync(string textLike) =>
         await ScalarAsync<int>($"SELECT COUNT(*) {CachedPlansWhere} AND st.text LIKE '{textLike}' AND st.text NOT LIKE '%dm_exec%';");
-
-    [Fact]
-    [Trait("Rule", FindingRuleIds.ForcedParameterizationConstantFoldableExpressionLiteralRuleId)]
-    public async Task ConstantFoldableExpression_ParameterizesAsTwoParameters_PlainLiteralControlAsOne()
-    {
-        var foldable = await PreparedTextAsync("FpConst", "SELECT Id FROM dbo.FpConst WHERE Id = 1 + 1008;");
-        var plain = await PreparedTextAsync("FpPlain", "SELECT Id FROM dbo.FpPlain WHERE Id = 1009;");
-
-        Assert.Contains("(@1int,@2int)", foldable);
-        Assert.Contains("(@1+@2)", foldable);
-        Assert.Contains("(@0int)", plain);
-        Assert.DoesNotContain("+", plain);
-    }
 
     [Fact]
     [Trait("Rule", FindingRuleIds.ForcedParameterizationConvertStyleCodeLiteralRuleId)]

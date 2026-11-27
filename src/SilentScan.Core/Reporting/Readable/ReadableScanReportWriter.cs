@@ -203,7 +203,7 @@ public static class ReadableScanReportWriter
         AddCount(counts, "Comparisons to NULL that never match", report.Find<DeprecatedSyntaxFinding>(nameof(DeprecatedSyntaxScanner)).Count);
         AddCount(counts, "Cursor and control-flow risks", report.Find<ControlFlowRiskFinding>(nameof(ControlFlowRiskScanner)).Count);
         AddCount(counts, "Physical/schema index design (heap/clustered-key quality)", report.Find<IndexDesignFinding>(nameof(IndexDesignScanner)).Count);
-        AddCount(counts, "Forced-parameterization-defeating query shapes", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
+        AddCount(counts, "Dynamic SQL values forced parameterization leaves in place", report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count);
         AddCount(counts, "Float/real equality predicates", report.Find<FloatEqualityFinding>(nameof(FloatEqualityPredicateScanner)).Count);
         AddCount(counts, "Exact numeric columns compared with float/real columns", report.Find<ExactApproximateComparisonFinding>(nameof(ExactApproximateComparisonScanner)).Count);
         AddCount(counts, "Float/real columns in order-dependent aggregates", report.Find<FloatOrderDependentAggregateFinding>(nameof(FloatOrderDependentAggregateScanner)).Count);
@@ -894,9 +894,9 @@ public static class ReadableScanReportWriter
             yield break;
         }
 
-        yield return new ReadableBlock.Heading(level, $"Forced-parameterization-defeating query shapes ({report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count})");
+        yield return new ReadableBlock.Heading(level, $"Dynamic SQL values forced parameterization leaves in place ({report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).Count})");
         yield return new ReadableBlock.Paragraph(
-            "Live-mode only, reported only when the target database has PARAMETERIZATION FORCED on. Ten query-text clause shapes - a LIKE pattern, a TOP/OFFSET-FETCH row count, a select-list/HAVING/ORDER-BY/OUTPUT-clause literal, a TABLESAMPLE size, a literal argument to a TypeName::Method(...) static call/CONVERT style code/CHECKSUM(...), and a constant-foldable arithmetic expression - each independently oracle-confirmed (docs/detection-reference.md Appendix 8) to stay unparameterized even while the rest of the same statement correctly shares one plan, silently defeating the setting for exactly the values an app's own workload varies most.");
+            "Live-mode only, reported only when the target database has PARAMETERIZATION FORCED on. A value that changes between executions is spliced into a position of a dynamic SQL string that the engine does not parameterize, so each distinct value compiles its own plan.");
 
         foreach (var group in report.Find<ForcedParameterizationFinding>(nameof(ForcedParameterizationScanner)).GroupBy(f => f.Kind).OrderBy(g => g.Key))
         {

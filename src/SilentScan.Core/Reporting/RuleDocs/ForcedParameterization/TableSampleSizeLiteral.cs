@@ -9,32 +9,38 @@ internal static class TableSampleSizeLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: `TABLESAMPLE (10 PERCENT)` keeps the `10` literal
-            untouched in the cached plan while an unrelated equality predicate in the same
-            statement correctly parameterizes.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a TABLESAMPLE size.
 
-            A sampling percentage or row count that varies by call - a data-profiling tool that
-            samples more aggressively on demand, for example - gets a fresh compile per distinct
-            sample size under PARAMETERIZATION FORCED.
-
-            Unlike every other member of this rule family, there is no parameter workaround here:
-            `TABLESAMPLE` and `REPEATABLE` clauses reject a variable outright (confirmed directly:
-            Msg 497, "Variables are not allowed in the TABLESAMPLE or REPEATABLE clauses") - a
-            varying sample size is unavoidably a fresh compile under PARAMETERIZATION FORCED, not
-            a fixable oversight.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            No parameter workaround exists - TABLESAMPLE rejects a variable outright. Keep the
-            sample size fixed per query text if the recompile cost matters, or accept it.
+            The engine accepts no parameter or does not parameterize this position, so keep the set of distinct values small and fixed - for example by branching to one literal statement per allowed value.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal TABLESAMPLE size",
+                Title: "A changing value spliced into a TABLESAMPLE size",
                 NoncompliantSql: """
-                    SELECT OrderId FROM dbo.Orders TABLESAMPLE (10 PERCENT);
+                    CREATE PROCEDURE dbo.RunDynamic @Value INT AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT CustomerId FROM dbo.Customers TABLESAMPLE (' + CAST(@Value AS NVARCHAR(10)) + N' ROWS)';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 10 stays literal in the cached plan - a different sample size recompiles instead of reusing this plan. TABLESAMPLE cannot take a variable at all (Msg 497), so this cannot be fixed by parameterizing it."),
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
+                CompliantSql: """
+                    CREATE PROCEDURE dbo.RunFixed @Value INT AS
+                    BEGIN
+                        IF @Value = 1
+                            EXEC (N'SELECT CustomerId FROM dbo.Customers');
+                    END;
+                    """,
+                CompliantExplanation: "The dynamic string no longer changes with the caller's value, so no plan is added per value."),
         ]);
 }

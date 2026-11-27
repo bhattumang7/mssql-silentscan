@@ -9,33 +9,35 @@ internal static class GroupByExpressionLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on, and only for
-            a literal inside a `GROUP BY` expression - confirmed directly against a real engine:
-            `WHERE Val > 5 GROUP BY (Id + 1)` parameterizes the `WHERE`-clause equality but keeps
-            the `1` in the `GROUP BY` expression untouched, in the same cached plan.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a GROUP BY expression.
 
-            Unlike the `ORDER BY` sibling rule, there is no bare-literal ordinal idiom to exclude
-            here: `GROUP BY 1` is not a valid ordinal position reference in T-SQL at all - the
-            engine rejects it outright ("Each GROUP BY expression must contain at least one column
-            that is not an outer reference"), confirmed directly. Every literal-bearing GROUP BY
-            expression is this one shape.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the literal inside the GROUP BY expression as a parameter or local variable
-            instead of a literal.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal inside a GROUP BY expression",
+                Title: "A changing value spliced into a GROUP BY expression",
                 NoncompliantSql: """
-                    SELECT OrderId + 1 AS Bucket, COUNT(*) FROM dbo.Orders GROUP BY (OrderId + 1);
+                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT COUNT(*) FROM dbo.Customers GROUP BY CHARINDEX(''' + @Value + N''', Name)';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 1 stays literal in the cached plan - a different bucket offset recompiles instead of reusing this plan.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetOrdersByBucket @Offset int AS
-                    SELECT OrderId + @Offset AS Bucket, COUNT(*) FROM dbo.Orders GROUP BY (OrderId + @Offset);
+                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
+                    EXEC sys.sp_executesql N'SELECT COUNT(*) FROM dbo.Customers GROUP BY CHARINDEX(@p, Name)', N'@p NVARCHAR(100)', @p = @Value;
                     """,
-                CompliantExplanation: "The offset is already a parameter, so every call shares the one compiled plan regardless of PARAMETERIZATION FORCED."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

@@ -6,9 +6,7 @@ internal static class DynamicSqlAutoParameterizationGuard
 {
     public static bool IsProvablyNotAutoParameterized(TSqlFragment root, int offset)
     {
-        var finder = new EnclosingStatementFinder(offset);
-        root.Accept(finder);
-        if (finder.Best is not { } statement)
+        if (ForcedParameterizationPosition.EnclosingStatement(root, offset) is not { } statement)
         {
             return false;
         }
@@ -16,20 +14,6 @@ internal static class DynamicSqlAutoParameterizationGuard
         var evidence = new IneligibilityVisitor();
         statement.Accept(evidence);
         return evidence.Found;
-    }
-
-    private sealed class EnclosingStatementFinder(int offset) : TSqlFragmentVisitor
-    {
-        public TSqlStatement? Best { get; private set; }
-
-        public override void Visit(TSqlStatement node)
-        {
-            if (node.StartOffset <= offset && offset < node.StartOffset + node.FragmentLength
-                && (Best is null || node.FragmentLength < Best.FragmentLength))
-            {
-                Best = node;
-            }
-        }
     }
 
     private sealed class IneligibilityVisitor : TSqlFragmentVisitor

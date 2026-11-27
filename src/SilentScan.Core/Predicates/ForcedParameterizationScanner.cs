@@ -1,6 +1,6 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
-using SilentScan.Core.Diagnostics;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 
@@ -8,222 +8,182 @@ namespace SilentScan.Core.Predicates;
 
 public static class ForcedParameterizationScanner
 {
-    public static IReadOnlyList<ForcedParameterizationFinding> Scan(IEnumerable<SqlParseResult> parseResults, IScanStage? stage = null)
+    public static IReadOnlyList<ForcedParameterizationFinding> ScanDynamicStatements(
+        SqlParseResult inner, IReadOnlyList<PlaceholderOccurrence> placeholders, string moduleName, FindingConfidence confidence)
     {
-        var findings = new List<ForcedParameterizationFinding>();
-        foreach (var parseResult in parseResults)
+        var changing = placeholders
+            .Where(p => p.ChangesPerExecution)
+            .ToDictionary(p => p, p => "__silentscan_sym_L" + p.Origin.Line.ToString(CultureInfo.InvariantCulture) + "C" + p.Origin.Column.ToString(CultureInfo.InvariantCulture) + "__");
+        if (changing.Count == 0)
         {
-            stage?.Advance(currentItem: parseResult.SourcePath);
-            var rule = new Rule(parseResult.SourcePath);
-            var walker = new ModuleWalker(parseResult.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
-            parseResult.Fragment.Accept(walker);
-            findings.AddRange(rule.Findings);
+            return [];
         }
 
-        return
-        [
-            .. findings
-                .OrderBy(f => f.Kind)
-                .ThenBy(f => f.SourcePath, StringComparer.Ordinal)
-                .ThenBy(f => f.Line)
-                .ThenBy(f => f.Column),
-        ];
+        var rule = new Rule(inner, new ChangingValues(changing), moduleName, confidence);
+        var walker = new ModuleWalker(inner.SourcePath, new DatabaseCatalog(), EmptyResolvedViews, rules: [rule]);
+        inner.Fragment.Accept(walker);
+        var outputSites = rule.Findings
+            .Where(f => f.Kind == ForcedParameterizationFindingKind.DmlOutputListLiteral)
+            .Select(f => (f.Line, f.Column))
+            .ToHashSet();
+        return [.. rule.Findings.Where(f => f.Kind != ForcedParameterizationFindingKind.SelectListLiteral || !outputSites.Contains((f.Line, f.Column)))];
     }
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    private sealed class Rule(string sourcePath) : IModuleRule
+    private sealed class ChangingValues(IReadOnlyDictionary<PlaceholderOccurrence, string> tokens)
+    {
+        public bool IsInLiteral(TSqlFragment fragment) =>
+            fragment is Literal literal && literal.Value is { } text && tokens.Values.Any(t => text.Contains(t, StringComparison.OrdinalIgnoreCase));
+
+        public bool IsBareNonStringValue(TSqlFragment fragment) =>
+            BareToken(fragment) is { } name
+            && tokens.Any(t => string.Equals(t.Value, name, StringComparison.OrdinalIgnoreCase) && !t.Key.Type.IsStringFamily);
+
+        public bool IsValue(TSqlFragment fragment) => IsInLiteral(fragment) || IsBareNonStringValue(fragment);
+
+        public TSqlFragment? FindValue(TSqlFragment root, bool anyBareToken)
+        {
+            var finder = new Finder(f => IsValue(f) || (anyBareToken && BareToken(f) is { } name && tokens.Values.Contains(name, StringComparer.OrdinalIgnoreCase)));
+            root.Accept(finder);
+            return finder.Found;
+        }
+
+        private static string? BareToken(TSqlFragment fragment) =>
+            fragment is ColumnReferenceExpression { MultiPartIdentifier.Identifiers: [var identifier] } ? identifier.Value : null;
+
+        private sealed class Finder(Func<TSqlFragment, bool> matches) : TSqlFragmentVisitor
+        {
+            public TSqlFragment? Found { get; private set; }
+
+            public override void Visit(TSqlFragment fragment)
+            {
+                if (Found is null && matches(fragment))
+                {
+                    Found = fragment;
+                }
+            }
+        }
+    }
+
+    private sealed class Rule(SqlParseResult inner, ChangingValues values, string moduleName, FindingConfidence confidence) : IModuleRule
     {
         public List<ForcedParameterizationFinding> Findings { get; } = [];
 
-        private string CurrentModule(ModuleWalker walker) => walker.CurrentProcScope ?? sourcePath;
-
         public void OnLikePredicate(LikePredicate node, ModuleWalker walker)
         {
-            if (node.SecondExpression is Literal literal)
+            if (values.IsValue(node.SecondExpression))
             {
-                Add(ForcedParameterizationFindingKind.LikePatternLiteral, literal,
-                    $"LIKE pattern '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying only this pattern still recompiles per distinct value.", walker, literal: literal);
+                Add(ForcedParameterizationFindingKind.LikePatternLiteral, node.SecondExpression, "LIKE pattern");
             }
         }
 
-        public void OnEnterTopRowFilter(TopRowFilter node, ModuleWalker walker)
-        {
-            if (node.Expression is Literal literal)
-            {
-                Add(ForcedParameterizationFindingKind.TopOrPagingLiteral, literal,
-                    $"TOP row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the row count still recompiles per distinct value.", walker, literal: literal);
-            }
-        }
+        public void OnEnterTopRowFilter(TopRowFilter node, ModuleWalker walker) =>
+            AddRowCount(node.Expression, "TOP row count");
 
         public void OnEnterOffsetClause(OffsetClause node, ModuleWalker walker)
         {
-            var literal = node.OffsetExpression as Literal ?? node.FetchExpression as Literal;
-            if (literal is not null)
-            {
-                Add(ForcedParameterizationFindingKind.TopOrPagingLiteral, literal,
-                    $"OFFSET/FETCH row count '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED, so a workload varying the page size still recompiles per distinct value.", walker, literal: literal);
-            }
+            AddRowCount(node.OffsetExpression, "OFFSET row count");
+            AddRowCount(node.FetchExpression, "FETCH row count");
         }
 
         public void OnEnterSelectScalarExpression(SelectScalarExpression node, ModuleWalker walker)
         {
-            if (node.Expression is Literal literal)
+            if (values.IsValue(node.Expression))
             {
-                Add(ForcedParameterizationFindingKind.SelectListLiteral, literal,
-                    $"Select-list literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                Add(ForcedParameterizationFindingKind.SelectListLiteral, node.Expression, "select-list value");
             }
         }
 
         public void OnEnterHavingClause(HavingClause node, ModuleWalker walker)
         {
-            foreach (var literal in FindDirectComparisonLiterals(node.SearchCondition))
+            foreach (var operand in FindDirectComparisonOperands(node.SearchCondition).Where(values.IsValue))
             {
-                Add(ForcedParameterizationFindingKind.HavingLiteral, literal,
-                    $"HAVING comparand '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                Add(ForcedParameterizationFindingKind.HavingLiteral, operand, "HAVING comparand");
             }
         }
 
         public void OnEnterOrderByClause(OrderByClause node, ModuleWalker walker)
         {
-            foreach (var element in node.OrderByElements)
+            foreach (var expression in node.OrderByElements.Select(e => e.Expression).Where(e => e is not (Literal or ColumnReferenceExpression)))
             {
-
-                if (element.Expression is Literal)
+                if (values.FindValue(expression, anyBareToken: false) is { } value)
                 {
-                    continue;
-                }
-
-                var finder = new LiteralFinder();
-                element.Expression.Accept(finder);
-                if (finder.Found is { } literal)
-                {
-                    Add(ForcedParameterizationFindingKind.OrderByExpressionLiteral, element,
-                        $"ORDER BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                    Add(ForcedParameterizationFindingKind.OrderByExpressionLiteral, value, "value inside an ORDER BY expression");
                 }
             }
         }
 
         public void OnEnterGroupByClause(GroupByClause node, ModuleWalker walker)
         {
-            foreach (var specification in node.GroupingSpecifications.OfType<ExpressionGroupingSpecification>())
+            foreach (var expression in node.GroupingSpecifications.OfType<ExpressionGroupingSpecification>()
+                         .Select(specification => specification.Expression)
+                         .Where(e => e is not ColumnReferenceExpression))
             {
-                var finder = new LiteralFinder();
-                specification.Expression.Accept(finder);
-                if (finder.Found is { } literal)
+                if (values.FindValue(expression, anyBareToken: false) is { } value)
                 {
-                    Add(ForcedParameterizationFindingKind.GroupByExpressionLiteral, specification,
-                        $"GROUP BY expression contains literal '{LiteralText(literal)}' - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                    Add(ForcedParameterizationFindingKind.GroupByExpressionLiteral, value, "value inside a GROUP BY expression");
                 }
             }
         }
 
         public void OnEnterNamedTableReference(NamedTableReference node, ModuleWalker walker)
         {
-            if (node.TableSampleClause?.SampleNumber is Literal literal)
+            if (node.TableSampleClause?.SampleNumber is { } sample && values.FindValue(sample, anyBareToken: true) is { } value)
             {
-                Add(ForcedParameterizationFindingKind.TableSampleSizeLiteral, literal,
-                    $"TABLESAMPLE size '{LiteralText(literal)}' is a literal - the engine leaves it unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                Add(ForcedParameterizationFindingKind.TableSampleSizeLiteral, value, "TABLESAMPLE size");
             }
         }
 
         public void OnEnterOutputClause(OutputClause node, ModuleWalker walker)
         {
-            foreach (var column in node.SelectColumns)
+            foreach (var column in node.SelectColumns.OfType<SelectScalarExpression>().Where(c => values.IsValue(c.Expression)))
             {
-                if (column is SelectScalarExpression { Expression: Literal literal })
-                {
-                    Add(ForcedParameterizationFindingKind.DmlOutputListLiteral, literal,
-                        $"OUTPUT clause literal '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
-                }
+                Add(ForcedParameterizationFindingKind.DmlOutputListLiteral, column.Expression, "OUTPUT clause value");
             }
         }
 
         public void OnEnterConvertCall(ConvertCall node, ModuleWalker walker)
         {
-            if (node.Style is Literal literal)
+            if (node.Style is { } style && values.FindValue(style, anyBareToken: true) is { } value)
             {
-                Add(ForcedParameterizationFindingKind.ConvertStyleCodeLiteral, literal,
-                    $"CONVERT style code '{LiteralText(literal)}' stays unparameterized even under PARAMETERIZATION FORCED.", walker, literal: literal);
+                Add(ForcedParameterizationFindingKind.ConvertStyleCodeLiteral, value, "CONVERT style code");
             }
         }
 
-        public void OnEnterBinaryExpression(BinaryExpression node, ModuleWalker walker)
+        private void AddRowCount(ScalarExpression? expression, string label)
         {
-            if (node.FirstExpression is Literal && node.SecondExpression is Literal)
+            if (expression is not null && values.FindValue(expression, anyBareToken: true) is { } value)
             {
-                Add(ForcedParameterizationFindingKind.ConstantFoldableExpressionLiteral, node,
-                    "Constant-foldable literal expression parameterizes as separate parameters instead of one folded value under PARAMETERIZATION FORCED.",
-                    walker, FindingConfidence.Low);
+                Add(ForcedParameterizationFindingKind.TopOrPagingLiteral, value, label);
             }
         }
 
-        private void Add(ForcedParameterizationFindingKind kind, TSqlFragment site, string detailText, ModuleWalker walker, FindingConfidence confidence = FindingConfidence.High, Literal? literal = null)
+        private void Add(ForcedParameterizationFindingKind kind, TSqlFragment site, string label)
         {
+            if (ForcedParameterizationPosition.EnclosingStatement(inner.Fragment, site.StartOffset) is not { } statement
+                || ForcedParameterizationPosition.IsRecompiled(statement)
+                || ForcedParameterizationPosition.UsesVariables(statement)
+                || Findings.Exists(f => f.Kind == kind && f.Line == site.StartLine && f.Column == site.StartColumn))
+            {
+                return;
+            }
+
             Findings.Add(new ForcedParameterizationFinding(
-                kind, CurrentModule(walker), sourcePath, site.StartLine, site.StartColumn, detailText, confidence, literal is null ? null : SourceText(literal)));
+                kind, moduleName, inner.SourcePath, site.StartLine, site.StartColumn,
+                $"A changing {label} is spliced into this dynamic SQL string - the engine leaves that position unparameterized even under PARAMETERIZATION FORCED, so each distinct value compiles its own plan.",
+                confidence, SourceText(site)));
         }
 
         private static string SourceText(TSqlFragment fragment) =>
             string.Concat(Enumerable.Range(fragment.FirstTokenIndex, fragment.LastTokenIndex - fragment.FirstTokenIndex + 1).Select(i => fragment.ScriptTokenStream[i].Text));
 
-        private static string LiteralText(Literal literal) => literal.Value ?? "NULL";
-
-        private sealed class LiteralFinder : TSqlFragmentVisitor
+        private static IEnumerable<ScalarExpression> FindDirectComparisonOperands(BooleanExpression expression) => expression switch
         {
-            public Literal? Found { get; private set; }
-
-            public override void ExplicitVisit(IntegerLiteral node) => Found ??= node;
-            public override void ExplicitVisit(NumericLiteral node) => Found ??= node;
-            public override void ExplicitVisit(RealLiteral node) => Found ??= node;
-            public override void ExplicitVisit(MoneyLiteral node) => Found ??= node;
-            public override void ExplicitVisit(BinaryLiteral node) => Found ??= node;
-            public override void ExplicitVisit(StringLiteral node) => Found ??= node;
-            public override void ExplicitVisit(NullLiteral node) => Found ??= node;
-            public override void ExplicitVisit(IdentifierLiteral node) => Found ??= node;
-            public override void ExplicitVisit(DefaultLiteral node) => Found ??= node;
-            public override void ExplicitVisit(MaxLiteral node) => Found ??= node;
-            public override void ExplicitVisit(OdbcLiteral node) => Found ??= node;
-        }
-
-        private static IEnumerable<Literal> FindDirectComparisonLiterals(BooleanExpression expression)
-        {
-            switch (expression)
-            {
-                case BooleanComparisonExpression comparison:
-                    if (comparison.FirstExpression is Literal first)
-                    {
-                        yield return first;
-                    }
-
-                    if (comparison.SecondExpression is Literal second)
-                    {
-                        yield return second;
-                    }
-
-                    break;
-
-                case BooleanBinaryExpression binary:
-                    foreach (var literal in FindDirectComparisonLiterals(binary.FirstExpression))
-                    {
-                        yield return literal;
-                    }
-
-                    foreach (var literal in FindDirectComparisonLiterals(binary.SecondExpression))
-                    {
-                        yield return literal;
-                    }
-
-                    break;
-
-                case BooleanParenthesisExpression parenthesis:
-                    foreach (var literal in FindDirectComparisonLiterals(parenthesis.Expression))
-                    {
-                        yield return literal;
-                    }
-
-                    break;
-            }
-        }
+            BooleanComparisonExpression comparison => [comparison.FirstExpression, comparison.SecondExpression],
+            BooleanBinaryExpression binary => FindDirectComparisonOperands(binary.FirstExpression).Concat(FindDirectComparisonOperands(binary.SecondExpression)),
+            BooleanParenthesisExpression parenthesis => FindDirectComparisonOperands(parenthesis.Expression),
+            _ => [],
+        };
     }
 }

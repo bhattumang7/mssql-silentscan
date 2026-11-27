@@ -9,30 +9,38 @@ internal static class ConvertStyleCodeLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: `CONVERT(varchar, GETDATE(), 101)` keeps the `101`
-            style code untouched in the cached plan.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips a CONVERT style code.
 
-            A style code that varies by call - formatting dates differently for different report
-            outputs from the same query shape, for example - gets a fresh compile per distinct
-            style under PARAMETERIZATION FORCED.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the CONVERT style code as a parameter or local variable instead of a literal -
-            confirmed directly that the engine accepts a variable there.
+            The engine accepts no parameter or does not parameterize this position, so keep the set of distinct values small and fixed - for example by branching to one literal statement per allowed value.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal CONVERT style code",
+                Title: "A changing value spliced into a CONVERT style code",
                 NoncompliantSql: """
-                    SELECT CONVERT(varchar, OrderDate, 101) FROM dbo.Orders;
+                    CREATE PROCEDURE dbo.RunDynamic @Value INT AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT CONVERT(VARCHAR(30), CreatedAt, ' + CAST(@Value AS NVARCHAR(10)) + N') FROM dbo.Customers';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 101 stays literal in the cached plan - a different style code recompiles instead of reusing this plan.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetOrdersFormatted @DateStyle int AS
-                    SELECT CONVERT(varchar, OrderDate, @DateStyle) FROM dbo.Orders;
+                    CREATE PROCEDURE dbo.RunFixed @Value INT AS
+                    BEGIN
+                        IF @Value = 101
+                            EXEC (N'SELECT CONVERT(VARCHAR(30), CreatedAt, 101) FROM dbo.Customers');
+                    END;
                     """,
-                CompliantExplanation: "The style code is already a parameter, so every call shares the one compiled plan regardless of PARAMETERIZATION FORCED."),
+                CompliantExplanation: "The dynamic string no longer changes with the caller's value, so no plan is added per value."),
         ]);
 }

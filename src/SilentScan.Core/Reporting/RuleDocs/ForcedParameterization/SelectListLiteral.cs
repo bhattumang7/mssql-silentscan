@@ -9,33 +9,35 @@ internal static class SelectListLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: `SELECT 'MarkerSelectList', Id FROM T WHERE Id = 1`
-            keeps the select-list literal untouched in the cached plan while the WHERE-clause
-            equality correctly parameterizes.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips the select list.
 
-            A tag/label literal returned alongside real columns (a common shape for
-            UNION-distinguishing constants, or a status label) is a minor case in isolation, but
-            it means that specific call site never shares a plan with a differently-tagged
-            sibling query under PARAMETERIZATION FORCED, even though the two are otherwise
-            identical.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the select-list literal as a parameter or local variable instead of a literal, or
-            accept that this specific query text always gets its own plan.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal tag column in the select list",
+                Title: "A changing value spliced into the select list",
                 NoncompliantSql: """
-                    SELECT 'Active', CustomerId FROM dbo.Customers WHERE Status = 1;
+                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'SELECT ''' + @Value + N''' AS Tag, CustomerId FROM dbo.Customers';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 'Active' stays literal in the cached plan - a sibling query tagging 'Inactive' compiles as a fully separate plan, not a shared one.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.GetCustomersByStatus @Tag varchar(20), @StatusId int AS
-                    SELECT @Tag, CustomerId FROM dbo.Customers WHERE Status = @StatusId;
+                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
+                    EXEC sys.sp_executesql N'SELECT @p AS Tag, CustomerId FROM dbo.Customers', N'@p NVARCHAR(100)', @p = @Value;
                     """,
-                CompliantExplanation: "The tag is already a parameter, so every call - regardless of tag value - shares the one compiled plan."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

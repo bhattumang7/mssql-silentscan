@@ -85,6 +85,7 @@ public static partial class DynamicSqlPipeline
             accumulator.WriteLoss.AddRange(DedupeWriteLoss(PreferBestConfidencePerKey(perCallSite.WriteLoss, WriteLossKey, f => f.Confidence)));
             accumulator.TvfFence.AddRange(DedupeTvfFence(PreferBestConfidencePerKey(perCallSite.TvfFence, TvfFenceKey, f => f.Confidence)));
             accumulator.ScalarUdf.AddRange(DedupeScalarUdf(PreferBestConfidencePerKey(perCallSite.ScalarUdf, ScalarUdfKey, f => f.Confidence)));
+            accumulator.ForcedParameterization.AddRange(perCallSite.ForcedParameterization.Distinct());
             MergeHarness(accumulator.Harness, perCallSite.Harness);
         }
 
@@ -219,6 +220,8 @@ public static partial class DynamicSqlPipeline
 
         public List<UnparameterizedDynamicSqlFinding> Unparameterized { get; } = [];
 
+        public List<ForcedParameterizationFinding> ForcedParameterization { get; } = [];
+
         public List<SkippedConstruct> Skipped { get; } = [];
 
         public Dictionary<string, List<IFinding>> Harness { get; } = new(StringComparer.Ordinal);
@@ -227,7 +230,7 @@ public static partial class DynamicSqlPipeline
             new(
                 Findings, Tier1, Typed, ExpressionDerived, WriteLoss, TvfFence, ScalarUdf, Unparameterized, Skipped,
                 Harness.Count == 0 ? null : Harness.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<IFinding>)kv.Value, StringComparer.Ordinal),
-                TemporalBoundary);
+                TemporalBoundary, ForcedParameterization);
     }
 
     private readonly record struct DynamicSqlParseOptions(bool InitialQuotedIdentifiers, int? CompatibilityLevel, DatabaseCatalog? Catalog = null)
@@ -492,6 +495,7 @@ public static partial class DynamicSqlPipeline
         ResultAccumulator accumulator)
     {
         var placeholders = script.PlaceholderOccurrences;
+        var isForced = context.Catalog.IsParameterizationForced;
         var parseOptions = new DynamicSqlParseOptions(
             context.Catalog.ResolveDynamicSqlQuotedIdentifier(script.Scope.ProcScope), context.Catalog.CompatibilityLevel, context.Catalog);
         if (!TryParseAndClassify(script, placeholders, parseOptions, accumulator, out var innerParseResult, out var elisionMap))
@@ -510,7 +514,7 @@ public static partial class DynamicSqlPipeline
         accumulator.Findings.Add(new DynamicSqlFinding(
             script.CallSite.SourcePath, script.CallSite.Line, script.CallSite.Column, outcome, reason));
 
-        DetectUnparameterizedConcatenation(script, innerParseResult, accumulator);
+        DetectPlanPerValue(isForced, script, innerParseResult, elisionMap is null ? placeholders : null, map, accumulator);
 
         var tier1Ledger = new SkipLedger();
         var (innerTier1Findings, innerTemporalFindings) = NonSargablePredicateScanner.ScanFull(
@@ -575,6 +579,7 @@ public static partial class DynamicSqlPipeline
         accumulator.TvfFence.AddRange(nested.TvfFenceFindings);
         accumulator.ScalarUdf.AddRange(nested.ScalarUdfFindings);
         accumulator.Unparameterized.AddRange(nested.UnparameterizedFindings);
+        accumulator.ForcedParameterization.AddRange(nested.ForcedParameterizationFindings ?? []);
         accumulator.Skipped.AddRange(nested.SkippedConstructs);
         MergeHarness(accumulator.Harness, nested.HarnessFindings);
     }
@@ -658,6 +663,53 @@ public static partial class DynamicSqlPipeline
             return;
         }
 
+        AddUnparameterized(script, accumulator);
+    }
+
+    private static void DetectPlanPerValue(
+        bool isForced, DynamicSqlScript script, SqlParseResult innerParseResult, IReadOnlyList<PlaceholderOccurrence>? placeholders,
+        Func<int, int, SourceSpan> map, ResultAccumulator accumulator)
+    {
+        if (isForced)
+        {
+            DetectForcedParameterizationGaps(script, innerParseResult, placeholders, map, accumulator);
+        }
+        else
+        {
+            DetectUnparameterizedConcatenation(script, innerParseResult, accumulator);
+        }
+    }
+
+    private static void DetectForcedParameterizationGaps(
+        DynamicSqlScript script, SqlParseResult innerParseResult, IReadOnlyList<PlaceholderOccurrence>? placeholders,
+        Func<int, int, SourceSpan> map, ResultAccumulator accumulator)
+    {
+        if (placeholders is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var finding in ForcedParameterizationScanner.ScanDynamicStatements(
+                     innerParseResult, placeholders, script.Scope.ProcScope ?? script.CallSite.SourcePath, script.Confidence))
+        {
+            var span = map(finding.Line, finding.Column);
+            accumulator.ForcedParameterization.Add(finding with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column });
+        }
+
+        var ignoredStatementTakesAValue = placeholders
+            .Where(p => p.ChangesPerExecution)
+            .Any(p => DynamicSqlOperandPositionClassifier.Classify(innerParseResult.Fragment, p.InnerStartOffset) == DynamicSqlOperandPosition.Value
+                && ForcedParameterizationPosition.EnclosingStatement(innerParseResult.Fragment, p.InnerStartOffset) is { } statement
+                && ForcedParameterizationPosition.UsesVariables(statement)
+                && !ForcedParameterizationPosition.IsRecompiled(statement));
+        if (ignoredStatementTakesAValue)
+        {
+            AddUnparameterized(script, accumulator);
+        }
+    }
+
+    private static void AddUnparameterized(DynamicSqlScript script, ResultAccumulator accumulator)
+    {
         accumulator.Unparameterized.Add(new UnparameterizedDynamicSqlFinding(
             script.CallSite.SourcePath, script.CallSite.Line, script.CallSite.Column,
             UnparameterizedDynamicSqlFindingKind.ConcatenatedValueInConstantSql, script.Confidence));
@@ -757,7 +809,8 @@ public static partial class DynamicSqlPipeline
             [.. nestedResult.UnparameterizedFindings.Select(f => RemapNested(f, script))],
             [.. nestedResult.SkippedConstructs.Select(s => Remap(s, script))],
             RemapHarnessFindings(nestedResult.HarnessFindings, script),
-            [.. (nestedResult.TemporalBoundaryFindings ?? []).Select(f => RemapNested(f, script))]);
+            [.. (nestedResult.TemporalBoundaryFindings ?? []).Select(f => RemapNested(f, script))],
+            [.. (nestedResult.ForcedParameterizationFindings ?? []).Select(f => RemapNested(f, script))]);
     }
 
     private static DynamicSqlPipelineResult RefuseNestedCandidates(SqlParseResult innerParseResult, DynamicSqlScript script, Func<int, int, SourceSpan> map)
@@ -865,6 +918,12 @@ public static partial class DynamicSqlPipeline
         return finding.Relocated(span, RemapCallSite(finding.DynamicSqlCallSite, outerScript), Worse(finding.Confidence, outerScript.Confidence));
     }
 
+    private static ForcedParameterizationFinding RemapNested(ForcedParameterizationFinding finding, DynamicSqlScript outerScript)
+    {
+        var span = outerScript.SegmentMap.Map(finding.Line, finding.Column);
+        return finding with { SourcePath = span.SourcePath, Line = span.Line, Column = span.Column };
+    }
+
     private static UnparameterizedDynamicSqlFinding RemapNested(UnparameterizedDynamicSqlFinding finding, DynamicSqlScript outerScript)
     {
         var span = outerScript.SegmentMap.Map(finding.Line, finding.Column);
@@ -920,4 +979,5 @@ public sealed record DynamicSqlPipelineResult(
     IReadOnlyList<UnparameterizedDynamicSqlFinding> UnparameterizedFindings,
     IReadOnlyList<SkippedConstruct> SkippedConstructs,
     IReadOnlyDictionary<string, IReadOnlyList<IFinding>>? HarnessFindings = null,
-    IReadOnlyList<TemporalBoundaryPrecisionFinding>? TemporalBoundaryFindings = null);
+    IReadOnlyList<TemporalBoundaryPrecisionFinding>? TemporalBoundaryFindings = null,
+    IReadOnlyList<ForcedParameterizationFinding>? ForcedParameterizationFindings = null);

@@ -11,7 +11,7 @@ public sealed record DynamicSqlScope(string? ProcScope, SchemaObjectName? Trigge
     public static readonly DynamicSqlScope None = new(null, null);
 }
 
-public sealed record PlaceholderOccurrence(int InnerStartOffset, int Length, SqlType Type, SourceSpan Origin);
+public sealed record PlaceholderOccurrence(int InnerStartOffset, int Length, SqlType Type, SourceSpan Origin, bool ChangesPerExecution = true);
 
 public sealed record DynamicSqlScript(
     SourceSpan CallSite,

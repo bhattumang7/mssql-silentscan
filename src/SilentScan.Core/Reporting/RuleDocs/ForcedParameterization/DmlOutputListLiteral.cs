@@ -9,31 +9,35 @@ internal static class DmlOutputListLiteral
 
     public static RuleDocContent Content { get; } = new(
         WhyItMatters: """
-            Reported only when the target database has `PARAMETERIZATION FORCED` on. Confirmed
-            directly against a real engine: `INSERT ... OUTPUT inserted.Id, 'tag' VALUES (...)`
-            keeps the OUTPUT-list literal untouched in the cached plan while the VALUES clause's
-            own literals correctly parameterize.
+            Reported only when the target database has `PARAMETERIZATION FORCED` on. That setting
+            replaces literals in ad hoc and dynamic SQL with parameters so that statements
+            differing only by value share one plan, but it skips an OUTPUT clause list.
 
-            A tag/label literal returned alongside `inserted`/`deleted` columns from an OUTPUT
-            clause is a minor case in isolation, but it means that specific call site never shares
-            a plan with a differently-tagged sibling insert/update/delete under
-            PARAMETERIZATION FORCED.
+            This dynamic SQL string splices a value that changes between executions into that
+            position, so every distinct value produces a different statement and compiles its own
+            plan. Literals written directly inside a procedure, view, function or trigger are not
+            affected: the engine never applies forced parameterization there, and their text does
+            not change.
             """,
         HowToFixIt: """
-            Pass the OUTPUT-list literal as a parameter or local variable instead of a literal.
+            Pass the value through sp_executesql's own parameter list, so the statement text stays the same for every value and one plan is reused.
             """,
         Examples:
         [
             new RuleDocExample(
-                Title: "A literal tag in an OUTPUT clause",
+                Title: "A changing value spliced into an OUTPUT clause list",
                 NoncompliantSql: """
-                    INSERT INTO dbo.AuditLog (Id) OUTPUT inserted.Id, 'insert' VALUES (1);
+                    CREATE PROCEDURE dbo.RunDynamic @Value NVARCHAR(100) AS
+                    BEGIN
+                        DECLARE @sql NVARCHAR(MAX) = N'UPDATE dbo.Customers SET Visits = 0 OUTPUT ''' + @Value + N''' AS Tag';
+                        EXEC (@sql);
+                    END;
                     """,
-                NoncompliantExplanation: "Under PARAMETERIZATION FORCED, 'insert' stays literal in the cached plan - a sibling statement tagging 'update' compiles as a fully separate plan, not a shared one.",
+                NoncompliantExplanation: "Each distinct @Value yields a different statement text that forced parameterization leaves as it is, so each one compiles its own plan.",
                 CompliantSql: """
-                    CREATE PROCEDURE dbo.InsertAuditRow @Id int, @Action varchar(20) AS
-                    INSERT INTO dbo.AuditLog (Id) OUTPUT inserted.Id, @Action VALUES (@Id);
+                    CREATE PROCEDURE dbo.RunParameterized @Value NVARCHAR(100) AS
+                    EXEC sys.sp_executesql N'UPDATE dbo.Customers SET Visits = 0 OUTPUT @p AS Tag', N'@p NVARCHAR(100)', @p = @Value;
                     """,
-                CompliantExplanation: "The tag is already a parameter, so every call - regardless of tag value - shares the one compiled plan."),
+                CompliantExplanation: "The text is identical on every call; only the parameter value changes, so one plan is reused."),
         ]);
 }

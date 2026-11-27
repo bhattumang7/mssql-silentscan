@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -7,17 +6,15 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", FindingRuleIds.ForcedParameterizationGroupByExpressionLiteralRuleId)]
 public sealed class ForcedParameterizationGroupByExpressionLiteralPairedOracleTests : ForcedParameterizationPairedOracle
 {
-    private const string Kept = "group-by-expression-literal";
-
-    protected override string AbsentLiteral => "99999";
+    private const string Kept = "group-by-expression-value";
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
-        new(Kept, Setup, "SELECT COUNT(*) AS C FROM dbo.T GROUP BY Id + 7;"),
+        new(Kept, Setup, Splicing("N'SELECT COUNT(*) FROM dbo.T GROUP BY CHARINDEX(''' + CAST(@v AS NVARCHAR(10)) + N''', Name)'")),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("comparison-literal", Setup, "SELECT COUNT(*) AS C FROM dbo.T WHERE Val = 7 GROUP BY Id;"), Kept),
+        new(new("comparison-value", Setup, Splicing("N'SELECT COUNT(*) FROM dbo.T WHERE Name = ''' + CAST(@v AS NVARCHAR(10)) + N''' GROUP BY Val'")), Kept),
     ];
 }

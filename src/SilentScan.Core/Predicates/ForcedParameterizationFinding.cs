@@ -21,8 +21,6 @@ public enum ForcedParameterizationFindingKind
 
     ConvertStyleCodeLiteral,
 
-    ConstantFoldableExpressionLiteral,
-
     GroupByExpressionLiteral,
 }
 

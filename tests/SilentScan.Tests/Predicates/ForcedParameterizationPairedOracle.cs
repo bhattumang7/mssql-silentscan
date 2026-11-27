@@ -14,13 +14,14 @@ public abstract class ForcedParameterizationPairedOracle : RuleOracle
         GO
         """;
 
-    protected override IReadOnlyList<string> ScannerOnlyForms => [StatementForms.Procedure, StatementForms.View];
+    protected static string Splicing(string assembledText) =>
+        $"CREATE PROCEDURE dbo.Run @v INT AS BEGIN DECLARE @sql NVARCHAR(MAX) = {assembledText}; EXEC (@sql); END;";
 
-    protected abstract string AbsentLiteral { get; }
+    protected override IReadOnlyList<string> ScannerOnlyForms => [StatementForms.DynamicSql];
 
     protected override IReadOnlyList<Func<IFinding, IFinding>> ClaimMutations =>
     [
-        finding => ((ForcedParameterizationFinding)finding) with { LiteralSourceText = AbsentLiteral },
+        finding => ((ForcedParameterizationFinding)finding) with { LiteralSourceText = "'absent__silentscan_sym_L1C1__'" },
         finding => ((ForcedParameterizationFinding)finding) with { LiteralSourceText = null },
     ];
 }

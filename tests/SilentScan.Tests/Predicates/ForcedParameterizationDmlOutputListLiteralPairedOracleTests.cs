@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -7,17 +6,15 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", FindingRuleIds.ForcedParameterizationDmlOutputListLiteralRuleId)]
 public sealed class ForcedParameterizationDmlOutputListLiteralPairedOracleTests : ForcedParameterizationPairedOracle
 {
-    private const string Kept = "output-list-literal";
-
-    protected override string AbsentLiteral => "99999";
+    private const string Kept = "output-list-value";
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
-        new(Kept, Setup, "UPDATE dbo.T SET Val = Val OUTPUT 7 AS K WHERE Id = -1;"),
+        new(Kept, Setup, Splicing("N'UPDATE dbo.T SET Val = 1 OUTPUT ''' + CAST(@v AS NVARCHAR(10)) + N''' AS Tag'")),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("assigned-literal", Setup, "UPDATE dbo.T SET Val = 7 WHERE Id = -1;"), Kept),
+        new(new("assigned-value", Setup, Splicing("N'UPDATE dbo.T SET Name = ''' + CAST(@v AS NVARCHAR(10)) + N''''")), Kept),
     ];
 }

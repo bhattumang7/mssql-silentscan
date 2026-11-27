@@ -59,7 +59,9 @@ public sealed record TouchedExpression(string Text) : ITouch;
 public delegate Task<int> PerturbationStep(SqlConnection connection, SqlTransaction transaction, CancellationToken cancellationToken);
 
 [VerifierSupport]
-public sealed record PerturbationOptions(string? AfterStatementQuery = null, bool TouchesReadAfterCondition = false, bool PlanCompiledInModule = false);
+public sealed record PerturbationOptions(
+    string? AfterStatementQuery = null, bool TouchesReadAfterCondition = false, bool PlanCompiledInModule = false,
+    Func<string, string?>? AppliedStatement = null);
 
 public sealed class Perturbation
 {
@@ -76,6 +78,7 @@ public sealed class Perturbation
         AfterStatementQuery = options?.AfterStatementQuery;
         TouchesReadAfterCondition = options?.TouchesReadAfterCondition ?? false;
         BaselineStatement = baselineStatement;
+        AppliedStatement = options?.AppliedStatement;
         Touches = touches;
         Expected = expected;
         RemoveCondition = removeCondition;
@@ -103,6 +106,8 @@ public sealed class Perturbation
     public Func<SqlException, bool> EngineRefusalRefutes { get; }
 
     public Func<string, string?>? BaselineStatement { get; }
+
+    public Func<string, string?>? AppliedStatement { get; }
 
     public string? AfterStatementQuery { get; }
 
@@ -244,9 +249,18 @@ public abstract class RuleVerifier<TFinding> : IRuleVerifier
             }
         }
 
-        var perturbed = await ObserveOnceAsync(connection, transaction, statement, observe, cancellationToken);
+        var applied = AppliedStatementOf(perturbation, statement);
+        if (applied is null)
+        {
+            return NotDecided("The statement cannot be rewritten to apply the condition.");
+        }
+
+        var perturbed = await ObserveOnceAsync(connection, transaction, applied, observe, cancellationToken);
         return Classify(perturbation.Expected, baseline, perturbed);
     }
+
+    private static string? AppliedStatementOf(Perturbation perturbation, string statement) =>
+        perturbation.AppliedStatement is { } derive ? derive(statement) : statement;
 
     private static EngineVerification Classify(Difference expected, Observation baseline, Observation perturbed)
     {

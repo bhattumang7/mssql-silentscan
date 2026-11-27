@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -7,17 +6,15 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", FindingRuleIds.ForcedParameterizationTopOrPagingLiteralRuleId)]
 public sealed class ForcedParameterizationTopOrPagingLiteralPairedOracleTests : ForcedParameterizationPairedOracle
 {
-    private const string Kept = "top-row-count-literal";
-
-    protected override string AbsentLiteral => "99999";
+    private const string Kept = "top-row-count-value";
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
-        new(Kept, Setup, "SELECT TOP 7 Id FROM dbo.T;"),
+        new(Kept, Setup, Splicing("N'SELECT TOP (' + CAST(@v AS NVARCHAR(10)) + N') Id FROM dbo.T'")),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("comparison-literal", Setup, "SELECT Id FROM dbo.T WHERE Val = 7;"), Kept),
+        new(new("comparison-value", Setup, Splicing("N'SELECT Id FROM dbo.T WHERE Val = ' + CAST(@v AS NVARCHAR(10))")), Kept),
     ];
 }

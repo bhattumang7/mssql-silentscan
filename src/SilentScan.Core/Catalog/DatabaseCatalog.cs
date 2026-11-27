@@ -548,6 +548,8 @@ public sealed class DatabaseCatalog
 
     public int? CompatibilityLevel { get; set; }
 
+    public bool IsParameterizationForced { get; set; }
+
     public IReadOnlyCollection<string>? CallerDefaultSchemas { get; set; }
 
     public ISet<string> DisabledScopedConfigurations { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

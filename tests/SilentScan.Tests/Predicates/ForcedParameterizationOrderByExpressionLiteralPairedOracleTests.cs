@@ -1,4 +1,3 @@
-using SilentScan.Core.Predicates;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -7,17 +6,15 @@ namespace SilentScan.Tests.Predicates;
 [Trait("Rule", FindingRuleIds.ForcedParameterizationOrderByExpressionLiteralRuleId)]
 public sealed class ForcedParameterizationOrderByExpressionLiteralPairedOracleTests : ForcedParameterizationPairedOracle
 {
-    private const string Kept = "order-by-expression-literal";
-
-    protected override string AbsentLiteral => "99999";
+    private const string Kept = "order-by-expression-value";
 
     protected override IReadOnlyList<OracleCase> FiringCases { get; } =
     [
-        new(Kept, Setup, "SELECT TOP (3) Id FROM dbo.T ORDER BY Id + 7;"),
+        new(Kept, Setup, Splicing("N'SELECT Id FROM dbo.T ORDER BY Val + CHARINDEX(''' + CAST(@v AS NVARCHAR(10)) + N''', Name)'")),
     ];
 
     protected override IReadOnlyList<SilentCase> SilentCases { get; } =
     [
-        new(new("comparison-literal", Setup, "SELECT TOP (3) Id FROM dbo.T WHERE Val = 7 ORDER BY Id;"), Kept),
+        new(new("comparison-value", Setup, Splicing("N'SELECT Id FROM dbo.T WHERE Name = ''' + CAST(@v AS NVARCHAR(10)) + N''''")), Kept),
     ];
 }

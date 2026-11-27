@@ -1,46 +1,111 @@
-using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SilentScan.Verify.Oracle;
 
 [VerifierSupport]
-internal static class LiteralParameterizationProbe
+internal static partial class LiteralParameterizationProbe
 {
-    public static Perturbation Describe(string? literal)
+    private const string Sample = "7";
+
+    private const string OtherSample = "8";
+
+    public static Perturbation Describe(string? spliced)
     {
-        if (Alternative(literal) is not { } alternative)
+        if (string.IsNullOrEmpty(spliced) || !PlaceholderToken().IsMatch(spliced))
         {
-            return Perturbation.NotApplicable("The finding does not carry a literal the probe can change to another value.");
+            return Perturbation.NotApplicable("The finding does not carry a spliced value the probe can change.");
         }
 
+        var shape = PlaceholderToken().Replace(spliced, Sample);
         return new Perturbation(
-            [new TouchedExpression(literal!)],
+            [],
             Difference.PlanTextChanged,
             static (_, _, _) => Task.FromResult(0),
             static (_, _, _) => Task.FromResult(0),
             static _ => false,
-            baselineStatement: statement => statement.Replace(literal!, alternative, StringComparison.Ordinal));
+            baselineStatement: statement => Render(statement, Sample) is { } inner && inner.Contains(shape, StringComparison.Ordinal) ? inner : null,
+            options: new PerturbationOptions(AppliedStatement: statement => Render(statement, OtherSample)));
     }
 
-    private static string? Alternative(string? literal)
+    private static string? Render(string statement, string sample)
     {
-        if (string.IsNullOrEmpty(literal))
+        var start = statement.IndexOf("= N'", StringComparison.Ordinal);
+        if (start < 0)
         {
             return null;
         }
 
-        if (long.TryParse(literal, NumberStyles.None, CultureInfo.InvariantCulture, out var whole))
+        var text = new StringBuilder();
+        var position = start + 2;
+        while (position < statement.Length)
         {
-            return (whole + 1).ToString(CultureInfo.InvariantCulture);
+            if (statement.AsSpan(position).StartsWith("N'", StringComparison.Ordinal))
+            {
+                position = AppendLiteral(statement, position + 2, text);
+            }
+            else
+            {
+                position = EndOfTerm(statement, position);
+                text.Append(sample);
+            }
+
+            position = SkipSpaces(statement, position);
+            if (position >= statement.Length || statement[position] != '+')
+            {
+                return text.ToString();
+            }
+
+            position = SkipSpaces(statement, position + 1);
         }
 
-        if (decimal.TryParse(literal, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out _))
-        {
-            return literal + "1";
-        }
-
-        var quote = literal.LastIndexOf('\'');
-        return quote > 0 && quote == literal.Length - 1
-            ? literal[..quote] + "x'"
-            : null;
+        return null;
     }
+
+    private static int AppendLiteral(string statement, int position, StringBuilder text)
+    {
+        while (position < statement.Length)
+        {
+            if (statement[position] != '\'')
+            {
+                text.Append(statement[position++]);
+            }
+            else if (position + 1 < statement.Length && statement[position + 1] == '\'')
+            {
+                text.Append('\'');
+                position += 2;
+            }
+            else
+            {
+                return position + 1;
+            }
+        }
+
+        return position;
+    }
+
+    private static int EndOfTerm(string statement, int position)
+    {
+        var depth = 0;
+        while (position < statement.Length && (depth > 0 || statement[position] is not ('+' or ';')))
+        {
+            depth += statement[position] switch { '(' => 1, ')' => -1, _ => 0 };
+            position++;
+        }
+
+        return position;
+    }
+
+    private static int SkipSpaces(string statement, int position)
+    {
+        while (position < statement.Length && char.IsWhiteSpace(statement[position]))
+        {
+            position++;
+        }
+
+        return position;
+    }
+
+    [GeneratedRegex("__silentscan_sym_L\\d+C\\d+__")]
+    private static partial Regex PlaceholderToken();
 }
