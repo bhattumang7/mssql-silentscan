@@ -15,9 +15,8 @@ public sealed class BoundedStringBuiltinUtf8DatabaseOracleTests : OracleTestFixt
 
     protected override string Ddl => "CREATE TABLE dbo.Anchor (Id INT);";
 
-    public override async Task InitializeAsync()
+    protected override async Task SeedAsync()
     {
-        await base.InitializeAsync();
         SqlConnection.ClearAllPools();
         await using var connection = new SqlConnection(Options.BuildConnectionString());
         await connection.OpenAsync();
