@@ -146,6 +146,9 @@ public static partial class WriteLossClassifier
         target.Category == SqlTypeCategory.DateTime
             && source.Category is SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset
             && source.Scale is >= 3
+        || target.Category == SqlTypeCategory.DateTime
+            && source.Category == SqlTypeCategory.Time
+            && source.Scale is >= 3
         || source.Category == SqlTypeCategory.DateTime
             && target.Category is SqlTypeCategory.DateTime2 or SqlTypeCategory.DateTimeOffset
             && target.Scale is < 7;

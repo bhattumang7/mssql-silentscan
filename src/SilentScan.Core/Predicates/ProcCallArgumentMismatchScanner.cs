@@ -31,7 +31,8 @@ public static class ProcCallArgumentMismatchScanner
         if (argument.CallerVariableWasAssignedBeforeCall
             && argument.CallerArgumentType is { } callerType
             && argument.FormalParameterType is { } formalType
-            && WriteLossClassifier.Classify(formalType, callerType, argument.CallerArgumentExpression, isVariableTarget: true) is { } passedInKind)
+            && WriteLossClassifier.Classify(formalType, callerType, argument.CallerArgumentExpression, isVariableTarget: true) is { } passedInKind
+            && !(edge.NumericRoundAbortOn && WriteLossClassifier.RaisesUnderNumericRoundAbort(passedInKind, formalType, callerType)))
         {
             findings.Add(new ProcCallArgumentMismatchFinding(
                 edge.CallerScopeQualifiedName, edge.CalleeQualifiedName, argument.FormalParameterName,
@@ -44,7 +45,8 @@ public static class ProcCallArgumentMismatchScanner
             && argument.CallerVariableName is { } callerVariableName
             && argument.CallerArgumentType is { } outputCallerType
             && argument.FormalParameterType is { } outputFormalType
-            && WriteLossClassifier.Classify(outputCallerType, outputFormalType, sourceExpression: null, isVariableTarget: true) is { } passedBackKind)
+            && WriteLossClassifier.Classify(outputCallerType, outputFormalType, sourceExpression: null, isVariableTarget: true) is { } passedBackKind
+            && !(edge.NumericRoundAbortOn && WriteLossClassifier.RaisesUnderNumericRoundAbort(passedBackKind, outputCallerType, outputFormalType)))
         {
             findings.Add(new ProcCallArgumentMismatchFinding(
                 edge.CallerScopeQualifiedName, edge.CalleeQualifiedName, argument.FormalParameterName,

@@ -1,6 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
 using SilentScan.Core.Common;
+using SilentScan.Core.TypeInference;
 
 namespace SilentScan.Core.Predicates;
 
@@ -31,12 +32,12 @@ internal static class SingleRowKeyPinning
             var first = equalities.Count;
             if (conjunct is BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison)
             {
-                AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries);
-                AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries);
+                AddEquality(equalities, comparison.FirstExpression, comparison.SecondExpression, entries, comparer);
+                AddEquality(equalities, comparison.SecondExpression, comparison.FirstExpression, entries, comparer);
             }
             else if (conjunct is InPredicate { NotDefined: false, Subquery: null, Values: [{ } onlyValue] } singleValueIn)
             {
-                AddEquality(equalities, singleValueIn.Expression, onlyValue, entries);
+                AddEquality(equalities, singleValueIn.Expression, onlyValue, entries, comparer);
             }
 
             if (onlyAliases is not null)
@@ -158,10 +159,12 @@ internal static class SingleRowKeyPinning
         List<ColumnEquality> equalities,
         ScalarExpression columnSide,
         ScalarExpression boundSide,
-        Dictionary<string, CatalogTable> entries)
+        Dictionary<string, CatalogTable> entries,
+        StringComparer comparer)
     {
         if (columnSide is not ColumnReferenceExpression { MultiPartIdentifier: { } identifier }
-            || ReferencedAlias(identifier, entries) is not { } alias)
+            || ReferencedAlias(identifier, entries) is not { } alias
+            || ConvertsColumn(entries[alias].FindColumn(identifier.Identifiers[^1].Value, comparer), boundSide))
         {
             return;
         }
@@ -186,6 +189,10 @@ internal static class SingleRowKeyPinning
 
         equalities.Add(new ColumnEquality(alias, identifier.Identifiers[^1].Value, boundAliases));
     }
+
+    private static bool ConvertsColumn(CatalogColumn? column, ScalarExpression boundSide) =>
+        boundSide is IntegerLiteral or NumericLiteral or RealLiteral or MoneyLiteral
+        && column?.Type?.Category is SqlTypeCategory.Char or SqlTypeCategory.VarChar or SqlTypeCategory.NChar or SqlTypeCategory.NVarChar;
 
     private static string? ReferencedAlias(MultiPartIdentifier identifier, Dictionary<string, CatalogTable> entries)
     {

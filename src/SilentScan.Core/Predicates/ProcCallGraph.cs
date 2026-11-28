@@ -14,7 +14,8 @@ public sealed record ProcCallArgument(
     bool CallerFlowApproximate = false, string? FormalTableTypeQualifiedName = null);
 
 public sealed record ProcCallEdge(
-    string? CallerScopeQualifiedName, string CalleeQualifiedName, SourceSpan CallSite, IReadOnlyList<ProcCallArgument> Arguments);
+    string? CallerScopeQualifiedName, string CalleeQualifiedName, SourceSpan CallSite, IReadOnlyList<ProcCallArgument> Arguments,
+    bool NumericRoundAbortOn = false);
 
 public sealed record SpExecuteSqlParameterBinding(
     string ParameterName, SqlType? DeclaredType, bool DeclaredIsOutput,
@@ -22,7 +23,8 @@ public sealed record SpExecuteSqlParameterBinding(
     ScalarExpression? CallerArgumentExpression, bool CallerVariableWasAssignedBeforeCall, bool CallerFlowApproximate);
 
 public sealed record SpExecuteSqlCallSite(
-    string? CallerScopeQualifiedName, SourceSpan CallSite, IReadOnlyList<SpExecuteSqlParameterBinding> Bindings);
+    string? CallerScopeQualifiedName, SourceSpan CallSite, IReadOnlyList<SpExecuteSqlParameterBinding> Bindings,
+    bool NumericRoundAbortOn = false);
 
 public sealed class ProcCallGraph(
     IReadOnlyList<ProcCallEdge> edges, IReadOnlyList<SpExecuteSqlCallSite>? spExecuteSqlCallSites = null, StringComparer? identifierComparer = null)

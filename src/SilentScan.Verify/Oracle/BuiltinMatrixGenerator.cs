@@ -11,6 +11,10 @@ public sealed partial class BuiltinMatrixGenerator
 {
     private const int MaxConcurrentProbes = 4;
 
+    private const string EnablePreviewFeatures =
+        "IF EXISTS (SELECT 1 FROM sys.database_scoped_configurations WHERE name = N'PREVIEW_FEATURES') "
+        + "EXEC (N'ALTER DATABASE SCOPED CONFIGURATION SET PREVIEW_FEATURES = ON;');";
+
     private readonly DatabaseProvisioner _provisioner;
     private readonly SqlServerOptions _options;
 
@@ -29,6 +33,7 @@ public sealed partial class BuiltinMatrixGenerator
         var cells = new ConcurrentBag<(int Order, BuiltinCell Cell)>();
         try
         {
+            await new ScriptDeployer(_options).DeployAsync(EnablePreviewFeatures, database, cancellationToken);
             var work = probes.SelectMany((p, i) => Shapes(p).Select(shape => (Index: i, Probe: p, Shape: shape))).ToList();
             var sequence = 0;
             await Parallel.ForEachAsync(

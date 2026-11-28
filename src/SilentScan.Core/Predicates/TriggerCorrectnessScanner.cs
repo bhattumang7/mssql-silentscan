@@ -14,12 +14,6 @@ public static class TriggerCorrectnessScanner
 
     private static readonly HashSet<string> PseudoTableNames = new(StringComparer.OrdinalIgnoreCase) { InsertedTableName, "deleted" };
 
-    private static readonly HashSet<string> AggregateFunctionNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "SUM", "COUNT", "COUNT_BIG", "AVG", "MIN", "MAX", "APPROX_COUNT_DISTINCT",
-        "CHECKSUM_AGG", "GROUPING", "GROUPING_ID", "STDEV", "STDEVP", "STRING_AGG", "VAR", "VARP",
-    };
-
     public static IReadOnlyList<TriggerCorrectnessFinding> Scan(SqlParseResult parseResult, DatabaseCatalog catalog)
     {
         var rule = CreateRule(parseResult.SourcePath, catalog);
@@ -243,7 +237,7 @@ public static class TriggerCorrectnessScanner
 
             public override void ExplicitVisit(FunctionCall node)
             {
-                if (node.OverClause is null && AggregateFunctionNames.Contains(node.FunctionName.Value))
+                if (node.OverClause is null && AggregateFunctions.Names.Contains(node.FunctionName.Value))
                 {
                     Found = true;
                     return;

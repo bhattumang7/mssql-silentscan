@@ -18,7 +18,9 @@ public static class ProcCallGraphBuilder
         foreach (var result in parseResults)
         {
             stage?.Advance(currentItem: result.SourcePath);
-            var rule = new Rule(catalog, ledger, result.SourcePath);
+            var rule = new Rule(
+                catalog, ledger, result.SourcePath,
+                SetOptionByStatementResolver.Resolve(result.Fragment, SetOptions.NumericRoundAbort, setting: true));
             var walker = new ModuleWalker(result.SourcePath, catalog, EmptyResolvedViews, rules: [rule]);
             result.Fragment.Accept(walker);
             edges.AddRange(rule.Edges);
@@ -33,8 +35,11 @@ public static class ProcCallGraphBuilder
 
     private static readonly IReadOnlyDictionary<string, ResolvedRelation> EmptyResolvedViews = new Dictionary<string, ResolvedRelation>();
 
-    private sealed class Rule(DatabaseCatalog catalog, SkipLedger ledger, string sourcePath) : IModuleRule
+    private sealed class Rule(
+        DatabaseCatalog catalog, SkipLedger ledger, string sourcePath, Dictionary<TSqlStatement, bool> numericRoundAbortByStatement) : IModuleRule
     {
+        private bool IsNumericRoundAbortOn(TSqlStatement statement) => numericRoundAbortByStatement.GetValueOrDefault(statement);
+
         private IList<TSqlStatement>? _currentScopeStatements;
 
         private readonly Dictionary<string, SqlType?> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
@@ -183,7 +188,7 @@ public static class ProcCallGraphBuilder
             }
 
             var matched = MatchFoldedArguments(innerProcedureReference.Parameters, formalParameters, rendered.SegmentMap);
-            Edges.Add(new ProcCallEdge(walker.CurrentProcScope, qualifiedName, site, matched));
+            Edges.Add(new ProcCallEdge(walker.CurrentProcScope, qualifiedName, site, matched, IsNumericRoundAbortOn(node)));
         }
 
         private bool CannotContainProcedureCall(IReadOnlyList<FlatPiece> assembly, ModuleWalker walker) =>
@@ -265,7 +270,8 @@ public static class ProcCallGraphBuilder
 
             if (bindings.Count > 0)
             {
-                SpExecuteSqlCallSites.Add(new SpExecuteSqlCallSite(walker.CurrentProcScope, new SourceSpan(sourcePath, node.StartLine, node.StartColumn), bindings));
+                SpExecuteSqlCallSites.Add(new SpExecuteSqlCallSite(
+                    walker.CurrentProcScope, new SourceSpan(sourcePath, node.StartLine, node.StartColumn), bindings, IsNumericRoundAbortOn(node)));
             }
         }
 
@@ -549,7 +555,9 @@ public static class ProcCallGraphBuilder
             var arguments = MatchArguments(
                 procedureReference.Parameters, formalParameters,
                 new MatchArgumentsContext(sourcePath, _currentScopeStatements, node, _variableTypes, catalog, qualifiedName, ledger));
-            Edges.Add(new ProcCallEdge(walker.CurrentProcScope, qualifiedName, new SourceSpan(sourcePath, node.StartLine, node.StartColumn), arguments));
+            Edges.Add(new ProcCallEdge(
+                walker.CurrentProcScope, qualifiedName, new SourceSpan(sourcePath, node.StartLine, node.StartColumn), arguments,
+                IsNumericRoundAbortOn(node)));
         }
 
         private readonly record struct MatchArgumentsContext(

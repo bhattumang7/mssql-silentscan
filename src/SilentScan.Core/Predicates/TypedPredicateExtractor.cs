@@ -882,8 +882,7 @@ public static class TypedPredicateExtractor
                 return false;
             }
 
-            if (kind.Value == WriteLossKind.NumericScaleNarrowing
-                && site.TargetType.Category == SqlTypeCategory.Decimal && site.SourceType!.Category == SqlTypeCategory.Decimal
+            if (Rules.WriteLossClassifier.RaisesUnderNumericRoundAbort(kind.Value, site.TargetType, site.SourceType!)
                 && IsNumericRoundAbortOnForCurrentStatement)
             {
                 return false;

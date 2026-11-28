@@ -16,11 +16,11 @@ public static class SargabilityClassifier
         string.Equals(functionName, "ISNULL", StringComparison.OrdinalIgnoreCase) && columnIsKnownNotNull;
 
     public static string DescribeCharindexRemediation(bool isExactPrefixMatch) => isExactPrefixMatch
-        ? "CHARINDEX(x, col) = 1 is a prefix match - rewritable to col LIKE 'x%', which restores the seek."
+        ? "CHARINDEX(x, col) = 1 is a prefix match - rewritable to col LIKE 'x%' with any %, _ and [ in x escaped, which restores the seek and matches the same rows only when x is non-empty and has no trailing blank."
         : "CHARINDEX(x, col) is a substring search - no sargable rewrite exists (unlike the = 1 prefix-match case).";
 
     public static string DescribeLeftRemediation(bool isExactPrefixMatch) => isExactPrefixMatch
-        ? "LEFT(col, n) = 'x' (LEN('x') = n) is a prefix match - rewritable to col LIKE 'x%', which restores the seek."
+        ? "LEFT(col, n) = 'x' (LEN('x') = n) is a prefix match - rewritable to col LIKE 'x%' with any %, _ and [ in x escaped, which restores the seek and matches the same rows only when x is non-empty and has no trailing blank."
         : "LEFT(col, n) wraps the column - no sargable rewrite applies unless the compared literal's own length exactly matches n.";
 
     public static bool IsCaseFoldFunction(string functionName) =>

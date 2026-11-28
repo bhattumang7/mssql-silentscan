@@ -32,7 +32,8 @@ public static class SpExecuteSqlParameterMismatchScanner
         if (binding.CallerVariableWasAssignedBeforeCall
             && binding.CallerArgumentType is { } callerType
             && binding.DeclaredType is { } declaredType
-            && WriteLossClassifier.Classify(declaredType, callerType, binding.CallerArgumentExpression, isVariableTarget: true) is { } passedInKind)
+            && WriteLossClassifier.Classify(declaredType, callerType, binding.CallerArgumentExpression, isVariableTarget: true) is { } passedInKind
+            && !(callSite.NumericRoundAbortOn && WriteLossClassifier.RaisesUnderNumericRoundAbort(passedInKind, declaredType, callerType)))
         {
             findings.Add(new SpExecuteSqlParameterMismatchFinding(
                 callSite.CallerScopeQualifiedName, binding.ParameterName, DisplayFor(binding), callerType.ToString(), declaredType.ToString(),
@@ -44,7 +45,8 @@ public static class SpExecuteSqlParameterMismatchScanner
             && binding.CallerVariableName is { } callerVariableName
             && binding.CallerArgumentType is { } outputCallerType
             && binding.DeclaredType is { } outputDeclaredType
-            && WriteLossClassifier.Classify(outputCallerType, outputDeclaredType, sourceExpression: null, isVariableTarget: true) is { } passedBackKind)
+            && WriteLossClassifier.Classify(outputCallerType, outputDeclaredType, sourceExpression: null, isVariableTarget: true) is { } passedBackKind
+            && !(callSite.NumericRoundAbortOn && WriteLossClassifier.RaisesUnderNumericRoundAbort(passedBackKind, outputCallerType, outputDeclaredType)))
         {
             findings.Add(new SpExecuteSqlParameterMismatchFinding(
                 callSite.CallerScopeQualifiedName, binding.ParameterName, callerVariableName, outputCallerType.ToString(), outputDeclaredType.ToString(),
