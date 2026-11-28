@@ -57,7 +57,7 @@ public static class ScalarUdfScanner
 
         private bool _scanForcingHintSeen;
 
-        private readonly List<(int Start, int End)> _inliningDisabledStatements = [];
+        private readonly List<(int Start, int End, bool ByHint)> _inliningDisabledStatements = [];
 
         public void OnEnterSelectStatementScope(SelectStatement node, ModuleWalker walker) =>
             RecordInliningHints(node, node.OptimizerHints);
@@ -67,10 +67,10 @@ public static class ScalarUdfScanner
 
         private void RecordInliningHints(TSqlFragment statement, IList<OptimizerHint> hints)
         {
-            if (hints.OfType<UseHintList>().SelectMany(list => list.Hints).Any(hint => DisablesInlining(hint.Value))
-                || InlineableReferenceCount(statement) > MaxInlinedReferencesPerStatement)
+            var byHint = hints.OfType<UseHintList>().SelectMany(list => list.Hints).Any(hint => DisablesInlining(hint.Value));
+            if (byHint || InlineableReferenceCount(statement) > MaxInlinedReferencesPerStatement)
             {
-                _inliningDisabledStatements.Add((statement.StartOffset, statement.StartOffset + statement.FragmentLength));
+                _inliningDisabledStatements.Add((statement.StartOffset, statement.StartOffset + statement.FragmentLength, byHint));
             }
         }
 
@@ -397,11 +397,17 @@ public static class ScalarUdfScanner
             }
 
             var (inlineability, blocker) = ScalarUdfInlineabilityClassifier.Classify(info, catalog.CompatibilityLevel, catalog.IsScopedConfigurationDisabled("TSQL_SCALAR_UDF_INLINING"));
-            if (inlineability == ScalarUdfInlineability.Inlineable
-                && !_inliningDisabledStatements.Any(r => node.StartOffset >= r.Start && node.StartOffset < r.End))
+            var disabled = _inliningDisabledStatements.FindAll(r => node.StartOffset >= r.Start && node.StartOffset < r.End);
+            if (inlineability == ScalarUdfInlineability.Inlineable && disabled.Count == 0)
             {
                 return;
             }
+
+            if (inlineability != ScalarUdfInlineability.NotInlineable && disabled.Exists(r => r.ByHint))
+            {
+                (inlineability, blocker) = (ScalarUdfInlineability.NotInlineable, "scalar UDF inlining is switched off by a statement hint");
+            }
+
             var constantArgumentsNotFolded = info.IsSchemaBound == false && node.Parameters.Count > 0 && node.Parameters.All(p => p is Literal);
 
             Findings.Add(new ScalarUdfFinding(

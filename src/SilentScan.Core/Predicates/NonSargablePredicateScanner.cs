@@ -438,7 +438,7 @@ public static class NonSargablePredicateScanner
                 return;
             }
 
-            if (RegexpSeekability.CannotDeriveRange(literal.Value))
+            if (!RegexSeekPrefix.CanBeDerived(literal.Value))
             {
                 Add(SargabilityFindingKind.RegexpPatternNoLiteralPrefix, columnName, detail: null, node, columnRef, scopeChain, walker);
             }

@@ -82,7 +82,7 @@ public sealed class QueryAntiPatternScannerTests
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
             + "CREATE PROCEDURE dbo.P @CustomerId INT, @ids dbo.IdList READONLY AS "
-            + "DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @CustomerId; "
+            + "SELECT Id FROM @ids WHERE Id = @CustomerId; "
             + "SELECT Id FROM dbo.Big WHERE Id = @CustomerId;",
             compatibilityLevel: 170);
 
@@ -1023,7 +1023,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
+            + "ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS TABLE AS RETURN SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1034,7 +1034,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE OR ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
+            + "CREATE OR ALTER FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS TABLE AS RETURN SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);
@@ -1094,7 +1094,7 @@ public sealed class QueryAntiPatternScannerTests
     {
         var findings = Scan(
             "CREATE TYPE dbo.IdList AS TABLE (Id INT NOT NULL PRIMARY KEY);\nGO\n"
-            + "CREATE FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS INT AS BEGIN DECLARE @c INT; SELECT @c = COUNT(*) FROM @ids WHERE Id = @id; RETURN @c; END;",
+            + "CREATE FUNCTION dbo.F (@id INT, @ids dbo.IdList READONLY) RETURNS TABLE AS RETURN SELECT Id FROM @ids WHERE Id = @id;",
             compatibilityLevel: 170);
 
         Assert.Single(findings, f => f.Kind == QueryAntiPatternFindingKind.TableVariablePspSkip);

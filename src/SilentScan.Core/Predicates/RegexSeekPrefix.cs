@@ -4,6 +4,8 @@ internal static class RegexSeekPrefix
 {
     private const string StoppingMetacharacters = "$.()|^]}-";
 
+    private const string EscapesWithoutALiteralRange = "abdfnprstvwxzABCDEPQSW";
+
     public static bool CanBeDerived(string pattern)
     {
         if (pattern.Length == 0 || pattern[0] != '^')
@@ -18,7 +20,7 @@ internal static class RegexSeekPrefix
             {
                 case '[':
                     return !ContainsNamedClass(pattern, i) && (!IsNegatedClass(pattern, i) || literalAtoms > 0);
-                case '\\' when i + 1 < pattern.Length && !char.IsLetterOrDigit(pattern[i + 1]):
+                case '\\' when i + 1 < pattern.Length && !EscapesWithoutALiteralRange.Contains(pattern[i + 1], StringComparison.Ordinal):
                     literalAtoms++;
                     i++;
                     break;
