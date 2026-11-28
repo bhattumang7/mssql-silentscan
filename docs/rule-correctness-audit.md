@@ -14,7 +14,7 @@ false-positive bug report the same way it treats a false-positive finding:
 worse than not reporting it at all.
 
 First full pass: all 78 rule scanner families audited, 35 confirmed
-correctness bugs found, all since fixed.
+correctness bugs found; 0 remain open below.
 
 ---
 
@@ -26,90 +26,6 @@ correctness bugs found, all since fixed.
 
 Entries here are closed fixes, kept only so a later bug can be checked
 against the same root-cause category before it's treated as new.
-
-- **Category: equality between a value and an exact copy of itself reported as approximate comparison.**
-  `predicates/float-equality` flagged a join or filter between a float column
-  and a table-variable or temp-table column that is populated only from `MIN`
-  or `MAX` (plain or windowed) of that same column, the idiom for locating the
-  row that holds an extreme. Oracle: `MIN`/`MAX` return an existing stored
-  value bit for bit, so the join back to the source matches, while a column
-  populated from `AVG` or a `MIN` later changed by an UPDATE misses the row.
-  Fixed by tracking, per module, INSERT...SELECT targets whose every write is a
-  `MIN`/`MAX` of one resolved base column (any other write, UPDATE assignment
-  of the column name, MERGE, or non-SELECT source disables it) and dropping a
-  finding whose two compared columns are such a pair. Sibling sweep:
-  `FloatOrderDependentAggregateScanner` only concerns SUM/AVG-style aggregates
-  and does not treat MIN/MAX as order dependent; no other scanner compares
-  float columns.
-- **Category: positional INSERT mapped onto columns the engine does not fill from the value list.**
-  `write-loss/*` (all kinds extracted by `TypedPredicateExtractor`) paired the
-  values of an `INSERT` with no column list against every column of the target
-  table, so an IDENTITY or computed column shifted every value one slot and a
-  float was reported as written into an integer column it never reached.
-  Oracle: a positional insert into a table with an IDENTITY or computed column
-  stores the first value in the first non-identity, non-computed column, while
-  the sibling that really sends a float to the first integer column still
-  truncates. Fixed by resolving the implicit target list without identity and
-  computed columns. Sibling sweep: `ProcCallTableValuedArgumentMismatchScanner`
-  also builds an implicit list from every column but only analyses rows whose
-  value count equals that list, so a skipped column makes it skip the row rather
-  than misalign; no other scanner maps insert values to columns positionally.
-
-- **Category: NULL guarded one scope above the reported expression.**
-  `predicate/plus-operator-null-propagation` inspected the select list of a
-  scalar subquery on its own, so a concatenation whose NULL result is replaced
-  by an enclosing `ISNULL`/`COALESCE` around the subquery was reported. Oracle:
-  the wrapped subquery returns the replacement for a NULL operand, while the
-  bare subquery and one used as the final fallback still return NULL. Fixed by
-  collecting scalar subqueries that sit in a replaced position and not
-  inspecting their select lists. Sibling sweep: other scanners that inspect
-  subquery select lists (`not-in-nullable-subquery`) concern NOT IN semantics,
-  not value replacement, and are unaffected.
-- **Category: intended NULL-dropping idiom reported as a NULL bug.**
-  `predicate/plus-operator-null-propagation` reported `',' + col` inside a
-  `FOR XML PATH('')` string aggregation, roughly half of the High findings in a
-  large real codebase. Oracle: with the unguarded operand a NULL row contributes
-  nothing (`,x,z`), while an `ISNULL`-guarded operand leaves a stray delimiter
-  (`,x,,z`), so the NULL-propagating form is the idiom's purpose, not a silent
-  loss. Fixed by not inspecting select elements of a query carrying an XML FOR
-  clause; FOR JSON and plain selects are unchanged. Sibling sweep: no other
-  scanner inspects `+` chains or reasons about FOR XML.
-- **Category: nullable column treated as possibly NULL inside a branch that excludes NULL.**
-  `predicate/plus-operator-null-propagation` reported a nullable column
-  concatenated inside a CASE branch that is reached only when the column is not
-  NULL (an earlier WHEN tested it IS NULL, or the branch's own WHEN is IS NOT NULL,
-  a comparison, or an AND containing one). Oracle: such a concatenation never
-  yields NULL over rows including a NULL one, while the same expression outside
-  the CASE and inside the IS NULL branch does. Fixed by carrying the
-  null-excluding facts of the enclosing CASE branches into the chain and
-  treating a resolved base column proven non-NULL as guarded; an OR keeps only
-  facts common to both sides. Sibling sweep: `not-in-nullable-subquery` has its
-  own IS NOT NULL filter check, and the other readers of column nullability
-  (`default-constraint-on-nullable-column`, `check-constraint-null-not-handled`,
-  trigger correctness) do not reason inside CASE branches.
-- **Category: per-row cost assumed for a construct the engine evaluates once.**
-  `scalar-udf/in-computed-column-or-constraint` reported every DEFAULT that
-  calls a scalar UDF as per-row cost. Oracle (function-stats execution counts
-  over a multi-row INSERT): a default calling a schema-bound deterministic UDF
-  that reads no table runs once per statement, while a non-schema-bound UDF, a
-  schema-bound UDF reading a table, a clock-dependent UDF and a non-persisted
-  computed column's UDF all run once per row. Fixed by reporting a default only
-  when the function is not schema-bound, reads a table, or is time-dependent;
-  the rationale and rule page no longer claim a default affects every query.
-  Sibling sweep: the computed-column and CHECK kinds were engine-confirmed
-  per-row and serial; no other scanner reasons about default evaluation.
-- **Category: NULL assumed to reach the comparison as UNKNOWN.**
-  `catalog/check-constraint-null-not-handled` reported any nullable column
-  mentioned anywhere in a CHECK predicate without an IS NULL test, including
-  columns reachable only through `ISNULL`/`COALESCE`, a CASE expression or a
-  user-defined function. Oracle: `ISNULL(Qty, 0) > 0` and a user function that
-  maps NULL to 0 both reject a NULL insert (error 547), while `LEN(Qty) > 0`
-  admits it. Fixed by walking the predicate's boolean structure and counting a
-  column only when it is compared directly or through arithmetic, CAST/CONVERT
-  or a fixed list of null-propagating built-ins. Sibling sweep:
-  `not-in-nullable-subquery` requires a bare selected column (no wrapping), and
-  `default-constraint-on-nullable-column` reads defaults, not predicates; both
-  clean.
 
 - **Category: filtered-index claim made for a module that never restates the
   filter.** The `set-option/*` rules (quoted-identifier-off, ansi-nulls-off,
@@ -375,33 +291,6 @@ against the same root-cause category before it's treated as new.
   enforced. Sibling sweep: `PartialCompositeForeignKeyJoinScanner` reads
   foreign keys too but its claim rests on the parent key's uniqueness, which a
   disabled constraint does not change, so it is unchanged.
-- **Category: published claim stronger than the engine fact.**
-  `write-loss/approximate-to-exact-truncation` said the fractional part is
-  "dropped" for every exact target, and `index-design/non-unique-clustered-index`
-  said the uniquifier is paid on every row. Oracle-confirmed: a float assigned
-  into DECIMAL/NUMERIC or MONEY/SMALLMONEY rounds half away from zero to the
-  target's scale while TINYINT/SMALLINT/INT/BIGINT truncate toward zero, and a
-  non-unique clustered index over all-distinct key values produces
-  nonclustered leaf records exactly as wide as a unique clustered index does,
-  because only duplicated key values carry a uniquifier. Rationale and rule
-  pages reworded; detection is unchanged.
-- **Category: lost-seek claim made for a column no index could seek on.**
-  `predicates/catch-all-parameter` reported `(col = @p OR @p IS NULL)` on a
-  column that leads no index (downgraded only in SARIF level). The claim is a
-  forfeited seek that OPTION (RECOMPILE) restores; oracle-confirmed that on an
-  unindexed column the plan is the same scan with and without RECOMPILE, while
-  on a leading-indexed column RECOMPILE turns the scan into a seek (including
-  the `col = @p OR col IS NULL OR @p IS NULL` shape). Fixed by not reporting a
-  catch-all whose base column is known to the catalog and leads no index; a
-  table unknown to the catalog still reports. Known limit: inside an inline
-  table-valued function the effect depends on the caller (a literal argument is
-  folded into the predicate and seeks, a variable argument scans), which a
-  per-module scan cannot decide, so those findings are unchanged. Sibling
-  sweep: `ParameterReassignmentPredicateScanner` also emits regardless of
-  indexing but its claim is a density-based estimate replacing the histogram,
-  which applies to unindexed columns too; the tier-one sargability scanners
-  carry the index flag into confidence and SARIF level and their claims are not
-  solely about a lost seek. Neither changed.
 
 ---
 
