@@ -17,6 +17,9 @@ internal static class ReplaceResultTruncated
             push a non-MAX literal input past that cap comes back silently truncated to exactly the
             cap, with no error.
 
+            REGEXP_REPLACE over such an input is capped the same way. It is reported when its
+            pattern is plain text, so that the resulting length can be computed.
+
             When the input, the text being replaced, and its replacement are all compile-time
             constants, the exact resulting length - and how many times the replacement occurs - is
             knowable from the source text alone.

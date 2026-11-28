@@ -238,7 +238,7 @@ public static class RuleCatalog
  new RuleCondition("literal-repeated-past-cap", RuleConditionKind.Fires, "a non-Unicode literal is repeated past 8000 characters"),
  new RuleCondition("repeated-within-cap", RuleConditionKind.Excluded, "the repeated length fits within the cap"),
  ]),
- new RuleDefinition(SarifRuleCatalog.BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated), "REPLACE's literal input argument not typed VARCHAR(MAX)/NVARCHAR(MAX) caps its return type at VARCHAR(8000)/NVARCHAR(4000), so a length-growing replacement that pushes the result past that cap is silently truncated, with no error.", "Cast the input literal to VARCHAR(MAX)/NVARCHAR(MAX) before replacing if the full expanded length is genuinely needed.", null,
+ new RuleDefinition(SarifRuleCatalog.BoundedStringBuiltinTruncationRuleId(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated), "REPLACE's (or a plain-text-pattern REGEXP_REPLACE's) literal input argument not typed VARCHAR(MAX)/NVARCHAR(MAX) caps its return type at VARCHAR(8000)/NVARCHAR(4000), so a length-growing replacement that pushes the result past that cap is silently truncated, with no error.", "Cast the input literal to VARCHAR(MAX)/NVARCHAR(MAX) before replacing if the full expanded length is genuinely needed.", null,
  [
  new RuleCondition("growing-replacement-past-cap", RuleConditionKind.Fires, "every argument is constant and a longer replacement pushes the result past the cap"),
  new RuleCondition("result-within-cap", RuleConditionKind.Excluded, "the replaced result fits within the cap"),

@@ -1,4 +1,7 @@
+using Microsoft.Data.SqlClient;
+using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates;
+using SilentScan.Verify;
 using SilentScan.Tests.Support;
 
 namespace SilentScan.Tests.Predicates;
@@ -202,5 +205,29 @@ public sealed class BoundedStringBuiltinTruncationLiveOracleTests
         var report = await EngineAuthoritativeScan.ScanAsync($"CREATE PROCEDURE dbo.usp_Probe AS BEGIN {select} END");
 
         Assert.Equal(truncates, report.Find<BoundedStringBuiltinTruncationFinding>("BoundedStringBuiltinTruncationScanner").Count > 0);
+    }
+
+    [Theory]
+    [InlineData("x", true)]
+    [InlineData("x+", false)]
+    public void RegexpReplaceOfALiteralPastCap_FiresOnlyForAPlainTextPattern(string pattern, bool fires)
+    {
+        var parsed = SqlScriptParser.ParseText("test.sql", $"SELECT REGEXP_REPLACE('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', '{pattern}', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');");
+
+        Assert.Equal(
+            fires,
+            BoundedStringBuiltinTruncationScanner.Scan(parsed)
+                .Any(f => f is { FunctionName: "REGEXP_REPLACE", ComputedLength: 9000, CapBytes: 8000 }));
+    }
+
+    [Fact]
+    public async Task Engine_TruncatesRegexpReplaceOverANonMaxLiteral()
+    {
+        await using var connection = new SqlConnection(SqlServerOptions.LocalDockerLatest.BuildConnectionString("tempdb"));
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT DATALENGTH(REGEXP_REPLACE('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 'x', 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'));", connection);
+
+        Assert.Equal(8000, Convert.ToInt32(await command.ExecuteScalarAsync(), System.Globalization.CultureInfo.InvariantCulture));
     }
 }

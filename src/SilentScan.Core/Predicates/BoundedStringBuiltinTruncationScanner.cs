@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
@@ -51,6 +52,10 @@ public static class BoundedStringBuiltinTruncationScanner
             {
                 CheckReplace(node);
             }
+            else if (string.Equals(name, "REGEXP_REPLACE", StringComparison.OrdinalIgnoreCase) && node.Parameters.Count == 3)
+            {
+                CheckRegexpReplace(node);
+            }
             else if (string.Equals(name, "SPACE", StringComparison.OrdinalIgnoreCase) && node.Parameters.Count == 1)
             {
                 CheckSpace(node);
@@ -86,7 +91,21 @@ public static class BoundedStringBuiltinTruncationScanner
             Add(BoundedStringBuiltinTruncationFindingKind.ReplicateResultTruncated, "REPLICATE", computed, cap, node);
         }
 
-        private void CheckReplace(FunctionCall node)
+        private static readonly SearchValues<char> RegexMetacharacters = SearchValues.Create(@"\.^$|?*+()[]{}");
+
+        private void CheckReplace(FunctionCall node) => CheckSubstitution(node, "REPLACE", MatchingComparison);
+
+        private void CheckRegexpReplace(FunctionCall node)
+        {
+            if (LiteralComparisonFolder.TryFoldToString(node.Parameters[1]) is { } pattern
+                && !pattern.AsSpan().ContainsAny(RegexMetacharacters)
+                && LiteralComparisonFolder.TryFoldToString(node.Parameters[2])?.Contains('\\') == false)
+            {
+                CheckSubstitution(node, "REGEXP_REPLACE", _ => StringComparison.Ordinal);
+            }
+        }
+
+        private void CheckSubstitution(FunctionCall node, string functionName, Func<StringLiteral, StringComparison> comparison)
         {
             if (node.Parameters[0] is not StringLiteral input)
             {
@@ -106,13 +125,13 @@ public static class BoundedStringBuiltinTruncationScanner
                 return;
             }
 
-            var replaced = LengthInCapUnits(input.Value.Replace(from, to, MatchingComparison(input)), input.IsNational);
+            var replaced = LengthInCapUnits(input.Value.Replace(from, to, comparison(input)), input.IsNational);
             if (replaced <= cap)
             {
                 return;
             }
 
-            Add(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated, "REPLACE", replaced, cap, node);
+            Add(BoundedStringBuiltinTruncationFindingKind.ReplaceResultTruncated, functionName, replaced, cap, node);
         }
 
         private long LengthInCapUnits(string value, bool isNational) =>
