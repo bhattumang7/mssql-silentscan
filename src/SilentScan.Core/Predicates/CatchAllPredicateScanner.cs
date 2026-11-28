@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using SilentScan.Core.Catalog;
+using SilentScan.Core.Common;
 using SilentScan.Core.Lineage;
 using SilentScan.Core.Parsing;
 using SilentScan.Core.Predicates.Normalization;
@@ -40,7 +41,11 @@ public static class CatchAllPredicateScanner
 
         private bool _statementHasOptionRecompile;
 
-        private bool OptionalParameterOptimizationApplies => catalog.CompatibilityLevel >= 170 && !catalog.IsScopedConfigurationDisabled("OPTIONAL_PARAMETER_OPTIMIZATION");
+        private const int OptionalParameterOptimizationMinimumCompatibilityLevel = 170;
+
+        private IList<OptimizerHint> _statementHints = [];
+
+        private bool _queryTakesPlanPerBranch;
 
         private bool HasActiveRecompileGuard => _procedureHasWithRecompile || _statementHasOptionRecompile;
 
@@ -97,9 +102,9 @@ public static class CatchAllPredicateScanner
 
         public void OnEnterQuerySpecificationScope(QuerySpecification node, ScopeChain scopeChain, ModuleWalker walker)
         {
-            if (!HasActiveRecompileGuard
-                && (!OptionalParameterOptimizationApplies || _queriesWithoutAPlanPerBranch.Contains(node)))
+            if (!HasActiveRecompileGuard)
             {
+                _queryTakesPlanPerBranch = !_queriesWithoutAPlanPerBranch.Contains(node);
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }
         }
@@ -113,8 +118,9 @@ public static class CatchAllPredicateScanner
         public void OnEnterUpdateStatementScope(UpdateStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
-            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
+            if (!HasActiveRecompileGuard)
             {
+                _queryTakesPlanPerBranch = true;
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }
         }
@@ -125,8 +131,9 @@ public static class CatchAllPredicateScanner
         public void OnEnterDeleteStatementScope(DeleteStatement node, ScopeChain scopeChain, ModuleWalker walker)
         {
             _statementRecompileStack.Push(BeginStatementOptimizerHints(node.OptimizerHints));
-            if (!HasActiveRecompileGuard && !OptionalParameterOptimizationApplies)
+            if (!HasActiveRecompileGuard)
             {
+                _queryTakesPlanPerBranch = true;
                 ModuleWalker.InspectAllPredicateLocations(node, scopeChain, (condition, chain) => InspectSearchCondition(condition, chain, walker));
             }
         }
@@ -143,9 +150,18 @@ public static class CatchAllPredicateScanner
         private bool BeginStatementOptimizerHints(IList<OptimizerHint> hints)
         {
             var previous = _statementHasOptionRecompile;
+            _statementHints = hints;
             _statementHasOptionRecompile = hints.Any(h => h.HintKind == OptimizerHintKind.Recompile);
             return previous;
         }
+
+        private bool CompilesAPlanPerBranch(string variableName) =>
+            _queryTakesPlanPerBranch
+            && (StatementHints.CompatibilityLevelOverride(_statementHints) ?? catalog.CompatibilityLevel) >= OptionalParameterOptimizationMinimumCompatibilityLevel
+            && !catalog.IsScopedConfigurationDisabled("OPTIONAL_PARAMETER_OPTIMIZATION")
+            && !catalog.IsScopedConfigurationDisabled("PARAMETER_SNIFFING")
+            && !StatementHints.UsesHint(_statementHints, "DISABLE_OPTIONAL_PARAMETER_OPTIMIZATION")
+            && !StatementHints.OptimizesForUnknown(_statementHints, variableName);
 
         private void InspectSearchCondition(BooleanExpression? searchCondition, ScopeChain scopeChain, ModuleWalker walker)
         {
@@ -338,6 +354,11 @@ public static class CatchAllPredicateScanner
             var table = catalog.Find(baseColumn.TableQualifiedName);
             var indexed = table?.IsIndexedColumn(baseColumn.ColumnName, catalog.IdentifierComparer) ?? false;
             if (table is not null && !indexed)
+            {
+                return;
+            }
+
+            if (CompilesAPlanPerBranch(variableRef.Name))
             {
                 return;
             }

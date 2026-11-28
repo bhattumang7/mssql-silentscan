@@ -1,6 +1,7 @@
 using Microsoft.Data.SqlClient;
 using SilentScan.Core.Parsing;
 using SilentScan.Verify;
+using SilentScan.Verify.Deployment;
 
 namespace SilentScan.Tests.Integration;
 
@@ -58,8 +59,31 @@ public sealed class ParserSyntaxCoverageOracleTests
     [Fact]
     public async Task EveryConstructTheNewestEngineParses_OurParserParsesAtTheNewestCompatibilityLevel()
     {
-        await using var connection = new SqlConnection(SqlServerOptions.LocalDockerLatest.BuildConnectionString("tempdb"));
+        var options = SqlServerOptions.LocalDockerLatest;
+        var databaseName = $"{nameof(ParserSyntaxCoverageOracleTests)}_{Guid.NewGuid():N}";
+        var provisioner = new DatabaseProvisioner(options);
+        await provisioner.CreateFreshAsync(databaseName);
+        try
+        {
+            var problems = await FindParserDisagreementsAsync(options.BuildConnectionString(databaseName));
+            Assert.True(problems.Count == 0, string.Join("\n", problems));
+        }
+        finally
+        {
+            SqlConnection.ClearAllPools();
+            await provisioner.DropIfExistsAsync(databaseName);
+        }
+    }
+
+    private static async Task<List<string>> FindParserDisagreementsAsync(string connectionString)
+    {
+        await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
+        await using (var preview = new SqlCommand("ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 170; ALTER DATABASE SCOPED CONFIGURATION SET PREVIEW_FEATURES = ON;", connection))
+        {
+            await preview.ExecuteNonQueryAsync();
+        }
+
         var problems = new List<string>();
         foreach (var (name, sql) in Constructs)
         {
@@ -82,6 +106,6 @@ public sealed class ParserSyntaxCoverageOracleTests
             }
         }
 
-        Assert.True(problems.Count == 0, string.Join("\n", problems));
+        return problems;
     }
 }

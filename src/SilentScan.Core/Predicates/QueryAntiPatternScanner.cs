@@ -54,7 +54,13 @@ public static class QueryAntiPatternScanner
         private readonly HashSet<string> _tableVariableNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _tableValuedParameterNames = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _scalarParameterNames = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Stack<(bool ComparesAColumnToAParameter, bool IsSelect)> _hintedStatements = new();
+        private readonly Stack<(bool ComparesAColumnToAParameter, bool IsSelect, bool TakesPlanVariants)> _hintedStatements = new();
+
+        private readonly HashSet<QuerySpecification> _queriesWithoutPlanVariants = [];
+
+        private bool TakesPlanVariants(StatementWithCtesAndXmlNamespaces statement) =>
+            !StatementHints.DisablesParameterSniffing(statement.OptimizerHints)
+            && !(statement is SelectStatement { QueryExpression: QuerySpecification query } && _queriesWithoutPlanVariants.Contains(query));
 
         private static string? AliasOf(TableReference reference) =>
             reference is NamedTableReference named ? named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value : null;
@@ -77,20 +83,7 @@ public static class QueryAntiPatternScanner
         private int _deferredCompilationHintedOffDepth;
 
         private static bool HintsDeferredCompilationOff(StatementWithCtesAndXmlNamespaces statement) =>
-            statement.OptimizerHints.OfType<UseHintList>()
-                .SelectMany(list => list.Hints)
-                .Any(hint => string.Equals(hint.Value, "DISABLE_DEFERRED_COMPILATION_TV", StringComparison.OrdinalIgnoreCase));
-
-        private static int? HintedCompatibilityLevel(StatementWithCtesAndXmlNamespaces statement)
-        {
-            const string Prefix = "QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_";
-            return statement.OptimizerHints.OfType<UseHintList>()
-                .SelectMany(list => list.Hints)
-                .Select(hint => hint.Value)
-                .Where(value => value.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
-                .Select(value => int.TryParse(value.AsSpan(Prefix.Length), out var level) ? level : (int?)null)
-                .FirstOrDefault(level => level is not null);
-        }
+            StatementHints.UsesHint(statement.OptimizerHints, "DISABLE_DEFERRED_COMPILATION_TV");
 
         public void OnEnterFromClause(FromClause node, ModuleWalker walker)
         {
@@ -138,6 +131,8 @@ public static class QueryAntiPatternScanner
         {
             if (!_tableValuedParameterNames.Contains(variableRef.Variable.Name)
                 || !_hintedStatements.TryPeek(out var statement) || !statement.ComparesAColumnToAParameter
+                || !statement.TakesPlanVariants
+                || catalog.IsScopedConfigurationDisabled("PARAMETER_SNIFFING")
                 || catalog.CompatibilityLevel is not { } level
                 || level < (statement.IsSelect ? SelectPspCompatibilityLevel : DataModificationPspCompatibilityLevel)
                 || catalog.IsScopedConfigurationDisabled("PARAMETER_SENSITIVE_PLAN_OPTIMIZATION"))
@@ -177,10 +172,10 @@ public static class QueryAntiPatternScanner
 
         private void EnterStatementHints(StatementWithCtesAndXmlNamespaces statement)
         {
-            _hintedCompatibilityLevels.Push(HintedCompatibilityLevel(statement));
+            _hintedCompatibilityLevels.Push(StatementHints.CompatibilityLevelOverride(statement.OptimizerHints));
             var finder = new ColumnToParameterEqualityFinder(_scalarParameterNames);
             statement.Accept(finder);
-            _hintedStatements.Push((finder.Found, statement is SelectStatement));
+            _hintedStatements.Push((finder.Found, statement is SelectStatement, TakesPlanVariants(statement)));
             if (HasOptionRecompile(statement))
             {
                 _recompileStatementDepth++;
@@ -249,6 +244,7 @@ public static class QueryAntiPatternScanner
         public void OnEnterTSqlBatch(TSqlBatch node, ModuleWalker walker)
         {
             _currentBatch = node;
+            node.Accept(new PlanPerBranchExclusions(_queriesWithoutPlanVariants));
             InspectCountStarExistenceSequence(node.Statements);
             InspectMultiRowInsertIgnoreDupKeySequence(node.Statements);
             _tableVariableNames.Clear();
@@ -677,7 +673,7 @@ public static class QueryAntiPatternScanner
 
                 var enclosingLevel = _hintedLevel;
                 var enclosingOff = _hintedOff;
-                _hintedLevel = HintedCompatibilityLevel(statement) ?? enclosingLevel;
+                _hintedLevel = StatementHints.CompatibilityLevelOverride(statement.OptimizerHints) ?? enclosingLevel;
                 _hintedOff = enclosingOff || HintsDeferredCompilationOff(statement);
                 visit();
                 _hintedLevel = enclosingLevel;

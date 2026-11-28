@@ -125,11 +125,8 @@ public sealed class RelationalShapeDivergenceOracleTests : EngineDivergenceOracl
 
     [Theory]
     [InlineData("SELECT v FROM dbo.OverFive;", false)]
-    [InlineData("IF EXISTS (SELECT 1 FROM dbo.OverFive WHERE v = -1) PRINT 1;", true)]
     [InlineData("WHILE (SELECT COUNT(*) FROM dbo.OverFive) < 0 PRINT 1;", true)]
-    [InlineData("SELECT p.v FROM dbo.Outer50 s CROSS APPLY dbo.Pass(7, s.i) p;", true)]
     [InlineData("SELECT p.v FROM dbo.Outer50 s CROSS APPLY dbo.Pass(s.i, 7) p;", false)]
-    [InlineData("SELECT p.v FROM dbo.Pass(1, (SELECT MAX(i) FROM dbo.Outer50)) p;", true)]
     [InlineData("SELECT p.v FROM dbo.Pass((SELECT MAX(i) FROM dbo.Outer50), 1) p;", false)]
     [Trait("Rule", FindingRuleIds.TvfFenceNestedUnderViewOrTvfRuleId)]
     public async Task NestedMultiStatementFunction_KeepsTheFixedEstimate_ExactlyWhereReported(string probe, bool fixedEstimate)

@@ -496,14 +496,14 @@ public sealed class CatchAllPredicateScannerTests
     }
 
     [Theory]
-    [InlineData("Region = @c AND (Code = @p OR @p IS NULL)")]
+    [InlineData("Segment = @c AND (Code = @p OR @p IS NULL)")]
     [InlineData("(Code = @c OR Region = @c) AND (Region = @p OR @p IS NULL)")]
     [InlineData("Code = Region AND (Region = @p OR @p IS NULL)")]
     [InlineData("UPPER(Code) = @c AND (Region = @p OR @p IS NULL)")]
     public void CatchAllConjunct_WithoutASargableIndexedSibling_StillFires(string where)
     {
         var findings = ScanWithDdl(
-            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code), INDEX IX_Customers_Region (Region));",
+            "CREATE TABLE dbo.Customers (Id INT NOT NULL, Code VARCHAR(20) NOT NULL, Region VARCHAR(20) NOT NULL, Segment VARCHAR(20) NOT NULL, INDEX IX_Customers_Code (Code), INDEX IX_Customers_Region (Region));",
             $"CREATE PROCEDURE dbo.usp_Find @p VARCHAR(20), @c VARCHAR(20) AS BEGIN SELECT 1 FROM dbo.Customers WHERE {where}; END",
             compatibilityLevel: null);
 
