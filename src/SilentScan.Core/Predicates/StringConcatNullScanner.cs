@@ -210,7 +210,7 @@ public static class StringConcatNullScanner
             [.. columns
                 .Select(column => BaseColumnResolver.ResolveBaseColumn(column, sourcePath, scopeChain, catalog))
                 .Where(resolved => resolved is not null)
-                .Select(resolved => (resolved!.Value.TableQualifiedName, resolved.Value.ColumnName))];
+                .Select(resolved => (resolved!.TableQualifiedName, resolved.ColumnName))];
 
         private bool IsProvenNonNull(Leaf leaf, List<(string Table, string Column)> proven) =>
             proven.Exists(p => catalog.IdentifierComparer.Equals(p.Table, leaf.TableQualifiedName)
